@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/AyVino.Api/AyVino.Api.csproj" />
+    <Project Path="src/backend/AyVino.Core/AyVino.Core.csproj" />
+  </Folder>
+</Solution>
