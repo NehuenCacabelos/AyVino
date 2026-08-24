@@ -60,6 +60,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
     private static string GetTitleForStatusCode(int statusCode) => statusCode switch
     {
         StatusCodes.Status400BadRequest => "Error de validación",
+        StatusCodes.Status401Unauthorized => "No autorizado",
         StatusCodes.Status404NotFound => "Recurso no encontrado",
         StatusCodes.Status409Conflict => "Conflicto de recursos",
         _ => "Error en la solicitud"

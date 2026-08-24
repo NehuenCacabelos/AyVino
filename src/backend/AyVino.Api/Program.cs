@@ -1,8 +1,19 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Common.Middleware;
+using AyVino.Api.Common.Security;
+using AyVino.Api.Features.Auth.Endpoints;
+using AyVino.Api.Features.Auth.Services;
 using AyVino.Api.Features.Users.Endpoints;
 using AyVino.Api.Features.Users.Repositories;
 using AyVino.Api.Features.Users.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
+// 1. Configuraciones iniciales de serialización / mapeo
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,12 +24,47 @@ builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Infrastructure & Data Access
-builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
+// Authentication & JWT Bearer
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
+    ?? throw new InvalidOperationException("Configuración JWT 'SecretKey' no encontrada.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Configuración JWT 'Issuer' no encontrada.");
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Configuración JWT 'Audience' no encontrada.");
 
-// Feature: Users
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// Infrastructure & Security Services (Singletons)
+builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
+builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
@@ -33,7 +79,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Authentication & Authorization Middlewares
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Feature Endpoints
+app.MapAuthEndpoints();
 app.MapUserEndpoints();
 
 app.Run();
