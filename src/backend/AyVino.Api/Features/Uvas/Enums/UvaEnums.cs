@@ -8,27 +8,31 @@ public enum TipoColor
     Naranjo = 4
 }
 
+// valores con salto de 10 para permitir insertar niveles a futuro
+
 public enum CuerpoTipico
 {
-    Liviano = 1,
-    MedioLiviano = 2,
-    Medio = 3,
-    MedioRobusto = 4,
-    Robusto = 5
+    Liviano = 10,
+    MedioLiviano = 20,
+    Medio = 30,
+    MedioRobusto = 40,
+    Robusto = 50
 }
 
 public enum TaninosTipico
 {
-    Suaves = 1,
-    MedioSuaves = 2,
-    Medios = 3,
-    MedioAstringentes = 4,
-    Astringentes = 5
+    Suaves = 10,
+    MedioSuaves = 20,
+    Medios = 30,
+    MedioAstringentes = 40,
+    Astringentes = 50
 }
 
 public enum AcidezTipica
 {
-    Baja = 1,
-    Media = 2,
-    Alta = 3
+    Baja = 10,
+    MediaBaja = 20,
+    Media = 30,
+    MediaAlta = 40,
+    Alta = 50
 }
