@@ -58,6 +58,25 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, cancellationToken: ct));
     }
 
+    public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT u.Id, u.NombreUsuario, u.Email, u.Rol, u.FechaRegistro, u.Activo, u.FotoPerfil, u.Bio,
+                   c.UsuarioId, c.PasswordHash, c.UltimoCambioPassword, c.IntentosFallidos, c.BloqueadoHasta
+            FROM Usuarios u
+            LEFT JOIN Credenciales c ON u.Id = c.UsuarioId
+            WHERE LOWER(u.Email) = LOWER(@Email);
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var result = await connection.QueryAsync<User, UserCredential, (User? User, UserCredential? Credential)>(
+            new CommandDefinition(sql, new { Email = email }, cancellationToken: ct),
+            (user, credential) => (user, credential),
+            splitOn: "UsuarioId");
+
+        return result.FirstOrDefault();
+    }
+
     public async Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);

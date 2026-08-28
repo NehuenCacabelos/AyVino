@@ -1,12 +1,12 @@
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Repositories;
 
 namespace AyVino.Api.Features.Users.Services;
 
-public partial class UserService(IUserRepository userRepository) : IUserService
+public partial class UserService(IUserRepository userRepository, IPasswordHasher passwordHasher) : IUserService
 {
     private static readonly HashSet<string> AllowedRoles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -36,7 +36,7 @@ public partial class UserService(IUserRepository userRepository) : IUserService
         }
 
         var userEntity = dto.ToEntity();
-        var passwordHash = HashPassword(dto.Password);
+        var passwordHash = passwordHasher.HashPassword(dto.Password);
         
         // El id inicial es 0, el repositorio asignará el Id generado dentro de la transacción
         var credentialEntity = dto.ToCredentialEntity(0, passwordHash);
@@ -187,17 +187,5 @@ public partial class UserService(IUserRepository userRepository) : IUserService
             throw new ValidationException($"El rol '{dto.Rol}' no es válido. Roles permitidos: Admin, Bodega, Usuario.");
         }
     }
-
-    private static string HashPassword(string password)
-    {
-        byte[] salt = RandomNumberGenerator.GetBytes(16);
-        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
-            password: password,
-            salt: salt,
-            iterations: 100_000,
-            hashAlgorithm: HashAlgorithmName.SHA256,
-            outputLength: 32);
-
-        return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
-    }
 }
+

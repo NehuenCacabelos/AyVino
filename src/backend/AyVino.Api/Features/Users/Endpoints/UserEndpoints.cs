@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Services;
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +23,24 @@ public static class UserEndpoints
         })
         .WithName("RegisterUser")
         .WithSummary("Registra un nuevo usuario con sus credenciales");
+
+        group.MapGet("/me", async (ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
+        {
+            var userIdClaim = claimsPrincipal.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? claimsPrincipal.FindFirstValue("sub");
+
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedException("Token de autenticación inválido o identificador no encontrado.");
+            }
+
+            var user = await userService.GetByIdAsync(userId, ct);
+            return Results.Ok(user);
+        })
+        .RequireAuthorization()
+        .WithName("GetCurrentUserProfile")
+        .WithSummary("Obtiene el perfil del usuario autenticado actual a partir de los Claims del token");
 
         group.MapGet("/", async (IUserService userService, CancellationToken ct) =>
         {
@@ -64,3 +85,4 @@ public static class UserEndpoints
         return app;
     }
 }
+
