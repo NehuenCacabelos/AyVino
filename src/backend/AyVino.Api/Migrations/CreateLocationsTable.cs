@@ -10,7 +10,7 @@ public class M20260829002_CreateLocationsTable : Migration
         Create.Table("Locations")
             .WithColumn("Id").AsInt32().PrimaryKey().Identity().NotNullable()
             .WithColumn("Country").AsString(100).NotNullable()
-            .WithColumn("Province").AsString(100).Nullable()
+            .WithColumn("State").AsString(100).Nullable()
             .WithColumn("City").AsString(100).Nullable();
     }
 
