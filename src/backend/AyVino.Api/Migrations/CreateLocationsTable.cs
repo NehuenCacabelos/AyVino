@@ -7,15 +7,15 @@ public class M20260829002_CreateLocationsTable : Migration
 {
     public override void Up()
     {
-        Create.Table("Locations")
-            .WithColumn("Id").AsInt32().PrimaryKey().Identity().NotNullable()
-            .WithColumn("Country").AsString(100).NotNullable()
-            .WithColumn("State").AsString(100).Nullable()
-            .WithColumn("City").AsString(100).Nullable();
+        Create.Table("locations")
+            .WithColumn("id").AsInt32().PrimaryKey().Identity().NotNullable()
+            .WithColumn("country").AsString(100).NotNullable()
+            .WithColumn("state").AsString(100).Nullable()
+            .WithColumn("city").AsString(100).Nullable();
     }
 
     public override void Down()
     {
-        Delete.Table("Locations");
+        Delete.Table("locations");
     }
 }
