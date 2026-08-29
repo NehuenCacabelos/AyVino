@@ -8,13 +8,26 @@ using AyVino.Api.Features.Auth.Services;
 using AyVino.Api.Features.Users.Endpoints;
 using AyVino.Api.Features.Users.Repositories;
 using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Features.Wineries.Endpoints;
+using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Services;
+using AyVino.Api.Features.Locations.Endpoints;
+using AyVino.Api.Features.Locations.Repositories;
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Grapes.Endpoints;
+using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Grapes.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 
 // 1. Configuraciones iniciales de serialización / mapeo
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +70,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+
 // Infrastructure & Security Services (Singletons)
 builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
@@ -66,6 +80,12 @@ builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IWineryRepository, WineryRepository>();
+builder.Services.AddScoped<IWineryService, WineryService>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IGrapeRepository, GrapeRepository>();
+builder.Services.AddScoped<IGrapeService, GrapeService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -77,6 +97,7 @@ builder.Services.AddFluentMigratorCore()
         .WithGlobalConnectionString(connectionString)
         .ScanIn(typeof(Program).Assembly).For.Migrations())
     .AddLogging(lb => lb.AddFluentMigratorConsole());
+
 
 var app = builder.Build();
 
@@ -102,6 +123,8 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
+
 }
 
 app.UseHttpsRedirection();
@@ -113,6 +136,9 @@ app.UseAuthorization();
 // Feature Endpoints
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
+app.MapWineryEndpoints();
+app.MapLocationEndpoints();
+app.MapGrapeEndpoints();
 
 app.Run();
 
