@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Common.Middleware;
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Auth.Endpoints;
@@ -69,7 +70,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => {
+    // Policy para usuarios Administradores
+    options.AddPolicy(AppPolicies.RequireAdmin, policy => 
+        policy.RequireRole(AppRoles.Admin));
+});
 
 
 // Infrastructure & Security Services (Singletons)
