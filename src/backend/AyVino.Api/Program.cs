@@ -18,6 +18,7 @@ Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -79,6 +80,7 @@ builder.Services.AddFluentMigratorCore()
         .WithGlobalConnectionString(connectionString)
         .ScanIn(typeof(Program).Assembly).For.Migrations())
     .AddLogging(lb => lb.AddFluentMigratorConsole());
+
 
 var app = builder.Build();
 
