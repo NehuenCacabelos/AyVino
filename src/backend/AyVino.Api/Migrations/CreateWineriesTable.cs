@@ -25,7 +25,7 @@ public class M20260829003_CreateWineriesTable : Migration
 
         Create.ForeignKey("FK_Wineries_Users")
             .FromTable("Wineries").ForeignColumn("UserId")
-            .ToTable("Users").PrimaryColumn("Id")
+            .ToTable("users").PrimaryColumn("id")
             .OnDelete(Rule.SetNull);
 
         Create.Index("IX_Wineries_UserId")
