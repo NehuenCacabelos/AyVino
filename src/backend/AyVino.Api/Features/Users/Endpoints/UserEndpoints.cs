@@ -33,49 +33,34 @@ public static class UserEndpoints
 
         authenticatedGroup.MapGet("/me", async (ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
         {
-            var userIdClaim = claimsPrincipal.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                ?? claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? claimsPrincipal.FindFirstValue("sub");
-
-            if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-            {
-                throw new UnauthorizedException("Token de autenticación inválido o identificador no encontrado.");
-            }
-
+            var userId = claimsPrincipal.GetUserId();
             var user = await userService.GetByIdAsync(userId, ct);
             return Results.Ok(user);
         })
         .WithName("GetCurrentUserProfile")
         .WithSummary("Obtiene el perfil del usuario autenticado actual a partir de los Claims del token");
 
-        authenticatedGroup.MapPut("/{id:int}/profile", async (int id, UpdateUserProfileRequestDto request, ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
+        authenticatedGroup.MapPut("/me", async (UpdateUserProfileRequestDto request, ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
         {
-            var userIdClaim = claimsPrincipal.FindFirstValue(JwtRegisteredClaimNames.Sub)
-                ?? claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? claimsPrincipal.FindFirstValue("sub");
-
-            if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var currentUserId))
-            {
-                throw new UnauthorizedException("Token de autenticación inválido o identificador no encontrado.");
-            }
-
-            var isAdmin = claimsPrincipal.IsInRole(AppRoles.Admin);
-
-            if (currentUserId != id && !isAdmin)
-            {
-                return Results.Problem("No tienes permisos para modificar este perfil.", statusCode: StatusCodes.Status403Forbidden);
-            }
-
-            var updatedUser = await userService.UpdateProfileAsync(id, request, ct);
+            var userId = claimsPrincipal.GetUserId();
+            var updatedUser = await userService.UpdateProfileAsync(userId, request, ct);
             return Results.Ok(updatedUser);
         })
-        .WithName("UpdateUserProfile")
-        .WithSummary("Actualiza la información de perfil de un usuario");
+        .WithName("UpdateMyProfile")
+        .WithSummary("Actualiza el perfil del usuario autenticado actual");
 
         // Grupo administrativo (requiere rol Admin)
         var adminGroup = app.MapGroup("/api/users")
                             .WithTags("Admin - Users")
                             .RequireAuthorization(AppPolicies.RequireAdmin);
+
+        adminGroup.MapPut("/{id:int}/profile", async (int id, UpdateUserProfileRequestDto request, IUserService userService, CancellationToken ct) =>
+        {
+            var updatedUser = await userService.UpdateProfileAsync(id, request, ct);
+            return Results.Ok(updatedUser);
+        })
+        .WithName("AdminUpdateUserProfile")
+        .WithSummary("Actualiza el perfil de cualquier usuario");
 
         adminGroup.MapGet("/", async (IUserService userService, CancellationToken ct) =>
         {

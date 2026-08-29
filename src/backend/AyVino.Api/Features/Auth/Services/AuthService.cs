@@ -58,5 +58,48 @@ public class AuthService(
         var (token, expiresAt) = jwtTokenGenerator.GenerateToken(user);
         return new AuthResponseDto(token, "Bearer", expiresAt, user.ToResponseDto());
     }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequestDto request, CancellationToken ct = default)
+    {
+        if(request is null){
+            throw new ValidationException("La solicitud de cambio de contraseña no puede ser nula.");
+        }
+
+        if(string.IsNullOrWhiteSpace(request.CurrentPassword)){
+            throw new ValidationException("La contraseña actual es obligatoria.");
+        }
+
+        if(string.IsNullOrWhiteSpace(request.NewPassword)){
+            throw new ValidationException("La nueva contraseña es obligatoria.");
+        }
+
+        if(request.CurrentPassword == request.NewPassword){
+            throw new ValidationException("La nueva contraseña debe ser diferente a la contraseña actual.");
+        }
+
+        if(request.NewPassword.Length < 6){
+            throw new ValidationException("La nueva contraseña debe tener al menos 6 caracteres.");
+        }
+
+        if(request.NewPassword.Length > 128){
+            throw new ValidationException("La nueva contraseña debe tener menos de 128 caracteres.");
+        }
+        
+        var credentials = await userRepository.GetUserCredentialsByIdAsync(userId, ct)
+            ?? throw new UnauthorizedException("Credenciales inválidas.");
+
+        var isPasswordValid = passwordHasher.VerifyPassword(request.CurrentPassword, credentials.PasswordHash);
+        if(!isPasswordValid){
+            throw new UnauthorizedException("Credenciales inválidas.");
+        }
+
+        var newPasswordHash = passwordHasher.HashPassword(request.NewPassword);
+
+        var update = await userRepository.UpdatePasswordAsync(userId, newPasswordHash,DateTime.UtcNow,ct);
+        
+        if(!update){
+            throw new InvalidOperationException("No fue posible actualizar la contraseña.");
+        }
+    }
 }
 

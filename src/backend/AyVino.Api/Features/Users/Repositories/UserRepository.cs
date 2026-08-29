@@ -183,4 +183,35 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
+
+    public async Task<UserCredential?> GetUserCredentialsByIdAsync(int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT user_id, password_hash, last_password_change, failed_login_attempts, blocked_until
+            FROM user_credentials
+            WHERE user_id = @UserId;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<UserCredential>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
+
+    public async Task<bool> UpdatePasswordAsync(int userId, string passwordHash, DateTime lastPasswordChange, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE user_credentials
+            SET password_hash = @PasswordHash,
+                last_password_change = @LastPasswordChange,
+                failed_login_attempts = 0,
+                blocked_until = NULL
+            WHERE user_id = @UserId;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { UserId = userId, PasswordHash = passwordHash, LastPasswordChange = lastPasswordChange }, cancellationToken: ct));
+
+        return rowsAffected > 0;
+    }
 }
