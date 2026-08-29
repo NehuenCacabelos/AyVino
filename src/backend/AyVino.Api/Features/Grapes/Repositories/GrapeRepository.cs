@@ -9,9 +9,9 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
     public async Task<Grape?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, ColorType, TypicalBody, TypicalTannins, TypicalAcidity, Description
-            FROM Grapes
-            WHERE Id = @Id;
+            SELECT id, name, color_type, typical_body, typical_tannins, typical_acidity, description
+            FROM grapes
+            WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Grape>(
@@ -21,10 +21,10 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
     public async Task<IEnumerable<Grape>> GetAllAsync(int pageNumber, int pageSize, int? colorType = null, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, ColorType, TypicalBody, TypicalTannins, TypicalAcidity, Description
-            FROM Grapes
-            WHERE (@ColorType IS NULL OR ColorType = @ColorType)
-            ORDER BY Name
+            SELECT id, name, color_type, typical_body, typical_tannins, typical_acidity, description
+            FROM grapes
+            WHERE (@ColorType IS NULL OR color_type = @ColorType)
+            ORDER BY name
             OFFSET @Offset LIMIT @PageSize;
             """;
         var offset = (pageNumber - 1) * pageSize;
@@ -36,9 +36,9 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
     public async Task<int> CreateAsync(Grape grape, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO Grapes (Name, ColorType, TypicalBody, TypicalTannins, TypicalAcidity, Description)
+            INSERT INTO grapes (name, color_type, typical_body, typical_tannins, typical_acidity, description)
             VALUES (@Name, @ColorType, @TypicalBody, @TypicalTannins, @TypicalAcidity, @Description)
-            RETURNING Id;
+            RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<int>(
@@ -48,14 +48,14 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
     public async Task<bool> UpdateAsync(Grape grape, CancellationToken ct = default)
     {
         const string sql = """
-            UPDATE Grapes
-            SET Name = @Name,
-                ColorType = @ColorType,
-                TypicalBody = @TypicalBody,
-                TypicalTannins = @TypicalTannins,
-                TypicalAcidity = @TypicalAcidity,
-                Description = @Description
-            WHERE Id = @Id;
+            UPDATE grapes
+            SET name = @Name,
+                color_type = @ColorType,
+                typical_body = @TypicalBody,
+                typical_tannins = @TypicalTannins,
+                typical_acidity = @TypicalAcidity,
+                description = @Description
+            WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
@@ -65,7 +65,7 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "DELETE FROM Grapes WHERE Id = @Id;";
+        const string sql = "DELETE FROM grapes WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
@@ -74,7 +74,7 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "SELECT EXISTS(SELECT 1 FROM Grapes WHERE Id = @Id);";
+        const string sql = "SELECT EXISTS(SELECT 1 FROM grapes WHERE id = @Id);";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));

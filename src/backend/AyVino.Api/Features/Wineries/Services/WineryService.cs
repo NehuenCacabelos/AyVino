@@ -1,5 +1,5 @@
 using AyVino.Api.Common.Exceptions;
-using AyVino.Api.Common.Security;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Locations.Repositories;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;

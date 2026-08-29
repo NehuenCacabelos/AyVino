@@ -1,4 +1,4 @@
-namespace AyVino.Api.Common.Security;
+namespace AyVino.Api.Common.Security.Jwt;
 
 public class JwtSettings
 {

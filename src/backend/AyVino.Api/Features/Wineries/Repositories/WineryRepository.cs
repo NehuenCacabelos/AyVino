@@ -11,9 +11,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, Description, LocationId, FoundationYear, Website, UserId, Status, RegisterDate
-            FROM Wineries
-            WHERE Id = @Id;
+            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
+            FROM wineries
+            WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Winery>(
@@ -23,11 +23,11 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, Description, LocationId, FoundationYear, Website, UserId, Status, RegisterDate
-            FROM Wineries
-            WHERE (@Status IS NULL OR Status = @Status)
-              AND (@LocationId IS NULL OR LocationId = @LocationId)
-            ORDER BY Id
+            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
+            FROM wineries
+            WHERE (@Status IS NULL OR status = @Status)
+              AND (@LocationId IS NULL OR location_id = @LocationId)
+            ORDER BY id
             OFFSET @Offset LIMIT @PageSize;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -39,9 +39,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<Winery> CreateAsync(int? userId, CreateWineryRequestDto dto, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO Wineries (Name, Description, LocationId, FoundationYear, Website, UserId, Status, RegisterDate)
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date)
             VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate)
-            RETURNING Id;
+            RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
 
@@ -78,13 +78,13 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<bool> UpdateAsync(int id, UpdateWineryRequestDto dto, CancellationToken ct = default)
     {
         const string sql = """
-            UPDATE Wineries
-            SET Name = @Name,
-                Description = @Description,
-                LocationId = @LocationId,
-                FoundationYear = @FoundationYear,
-                Website = @Website
-            WHERE Id = @Id;
+            UPDATE wineries
+            SET name = @Name,
+                description = @Description,
+                location_id = @LocationId,
+                foundation_year = @FoundationYear,
+                website = @Website
+            WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
@@ -95,9 +95,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default)
     {
         const string sql = """
-            UPDATE Wineries
-            SET Status = @Status
-            WHERE Id = @Id;
+            UPDATE wineries
+            SET status = @Status
+            WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
@@ -107,7 +107,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "DELETE FROM Wineries WHERE Id = @Id;";
+        const string sql = "DELETE FROM wineries WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
@@ -116,7 +116,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "SELECT EXISTS(SELECT 1 FROM Wineries WHERE Id = @Id);";
+        const string sql = "SELECT EXISTS(SELECT 1 FROM wineries WHERE id = @Id);";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));

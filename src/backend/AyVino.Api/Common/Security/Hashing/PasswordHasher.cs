@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace AyVino.Api.Common.Security;
+namespace AyVino.Api.Common.Security.Hashing;
 
 public class PasswordHasher : IPasswordHasher
 {
