@@ -16,4 +16,3 @@ public interface IUserRepository
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
     Task<bool> ExistsByNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default);
 }
-

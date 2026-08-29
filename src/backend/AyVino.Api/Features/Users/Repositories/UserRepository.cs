@@ -184,4 +184,3 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, new { NombreUsuario = nombreUsuario }, cancellationToken: ct));
     }
 }
-

@@ -14,6 +14,7 @@ public class PasswordHasher : IPasswordHasher
 
     public PasswordHasher()
     {
+
         DummyHash = HashPassword("dummy_security_timing_attack_mitigation_password");
     }
 
