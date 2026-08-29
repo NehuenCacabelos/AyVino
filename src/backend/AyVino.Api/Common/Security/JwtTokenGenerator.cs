@@ -3,25 +3,20 @@ using System.Security.Claims;
 using System.Text;
 using AyVino.Api.Features.Users.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AyVino.Api.Common.Security;
 
-public class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenGenerator
+public class JwtTokenGenerator(IOptions<JwtSettings> jwtSettings) : IJwtTokenGenerator
 {
-    private readonly string _secretKey = configuration["Jwt:SecretKey"]
-        ?? throw new InvalidOperationException("Configuración JWT 'SecretKey' no encontrada.");
-    private readonly string _issuer = configuration["Jwt:Issuer"]
-        ?? throw new InvalidOperationException("Configuración JWT 'Issuer' no encontrada.");
-    private readonly string _audience = configuration["Jwt:Audience"]
-        ?? throw new InvalidOperationException("Configuración JWT 'Audience' no encontrada.");
-    private readonly int _expirationMinutes = configuration.GetValue<int>("Jwt:ExpirationMinutes", 120);
+    private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
     public (string Token, DateTime ExpiresAt) GenerateToken(User user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_expirationMinutes);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes);
 
         var claims = new List<Claim>
         {
@@ -33,8 +28,8 @@ public class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenGenerato
         };
 
         var tokenDescriptor = new JwtSecurityToken(
-            issuer: _issuer,
-            audience: _audience,
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
             claims: claims,
             expires: expiresAt,
             signingCredentials: credentials);
