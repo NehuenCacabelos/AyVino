@@ -5,10 +5,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>3b6fab02-3ce8-4f23-a34b-20a45741784c</UserSecretsId>
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="FluentMigrator" Version="8.0.1" />
+    <PackageReference Include="FluentMigrator.Runner" Version="8.0.1" />
+    <PackageReference Include="FluentMigrator.Runner.Postgres" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
