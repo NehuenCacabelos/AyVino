@@ -38,14 +38,14 @@ public class AuthService(
             throw new UnauthorizedException("Credenciales inválidas.");
         }
 
-        if (!user.Activo)
+        if (!user.IsActive)
         {
             throw new UnauthorizedException("La cuenta se encuentra desactivada.");
         }
 
-        if (credential.BloqueadoHasta.HasValue && credential.BloqueadoHasta.Value > DateTime.UtcNow)
+        if (credential.BlockedUntil.HasValue && credential.BlockedUntil.Value > DateTime.UtcNow)
         {
-            throw new UnauthorizedException($"La cuenta se encuentra temporalmente bloqueada hasta {credential.BloqueadoHasta.Value:yyyy-MM-dd HH:mm:ss} UTC.");
+            throw new UnauthorizedException($"La cuenta se encuentra temporalmente bloqueada hasta {credential.BlockedUntil.Value:yyyy-MM-dd HH:mm:ss} UTC.");
         }
 
         var isPasswordValid = passwordHasher.VerifyPassword(request.Password, credential.PasswordHash);

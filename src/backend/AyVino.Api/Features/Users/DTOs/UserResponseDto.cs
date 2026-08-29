@@ -2,12 +2,12 @@ namespace AyVino.Api.Features.Users.DTOs;
 
 public record UserResponseDto(
     int Id,
-    string NombreUsuario,
+    string Username,
     string Email,
-    string Rol,
-    DateTime FechaRegistro,
-    bool Activo,
-    string? FotoPerfil,
+    string Role,
+    DateTime RegisterDate,
+    bool IsActive,
+    string? Photo,
     string? Bio
 );
 

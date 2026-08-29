@@ -1,11 +1,11 @@
 namespace AyVino.Api.Features.Users.DTOs;
 
 public record CreateUserRequestDto(
-    string NombreUsuario,
+    string Username,
     string Email,
     string Password,
-    string Rol = "Usuario",
+    string Role = "User",
     string? Bio = null,
-    string? FotoPerfil = null
+    string? Photo = null
 );
 

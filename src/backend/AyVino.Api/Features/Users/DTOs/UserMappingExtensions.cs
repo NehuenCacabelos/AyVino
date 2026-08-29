@@ -8,12 +8,12 @@ public static class UserMappingExtensions
     {
         return new User
         {
-            NombreUsuario = dto.NombreUsuario.Trim(),
+            Username = dto.Username.Trim(),
             Email = dto.Email.Trim().ToLowerInvariant(),
-            Rol = string.IsNullOrWhiteSpace(dto.Rol) ? "Usuario" : dto.Rol.Trim(),
-            FechaRegistro = DateTime.UtcNow,
-            Activo = true,
-            FotoPerfil = dto.FotoPerfil?.Trim(),
+            Role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim(),
+            RegisterDate = DateTime.UtcNow,
+            IsActive = true,
+            Photo = dto.Photo?.Trim(),
             Bio = dto.Bio?.Trim()
         };
     }
@@ -22,12 +22,12 @@ public static class UserMappingExtensions
     {
         return new UserResponseDto(
             Id: user.Id,
-            NombreUsuario: user.NombreUsuario,
+            Username: user.Username,
             Email: user.Email,
-            Rol: user.Rol,
-            FechaRegistro: user.FechaRegistro,
-            Activo: user.Activo,
-            FotoPerfil: user.FotoPerfil,
+            Role: user.Role,
+            RegisterDate: user.RegisterDate,
+            IsActive: user.IsActive,
+            Photo: user.Photo,
             Bio: user.Bio
         );
     }
@@ -37,15 +37,15 @@ public static class UserMappingExtensions
         return users.Select(u => u.ToResponseDto());
     }
 
-    public static UserCredential ToCredentialEntity(this CreateUserRequestDto dto, int usuarioId, string passwordHash)
+    public static UserCredential ToCredentialEntity(this CreateUserRequestDto dto, int userId, string passwordHash)
     {
         return new UserCredential
         {
-            UsuarioId = usuarioId,
+            UserId = userId,
             PasswordHash = passwordHash,
-            UltimoCambioPassword = DateTime.UtcNow,
-            IntentosFallidos = 0,
-            BloqueadoHasta = null
+            LastPasswordChange = DateTime.UtcNow,
+            FailedLoginAttempts = 0,
+            BlockedUntil = null
         };
     }
 }

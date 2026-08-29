@@ -6,13 +6,13 @@ public interface IUserRepository
 {
     Task<User?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
-    Task<User?> GetByNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default);
+    Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
     Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default);
     Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default);
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);
-    Task<bool> UpdateProfileAsync(int id, string nombreUsuario, string? bio, string? fotoPerfil, CancellationToken ct = default);
-    Task<bool> SetActivoAsync(int id, bool activo, CancellationToken ct = default);
+    Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default);
+    Task<bool> SetIsActiveAsync(int id, bool isActive, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
-    Task<bool> ExistsByNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default);
+    Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default);
 }

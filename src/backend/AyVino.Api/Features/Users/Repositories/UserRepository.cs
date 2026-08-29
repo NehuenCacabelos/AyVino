@@ -9,8 +9,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     public async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, NombreUsuario, Email, Rol, FechaRegistro, Activo, FotoPerfil, Bio
-            FROM Usuarios
+            SELECT Id, Username, Email, Role, RegisterDate, IsActive, Photo, Bio
+            FROM Users
             WHERE Id = @Id;
             """;
 
@@ -22,8 +22,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, NombreUsuario, Email, Rol, FechaRegistro, Activo, FotoPerfil, Bio
-            FROM Usuarios
+            SELECT Id, Username, Email, Role, RegisterDate, IsActive, Photo, Bio
+            FROM Users
             WHERE LOWER(Email) = LOWER(@Email);
             """;
 
@@ -32,24 +32,24 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, new { Email = email }, cancellationToken: ct));
     }
 
-    public async Task<User?> GetByNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default)
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, NombreUsuario, Email, Rol, FechaRegistro, Activo, FotoPerfil, Bio
-            FROM Usuarios
-            WHERE LOWER(NombreUsuario) = LOWER(@NombreUsuario);
+            SELECT Id, Username, Email, Role, RegisterDate, IsActive, Photo, Bio
+            FROM Users
+            WHERE LOWER(Username) = LOWER(@Username);
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<User>(
-            new CommandDefinition(sql, new { NombreUsuario = nombreUsuario }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, NombreUsuario, Email, Rol, FechaRegistro, Activo, FotoPerfil, Bio
-            FROM Usuarios
+            SELECT Id, Username, Email, Role, RegisterDate, IsActive, Photo, Bio
+            FROM Users
             ORDER BY Id ASC;
             """;
 
@@ -61,10 +61,10 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT u.Id, u.NombreUsuario, u.Email, u.Rol, u.FechaRegistro, u.Activo, u.FotoPerfil, u.Bio,
-                   c.UsuarioId, c.PasswordHash, c.UltimoCambioPassword, c.IntentosFallidos, c.BloqueadoHasta
-            FROM Usuarios u
-            LEFT JOIN Credenciales c ON u.Id = c.UsuarioId
+            SELECT u.Id, u.Username, u.Email, u.Role, u.RegisterDate, u.IsActive, u.Photo, u.Bio,
+                   c.UserId, c.PasswordHash, c.LastPasswordChange, c.FailedLoginAttempts, c.BlockedUntil
+            FROM Users u
+            LEFT JOIN UserCredentials c ON u.Id = c.UserId
             WHERE LOWER(u.Email) = LOWER(@Email);
             """;
 
@@ -72,7 +72,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         var result = await connection.QueryAsync<User, UserCredential, (User? User, UserCredential? Credential)>(
             new CommandDefinition(sql, new { Email = email }, cancellationToken: ct),
             (user, credential) => (user, credential),
-            splitOn: "UsuarioId");
+            splitOn: "UserId");
 
         return result.FirstOrDefault();
     }
@@ -85,8 +85,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         try
         {
             const string insertUserSql = """
-                INSERT INTO Usuarios (NombreUsuario, Email, Rol, FechaRegistro, Activo, FotoPerfil, Bio)
-                VALUES (@NombreUsuario, @Email, @Rol, @FechaRegistro, @Activo, @FotoPerfil, @Bio)
+                INSERT INTO Users (Username, Email, Role, RegisterDate, IsActive, Photo, Bio)
+                VALUES (@Username, @Email, @Role, @RegisterDate, @IsActive, @Photo, @Bio)
                 RETURNING Id;
                 """;
 
@@ -94,11 +94,11 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 new CommandDefinition(insertUserSql, user, transaction: transaction, cancellationToken: ct));
 
             const string insertCredentialSql = """
-                INSERT INTO Credenciales (UsuarioId, PasswordHash, UltimoCambioPassword, IntentosFallidos, BloqueadoHasta)
-                VALUES (@UsuarioId, @PasswordHash, @UltimoCambioPassword, @IntentosFallidos, @BloqueadoHasta);
+                INSERT INTO UserCredentials (UserId, PasswordHash, LastPasswordChange, FailedLoginAttempts, BlockedUntil)
+                VALUES (@UserId, @PasswordHash, @LastPasswordChange, @FailedLoginAttempts, @BlockedUntil);
                 """;
 
-            var credentialWithId = credential with { UsuarioId = userId };
+            var credentialWithId = credential with { UserId = userId };
             await connection.ExecuteAsync(
                 new CommandDefinition(insertCredentialSql, credentialWithId, transaction: transaction, cancellationToken: ct));
 
@@ -112,34 +112,34 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         }
     }
 
-    public async Task<bool> UpdateProfileAsync(int id, string nombreUsuario, string? bio, string? fotoPerfil, CancellationToken ct = default)
+    public async Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default)
     {
         const string sql = """
-            UPDATE Usuarios
-            SET NombreUsuario = @NombreUsuario,
+            UPDATE Users
+            SET Username = @Username,
                 Bio = @Bio,
-                FotoPerfil = @FotoPerfil
+                Photo = @Photo
             WHERE Id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, NombreUsuario = nombreUsuario, Bio = bio, FotoPerfil = fotoPerfil }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, Username = username, Bio = bio, Photo = photo }, cancellationToken: ct));
 
         return rowsAffected > 0;
     }
 
-    public async Task<bool> SetActivoAsync(int id, bool activo, CancellationToken ct = default)
+    public async Task<bool> SetIsActiveAsync(int id, bool isActive, CancellationToken ct = default)
     {
         const string sql = """
-            UPDATE Usuarios
-            SET Activo = @Activo
+            UPDATE Users
+            SET IsActive = @IsActive
             WHERE Id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, Activo = activo }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, IsActive = isActive }, cancellationToken: ct));
 
         return rowsAffected > 0;
     }
@@ -147,7 +147,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            DELETE FROM Usuarios
+            DELETE FROM Users
             WHERE Id = @Id;
             """;
 
@@ -162,7 +162,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     {
         const string sql = """
             SELECT EXISTS (
-                SELECT 1 FROM Usuarios WHERE LOWER(Email) = LOWER(@Email)
+                SELECT 1 FROM Users WHERE LOWER(Email) = LOWER(@Email)
             );
             """;
 
@@ -171,16 +171,16 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, new { Email = email }, cancellationToken: ct));
     }
 
-    public async Task<bool> ExistsByNombreUsuarioAsync(string nombreUsuario, CancellationToken ct = default)
+    public async Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default)
     {
         const string sql = """
             SELECT EXISTS (
-                SELECT 1 FROM Usuarios WHERE LOWER(NombreUsuario) = LOWER(@NombreUsuario)
+                SELECT 1 FROM Users WHERE LOWER(Username) = LOWER(@Username)
             );
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
-            new CommandDefinition(sql, new { NombreUsuario = nombreUsuario }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
 }

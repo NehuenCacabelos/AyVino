@@ -68,7 +68,7 @@ public static class UserEndpoints
 
         group.MapPatch("/{id:int}/status", async (int id, ChangeUserStatusRequestDto request, IUserService userService, CancellationToken ct) =>
         {
-            await userService.ChangeStatusAsync(id, request.Activo, ct);
+            await userService.ChangeStatusAsync(id, request.IsActive, ct);
             return Results.NoContent();
         })
         .WithName("ChangeUserStatus")

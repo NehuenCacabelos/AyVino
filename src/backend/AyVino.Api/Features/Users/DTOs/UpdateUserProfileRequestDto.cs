@@ -1,8 +1,8 @@
 namespace AyVino.Api.Features.Users.DTOs;
 
 public record UpdateUserProfileRequestDto(
-    string NombreUsuario,
+    string Username,
     string? Bio,
-    string? FotoPerfil
+    string? Photo
 );
 
