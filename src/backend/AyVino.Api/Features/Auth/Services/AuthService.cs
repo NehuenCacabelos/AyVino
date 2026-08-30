@@ -1,18 +1,24 @@
+using System.Security.Cryptography;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Auth.DTOs;
+using AyVino.Api.Features.Auth.Models;
+using AyVino.Api.Features.Auth.Repositories;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace AyVino.Api.Features.Auth.Services;
 
 public class AuthService(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
-    IJwtTokenGenerator jwtTokenGenerator) : IAuthService
+    IJwtTokenGenerator jwtTokenGenerator,
+    IRefreshTokenRepository refreshTokenRepository,
+    IOptions<JwtSettings> jwtSettings) : IAuthService
 {
-    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request, CancellationToken ct = default)
+    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken ct = default)
     {
         if (request is null)
         {
@@ -56,7 +62,89 @@ public class AuthService(
         }
 
         var (token, expiresAt) = jwtTokenGenerator.GenerateToken(user);
-        return new AuthResponseDto(token, "Bearer", expiresAt, user.ToResponseDto());
+        var refreshTokenString = GenerateSecureRefreshToken();
+        var refreshTokenExpiresAt = DateTime.UtcNow.AddDays(jwtSettings.Value.RefreshTokenExpirationDays);
+
+        var refreshToken = new RefreshToken
+        {
+            Token = refreshTokenString,
+            UserId = user.Id,
+            ExpiresAt = refreshTokenExpiresAt,
+            CreatedByIp = ipAddress
+        };
+
+        await refreshTokenRepository.SaveRefreshTokenAsync(refreshToken, ct);
+
+        return new AuthResponseDto(token, refreshTokenString, "Bearer", expiresAt, user.ToResponseDto());
+    }
+
+    public async Task<AuthResponseDto> RefreshAsync(RefreshRequestDto request, string? ipAddress, CancellationToken ct = default)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            throw new ValidationException("El token de refresco es obligatorio.");
+        }
+
+        var oldRefreshToken = await refreshTokenRepository.GetByTokenAsync(request.RefreshToken, ct);
+        if (oldRefreshToken is null)
+        {
+            throw new UnauthorizedException("Sesión inválida o expirada.");
+        }
+
+        // Detección de Reutilización / Robo de Token
+        if (oldRefreshToken.IsRevoked || oldRefreshToken.ReplacedByToken != null)
+        {
+            // El token ya fue usado o revocado. Revocamos todos los tokens del usuario.
+            await refreshTokenRepository.RevokeAllUserTokensAsync(oldRefreshToken.UserId, ipAddress, ct);
+            throw new UnauthorizedException("Sesión inválida o expirada.");
+        }
+
+        if (oldRefreshToken.IsExpired)
+        {
+            throw new UnauthorizedException("Sesión inválida o expirada.");
+        }
+
+        var user = await userRepository.GetByIdAsync(oldRefreshToken.UserId, ct);
+        if (user is null || !user.IsActive)
+        {
+            throw new UnauthorizedException("Sesión inválida o expirada.");
+        }
+
+        // Generar nuevos tokens
+        var (newAccessToken, expiresAt) = jwtTokenGenerator.GenerateToken(user);
+        var newRefreshTokenString = GenerateSecureRefreshToken();
+        var newRefreshTokenExpiresAt = DateTime.UtcNow.AddDays(jwtSettings.Value.RefreshTokenExpirationDays);
+
+        var newRefreshToken = new RefreshToken
+        {
+            Token = newRefreshTokenString,
+            UserId = user.Id,
+            ExpiresAt = newRefreshTokenExpiresAt,
+            CreatedByIp = ipAddress
+        };
+
+        await refreshTokenRepository.SaveRefreshTokenAsync(newRefreshToken, ct);
+
+        // Rotación: marcar el anterior como revocado y enlazado al nuevo
+        var updatedOldToken = oldRefreshToken with
+        {
+            RevokedAt = DateTime.UtcNow,
+            RevokedByIp = ipAddress,
+            ReplacedByToken = newRefreshTokenString
+        };
+        await refreshTokenRepository.UpdateRefreshTokenAsync(updatedOldToken, ct);
+
+        return new AuthResponseDto(newAccessToken, newRefreshTokenString, "Bearer", expiresAt, user.ToResponseDto());
+    }
+
+    public async Task RevokeAsync(RevokeTokenRequestDto request, string? ipAddress, CancellationToken ct = default)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            throw new ValidationException("El token de refresco es obligatorio.");
+        }
+
+        await refreshTokenRepository.RevokeRefreshTokenAsync(request.RefreshToken, ipAddress, ct);
     }
 
     public async Task ChangePasswordAsync(int userId, ChangePasswordRequestDto request, CancellationToken ct = default)
@@ -100,6 +188,14 @@ public class AuthService(
         if(!update){
             throw new InvalidOperationException("No fue posible actualizar la contraseña.");
         }
+    }
+
+    private string GenerateSecureRefreshToken()
+    {
+        var randomNumber = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomNumber);
+        return Convert.ToBase64String(randomNumber);
     }
 }
 

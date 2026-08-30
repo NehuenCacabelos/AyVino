@@ -7,6 +7,9 @@ using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Auth.Endpoints;
 using AyVino.Api.Features.Auth.Services;
+using AyVino.Api.Features.Auth.Repositories;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using AyVino.Api.Features.Users.Endpoints;
 using AyVino.Api.Features.Users.Repositories;
 using AyVino.Api.Features.Users.Services;
@@ -35,6 +38,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
+
+// Rate Limiting configuration
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("AuthLimit", context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ipAddress,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 15,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+});
 
 // Exception Handling & RFC 7807 ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -84,8 +106,10 @@ builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHostedService<TokenCleanupBackgroundService>();
 builder.Services.AddScoped<IWineryRepository, WineryRepository>();
 builder.Services.AddScoped<IWineryService, WineryService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
@@ -134,6 +158,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Rate Limiter Middleware
+app.UseRateLimiter();
 
 // Authentication & Authorization Middlewares
 app.UseAuthentication();
