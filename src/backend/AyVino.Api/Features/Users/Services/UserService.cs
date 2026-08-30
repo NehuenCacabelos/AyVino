@@ -10,9 +10,9 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
 {
     private static readonly HashSet<string> AllowedRoles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Admin",
-        "Bodega",
-        "User"
+        AppRoles.Admin,
+        AppRoles.Winery,
+        AppRoles.User
     };
 
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
