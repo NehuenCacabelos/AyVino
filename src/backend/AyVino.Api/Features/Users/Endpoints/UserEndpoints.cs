@@ -28,7 +28,7 @@ public static class UserEndpoints
 
         // Grupo para usuarios autenticados (requiere login)
         var authenticatedGroup = app.MapGroup("/api/users")
-                                    .WithTags("Users")
+                                    .WithTags("Users profile")
                                     .RequireAuthorization();
 
         authenticatedGroup.MapGet("/me", async (ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
@@ -38,7 +38,7 @@ public static class UserEndpoints
             return Results.Ok(user);
         })
         .WithName("GetCurrentUserProfile")
-        .WithSummary("Obtiene el perfil del usuario autenticado actual a partir de los Claims del token");
+        .WithSummary("Obtiene el perfil del usuario autenticado actual");
 
         authenticatedGroup.MapPut("/me", async (UpdateUserProfileRequestDto request, ClaimsPrincipal claimsPrincipal, IUserService userService, CancellationToken ct) =>
         {
