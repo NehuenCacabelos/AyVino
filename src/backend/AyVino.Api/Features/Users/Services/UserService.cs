@@ -185,7 +185,7 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         var role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim();
         if (!AllowedRoles.Contains(role))
         {
-            throw new ValidationException($"El rol '{dto.Role}' no es válido. Roles permitidos: Admin, Bodega, User.");
+            throw new ValidationException($"El rol '{dto.Role}' no es válido. Roles permitidos: Admin, Winery, User.");
         }
     }
 }

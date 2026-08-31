@@ -96,6 +96,12 @@ builder.Services.AddAuthorization(options => {
     // Policy para usuarios Administradores
     options.AddPolicy(AppPolicies.RequireAdmin, policy => 
         policy.RequireRole(AppRoles.Admin));
+    // Policy para usuarios Comunes
+    options.AddPolicy(AppPolicies.RequireUser, policy => 
+        policy.RequireRole(AppRoles.User));
+    // Policy para usuarios Bodegas
+    options.AddPolicy(AppPolicies.RequireWinery, policy => 
+        policy.RequireRole(AppRoles.Winery));
 });
 
 

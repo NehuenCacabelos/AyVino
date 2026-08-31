@@ -18,7 +18,7 @@ public class AuthService(
     IRefreshTokenRepository refreshTokenRepository,
     IOptions<JwtSettings> jwtSettings) : IAuthService
 {
-    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken ct = default)
+    public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken ct = default)
     {
         if (request is null)
         {
@@ -75,10 +75,10 @@ public class AuthService(
 
         await refreshTokenRepository.SaveRefreshTokenAsync(refreshToken, ct);
 
-        return new AuthResponseDto(token, refreshTokenString, "Bearer", expiresAt, user.ToResponseDto());
+        return new LoginResponseDto(token, refreshTokenString, "Bearer", expiresAt, user.ToResponseDto());
     }
 
-    public async Task<AuthResponseDto> RefreshAsync(RefreshRequestDto request, string? ipAddress, CancellationToken ct = default)
+    public async Task<RefreshResponseDto> RefreshAsync(RefreshRequestDto request, string? ipAddress, CancellationToken ct = default)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.RefreshToken))
         {
@@ -134,7 +134,7 @@ public class AuthService(
         };
         await refreshTokenRepository.UpdateRefreshTokenAsync(updatedOldToken, ct);
 
-        return new AuthResponseDto(newAccessToken, newRefreshTokenString, "Bearer", expiresAt, user.ToResponseDto());
+        return new RefreshResponseDto(newAccessToken, newRefreshTokenString, "Bearer", expiresAt);
     }
 
     public async Task RevokeAsync(RevokeTokenRequestDto request, string? ipAddress, CancellationToken ct = default)
