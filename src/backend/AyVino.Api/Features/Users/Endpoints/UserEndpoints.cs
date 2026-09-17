@@ -18,11 +18,12 @@ public static class UserEndpoints
         var publicGroup = app.MapGroup("/api/users")
                              .WithTags("Users");
 
-        publicGroup.MapPost("/", async (CreateUserRequestDto request, IUserService userService, CancellationToken ct) =>
+        publicGroup.MapPost("/", async (RegisterUserRequestDto request, IUserService userService, CancellationToken ct) =>
         {
-            var createdUser = await userService.RegisterAsync(request, ct);
-            return Results.Created($"/api/users/{createdUser.Id}", createdUser);
+            var createdUser = await userService.RegisterAsync(request.ToCreateDto(), ct);
+            return Results.Created("/api/users/me", createdUser);
         })
+        .AllowAnonymous()
         .WithName("RegisterUser")
         .WithSummary("Registra un nuevo usuario con sus credenciales");
 

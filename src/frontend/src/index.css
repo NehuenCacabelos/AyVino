@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wine-50: #fdf2f4;
+  --color-wine-100: #fbe6e9;
+  --color-wine-500: #be123c;
+  --color-wine-800: #881337;
+  --color-wine-900: #4c0519;
+
+  --color-cream-50: #fcfbf9;
+  --color-cream-100: #f7f4ed;
+  --color-cream-200: #ede8dc;
+
+  --color-earth-900: #1c1917;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+}
+
+body {
+  background-color: var(--color-cream-50);
+  color: var(--color-earth-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

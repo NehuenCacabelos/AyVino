@@ -177,9 +177,9 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             throw new ValidationException("El formato del correo electrónico no es válido.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
+        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 8)
         {
-            throw new ValidationException("La contraseña debe tener al menos 6 caracteres.");
+            throw new ValidationException("La contraseña debe tener al menos 8 caracteres.");
         }
 
         var role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim();

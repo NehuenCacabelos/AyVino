@@ -1,9 +1,21 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Users.Models;
 
 namespace AyVino.Api.Features.Users.DTOs;
 
 public static class UserMappingExtensions
 {
+    public static CreateUserRequestDto ToCreateDto(this RegisterUserRequestDto dto)
+    {
+        return new CreateUserRequestDto(
+            Username: dto.Username,
+            Email: dto.Email,
+            Password: dto.Password,
+            Role: AppRoles.User,
+            Bio: dto.Bio,
+            Photo: dto.Photo
+        );
+    }
     public static User ToEntity(this CreateUserRequestDto dto)
     {
         return new User

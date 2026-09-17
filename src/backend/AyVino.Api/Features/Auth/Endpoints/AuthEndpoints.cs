@@ -20,6 +20,7 @@ public static class AuthEndpoints
             var response = await authService.LoginAsync(request, ipAddress, ct);
             return Results.Ok(response);
         })
+        .AllowAnonymous()
         .RequireRateLimiting("AuthLimit")
         .WithName("Login")
         .WithSummary("Inicia sesión y genera tokens de acceso y refresco");
@@ -30,6 +31,7 @@ public static class AuthEndpoints
             var response = await authService.RefreshAsync(request, ipAddress, ct);
             return Results.Ok(response);
         })
+        .AllowAnonymous()
         .RequireRateLimiting("AuthLimit")
         .WithName("Refresh")
         .WithSummary("Refresca el token de acceso utilizando un token de refresco válido");
