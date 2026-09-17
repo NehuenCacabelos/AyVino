@@ -34,3 +34,17 @@ AyVino/
 │           │   └── Reviews/      # Reseñas y Puntuaciones
 │           ├── appsettings.json  # Configuración y Connection Strings
 │           └── Program.cs        # Punto de entrada (registro de servicios y rutas)
+```
+
+---
+
+## 📚 Documentación del Proyecto
+
+Toda la documentación técnica, funcional y de arquitectura se encuentra centralizada en el directorio [`docs/`](file:///c:/Codigo%20General/AyVino/AyVino/docs):
+
+- 📖 [**Índice Maestro de Documentación (`docs/README.md`)**](file:///c:/Codigo%20General/AyVino/AyVino/docs/README.md)
+- 📋 [Especificación de Requerimientos (`docs/requirements/spec.md`)](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)
+- 🏗️ [Arquitectura Global (`docs/architecture/overview.md`)](file:///c:/Codigo%20General/AyVino/AyVino/docs/architecture/overview.md)
+- ⚙️ [Documentación Backend (`docs/backend/overview.md`)](file:///c:/Codigo%20General/AyVino/AyVino/docs/backend/overview.md)
+- 🎨 [Documentación Frontend (`docs/frontend/overview.md`)](file:///c:/Codigo%20General/AyVino/AyVino/docs/frontend/overview.md)
+- 🚀 [Guía de Inicio Rápido (`docs/guides/getting-started.md`)](file:///c:/Codigo%20General/AyVino/AyVino/docs/guides/getting-started.md)

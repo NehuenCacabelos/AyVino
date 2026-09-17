@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wine-50: #fdf2f4;
+  --color-wine-100: #fbe6e9;
+  --color-wine-500: #be123c;
+  --color-wine-800: #881337;
+  --color-wine-900: #4c0519;
+
+  --color-cream-50: #fcfbf9;
+  --color-cream-100: #f7f4ed;
+  --color-cream-200: #ede8dc;
+
+  --color-earth-900: #1c1917;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+}
+
+body {
+  background-color: var(--color-cream-50);
+  color: var(--color-earth-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pseudo-3D and editorial visual utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+@keyframes wineFloat {
+  0%, 100% {
+    transform: translateY(0px) rotateY(-18deg) rotateX(6deg) rotateZ(1deg);
+  }
+  50% {
+    transform: translateY(-14px) rotateY(-14deg) rotateX(4deg) rotateZ(2deg);
+  }
+}
+
+@keyframes shadowPulse {
+  0%, 100% {
+    transform: scale(1) rotateX(75deg);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(0.88) rotateX(75deg);
+    opacity: 0.2;
+  }
+}
+
+.animate-wine-float {
+  animation: wineFloat 7s ease-in-out infinite;
+}
+
+.animate-shadow-pulse {
+  animation: shadowPulse 7s ease-in-out infinite;
+}
