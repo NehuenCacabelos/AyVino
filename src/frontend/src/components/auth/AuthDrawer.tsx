@@ -1,14 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { X, Lock, Mail, User, ArrowRight, CheckCircle2, Wine, Sparkles } from 'lucide-react';
+import type { AuthMode, AuthFormData } from '../../types/auth';
+
+interface AuthDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialMode?: AuthMode;
+}
 
 /**
  * AuthDrawer Component
  * Panel lateral derecho (Slide-Over Drawer) elegante y editorial.
  * Reemplaza el modal flotante centrado para integrarse orgánicamente con la estética de AyVino.
  */
-export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
-  const [mode, setMode] = useState(initialMode); // 'login' | 'register'
-  const [formData, setFormData] = useState({
+export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }: AuthDrawerProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [formData, setFormData] = useState<AuthFormData>({
     name: '',
     email: '',
     password: '',
@@ -30,10 +37,9 @@ export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
     }
   }
 
-
   // Manejo de accesibilidad: tecla Escape y bloqueo de scroll en el body
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
@@ -52,7 +58,7 @@ export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
     };
   }, [isOpen, onClose]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -60,7 +66,7 @@ export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -206,7 +212,7 @@ export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
                         type="text"
                         name="name"
                         required
-                        value={formData.name}
+                        value={formData.name || ''}
                         onChange={handleChange}
                         placeholder="Ej. Martín Berasategui"
                         className="w-full pl-10 pr-3.5 py-2.5 bg-cream-100/70 border border-cream-200/90 rounded-xl text-sm text-earth-900 placeholder:text-earth-900/35 focus:outline-none focus:bg-cream-50 focus:border-wine-800 focus:ring-2 focus:ring-wine-800/10 transition-all"
@@ -323,3 +329,4 @@ export default function AuthDrawer({ isOpen, onClose, initialMode = 'login' }) {
     </div>
   );
 }
+

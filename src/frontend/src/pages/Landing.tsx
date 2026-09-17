@@ -4,6 +4,8 @@ import AuthDrawer from '../components/auth/AuthDrawer';
 import WineCard from '../components/wine/WineCard';
 import WineBottleMock from '../components/wine/WineBottleMock';
 import WineDetailModal from '../components/wine/WineDetailModal';
+import type { CuratedWine } from '../types/wine';
+import type { AuthMode } from '../types/auth';
 import {
   Sparkles,
   ArrowDown,
@@ -20,7 +22,7 @@ import {
  * Datos mockeados de la muestra curada (Demo abierta sin bloqueo).
  * Representa la diversidad del terroir vitivinícola argentino y cumple RF-1.3 (Comunidad vs Bodega Oficial).
  */
-const CURATED_WINES = [
+const CURATED_WINES: CuratedWine[] = [
   {
     id: 'wine-1',
     name: 'Piedra Infinita Malbec',
@@ -105,10 +107,10 @@ const CURATED_WINES = [
 
 export default function Landing() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
-  const [selectedWine, setSelectedWine] = useState(null);
+  const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
+  const [selectedWine, setSelectedWine] = useState<CuratedWine | null>(null);
 
-  const handleOpenAuth = (mode = 'login') => {
+  const handleOpenAuth = (mode: AuthMode = 'login') => {
     setAuthModalMode(mode);
     setAuthModalOpen(true);
   };
@@ -117,7 +119,7 @@ export default function Landing() {
     setAuthModalOpen(false);
   };
 
-  const scrollToSection = (id) => {
+  const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -434,3 +436,4 @@ export default function Landing() {
     </div>
   );
 }
+

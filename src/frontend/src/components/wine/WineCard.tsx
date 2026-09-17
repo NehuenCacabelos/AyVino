@@ -1,5 +1,11 @@
 import { useState } from 'react';
 import { Star, Heart, MapPin, Wine as WineIcon, Sparkles, CheckCircle, Info } from 'lucide-react';
+import type { CuratedWine } from '../../types/wine';
+
+interface WineCardProps {
+  wine: CuratedWine;
+  onSelect?: (wine: CuratedWine) => void;
+}
 
 /**
  * WineCard Component
@@ -7,7 +13,7 @@ import { Star, Heart, MapPin, Wine as WineIcon, Sparkles, CheckCircle, Info } fr
  * Muestra información del terroir, notas de cata sensoriales, precio orientativo
  * y badge de procedencia (Oficial vs Comunidad).
  */
-export default function WineCard({ wine, onSelect }) {
+export default function WineCard({ wine, onSelect }: WineCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
   const {
@@ -142,3 +148,4 @@ export default function WineCard({ wine, onSelect }) {
     </article>
   );
 }
+

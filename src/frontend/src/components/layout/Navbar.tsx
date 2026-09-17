@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Wine, Menu, X, ArrowRight } from 'lucide-react';
+import type { AuthMode } from '../../types/auth';
+
+interface NavbarProps {
+  onOpenAuth?: (mode: AuthMode) => void;
+}
 
 /**
  * Navbar Component
  * Fija/flotante con efecto glassmorphism sutil (bg-cream-50/80 backdrop-blur-md),
  * logo tipográfico editorial en Playfair Display y acciones de acceso rápido.
  */
-export default function Navbar({ onOpenAuth }) {
+export default function Navbar({ onOpenAuth }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -120,3 +125,4 @@ export default function Navbar({ onOpenAuth }) {
     </header>
   );
 }
+

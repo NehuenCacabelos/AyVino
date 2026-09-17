@@ -1,14 +1,22 @@
 import { useEffect } from 'react';
 import { X, Star, MapPin, Award, CheckCircle, Sparkles, Utensils, Droplets, ShieldCheck } from 'lucide-react';
+import type { CuratedWine } from '../../types/wine';
+import type { AuthMode } from '../../types/auth';
+
+interface WineDetailModalProps {
+  wine: CuratedWine | null;
+  onClose: () => void;
+  onOpenAuth?: (mode: AuthMode) => void;
+}
 
 /**
  * WineDetailModal Component
  * Muestra la ficha de cata abierta y completa para la selección curada,
  * cumpliendo el requerimiento de visualización libre sin bloqueo de contenido demo.
  */
-export default function WineDetailModal({ wine, onClose, onOpenAuth }) {
+export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetailModalProps) {
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && wine) onClose();
     };
     if (wine) {
@@ -169,3 +177,4 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }) {
     </div>
   );
 }
+
