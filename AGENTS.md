@@ -6,3 +6,4 @@
 4. **Límites**: Desacoplamiento estricto; la capa API no expone entidades de dominio, usa DTOs.
 5. **Tests**: Cada nueva funcionalidad debe incluir sus respectivos tests en el directorio `tests`.
 6. **Agente**: Reglas de desarrollo en `AGENTS.md` y flujos complejos en `.agents/skills/`.
+7. **Documentación Viva**: Toda nueva funcionalidad, endpoint, cambio de esquema o vista debe reflejarse y documentarse automáticamente en su carpeta correspondiente dentro de `docs/` como parte de la definición de terminado (DoD).

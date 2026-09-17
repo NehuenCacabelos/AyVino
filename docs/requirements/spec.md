@@ -49,3 +49,4 @@ Este documento detalla el alcance funcional, el valor de negocio (El porqué) y 
 1. **Catálogo Operativo**: Capacidad de registrar bodegas oficiales, subir sus catálogos, y permitir a los usuarios comunes cargar botellas inexistentes.
 2. **Migración de Reseñas**: El proceso de deduplicación y traspaso de reseñas de vinos comunitarios a vinos oficiales funciona de manera consistente y sin pérdida de datos.
 3. **Organización del Usuario**: Los usuarios pueden guardar vinos en sus listas fijas y calificarlos numéricamente.
+
