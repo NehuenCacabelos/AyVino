@@ -10,8 +10,7 @@ public static class LocationEndpoints
 {
     public static IEndpointRouteBuilder MapLocationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/locations")
-                       .WithTags("Locations");
+        var group = app.MapGroup("/api/locations").WithTags("Locations");
 
         group.MapPost("/", async (CreateLocationRequestDto request, ILocationService locationService, CancellationToken ct) =>
         {
@@ -19,39 +18,12 @@ public static class LocationEndpoints
             return Results.Created($"/api/locations/{created.Id}", created);
         })
         .WithName("CreateLocation")
-        .WithSummary("Creates a new location");
-
-        group.MapGet("/", async (int pageNumber, int pageSize, string? country, ILocationService locationService, CancellationToken ct) =>
-        {
-            var locations = await locationService.GetAllAsync(pageNumber, pageSize, country, ct);
-            return Results.Ok(locations);
-        })
-        .WithName("GetAllLocations")
-        .WithSummary("Gets a paginated list of locations, with optional country filter");
+        .WithSummary("Creates a new location from an existing CityId");
 
         group.MapGet("/{id:int}", async (int id, ILocationService locationService, CancellationToken ct) =>
-        {
-            var location = await locationService.GetByIdAsync(id, ct);
-            return Results.Ok(location);
-        })
-        .WithName("GetLocationById")
-        .WithSummary("Gets a location by its ID");
-
-        group.MapPut("/{id:int}", async (int id, UpdateLocationRequestDto request, ILocationService locationService, CancellationToken ct) =>
-        {
-            var updated = await locationService.UpdateAsync(id, request, ct);
-            return Results.Ok(updated);
-        })
-        .WithName("UpdateLocation")
-        .WithSummary("Updates an existing location");
-
-        group.MapDelete("/{id:int}", async (int id, ILocationService locationService, CancellationToken ct) =>
-        {
-            await locationService.DeleteAsync(id, ct);
-            return Results.NoContent();
-        })
-        .WithName("DeleteLocation")
-        .WithSummary("Deletes a location");
+            Results.Ok(await locationService.GetByIdAsync(id, ct)))
+            .WithName("GetLocationById")
+            .WithSummary("Gets a location with its city/state names");
 
         return app;
     }
