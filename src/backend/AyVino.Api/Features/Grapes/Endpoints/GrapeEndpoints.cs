@@ -15,7 +15,7 @@ public static class GrapeEndpoints
             return Results.Created($"/api/grapes/{created.Id}", created);
         }).WithName("CreateGrape").WithSummary("Creates a new grape.");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, string? colorType, IGrapeService service, CancellationToken ct) =>
+        group.MapGet("/", async (IGrapeService service, int pageNumber = 1, int pageSize = 10, string? colorType = null, CancellationToken ct = default) =>
         {
             var grapes = await service.GetAllAsync(pageNumber, pageSize, colorType, ct);
             return Results.Ok(grapes);

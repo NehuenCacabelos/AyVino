@@ -25,6 +25,11 @@ public static class LocationEndpoints
             .WithName("GetLocationById")
             .WithSummary("Gets a location with its city/state names");
 
+        group.MapGet("/", async (ILocationService locationService, CancellationToken ct, int pageNumber = 1, int pageSize = 10) =>
+            Results.Ok(await locationService.GetAllAsync(pageNumber, pageSize, ct)))
+            .WithName("GetAllLocations")
+            .WithSummary("Gets a paginated list of locations with resolved city/state names");    
+
         return app;
     }
 }

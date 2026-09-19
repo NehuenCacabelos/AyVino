@@ -7,33 +7,33 @@ namespace AyVino.Api.Features.Locations.Repositories;
 
 public class LocationRepository(IDbConnectionFactory connectionFactory) : ILocationRepository
 {
-    public async Task<LocationResponseDto?> GetByIdAsync(int id, CancellationToken ct = default)
-    {
-        const string sql = """
-            SELECT l.Id, l.CityId, c.Name AS CityName, c.StateId, s.Name AS StateName
-            FROM Locations l
-            INNER JOIN Cities c ON c.Id = l.CityId
-            INNER JOIN States s ON s.Id = c.StateId
-            WHERE l.Id = @Id;
-            """;
+public async Task<LocationResponseDto?> GetByIdAsync(int id, CancellationToken ct = default)
+{
+    const string sql = """
+        SELECT l.Id, l.city_id AS CityId, c.Name AS CityName, c.state_id AS StateId, s.Name AS StateName
+        FROM Locations l
+        INNER JOIN Cities c ON c.Id = l.city_id
+        INNER JOIN States s ON s.Id = c.state_id
+        WHERE l.Id = @Id;
+        """;
 
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QuerySingleOrDefaultAsync<LocationResponseDto>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
-    }
+    await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+    return await connection.QuerySingleOrDefaultAsync<LocationResponseDto>(
+        new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+}
 
-    public async Task<int> CreateAsync(Location location, CancellationToken ct = default)
-    {
-        const string sql = """
-            INSERT INTO Locations (CityId)
-            VALUES (@CityId)
-            RETURNING Id;
-            """;
+public async Task<int> CreateAsync(Location location, CancellationToken ct = default)
+{
+    const string sql = """
+        INSERT INTO Locations (city_id)
+        VALUES (@CityId)
+        RETURNING Id;
+        """;
 
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteScalarAsync<int>(
-            new CommandDefinition(sql, location, cancellationToken: ct));
-    }
+    await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+    return await connection.ExecuteScalarAsync<int>(
+        new CommandDefinition(sql, location, cancellationToken: ct));
+}
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
@@ -45,4 +45,22 @@ public class LocationRepository(IDbConnectionFactory connectionFactory) : ILocat
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
+
+    public async Task<IEnumerable<LocationResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
+{
+    const string sql = """
+        SELECT l.Id, l.city_id AS CityId, c.Name AS CityName, c.state_id AS StateId, s.Name AS StateName
+        FROM Locations l
+        INNER JOIN Cities c ON c.Id = l.city_id
+        INNER JOIN States s ON s.Id = c.state_id
+        ORDER BY l.Id ASC
+        OFFSET @Offset LIMIT @PageSize;
+        """;
+
+    var offset = (pageNumber - 1) * pageSize;
+
+    await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+    return await connection.QueryAsync<LocationResponseDto>(
+        new CommandDefinition(sql, new { Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+}
 }

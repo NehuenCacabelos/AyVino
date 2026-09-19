@@ -9,7 +9,7 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
     public async Task<City?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, StateId, Status
+            SELECT Id, Name, state_id AS StateId, Status
             FROM Cities
             WHERE Id = @Id;
             """;
@@ -22,9 +22,9 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
     public async Task<City?> GetByNameAndStateAsync(string name, int stateId, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, StateId, Status
+            SELECT Id, Name, state_id AS StateId, Status
             FROM Cities
-            WHERE StateId = @StateId AND LOWER(Name) = LOWER(@Name);
+            WHERE state_id = @StateId AND LOWER(Name) = LOWER(@Name);
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -35,10 +35,10 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
     public async Task<IEnumerable<City>> GetAllAsync(int pageNumber, int pageSize, int? stateId, int? status, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, StateId, Status
+            SELECT Id, Name, state_id AS StateId, Status
             FROM Cities
-            WHERE (@StateId IS NULL OR StateId = @StateId)
-              AND (@Status IS NULL OR Status = @Status)
+            WHERE (@StateId IS NULL OR state_id = @StateId)
+            AND (@Status IS NULL OR Status = @Status)
             ORDER BY Name ASC
             OFFSET @Offset LIMIT @PageSize;
             """;
@@ -53,7 +53,7 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
     public async Task<int> CreateAsync(City city, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO Cities (Name, StateId, Status)
+            INSERT INTO Cities (Name, state_id, Status)
             VALUES (@Name, @StateId, @Status)
             RETURNING Id;
             """;
@@ -61,7 +61,7 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(sql, new { city.Name, city.StateId, Status = (int)city.Status }, cancellationToken: ct));
-    }
+    }   
 
     public async Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default)
     {

@@ -25,4 +25,15 @@ public class LocationService(ILocationRepository locationRepository, ICityReposi
         return await locationRepository.GetByIdAsync(generatedId, ct)
             ?? throw new NotFoundException("Location was created but could not be retrieved.");
     }
+
+    public async Task<IEnumerable<LocationResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
+{
+    if (pageNumber <= 0)
+        throw new ValidationException("Page number must be greater than 0.");
+
+    if (pageSize <= 0 || pageSize > 100)
+        throw new ValidationException("Page size must be between 1 and 100.");
+
+    return await locationRepository.GetAllAsync(pageNumber, pageSize, ct);
+}
 }
