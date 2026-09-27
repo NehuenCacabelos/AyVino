@@ -4,6 +4,7 @@ public record UpdateWineRequestDto(
     string Name,
     string WineType,
     int? WineryId = null,
+    string? WineryNameText = null,
     string? Description = null,
     int? LocationId = null,
     int? Year = null,

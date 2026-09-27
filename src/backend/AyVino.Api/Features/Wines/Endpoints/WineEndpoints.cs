@@ -45,6 +45,16 @@ public static class WineEndpoints
             .WithName("DeleteWine")
             .WithSummary("Deletes a wine.");
 
+        group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetClaimCandidatesAsync(wineryId, ct)))
+            .WithName("GetWineClaimCandidates")
+            .WithSummary("Lists unclaimed community wines whose typed winery name matches this winery.");
+
+        group.MapPost("/claim/{wineryId:int}", async (int wineryId, ClaimWinesRequestDto request, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.ClaimWinesAsync(wineryId, request.WineIds, ct)))
+            .WithName("ClaimWines")
+            .WithSummary("Links unclaimed community wines to a registered winery (sets WineryId, marks them Official).");
+
         return app;
     }
 }

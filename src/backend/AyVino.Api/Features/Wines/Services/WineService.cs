@@ -30,24 +30,19 @@ public class WineService(
             throw new ValidationException("'yearFrom' cannot be greater than 'yearTo'.");
 
         var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, ct);
-
-        // N+1 a propósito: seguimos el mismo criterio simple que el resto del proyecto (sin
-        // multi-mapping de Dapper todavía) y el pageSize está topeado en 100, así que no duele.
-        var result = new List<WineResponseDto>();
-        foreach (var wine in wines)
-        {
-            var grapes = await wineRepository.GetGrapesByWineIdAsync(wine.Id, ct);
-            result.Add(wine.ToResponseDto(grapes));
-        }
-        return result;
+        return await ToResponseDtosAsync(wines, ct);
     }
 
     public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, CancellationToken ct = default)
     {
         var wineType = await ValidateAndParseAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, dto.Grapes, ct);
+        // Regla simple: si ya viene con WineryId, es porque la bodega existe y está cargando
+        // su propio vino -> Official. Si no, es una carga community (todavía no se sabe
+        // si la bodega tiene cuenta) -> se resuelve más adelante con /claim-wines.
+        var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var wine = await wineRepository.CreateAsync(dto, wineType, grapes, ct);
+        var wine = await wineRepository.CreateAsync(dto, wineType, sourceType, grapes, ct);
         return wine.ToResponseDto(grapes);
     }
 
@@ -85,6 +80,40 @@ public class WineService(
         if (!deleted) throw new NotFoundException($"Wine with ID {id} not found.");
     }
 
+    public async Task<IEnumerable<WineResponseDto>> GetClaimCandidatesAsync(int wineryId, CancellationToken ct = default)
+    {
+        var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
+            ?? throw new NotFoundException($"Winery with ID {wineryId} not found.");
+
+        var candidates = await wineRepository.GetUnclaimedByNameLikeAsync(winery.Name, ct);
+        return await ToResponseDtosAsync(candidates, ct);
+    }
+
+    public async Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, CancellationToken ct = default)
+    {
+        var exists = await wineryRepository.ExistsByIdAsync(wineryId, ct);
+        if (!exists) throw new NotFoundException($"Winery with ID {wineryId} not found.");
+
+        if (wineIds is not { Count: > 0 })
+            throw new ValidationException("You must provide at least one wine ID to claim.");
+
+        var claimedCount = await wineRepository.ClaimWinesAsync(wineryId, wineIds.Distinct(), ct);
+        if (claimedCount == 0)
+            throw new ValidationException("None of the provided wine IDs were valid, unclaimed wines.");
+
+        var claimedWines = new List<WineResponseDto>();
+        foreach (var wineId in wineIds.Distinct())
+        {
+            var wine = await wineRepository.GetByIdAsync(wineId, ct);
+            if (wine is not null && wine.WineryId == wineryId)
+            {
+                var grapes = await wineRepository.GetGrapesByWineIdAsync(wineId, ct);
+                claimedWines.Add(wine.ToResponseDto(grapes));
+            }
+        }
+        return claimedWines;
+    }
+
     private async Task<WineType> ValidateAndParseAsync(string name, string wineType, int? wineryId, int? locationId, List<WineGrapeRequestDto>? grapes, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -114,14 +143,23 @@ public class WineService(
                 if (!await grapeRepository.ExistsByIdAsync(grape.GrapeId, ct))
                     throw new ValidationException($"Grape with ID {grape.GrapeId} does not exist.");
             }
-
-            // Esta es la regla de negocio de 2+ entidades que pide la consigna: el corte no puede declarar más del 100%.
             var totalPercentage = grapes.Sum(g => g.Percentage ?? 0);
             if (totalPercentage > 100)
                 throw new ValidationException("The sum of the grape percentages cannot exceed 100%.");
         }
 
         return parsedType;
+    }
+
+    private async Task<IEnumerable<WineResponseDto>> ToResponseDtosAsync(IEnumerable<Wine> wines, CancellationToken ct)
+    {
+        var result = new List<WineResponseDto>();
+        foreach (var wine in wines)
+        {
+            var grapes = await wineRepository.GetGrapesByWineIdAsync(wine.Id, ct);
+            result.Add(wine.ToResponseDto(grapes));
+        }
+        return result;
     }
 
     private static List<WineGrape> ToWineGrapes(List<WineGrapeRequestDto>? grapes) =>

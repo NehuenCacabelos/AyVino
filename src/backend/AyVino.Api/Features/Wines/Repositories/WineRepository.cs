@@ -8,15 +8,16 @@ namespace AyVino.Api.Features.Wines.Repositories;
 
 public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepository
 {
+    private const string SelectColumns = """
+        id, winery_id, name, description, wine_type, location_id, year,
+        alcohol_content, serving_temperature, aging_advice, label_image_url,
+        approval_status, uploaded_by_user_id, register_date,
+        winery_name_text, source_type, duplicate_of_wine_id
+        """;
+
     public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, winery_id, name, description, wine_type, location_id, year,
-                   alcohol_content, serving_temperature, aging_advice, label_image_url,
-                   approval_status, uploaded_by_user_id, register_date
-            FROM wines
-            WHERE id = @Id;
-            """;
+        var sql = $"SELECT {SelectColumns} FROM wines WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Wine>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
@@ -36,12 +37,11 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default)
     {
-        // grapeId filtra con EXISTS en vez de JOIN para que un vino con varias uvas que matchean
-        // no aparezca duplicado en la página.
-        const string sql = """
+         var sql = """
             SELECT w.id, w.winery_id, w.name, w.description, w.wine_type, w.location_id, w.year,
                    w.alcohol_content, w.serving_temperature, w.aging_advice, w.label_image_url,
-                   w.approval_status, w.uploaded_by_user_id, w.register_date
+                   w.approval_status, w.uploaded_by_user_id, w.register_date,
+                   w.winery_name_text, w.source_type, w.duplicate_of_wine_id
             FROM wines w
             WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
               AND (@YearFrom IS NULL OR w.year >= @YearFrom)
@@ -65,15 +65,17 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-    public async Task<Wine> CreateAsync(CreateWineRequestDto dto, WineType wineType, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public async Task<Wine> CreateAsync(CreateWineRequestDto dto, WineType wineType, SourceType sourceType, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string insertWineSql = """
             INSERT INTO wines (winery_id, name, description, wine_type, location_id, year,
                                 alcohol_content, serving_temperature, aging_advice, label_image_url,
-                                approval_status, uploaded_by_user_id, register_date)
+                                approval_status, uploaded_by_user_id, register_date,
+                                winery_name_text, source_type)
             VALUES (@WineryId, @Name, @Description, @WineType, @LocationId, @Year,
                     @AlcoholContent, @ServingTemperature, @AgingAdvice, @LabelImageUrl,
-                    @ApprovalStatus, @UploadedByUserId, @RegisterDate)
+                    @ApprovalStatus, @UploadedByUserId, @RegisterDate,
+                    @WineryNameText, @SourceType)
             RETURNING id;
             """;
         const string insertGrapeSql = """
@@ -85,8 +87,6 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         const int pendingStatus = (int)ApprovalStatus.Pending;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        // Transacción porque el vino y su lista de uvas tienen que quedar consistentes:
-        // si falla el insert de una uva, no quiero un vino "fantasma" sin blend.
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         var id = await connection.ExecuteScalarAsync<int>(
@@ -104,7 +104,9 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 dto.LabelImageUrl,
                 ApprovalStatus = pendingStatus,
                 dto.UploadedByUserId,
-                RegisterDate = registerDate
+                RegisterDate = registerDate,
+                dto.WineryNameText,
+                SourceType = (int)sourceType
             }, transaction: transaction, cancellationToken: ct));
 
         foreach (var grape in grapes)
@@ -131,7 +133,9 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             LabelImageUrl = dto.LabelImageUrl,
             ApprovalStatus = ApprovalStatus.Pending,
             UploadedByUserId = dto.UploadedByUserId,
-            RegisterDate = registerDate
+            RegisterDate = registerDate,
+            WineryNameText = dto.WineryNameText,
+            SourceType = sourceType
         };
     }
 
@@ -148,7 +152,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 alcohol_content = @AlcoholContent,
                 serving_temperature = @ServingTemperature,
                 aging_advice = @AgingAdvice,
-                label_image_url = @LabelImageUrl
+                label_image_url = @LabelImageUrl,
+                winery_name_text = @WineryNameText
             WHERE id = @Id;
             """;
         const string deleteGrapesSql = "DELETE FROM wine_grapes WHERE wine_id = @WineId;";
@@ -173,7 +178,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 dto.AlcoholContent,
                 dto.ServingTemperature,
                 dto.AgingAdvice,
-                dto.LabelImageUrl
+                dto.LabelImageUrl,
+                dto.WineryNameText
             }, transaction: transaction, cancellationToken: ct));
 
         if (rowsAffected == 0)
@@ -182,8 +188,6 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             return false;
         }
 
-        // Para sincronizar el blend hago wipe + re-insert en vez de diffear uva por uva:
-        // con listas chicas (2-5 uvas por vino) es más simple y no vale la pena la complejidad extra.
         await connection.ExecuteAsync(
             new CommandDefinition(deleteGrapesSql, new { WineId = id }, transaction: transaction, cancellationToken: ct));
 
@@ -226,5 +230,39 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default)
+    {
+        var sql = $"""
+            SELECT {SelectColumns}
+            FROM wines
+            WHERE winery_id IS NULL
+              AND winery_name_text ILIKE @Pattern;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Wine>(
+            new CommandDefinition(sql, new { Pattern = $"%{nameFragment}%" }, cancellationToken: ct));
+    }
+
+    public async Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default)
+    {
+        // El "AND winery_id IS NULL" es la protección clave acá: si alguien ya reclamó
+        // ese vino antes, no lo pisamos ni lo movemos a otra bodega por error.
+        const string sql = """
+            UPDATE wines
+            SET winery_id = @WineryId,
+                source_type = @SourceType
+            WHERE id = ANY(@WineIds)
+              AND winery_id IS NULL;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteAsync(
+            new CommandDefinition(sql, new
+            {
+                WineryId = wineryId,
+                SourceType = (int)SourceType.Official,
+                WineIds = wineIds.ToArray()
+            }, cancellationToken: ct));
     }
 }

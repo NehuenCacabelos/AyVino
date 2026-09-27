@@ -18,4 +18,12 @@ public record Wine
     public ApprovalStatus ApprovalStatus { get; init; }
     public int UploadedByUserId { get; init; }
     public DateTime RegisterDate { get; init; }
+
+    // Texto libre con el nombre de bodega tipeado por el usuario cuando WineryId es null
+    // (todavía no existe cuenta de esa bodega). Es la "pista" que usa /claim-wines para matchear.
+    public string? WineryNameText { get; init; }
+    public SourceType SourceType { get; init; }
+
+    // Self-FK: si este vino terminó fusionado a otro, acá queda la referencia al "main".
+    public int? DuplicateOfWineId { get; init; }
 }

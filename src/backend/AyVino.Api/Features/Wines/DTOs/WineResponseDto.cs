@@ -17,4 +17,7 @@ public record WineResponseDto(
     string ApprovalStatus,
     int UploadedByUserId,
     DateTime RegisterDate,
+    string? WineryNameText,
+    string SourceType,
+    int? DuplicateOfWineId,
     IEnumerable<WineGrapeResponseDto> Grapes);

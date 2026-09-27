@@ -1,4 +1,3 @@
-using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 
 namespace AyVino.Api.Features.Wines.DTOs;
@@ -20,5 +19,8 @@ public static class WineMappingExtensions
         wine.ApprovalStatus.ToString(),
         wine.UploadedByUserId,
         wine.RegisterDate,
+        wine.WineryNameText,
+        wine.SourceType.ToString(),
+        wine.DuplicateOfWineId,
         grapes.Select(g => new WineGrapeResponseDto(g.GrapeId, g.Percentage)));
 }

@@ -5,6 +5,7 @@ public record CreateWineRequestDto(
     string WineType,
     int UploadedByUserId,
     int? WineryId = null,
+    string? WineryNameText = null,
     string? Description = null,
     int? LocationId = null,
     int? Year = null,
