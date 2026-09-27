@@ -16,12 +16,24 @@ using AyVino.Api.Features.Users.Services;
 using AyVino.Api.Features.Wineries.Endpoints;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Wineries.Services;
+using AyVino.Api.Features.States.Endpoints;
+using AyVino.Api.Features.States.Repositories;
+using AyVino.Api.Features.States.Services;
+using AyVino.Api.Features.Cities.Endpoints;
+using AyVino.Api.Features.Cities.Repositories;
+using AyVino.Api.Features.Cities.Services;
 using AyVino.Api.Features.Locations.Endpoints;
 using AyVino.Api.Features.Locations.Repositories;
 using AyVino.Api.Features.Locations.Services;
 using AyVino.Api.Features.Grapes.Endpoints;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Grapes.Services;
+using AyVino.Api.Features.Wines.Endpoints;
+using AyVino.Api.Features.Wines.Repositories;
+using AyVino.Api.Features.Wines.Services;
+using AyVino.Api.Features.Pairings.Endpoints;
+using AyVino.Api.Features.Pairings.Repositories;
+using AyVino.Api.Features.Pairings.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -136,10 +148,18 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHostedService<TokenCleanupBackgroundService>();
 builder.Services.AddScoped<IWineryRepository, WineryRepository>();
 builder.Services.AddScoped<IWineryService, WineryService>();
+builder.Services.AddScoped<IStateRepository, StateRepository>();
+builder.Services.AddScoped<IStateService, StateService>();
+builder.Services.AddScoped<ICityRepository, CityRepository>();
+builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IGrapeRepository, GrapeRepository>();
 builder.Services.AddScoped<IGrapeService, GrapeService>();
+builder.Services.AddScoped<IWineRepository, WineRepository>();
+builder.Services.AddScoped<IWineService, WineService>();
+builder.Services.AddScoped<IPairingRepository, PairingRepository>();
+builder.Services.AddScoped<IPairingService, PairingService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -197,8 +217,12 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapWineryEndpoints();
+app.MapStateEndpoints();
+app.MapCityEndpoints();
 app.MapLocationEndpoints();
 app.MapGrapeEndpoints();
+app.MapWineEndpoints();
+app.MapPairingEndpoints();
 
 app.Run();
 
