@@ -31,6 +31,9 @@ using AyVino.Api.Features.Grapes.Services;
 using AyVino.Api.Features.Wines.Endpoints;
 using AyVino.Api.Features.Wines.Repositories;
 using AyVino.Api.Features.Wines.Services;
+using AyVino.Api.Features.Pairings.Endpoints;
+using AyVino.Api.Features.Pairings.Repositories;
+using AyVino.Api.Features.Pairings.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -155,6 +158,8 @@ builder.Services.AddScoped<IGrapeRepository, GrapeRepository>();
 builder.Services.AddScoped<IGrapeService, GrapeService>();
 builder.Services.AddScoped<IWineRepository, WineRepository>();
 builder.Services.AddScoped<IWineService, WineService>();
+builder.Services.AddScoped<IPairingRepository, PairingRepository>();
+builder.Services.AddScoped<IPairingService, PairingService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -217,6 +222,7 @@ app.MapCityEndpoints();
 app.MapLocationEndpoints();
 app.MapGrapeEndpoints();
 app.MapWineEndpoints();
+app.MapPairingEndpoints();
 
 app.Run();
 
