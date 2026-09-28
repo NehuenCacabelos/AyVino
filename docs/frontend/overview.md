@@ -1,43 +1,78 @@
 # Arquitectura y Diseño Frontend - AyVino
 
-El frontend de AyVino es una Single Page Application (SPA) desarrollada en **React 19** con **TypeScript** estricto y empaquetada mediante **Vite**.
+El frontend de AyVino es una Single Page Application (SPA) desarrollada en **React 19** con **TypeScript** estricto y empaquetada mediante **Vite 8**.
 
 ---
 
-## 1. Stack y Tecnologías
+## 1. Stack Tecnológico
 
-- **Framework**: React 19 con Functional Components y Hooks.
-- **Tipado**: TypeScript con configuración estricta (`strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true`).
-- **Build Tool**: Vite 8 con hot module replacement (HMR).
-- **Estilos**: Tailwind CSS v4 con `@tailwindcss/vite`.
-- **Iconografía**: `lucide-react`.
-- **Rutas**: `react-router-dom` v7.
-- **Comunicación HTTP**: `axios`.
+| Dependencia | Versión | Rol / Justificación |
+| :--- | :--- | :--- |
+| **React** | 19.x | Interfaz reactiva con Concurrent Mode nativo y Functional Components con Hooks. |
+| **TypeScript** | ~5.8 | Tipado estricto de extremo a extremo sin concesiones (`noUnusedLocals`, `noUnusedParameters`, cero `any`). |
+| **Vite** | 8.x | Servidor de desarrollo con Hot Module Replacement (HMR) instantáneo y compilador optimizado. |
+| **Tailwind CSS** | v4 (`@tailwindcss/vite`) | Motor de utilidades moderno de última generación integrado directamente con Vite. |
+| **Lucide React** | ^1.46 | Iconografía vectorial consistente y liviana para acciones de usuario y navegación. |
+| **React Router DOM** | v7.x | Enrutamiento declarativo del lado del cliente. |
+| **Axios** | ^1.20 | Cliente HTTP para comunicación tipada con la API RESTful. |
 
 ---
 
 ## 2. Pautas Visuales y Estilo Editorial
 
-AyVino adopta una línea visual editorial vinícola, cálida y limpia:
+AyVino implementa una estética de **revista editorial de vinos**: cálida, noble, sofisticada y limpia, distanciándose del diseño corporativo frío.
 
-- **Paleta de Colores**:
-  - `wine-*`: Tonos borravino, rubí profundo y granate noble.
-  - `cream-*`: Fondos papel encerado, marfil y pergamino suave (`bg-cream-50`, `bg-cream-100`).
-  - `earth-*`: Tipografías en tonos carbón y tierra oscura para máximo contraste sin la frialdad del negro puro.
-- **Tipografías**:
-  - `Playfair Display`: Títulos editoriales, nombres de etiquetas y encabezados nobles en serif.
-  - `Plus Jakarta Sans`: Textos de cuerpo, notas de cata y formularios para máxima legibilidad.
-- **Micro-interacciones**:
-  - Elevaciones sutiles (`hover:-translate-y-1`), transiciones suaves y desenfoques controlados (`backdrop-blur-md`).
-  - Paneles deslizantes (`AuthDrawer.tsx`) en lugar de modales intrusivos para preservar el contexto de lectura.
+### 2.1 Paleta Cromática
+- **Gama Vinícola (`wine-*`)**: Tonos borravino profundo, rubí y granate noble para acciones principales, acentos y estados activos.
+- **Gama Papel / Pergamino (`cream-*`)**: Fondos basados en tonos marfil, papel encerado y pergamino suave (`bg-cream-50`, `bg-cream-100`) para generar calidez visual y lectura descansada.
+- **Gama Tierra (`earth-*`)**: Tipografía en tonos carbón vegetal y tierra tostada para garantizar contraste óptimo según las pautas WCAG sin la dureza del negro puro.
+
+### 2.2 Tipografías
+- **`Playfair Display` (Serif)**: Encabezados editoriales, nombres de bodegas y títulos de botellas. Aporta elegancia clásica.
+- **`Plus Jakarta Sans` (Sans-Serif)**: Textos de cuerpo, notas de cata, tablas técnicas y formularios. Prioriza la legibilidad en pantallas retina y móviles.
+
+### 2.3 Micro-interacciones y UX
+- Elevaciones sutiles (`hover:-translate-y-1`), transiciones graduales (`transition-all duration-300`) y sombras orgánicas.
+- **Paneles Deslizantes Laterales (`AuthDrawer`)**: La autenticación se resuelve mediante un cajón lateral deslizante que preserva el contexto de lectura del usuario, evitando modales invasivos en pantalla completa.
+- **Modales Contextuales de Botella (`WineDetailModal`)**: Despliegue de ficha técnica detallada (añada, graduación alcohólica, notas de cata y maridajes sugeridos).
 
 ---
 
-## 3. Convenciones de Tipado y TypeScript
+## 3. Estructura de Directorios Clave
 
-- Todo nuevo componente debe tener sus `interface` o `type` explícitos para props.
-- Los modelos compartidos residen en [`src/types/`](file:///c:/Codigo%20General/AyVino/AyVino/src/frontend/src/types):
-  - [`wine.ts`](file:///c:/Codigo%20General/AyVino/AyVino/src/frontend/src/types/wine.ts): Interfaz `CuratedWine`.
-  - [`auth.ts`](file:///c:/Codigo%20General/AyVino/AyVino/src/frontend/src/types/auth.ts): Tipos `AuthMode`, `AuthFormData`.
-- Prohibido el uso de `any`; usar tipos discriminados, genéricos o `unknown` con type guards.
+```text
+src/frontend/src/
+├── assets/                    # Recursos visuales estáticos (hero.png, logos)
+├── components/                # Componentes modulares reutilizables
+│   ├── auth/                  # Componentes de autenticación
+│   │   ├── AuthDrawer.tsx     # Panel lateral deslizable (Login / Registro / Bodega)
+│   │   └── AuthModal.tsx      # Modal alternativo de login
+│   ├── layout/                # Estructura visual global
+│   │   └── Navbar.tsx         # Barra de navegación con acciones de usuario
+│   └── wine/                  # Componentes del catálogo de vinos
+│       ├── WineBottleMock.tsx # Representación gráfica simulada de la botella
+│       ├── WineCard.tsx       # Tarjeta de vino con puntuación y badges
+│       └── WineDetailModal.tsx# Ficha técnica ampliada en modal
+├── pages/                     # Páginas y vistas principales
+│   └── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
+├── types/                     # Definiciones de tipos e interfaces TypeScript
+│   ├── auth.ts                # Tipos de autenticación (AuthMode, AuthFormData)
+│   └── wine.ts                # Modelos de presentación (CuratedWine)
+├── App.tsx                    # Componente contenedor raíz
+├── index.css                  # Directivas de Tailwind CSS v4 y fuentes
+└── main.tsx                   # Punto de entrada de React 19 y montaje en DOM
+```
 
+---
+
+## 4. Convenciones de Tipado y TypeScript
+
+1. **Prohibido el uso de `any`**: Cualquier tipo desconocido debe gestionarse con genéricos, tipos de unión discriminada o `unknown` con type guards.
+2. **Interfaces Explícitas para Componentes**: Cada componente debe definir su interfaz `Props` explícita:
+   ```typescript
+   export interface WineCardProps {
+     wine: CuratedWine;
+     onSelect: (wine: CuratedWine) => void;
+   }
+   ```
+3. **Modelos de Datos Centralizados en `src/types/`**: Evitar definiciones duplicadas de interfaces en componentes locales.

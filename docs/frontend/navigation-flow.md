@@ -1,96 +1,72 @@
-# Flujo de Navegación, UX y Arquitectura Frontend - AyVino
+# Mapa de Navegación y Flujo de Usuario - AyVino Frontend
 
-Este documento detalla el mapa de navegación, los flujos de usuario y la estrategia de integración frontend para la plataforma **AyVino**, alineado estrictamente con los requisitos funcionales de [`docs/requirements/spec.md`](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md).
-
----
-
-## 1. Mapa de Rutas (Routing & Pantallas)
-
-AyVino utiliza `react-router-dom` para gestionar la navegación con soporte para rutas públicas, semi-protegidas (contenido visible pero acciones autenticadas) y privadas.
-
-| Ruta | Vista / Componente | Acceso | Propósito |
-| :--- | :--- | :--- | :--- |
-| `/` | `Landing.tsx` | Público | Presentación de marca, hero 3D, muestra curada abierta sin bloqueo y accesos a registro/login. |
-| `/catalogo` | `CatalogPage.tsx` | Público / Abierto | Explorador global de vinos con filtros combinados (cepa, bodega, región, altitud, procedencia oficial vs comunitaria). |
-| `/vinos/:id` | `WineDetailPage.tsx` | Público / Abierto | Ficha de cata técnica detallada, organoléptica, maridaje, listado de reseñas y acciones interactivas. |
-| `/bodegas/:id` | `WineryProfilePage.tsx` | Público / Abierto | Perfil de bodega con distinción entre bodega oficial verificada y bodega creada por comunidad ([RF-1.4](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)). |
-| `/subir-vino` | `AddWinePage.tsx` | Requiere Auth | Carga comunitaria de vinos nuevos por foto o ingreso manual ([RF-1.2](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md), [RF-1.6](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)). |
-| `/mis-colecciones`| `MyCellarPage.tsx` | Requiere Auth | Panel personal del usuario con sus listas fijas: **"Favoritos"** y **"Por Probar"** ([RF-3.1](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)). |
-| `/mi-perfil` | `ProfilePage.tsx` | Requiere Auth | Historial de reseñas del usuario, vinos aportados a la comunidad y ajustes de cuenta. |
+Este documento detalla la arquitectura de información, las vistas de la aplicación y la experiencia interactiva (UX) del usuario en la SPA de AyVino.
 
 ---
 
-## 2. Flujos Clave de Usuario (User Flows)
+## 1. Diagrama de Navegación de Vistas
 
-### Flujo A: Autenticación & Acceso (`AuthDrawer`)
-- **Punto de activación**: Botón en `Navbar` ("Iniciar Sesión" / "Crear Cuenta") o gatillado contextual al intentar una acción restringida (ej. dar "Like", guardar en colección o publicar reseña).
-- **Mecanismo**: Panel lateral deslizante (`AuthDrawer.tsx`) para mantener el contexto visual de la página en la que se encuentra el usuario.
-- **Transición**:
-  1. El usuario completa credenciales.
-  2. La API emite el JWT y la cookie/token de refresh (`/api/auth/login` o `/api/auth/register`).
-  3. El frontend almacena el estado en el contexto de autenticación (`AuthContext`).
-  4. Si la apertura fue gatillada por una acción previa, la acción se completa automáticamente tras el login sin perder la posición del usuario.
+```mermaid
+flowchart TD
+    Landing["Landing Page (Catálogo Curado + Hero)"]
+    DetailModal["WineDetailModal (Ficha Técnica Contextual)"]
+    AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
 
----
+    subgraph AuthSubviews["Modos del AuthDrawer"]
+        LoginMode["Modo Login (Email / Password)"]
+        RegisterUser["Modo Registro Aficionado (Username, Email, Password)"]
+        RegisterWinery["Modo Registro Bodega (Credenciales + Datos Institucionales)"]
+    end
 
-### Flujo B: Exploración y Ficha de Cata ([RF-1.3](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md), [RF-2.1](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md), [RF-2.2](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md))
-- **Descubrimiento**:
-  - En `/` (Landing): Se accede a través de la sección "Selección Curada" en modal rápido (`WineDetailModal.tsx`).
-  - En `/catalogo`: Se listan las tarjetas interactivas (`WineCard.tsx`) con badges visibles de procedencia:
-    - 🟢 **Bodega Oficial**: ficha con datos técnicos verificados.
-    - 🟡 **Agregado por la comunidad**: ficha con datos y fotos aportados por usuarios.
-- **Interacciones en Ficha**:
-  - **Me Gusta / Like**: Toggle rápido ([RF-2.2](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)).
-  - **Guardar en Colección**: Selector desplegable para asignar a *"Favoritos"* o *"Por Probar"* ([RF-3.1](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)).
-  - **Escribir Reseña**: Calificación de 1 a 5 estrellas + reseña escrita en texto libre ([RF-2.1](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md)).
+    subgraph FutureViews["Vistas Planificadas (Próxima Fase)"]
+        SearchCatalog["Explorador con Filtros Avanzados (Varietales, Región, Añada)"]
+        UserProfile["Perfil de Usuario y Colecciones ('Favoritos', 'Por Probar')"]
+        WineryDashboard["Panel de Bodega (Gestión de Vinos y Reclamo de Candidatos)"]
+    end
 
----
+    Landing -->|"Click en tarjeta de vino"| DetailModal
+    Landing -->|"Click en 'Iniciar Sesión' / 'Registrarse'"| AuthDrawer
+    AuthDrawer --> LoginMode
+    AuthDrawer --> RegisterUser
+    AuthDrawer --> RegisterWinery
 
-### Flujo C: Carga Comunitaria de Vinos ([RF-1.2](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md), [RF-1.6](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md))
-1. **Acceso**: Botón flotante o link en navegación `"Catalogar Vino"`.
-2. **Método de Entrada**:
-   - Opción A: Capturar/Subir foto de etiqueta (preparado para extracción OCR futura).
-   - Opción B: Carga manual directa.
-3. **Formulario y Validación**:
-   - **Obligatorios**: Nombre del vino y Bodega ([RF-1.6](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md) - feedback inmediato si faltan).
-   - **Opcionales**: Cepa / Varietal, Añada, Región, Notas sensoriales, Foto.
-4. **Publicación**:
-   - El vino queda etiquetado inmediatamente como `"Agregado por la comunidad"`.
-   - Se ofrece al usuario la opción de dejar la primera reseña o sumarlo a sus listas.
-
----
-
-### Flujo D: Gestión de Colecciones Fijas ([RF-3.1](file:///c:/Codigo%20General/AyVino/AyVino/docs/requirements/spec.md))
-- La pantalla `/mis-colecciones` presenta dos pestañas principales inmutables:
-  1. **Favoritos**: Vinos ya probados que el usuario destaca.
-  2. **Por Probar**: Lista de deseos / recomendaciones pendientes.
-- Acciones rápidas:
-  - Mover un vino de "Por Probar" a "Favoritos" con prompt para calificarlo.
-  - Quitar de la lista con un click.
-
----
-
-## 3. Arquitectura Técnica del Frontend
-
-```text
-src/frontend/src/
-├── assets/             # Imágenes, isotipos, logotipos
-├── components/         # Componentes reutilizables
-│   ├── auth/           # AuthDrawer, AuthModal, ProtectedRoute
-│   ├── common/         # Botones, Inputs, Badges, Modales base
-│   ├── layout/         # Navbar, Footer, Sidebar
-│   └── wine/           # WineCard, WineBottleMock, WineDetailModal, WineRatingStars
-├── context/            # Contextos React (AuthContext, ToastContext)
-├── hooks/              # Custom hooks (useAuth, useWines, useDebounce)
-├── pages/              # Páginas de rutas principales (Landing, Catalog, etc.)
-├── services/           # Clientes HTTP (api.ts, wineService.ts, authService.ts)
-└── types/              # Interfaces TypeScript estrictas (wine.ts, auth.ts, api.ts)
+    Landing -.->|"Búsqueda avanzada"| SearchCatalog
+    LoginMode -.->|"Login aficionado exitoso"| UserProfile
+    LoginMode -.->|"Login bodega exitoso"| WineryDashboard
 ```
 
-### Gestión de Estado y Comunicación con la API
-- **Cliente HTTP Centralizado**: Instancia configurada de `axios` (`services/api.ts`) que:
-  - Inyecta automáticamente el header `Authorization: Bearer <token>`.
-  - Captura respuestas `401 Unauthorized` para ejecutar el flujo de refresh token silencioso o abrir el `AuthDrawer`.
-- **Estado de Sesión**: `AuthContext` expone `user`, `isAuthenticated`, `login()`, `logout()` y `openAuth(mode)`.
-- **Tipado Estricto**: DTOs del backend espejados fielmente en `types/` garantizando cero discrepancias de contrato.
+---
 
+## 2. Pantallas y Componentes Interactivos
+
+### 2.1 Página de Inicio (`Landing.tsx`)
+- **Sección Hero**:
+  - Título editorial de alto impacto (*"Descubrí, puntuá y compartí tu pasión por el buen vino"*).
+  - Barra de búsqueda rápida de etiquetas, varietales y bodegas.
+  - Llamados a la acción directos para explorar el catálogo o iniciar sesión.
+- **Grilla de Vinos Curados**:
+  - Renderizado de tarjetas de vino (`WineCard.tsx`).
+  - Badges distintivos: Puntuación de cata (ej: `94 pts`), Origen geográfico (`Mendoza, Argentina`), Varietal dominante (`Malbec`) y Estado de origen (*"Oficial"* vs *"Comunidad"*).
+
+### 2.2 Ficha Técnica en Modal (`WineDetailModal.tsx`)
+Al presionar una tarjeta, se abre un modal contextual con fondo oscurecido (`backdrop-blur-sm`) que exhibe:
+- Representación visual de la botella y etiqueta (`WineBottleMock.tsx`).
+- Datos técnicos: Añada (cosecha), graduación alcohólica, temperatura recomendada de servicio y notas de estiba.
+- Composición de uvas (Blend / Corte) con porcentajes detallados.
+- Maridajes sugeridos (carnes rojas, pastas, quesos maduros, etc.).
+- Botones de acción rápida: Guardar en *"Favoritos"*, *"Por Probar"* o calificar.
+
+### 2.3 Cajón Lateral de Autenticación (`AuthDrawer.tsx`)
+En lugar de redirigir al usuario a una página aislada o bloquear la pantalla con un modal agresivo, la autenticación se despliega como un panel deslizante desde el lateral derecho:
+1. **Pestaña de Inicio de Sesión**: Validación de correo electrónico y contraseña, enlace a recuperación.
+2. **Pestaña de Registro de Aficionado**: Creación rápida de cuenta con rol de usuario estándar para interactuar con la comunidad.
+3. **Pestaña de Registro de Bodega**: Formulario especializado de onboarding que recopila los datos del responsable y la información institucional de la bodega (nombre, región vitivinícola, sitio web y contacto) para emitir el perfil oficial y la sesión JWT en un único paso.
+
+---
+
+## 3. Próximos Flujos en Desarrollo
+
+- **Explorador y Filtro Multicriterio**:
+  Integración directa con `GET /api/wines` admitiendo filtros combinados por `wineryId`, `grapeId`, `yearFrom` y `yearTo`.
+- **Flujo de Reclamo en Dashboard de Bodega**:
+  Interfaz dedicada donde el sommelier o administrador de la bodega puede visualizar los vinos candidatos detectados por el sistema (`GET /api/wines/claim-candidates/{wineryId}`) y adoptarlos con un solo click (`POST /api/wines/claim/{wineryId}`).
