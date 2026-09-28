@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X, Star, MapPin, Award, CheckCircle, Sparkles, Utensils, Droplets, ShieldCheck } from 'lucide-react';
-import type { CuratedWine } from '../../types/wine';
-import type { AuthMode } from '../../types/auth';
+import type { CuratedWine } from '../../../types/wine';
+import type { AuthMode } from '../../auth/types';
 
 interface WineDetailModalProps {
   wine: CuratedWine | null;

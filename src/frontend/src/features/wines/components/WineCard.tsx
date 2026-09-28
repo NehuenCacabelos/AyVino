@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Star, Heart, MapPin, Wine as WineIcon, Sparkles, CheckCircle, Info } from 'lucide-react';
-import type { CuratedWine } from '../../types/wine';
+import type { CuratedWine } from '../../../types/wine';
 
 interface WineCardProps {
   wine: CuratedWine;

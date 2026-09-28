@@ -1,8 +1,4 @@
-export type AuthMode = 'login' | 'register';
-
-export interface AuthFormData {
-  name?: string;
-  email: string;
-  password: string;
-}
-
+/**
+ * Re-exportación centralizada de tipos de autenticación desde el módulo de características.
+ */
+export * from '../features/auth/types';

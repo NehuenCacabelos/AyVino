@@ -43,24 +43,35 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 ```text
 src/frontend/src/
 ├── assets/                    # Recursos visuales estáticos (hero.png, logos)
-├── components/                # Componentes modulares reutilizables
-│   ├── auth/                  # Componentes de autenticación
-│   │   ├── AuthDrawer.tsx     # Panel lateral deslizable (Login / Registro / Bodega)
-│   │   └── AuthModal.tsx      # Modal alternativo de login
-│   ├── layout/                # Estructura visual global
-│   │   └── Navbar.tsx         # Barra de navegación con acciones de usuario
-│   └── wine/                  # Componentes del catálogo de vinos
-│       ├── WineBottleMock.tsx # Representación gráfica simulada de la botella
-│       ├── WineCard.tsx       # Tarjeta de vino con puntuación y badges
-│       └── WineDetailModal.tsx# Ficha técnica ampliada en modal
+├── components/                # Componentes UI atómicos y genéricos
+│   └── layout/                # Estructura visual global
+│       └── Navbar.tsx         # Barra de navegación con acciones de usuario
+├── features/                  # Arquitectura híbrida orientada a características
+│   ├── auth/                  # Módulo de Autenticación
+│   │   ├── api/               # Llamadas API del módulo (authApi.ts)
+│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthDrawer.tsx, AuthModal.tsx, ProtectedRoute.tsx)
+│   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
+│   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
+│   │   └── index.ts           # Barrel export público del módulo auth
+│   └── wines/                 # Módulo de Vinos y Catálogo
+│       └── components/        # Componentes de presentación (WineCard.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
 ├── pages/                     # Páginas y vistas principales
-│   └── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
-├── types/                     # Definiciones de tipos e interfaces TypeScript
-│   ├── auth.ts                # Tipos de autenticación (AuthMode, AuthFormData)
+│   ├── CatalogPage.tsx        # Catálogo general protegido
+│   ├── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
+│   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
+├── routes/                    # Configuración de enrutamiento
+│   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
+├── services/                  # Infraestructura y clientes compartidos
+│   └── apiClient.ts           # Instancia centralizada de Axios con interceptores JWT y refresh token
+├── styles/                    # Sistema de estilización centralizado (Sección 4 de la cátedra)
+│   ├── tokens.css             # Variables de diseño (:root, paleta vinícola, múltiplos de 4px)
+│   ├── reset.css              # Normalización y reseteo base
+│   └── global.css             # Reglas tipográficas, integración Tailwind v4 y animaciones
+├── types/                     # Tipos globales y re-exportaciones
+│   ├── auth.ts                # Re-exportación centralizada de auth types
 │   └── wine.ts                # Modelos de presentación (CuratedWine)
-├── App.tsx                    # Componente contenedor raíz
-├── index.css                  # Directivas de Tailwind CSS v4 y fuentes
-└── main.tsx                   # Punto de entrada de React 19 y montaje en DOM
+├── App.tsx                    # Componente contenedor raíz con BrowserRouter y AuthProvider
+└── main.tsx                   # Punto de entrada de React 19 (carga en cascada de estilos)
 ```
 
 ---
@@ -76,3 +87,66 @@ src/frontend/src/
    }
    ```
 3. **Modelos de Datos Centralizados en `src/types/`**: Evitar definiciones duplicadas de interfaces en componentes locales.
+
+---
+
+## 5. Sistema de Enrutamiento y Guardias de Seguridad
+
+El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque declarativo centralizado en [`src/frontend/src/routes/AppRoutes.tsx`](../../src/frontend/src/routes/AppRoutes.tsx):
+
+- **Guardia de Rutas (`ProtectedRoute.tsx`)**:
+  - Valida el estado de autenticación (`isAuthenticated`) y los roles permitidos (`allowedRoles?: UserRole[]`).
+  - Si la sesión se encuentra cargando (`isLoading = true`), presenta un indicador de espera accesible.
+  - Si no está autenticado o el rol no coincide, redirige de forma atómica a `/` (`<Navigate to="/" replace />`).
+  - Si cumple los criterios, renderiza la vista solicitada.
+
+---
+
+## 6. Manejo de Sesión y Renovación Automática (Refresh Token)
+
+La capa de comunicación HTTP reside en [`src/frontend/src/services/apiClient.ts`](../../src/frontend/src/services/apiClient.ts) y opera en estrecha sincronía con [`AuthContext.tsx`](../../src/frontend/src/features/auth/context/AuthContext.tsx):
+
+1. **Inyección Automática de Bearer Token**: El interceptor de request adjunta `Authorization: Bearer <accessToken>` en cada solicitud saliente.
+2. **Interceptación de `401 Unauthorized`**:
+   - Detecta respuestas 401 excluyendo endpoints de autenticación (`/auth/login`, `/auth/refresh`).
+   - Lee el `refreshToken` desde `localStorage`.
+   - Lanza una llamada a `POST /api/auth/refresh`.
+   - Si la renovación tiene éxito, guarda las nuevas claves en `localStorage`, actualiza las cabeceras de la petición original y la reintenta sin intervención del usuario.
+   - Si la renovación falla (token revocado o expirado), purga el almacenamiento local, dispara el evento `'auth:unauthorized'` y redirige al usuario a la página de bienvenida.
+
+---
+
+## 7. Guía de Prueba y Verificación de Flujos
+
+### 7.1 Arranque de Entornos
+```bash
+# Terminal 1: Backend (.NET Core)
+cd src/backend/AyVino.Api
+dotnet run
+
+# Terminal 2: Frontend (Vite SPA)
+cd src/frontend
+npm run dev
+```
+
+### 7.2 Casos de Prueba Interactivos
+
+1. **Flujo de Usuario Anónimo**:
+   - Ingresar a `http://localhost:5173/`.
+   - Intentar navegar manualmente a `/catalogo` o `/bodega/dashboard`.
+   - **Resultado esperado**: El guardia `ProtectedRoute` intercepta la navegación y redirige automáticamente a `/`.
+2. **Inicio de Sesión con Credenciales**:
+   - Abrir el panel lateral presionando *"Iniciar Sesión"*.
+   - Probar credenciales incorrectas para verificar la alerta de error.
+   - Ingresar con credenciales válidas registradas en el backend.
+   - **Resultado esperado**: Cierre automático del drawer, aparición de la píldora de usuario en el `Navbar` con su rol y desbloqueo de los accesos a `/catalogo` y/o `/bodega/dashboard`.
+3. **Cierre de Sesión (Logout)**:
+   - Presionar *"Salir"* en el `Navbar`.
+   - **Resultado esperado**: Se invoca `POST /api/auth/revoke`, se limpian los tokens de `localStorage` y se restablece la vista pública.
+4. **Verificación de Calidad de Código**:
+   ```bash
+   cd src/frontend
+   npm run build  # Compilación estricta TypeScript (0 errores)
+   npm run lint   # Validación de reglas ESLint (0 advertencias)
+   ```
+
