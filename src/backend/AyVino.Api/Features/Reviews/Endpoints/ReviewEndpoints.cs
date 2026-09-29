@@ -12,7 +12,7 @@ public static class ReviewEndpoints
 
         group.MapPost("/", async (CreateReviewRequestDto request, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
         {
-            var userId = GetUserId(user); // <-- reemplazar por el helper real de Auth si existe uno
+            var userId = user.GetUserId();
             var created = await service.CreateAsync(request, userId, ct);
             return Results.Created($"/api/reviews/{created.Id}", created);
         }).RequireAuthorization()
@@ -21,7 +21,7 @@ public static class ReviewEndpoints
 
         group.MapPut("/{id:int}", async (int id, UpdateReviewRequestDto request, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
         {
-            var userId = GetUserId(user);
+            var userId = user.GetUserId();
             var updated = await service.UpdateAsync(id, request, userId, ct);
             return Results.Ok(updated);
         }).RequireAuthorization()
@@ -30,7 +30,7 @@ public static class ReviewEndpoints
 
         group.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
         {
-            var userId = GetUserId(user);
+            var userId = user.GetUserId();
             await service.DeleteAsync(id, userId, ct);
             return Results.NoContent();
         }).RequireAuthorization()
@@ -53,9 +53,4 @@ public static class ReviewEndpoints
 
         return app;
     }
-
-    // Placeholder: ajustar si ya existe un helper equivalente en Users/Auth.
-    private static int GetUserId(ClaimsPrincipal user) =>
-        int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException("Token sin claim de usuario."));
 }
