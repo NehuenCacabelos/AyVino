@@ -4,23 +4,16 @@ namespace AyVino.Api.Features.Wines.DTOs;
 
 public static class WineMappingExtensions
 {
-    public static WineResponseDto ToResponseDto(this Wine wine, IEnumerable<WineGrape> grapes) => new(
+    public static WineResponseDto ToResponseDto(this Wine wine) => new(
         wine.Id,
         wine.WineryId,
+        wine.WineryNameText,
         wine.Name,
         wine.Description,
         wine.WineType.ToString(),
         wine.LocationId,
-        wine.Year,
-        wine.AlcoholContent,
-        wine.ServingTemperature,
-        wine.AgingAdvice,
-        wine.LabelImageUrl,
-        wine.ApprovalStatus.ToString(),
-        wine.UploadedByUserId,
-        wine.RegisterDate,
-        wine.WineryNameText,
         wine.SourceType.ToString(),
         wine.DuplicateOfWineId,
-        grapes.Select(g => new WineGrapeResponseDto(g.GrapeId, g.Percentage)));
+        wine.ReviewCount >= 5 ? Math.Round((decimal)wine.RatingSum / wine.ReviewCount, 2) : null,
+        wine.ReviewCount);
 }

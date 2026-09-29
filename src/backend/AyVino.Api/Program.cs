@@ -160,6 +160,8 @@ builder.Services.AddScoped<IWineRepository, WineRepository>();
 builder.Services.AddScoped<IWineService, WineService>();
 builder.Services.AddScoped<IPairingRepository, PairingRepository>();
 builder.Services.AddScoped<IPairingService, PairingService>();
+builder.Services.AddScoped<IWineVintageRepository, WineVintageRepository>();
+builder.Services.AddScoped<IWineVintageService, WineVintageService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -223,6 +225,7 @@ app.MapLocationEndpoints();
 app.MapGrapeEndpoints();
 app.MapWineEndpoints();
 app.MapPairingEndpoints();
+app.MapWineVintageEndpoints();
 
 app.Run();
 

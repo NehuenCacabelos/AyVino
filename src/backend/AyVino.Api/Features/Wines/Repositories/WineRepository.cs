@@ -9,10 +9,8 @@ namespace AyVino.Api.Features.Wines.Repositories;
 public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepository
 {
     private const string SelectColumns = """
-        id, winery_id, name, description, wine_type, location_id, year,
-        alcohol_content, serving_temperature, aging_advice, label_image_url,
-        approval_status, uploaded_by_user_id, register_date,
-        winery_name_text, source_type, duplicate_of_wine_id
+        id, winery_id, winery_name_text, name, description, wine_type, location_id,
+        source_type, duplicate_of_wine_id, rating_sum, review_count
         """;
 
     public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -23,31 +21,27 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<WineGrape>> GetGrapesByWineIdAsync(int wineId, CancellationToken ct = default)
-    {
-        const string sql = """
-            SELECT wine_id, grape_id, percentage
-            FROM wine_grapes
-            WHERE wine_id = @WineId;
-            """;
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<WineGrape>(
-            new CommandDefinition(sql, new { WineId = wineId }, cancellationToken: ct));
-    }
-
     public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default)
     {
-         var sql = """
-            SELECT w.id, w.winery_id, w.name, w.description, w.wine_type, w.location_id, w.year,
-                   w.alcohol_content, w.serving_temperature, w.aging_advice, w.label_image_url,
-                   w.approval_status, w.uploaded_by_user_id, w.register_date,
-                   w.winery_name_text, w.source_type, w.duplicate_of_wine_id
+        // El filtro de año/uva ahora mira DENTRO de las cosechas de cada etiqueta (EXISTS),
+        // porque la etiqueta en sí ya no tiene year ni grapes propios.
+        const string sql = """
+            SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
+                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
             FROM wines w
             WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
-              AND (@YearFrom IS NULL OR w.year >= @YearFrom)
-              AND (@YearTo IS NULL OR w.year <= @YearTo)
               AND (@GrapeId IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_grapes wg WHERE wg.wine_id = w.id AND wg.grape_id = @GrapeId))
+                    SELECT 1 FROM wine_vintages wv
+                    JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
+                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId))
+              AND (
+                    (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
+                        SELECT 1 FROM wine_vintages wv2
+                        WHERE wv2.wine_id = w.id
+                          AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
+                          AND (@YearTo IS NULL OR wv2.year <= @YearTo)
+                    )
+                  )
             ORDER BY w.id
             OFFSET @Offset LIMIT @PageSize;
             """;
@@ -65,54 +59,61 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-    public async Task<Wine> CreateAsync(CreateWineRequestDto dto, WineType wineType, SourceType sourceType, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public async Task<Wine> CreateWithFirstVintageAsync(CreateWineRequestDto dto, WineType wineType, SourceType sourceType, CreateWineVintageRequestDto vintageDto, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string insertWineSql = """
-            INSERT INTO wines (winery_id, name, description, wine_type, location_id, year,
-                                alcohol_content, serving_temperature, aging_advice, label_image_url,
-                                approval_status, uploaded_by_user_id, register_date,
-                                winery_name_text, source_type)
-            VALUES (@WineryId, @Name, @Description, @WineType, @LocationId, @Year,
-                    @AlcoholContent, @ServingTemperature, @AgingAdvice, @LabelImageUrl,
-                    @ApprovalStatus, @UploadedByUserId, @RegisterDate,
-                    @WineryNameText, @SourceType)
+            INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count)
+            VALUES (@WineryId, @WineryNameText, @Name, @Description, @WineType, @LocationId, @SourceType, 0, 0)
+            RETURNING id;
+            """;
+        const string insertVintageSql = """
+            INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_url, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
+            VALUES (@WineId, @Year, @AlcoholContent, @ServingTemperature, @AgingAdvice, @ImageUrl, @ApprovalStatus, @UploadedByUserId, @RegisterDate, 0, 0)
             RETURNING id;
             """;
         const string insertGrapeSql = """
-            INSERT INTO wine_grapes (wine_id, grape_id, percentage)
-            VALUES (@WineId, @GrapeId, @Percentage);
+            INSERT INTO wine_grapes (wine_vintage_id, grape_id, percentage)
+            VALUES (@WineVintageId, @GrapeId, @Percentage);
             """;
 
         var registerDate = DateTime.UtcNow;
         const int pendingStatus = (int)ApprovalStatus.Pending;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        // Una sola transacción para las tres tablas: si falla la cosecha o una uva,
+        // no queremos una etiqueta "fantasma" sin ninguna cosecha.
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
-        var id = await connection.ExecuteScalarAsync<int>(
+        var wineId = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertWineSql, new
             {
                 dto.WineryId,
+                dto.WineryNameText,
                 dto.Name,
                 dto.Description,
                 WineType = (int)wineType,
                 dto.LocationId,
-                dto.Year,
-                dto.AlcoholContent,
-                dto.ServingTemperature,
-                dto.AgingAdvice,
-                dto.LabelImageUrl,
-                ApprovalStatus = pendingStatus,
-                dto.UploadedByUserId,
-                RegisterDate = registerDate,
-                dto.WineryNameText,
                 SourceType = (int)sourceType
+            }, transaction: transaction, cancellationToken: ct));
+
+        var vintageId = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(insertVintageSql, new
+            {
+                WineId = wineId,
+                vintageDto.Year,
+                vintageDto.AlcoholContent,
+                vintageDto.ServingTemperature,
+                vintageDto.AgingAdvice,
+                vintageDto.ImageUrl,
+                ApprovalStatus = pendingStatus,
+                vintageDto.UploadedByUserId,
+                RegisterDate = registerDate
             }, transaction: transaction, cancellationToken: ct));
 
         foreach (var grape in grapes)
         {
             await connection.ExecuteAsync(
-                new CommandDefinition(insertGrapeSql, new { WineId = id, grape.GrapeId, grape.Percentage },
+                new CommandDefinition(insertGrapeSql, new { WineVintageId = vintageId, grape.GrapeId, grape.Percentage },
                     transaction: transaction, cancellationToken: ct));
         }
 
@@ -120,116 +121,59 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
         return new Wine
         {
-            Id = id,
+            Id = wineId,
             WineryId = dto.WineryId,
+            WineryNameText = dto.WineryNameText,
             Name = dto.Name,
             Description = dto.Description,
             WineType = wineType,
             LocationId = dto.LocationId,
-            Year = dto.Year,
-            AlcoholContent = dto.AlcoholContent,
-            ServingTemperature = dto.ServingTemperature,
-            AgingAdvice = dto.AgingAdvice,
-            LabelImageUrl = dto.LabelImageUrl,
-            ApprovalStatus = ApprovalStatus.Pending,
-            UploadedByUserId = dto.UploadedByUserId,
-            RegisterDate = registerDate,
-            WineryNameText = dto.WineryNameText,
             SourceType = sourceType
         };
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateWineRequestDto dto, WineType wineType, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
-    {
-        const string updateWineSql = """
-            UPDATE wines
-            SET winery_id = @WineryId,
-                name = @Name,
-                description = @Description,
-                wine_type = @WineType,
-                location_id = @LocationId,
-                year = @Year,
-                alcohol_content = @AlcoholContent,
-                serving_temperature = @ServingTemperature,
-                aging_advice = @AgingAdvice,
-                label_image_url = @LabelImageUrl,
-                winery_name_text = @WineryNameText
-            WHERE id = @Id;
-            """;
-        const string deleteGrapesSql = "DELETE FROM wine_grapes WHERE wine_id = @WineId;";
-        const string insertGrapeSql = """
-            INSERT INTO wine_grapes (wine_id, grape_id, percentage)
-            VALUES (@WineId, @GrapeId, @Percentage);
-            """;
-
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        await using var transaction = await connection.BeginTransactionAsync(ct);
-
-        var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(updateWineSql, new
-            {
-                Id = id,
-                dto.WineryId,
-                dto.Name,
-                dto.Description,
-                WineType = (int)wineType,
-                dto.LocationId,
-                dto.Year,
-                dto.AlcoholContent,
-                dto.ServingTemperature,
-                dto.AgingAdvice,
-                dto.LabelImageUrl,
-                dto.WineryNameText
-            }, transaction: transaction, cancellationToken: ct));
-
-        if (rowsAffected == 0)
-        {
-            await transaction.RollbackAsync(ct);
-            return false;
-        }
-
-        await connection.ExecuteAsync(
-            new CommandDefinition(deleteGrapesSql, new { WineId = id }, transaction: transaction, cancellationToken: ct));
-
-        foreach (var grape in grapes)
-        {
-            await connection.ExecuteAsync(
-                new CommandDefinition(insertGrapeSql, new { WineId = id, grape.GrapeId, grape.Percentage },
-                    transaction: transaction, cancellationToken: ct));
-        }
-
-        await transaction.CommitAsync(ct);
-        return true;
-    }
-
-    public async Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(int id, UpdateWineRequestDto dto, WineType wineType, CancellationToken ct = default)
     {
         const string sql = """
             UPDATE wines
-            SET approval_status = @Status
+            SET winery_id = @WineryId,
+                winery_name_text = @WineryNameText,
+                name = @Name,
+                description = @Description,
+                wine_type = @WineType,
+                location_id = @LocationId
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, Status = status }, cancellationToken: ct));
-        return rowsAffected > 0;
+        var rows = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new
+            {
+                Id = id,
+                dto.WineryId,
+                dto.WineryNameText,
+                dto.Name,
+                dto.Description,
+                WineType = (int)wineType,
+                dto.LocationId
+            }, cancellationToken: ct));
+        return rows > 0;
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
+        // wine_vintages tiene ON DELETE CASCADE hacia wines, así que borrar la etiqueta
+        // se lleva puestas todas sus cosechas (y wine_grapes en cascada desde ahí también).
         const string sql = "DELETE FROM wines WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
-        return rowsAffected > 0;
+        var rows = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return rows > 0;
     }
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = "SELECT EXISTS(SELECT 1 FROM wines WHERE id = @Id);";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteScalarAsync<bool>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default)
@@ -247,8 +191,6 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default)
     {
-        // El "AND winery_id IS NULL" es la protección clave acá: si alguien ya reclamó
-        // ese vino antes, no lo pisamos ni lo movemos a otra bodega por error.
         const string sql = """
             UPDATE wines
             SET winery_id = @WineryId,
