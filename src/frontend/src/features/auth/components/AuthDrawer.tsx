@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { X, Lock, Mail, User, ArrowRight, CheckCircle2, Wine, Sparkles } from 'lucide-react';
-import type { AuthMode, AuthFormData } from '../../types/auth';
+import type { AuthMode, AuthFormData } from '../types';
 
 interface AuthDrawerProps {
   isOpen: boolean;

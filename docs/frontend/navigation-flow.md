@@ -1,38 +1,42 @@
 # Mapa de Navegación y Flujo de Usuario - AyVino Frontend
 
-Este documento detalla la arquitectura de información, las vistas de la aplicación y la experiencia interactiva (UX) del usuario en la SPA de AyVino.
+Este documento detalla la arquitectura de información, las vistas de la aplicación, el sistema de rutas protegidas y la experiencia interactiva (UX) del usuario en la SPA de AyVino.
 
 ---
 
-## 1. Diagrama de Navegación de Vistas
+## 1. Diagrama de Navegación y Guardias de Ruta
 
 ```mermaid
 flowchart TD
-    Landing["Landing Page (Catálogo Curado + Hero)"]
-    DetailModal["WineDetailModal (Ficha Técnica Contextual)"]
-    AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
-
-    subgraph AuthSubviews["Modos del AuthDrawer"]
-        LoginMode["Modo Login (Email / Password)"]
-        RegisterUser["Modo Registro Aficionado (Username, Email, Password)"]
-        RegisterWinery["Modo Registro Bodega (Credenciales + Datos Institucionales)"]
+    subgraph PublicRoutes["Rutas Públicas"]
+        Landing["/ -> Landing.tsx (Hero + Muestra Curada)"]
+        DetailModal["WineDetailModal (Ficha Técnica Contextual)"]
+        AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
     end
 
-    subgraph FutureViews["Vistas Planificadas (Próxima Fase)"]
-        SearchCatalog["Explorador con Filtros Avanzados (Varietales, Región, Añada)"]
-        UserProfile["Perfil de Usuario y Colecciones ('Favoritos', 'Por Probar')"]
-        WineryDashboard["Panel de Bodega (Gestión de Vinos y Reclamo de Candidatos)"]
+    subgraph AuthPipeline["Autenticación & Autorización"]
+        Guard["ProtectedRoute (Guardia por Rol)"]
+        AuthContext["AuthContext (AuthProvider + useAuth)"]
+    end
+
+    subgraph ProtectedRoutes["Rutas Protegidas (Requieren Sesión)"]
+        Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
+        WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx (Exclusivo Bodega/Admin)"]
     end
 
     Landing -->|"Click en tarjeta de vino"| DetailModal
-    Landing -->|"Click en 'Iniciar Sesión' / 'Registrarse'"| AuthDrawer
-    AuthDrawer --> LoginMode
-    AuthDrawer --> RegisterUser
-    AuthDrawer --> RegisterWinery
+    Landing -->|"Click en 'Iniciar Sesión' / 'Crear Cuenta'"| AuthDrawer
+    AuthDrawer -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
 
-    Landing -.->|"Búsqueda avanzada"| SearchCatalog
-    LoginMode -.->|"Login aficionado exitoso"| UserProfile
-    LoginMode -.->|"Login bodega exitoso"| WineryDashboard
+    Landing -->|"Navegación /catalogo"| Guard
+    Landing -->|"Navegación /bodega/dashboard"| Guard
+
+    Guard -->|"!isAuthenticated"| Landing
+    Guard -->|"isAuthenticated (Cualquier rol)"| Catalog
+    Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryDash
+    Guard -->|"Rol no autorizado"| Landing
+
+    Fallback["Ruta desconocida (*)"] -->|"Redirect"| Landing
 ```
 
 ---
@@ -41,32 +45,41 @@ flowchart TD
 
 ### 2.1 Página de Inicio (`Landing.tsx`)
 - **Sección Hero**:
-  - Título editorial de alto impacto (*"Descubrí, puntuá y compartí tu pasión por el buen vino"*).
-  - Barra de búsqueda rápida de etiquetas, varietales y bodegas.
-  - Llamados a la acción directos para explorar el catálogo o iniciar sesión.
+  - Título editorial de alto impacto (*"Tu bodega personal, organizada copa a copa"*).
+  - Acciones rápidas para explorar la selección curada o ingresar al sistema.
 - **Grilla de Vinos Curados**:
-  - Renderizado de tarjetas de vino (`WineCard.tsx`).
-  - Badges distintivos: Puntuación de cata (ej: `94 pts`), Origen geográfico (`Mendoza, Argentina`), Varietal dominante (`Malbec`) y Estado de origen (*"Oficial"* vs *"Comunidad"*).
+  - Renderizado de tarjetas de vino ([`WineCard.tsx`](../../src/frontend/src/features/wines/components/WineCard.tsx)).
+  - Badges de puntuación, notas de cata sensoriales, procedencia (*"Oficial"* vs *"Comunidad"*) y precio orientativo.
+- **Modal de Ficha Técnica** ([`WineDetailModal.tsx`](../../src/frontend/src/features/wines/components/WineDetailModal.tsx)):
+  - Visualización 3D simulada de la botella ([`WineBottleMock.tsx`](../../src/frontend/src/features/wines/components/WineBottleMock.tsx)).
+  - Desglose técnico: añada, notas de cata completas, maridajes y características de terroir.
 
-### 2.2 Ficha Técnica en Modal (`WineDetailModal.tsx`)
-Al presionar una tarjeta, se abre un modal contextual con fondo oscurecido (`backdrop-blur-sm`) que exhibe:
-- Representación visual de la botella y etiqueta (`WineBottleMock.tsx`).
-- Datos técnicos: Añada (cosecha), graduación alcohólica, temperatura recomendada de servicio y notas de estiba.
-- Composición de uvas (Blend / Corte) con porcentajes detallados.
-- Maridajes sugeridos (carnes rojas, pastas, quesos maduros, etc.).
-- Botones de acción rápida: Guardar en *"Favoritos"*, *"Por Probar"* o calificar.
+### 2.2 Cajón Lateral de Autenticación (`AuthDrawer.tsx`)
+- Panel deslizante derecho que preserva el contexto de lectura.
+- **Modo Inicio de Sesión**:
+  - Envío reactivo a `POST /api/auth/login` mediante [`loginApi`](../../src/frontend/src/features/auth/api/authApi.ts).
+  - Manejo integral de errores con alertas visuales:
+    - `401 Unauthorized`: Feedback de credenciales incorrectas.
+    - `429 Rate Limit`: Advertencia de exceso de intentos fallidos.
+- **Modo Registro**:
+  - Formulario de alta para sumarse a la comunidad vitivinícola.
 
-### 2.3 Cajón Lateral de Autenticación (`AuthDrawer.tsx`)
-En lugar de redirigir al usuario a una página aislada o bloquear la pantalla con un modal agresivo, la autenticación se despliega como un panel deslizante desde el lateral derecho:
-1. **Pestaña de Inicio de Sesión**: Validación de correo electrónico y contraseña, enlace a recuperación.
-2. **Pestaña de Registro de Aficionado**: Creación rápida de cuenta con rol de usuario estándar para interactuar con la comunidad.
-3. **Pestaña de Registro de Bodega**: Formulario especializado de onboarding que recopila los datos del responsable y la información institucional de la bodega (nombre, región vitivinícola, sitio web y contacto) para emitir el perfil oficial y la sesión JWT en un único paso.
+### 2.3 Barra de Navegación Contextual (`Navbar.tsx`)
+- Integración con React Router (`<Link>`) y reactiva al estado global de [`useAuth()`](../../src/frontend/src/features/auth/context/AuthContext.tsx):
+  - **Estado Anónimo**: Exhibe enlaces de sección y botones *"Iniciar Sesión"* y *"Crear Cuenta"*.
+  - **Estado Autenticado**:
+    - Píldora con nombre de usuario y badge de rol (`User`, `Winery`, `Admin`).
+    - Enlace al Catálogo Protegido (`/catalogo`).
+    - Enlace al Panel de Bodega (`/bodega/dashboard`) únicamente visible para roles `Winery` y `Admin`.
+    - Botón de cierre de sesión (*"Salir"* / *"Cerrar Sesión"*), con revocación remota en backend y reseteo local.
 
 ---
 
-## 3. Próximos Flujos en Desarrollo
+## 3. Vistas Protegidas y Políticas de Acceso
 
-- **Explorador y Filtro Multicriterio**:
-  Integración directa con `GET /api/wines` admitiendo filtros combinados por `wineryId`, `grapeId`, `yearFrom` y `yearTo`.
-- **Flujo de Reclamo en Dashboard de Bodega**:
-  Interfaz dedicada donde el sommelier o administrador de la bodega puede visualizar los vinos candidatos detectados por el sistema (`GET /api/wines/claim-candidates/{wineryId}`) y adoptarlos con un solo click (`POST /api/wines/claim/{wineryId}`).
+| Ruta | Componente | Acceso Permitido | Comportamiento si no cumple |
+| :--- | :--- | :--- | :--- |
+| `/` | `Landing.tsx` | Público (todos) | N/A |
+| `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
+| `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Redirige a `/` |
+| `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |

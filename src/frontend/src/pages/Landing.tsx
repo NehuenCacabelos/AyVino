@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import Navbar from '../components/layout/Navbar';
-import AuthDrawer from '../components/auth/AuthDrawer';
-import WineCard from '../components/wine/WineCard';
-import WineBottleMock from '../components/wine/WineBottleMock';
-import WineDetailModal from '../components/wine/WineDetailModal';
+import AuthDrawer from '../features/auth/components/AuthDrawer';
+import type { AuthMode } from '../features/auth/types';
+import WineCard from '../features/wines/components/WineCard';
+import WineBottleMock from '../features/wines/components/WineBottleMock';
+import WineDetailModal from '../features/wines/components/WineDetailModal';
 import type { CuratedWine } from '../types/wine';
-import type { AuthMode } from '../types/auth';
 import {
   Sparkles,
   ArrowDown,
