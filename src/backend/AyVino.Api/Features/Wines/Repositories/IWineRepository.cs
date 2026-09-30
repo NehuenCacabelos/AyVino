@@ -1,0 +1,17 @@
+using AyVino.Api.Features.Wines.DTOs;
+using AyVino.Api.Features.Wines.Enums;
+using AyVino.Api.Features.Wines.Models;
+
+namespace AyVino.Api.Features.Wines.Repositories;
+
+public interface IWineRepository
+{
+    Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default);
+    Task<Wine> CreateWithFirstVintageAsync(CreateWineRequestDto dto, WineType wineType, SourceType sourceType, CreateWineVintageRequestDto vintageDto, IEnumerable<WineGrape> grapes, CancellationToken ct = default);
+    Task<bool> UpdateAsync(int id, UpdateWineRequestDto dto, WineType wineType, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
+    Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default);
+    Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default);
+}
