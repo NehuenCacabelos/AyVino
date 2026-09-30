@@ -6,10 +6,4 @@ public record UpdateWineRequestDto(
     int? WineryId = null,
     string? WineryNameText = null,
     string? Description = null,
-    int? LocationId = null,
-    int? Year = null,
-    decimal? AlcoholContent = null,
-    int? ServingTemperature = null,
-    string? AgingAdvice = null,
-    string? LabelImageUrl = null,
-    List<WineGrapeRequestDto>? Grapes = null);
+    int? LocationId = null);
