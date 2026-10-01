@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Grapes.DTOs;
 using AyVino.Api.Features.Grapes.Services;
 
@@ -13,7 +14,10 @@ public static class GrapeEndpoints
         {
             var created = await service.CreateAsync(request, ct);
             return Results.Created($"/api/grapes/{created.Id}", created);
-        }).WithName("CreateGrape").WithSummary("Creates a new grape.");
+        })
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("CreateGrape")
+        .WithSummary("Creates a new grape.");
 
         group.MapGet("/", async (IGrapeService service, int pageNumber = 1, int pageSize = 10, string? colorType = null, CancellationToken ct = default) =>
         {
@@ -27,13 +31,19 @@ public static class GrapeEndpoints
 
         group.MapPut("/{id:int}", async (int id, UpdateGrapeRequestDto request, IGrapeService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct))
-        ).WithName("UpdateGrape").WithSummary("Updates an existing grape.");
+        )
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("UpdateGrape")
+        .WithSummary("Updates an existing grape.");
 
         group.MapDelete("/{id:int}", async (int id, IGrapeService service, CancellationToken ct) =>
         {
             await service.DeleteAsync(id, ct);
             return Results.NoContent();
-        }).WithName("DeleteGrape").WithSummary("Deletes a grape.");
+        })
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("DeleteGrape")
+        .WithSummary("Deletes a grape.");
 
         return app;
     }

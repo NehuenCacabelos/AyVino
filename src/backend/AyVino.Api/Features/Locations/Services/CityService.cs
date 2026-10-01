@@ -1,10 +1,9 @@
 using AyVino.Api.Common.Exceptions;
-using AyVino.Api.Features.Cities.DTOs;
-using AyVino.Api.Features.Cities.Enums;
-using AyVino.Api.Features.Cities.Repositories;
-using AyVino.Api.Features.States.Repositories;
+using AyVino.Api.Features.Locations.DTOs;
+using AyVino.Api.Features.Locations.Enums;
+using AyVino.Api.Features.Locations.Repositories;
 
-namespace AyVino.Api.Features.Cities.Services;
+namespace AyVino.Api.Features.Locations.Services;
 
 public class CityService(ICityRepository cityRepository, IStateRepository stateRepository) : ICityService
 {

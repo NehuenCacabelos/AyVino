@@ -1,5 +1,4 @@
 using AyVino.Api.Common.Data;
-using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using Dapper;
@@ -19,6 +18,20 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Wine>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
+    {
+        var idList = ids as IReadOnlyCollection<int> ?? ids.ToArray();
+        if (idList.Count == 0)
+        {
+            return [];
+        }
+
+        var sql = $"SELECT {SelectColumns} FROM wines WHERE id = ANY(@Ids) ORDER BY id;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Wine>(
+            new CommandDefinition(sql, new { Ids = idList.ToArray() }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default)
@@ -59,7 +72,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-    public async Task<Wine> CreateWithFirstVintageAsync(CreateWineRequestDto dto, WineType wineType, SourceType sourceType, CreateWineVintageRequestDto vintageDto, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public async Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string insertWineSql = """
             INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count)
@@ -76,38 +89,33 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             VALUES (@WineVintageId, @GrapeId, @Percentage);
             """;
 
-        var registerDate = DateTime.UtcNow;
-        const int pendingStatus = (int)ApprovalStatus.Pending;
-
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        // Una sola transacción para las tres tablas: si falla la cosecha o una uva,
-        // no queremos una etiqueta "fantasma" sin ninguna cosecha.
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         var wineId = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertWineSql, new
             {
-                dto.WineryId,
-                dto.WineryNameText,
-                dto.Name,
-                dto.Description,
-                WineType = (int)wineType,
-                dto.LocationId,
-                SourceType = (int)sourceType
+                wine.WineryId,
+                wine.WineryNameText,
+                wine.Name,
+                wine.Description,
+                WineType = (int)wine.WineType,
+                wine.LocationId,
+                SourceType = (int)wine.SourceType
             }, transaction: transaction, cancellationToken: ct));
 
         var vintageId = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertVintageSql, new
             {
                 WineId = wineId,
-                vintageDto.Year,
-                vintageDto.AlcoholContent,
-                vintageDto.ServingTemperature,
-                vintageDto.AgingAdvice,
-                vintageDto.ImageUrl,
-                ApprovalStatus = pendingStatus,
-                vintageDto.UploadedByUserId,
-                RegisterDate = registerDate
+                firstVintage.Year,
+                firstVintage.AlcoholContent,
+                firstVintage.ServingTemperature,
+                firstVintage.AgingAdvice,
+                firstVintage.ImageUrl,
+                ApprovalStatus = (int)firstVintage.ApprovalStatus,
+                firstVintage.UploadedByUserId,
+                firstVintage.RegisterDate
             }, transaction: transaction, cancellationToken: ct));
 
         foreach (var grape in grapes)
@@ -119,20 +127,10 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
         await transaction.CommitAsync(ct);
 
-        return new Wine
-        {
-            Id = wineId,
-            WineryId = dto.WineryId,
-            WineryNameText = dto.WineryNameText,
-            Name = dto.Name,
-            Description = dto.Description,
-            WineType = wineType,
-            LocationId = dto.LocationId,
-            SourceType = sourceType
-        };
+        return wine with { Id = wineId };
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateWineRequestDto dto, WineType wineType, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(Wine wine, CancellationToken ct = default)
     {
         const string sql = """
             UPDATE wines
@@ -148,13 +146,13 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         var rows = await connection.ExecuteAsync(
             new CommandDefinition(sql, new
             {
-                Id = id,
-                dto.WineryId,
-                dto.WineryNameText,
-                dto.Name,
-                dto.Description,
-                WineType = (int)wineType,
-                dto.LocationId
+                wine.Id,
+                wine.WineryId,
+                wine.WineryNameText,
+                wine.Name,
+                wine.Description,
+                WineType = (int)wine.WineType,
+                wine.LocationId
             }, cancellationToken: ct));
         return rows > 0;
     }

@@ -39,7 +39,10 @@ public class WineService(
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
-        var wine = await wineRepository.CreateWithFirstVintageAsync(dto, wineType, sourceType, dto.FirstVintage, grapes, ct);
+        var wineEntity = dto.ToEntity(wineType, sourceType);
+        var firstVintageEntity = dto.FirstVintage.ToEntity();
+
+        var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
         return wine.ToResponseDto();
     }
 
@@ -49,7 +52,8 @@ public class WineService(
         if (!exists) throw new NotFoundException($"Wine with ID {id} not found.");
 
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
-        var updated = await wineRepository.UpdateAsync(id, dto, wineType, ct);
+        var wineEntity = dto.ToEntity(id, wineType);
+        var updated = await wineRepository.UpdateAsync(wineEntity, ct);
         if (!updated) throw new NotFoundException($"Wine with ID {id} not found.");
 
         return await GetByIdAsync(id, ct);
@@ -78,18 +82,16 @@ public class WineService(
         if (wineIds is not { Count: > 0 })
             throw new ValidationException("You must provide at least one wine ID to claim.");
 
-        var claimedCount = await wineRepository.ClaimWinesAsync(wineryId, wineIds.Distinct(), ct);
+        var distinctIds = wineIds.Distinct().ToList();
+        var claimedCount = await wineRepository.ClaimWinesAsync(wineryId, distinctIds, ct);
         if (claimedCount == 0)
             throw new ValidationException("None of the provided wine IDs were valid, unclaimed wines.");
 
-        var claimed = new List<WineResponseDto>();
-        foreach (var wineId in wineIds.Distinct())
-        {
-            var wine = await wineRepository.GetByIdAsync(wineId, ct);
-            if (wine is not null && wine.WineryId == wineryId)
-                claimed.Add(wine.ToResponseDto());
-        }
-        return claimed;
+        var claimedWines = await wineRepository.GetByIdsAsync(distinctIds, ct);
+        return claimedWines
+            .Where(w => w.WineryId == wineryId)
+            .Select(w => w.ToResponseDto())
+            .ToList();
     }
 
     private async Task<WineType> ValidateLabelAsync(string name, string wineType, int? wineryId, int? locationId, CancellationToken ct)

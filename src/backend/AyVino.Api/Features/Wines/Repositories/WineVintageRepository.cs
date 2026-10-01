@@ -1,5 +1,4 @@
 using AyVino.Api.Common.Data;
-using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using Dapper;
@@ -37,7 +36,23 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, new { VintageId = vintageId }, cancellationToken: ct));
     }
 
-    public async Task<WineVintage> CreateAsync(int wineId, CreateWineVintageRequestDto dto, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public async Task<IEnumerable<WineGrape>> GetGrapesByVintageIdsAsync(IEnumerable<int> vintageIds, CancellationToken ct = default)
+    {
+        var ids = vintageIds as int[] ?? vintageIds.ToArray();
+        if (ids.Length == 0) return [];
+
+        const string sql = """
+            SELECT wine_vintage_id, grape_id, percentage
+            FROM wine_grapes
+            WHERE wine_vintage_id = ANY(@VintageIds);
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<WineGrape>(
+            new CommandDefinition(sql, new { VintageIds = ids }, cancellationToken: ct));
+    }
+
+    public async Task<WineVintage> CreateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string insertVintageSql = """
             INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_url, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
@@ -49,24 +64,21 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             VALUES (@WineVintageId, @GrapeId, @Percentage);
             """;
 
-        var registerDate = DateTime.UtcNow;
-        const int pendingStatus = (int)ApprovalStatus.Pending;
-
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         var id = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertVintageSql, new
             {
-                WineId = wineId,
-                dto.Year,
-                dto.AlcoholContent,
-                dto.ServingTemperature,
-                dto.AgingAdvice,
-                dto.ImageUrl,
-                ApprovalStatus = pendingStatus,
-                dto.UploadedByUserId,
-                RegisterDate = registerDate
+                vintage.WineId,
+                vintage.Year,
+                vintage.AlcoholContent,
+                vintage.ServingTemperature,
+                vintage.AgingAdvice,
+                vintage.ImageUrl,
+                ApprovalStatus = (int)vintage.ApprovalStatus,
+                vintage.UploadedByUserId,
+                vintage.RegisterDate
             }, transaction: transaction, cancellationToken: ct));
 
         foreach (var grape in grapes)
@@ -78,22 +90,10 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
 
         await transaction.CommitAsync(ct);
 
-        return new WineVintage
-        {
-            Id = id,
-            WineId = wineId,
-            Year = dto.Year,
-            AlcoholContent = dto.AlcoholContent,
-            ServingTemperature = dto.ServingTemperature,
-            AgingAdvice = dto.AgingAdvice,
-            ImageUrl = dto.ImageUrl,
-            ApprovalStatus = ApprovalStatus.Pending,
-            UploadedByUserId = dto.UploadedByUserId,
-            RegisterDate = registerDate
-        };
+        return vintage with { Id = id };
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateWineVintageRequestDto dto, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string updateSql = """
             UPDATE wine_vintages
@@ -114,8 +114,15 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         var rows = await connection.ExecuteAsync(
-            new CommandDefinition(updateSql, new { Id = id, dto.Year, dto.AlcoholContent, dto.ServingTemperature, dto.AgingAdvice, dto.ImageUrl },
-                transaction: transaction, cancellationToken: ct));
+            new CommandDefinition(updateSql, new
+            {
+                vintage.Id,
+                vintage.Year,
+                vintage.AlcoholContent,
+                vintage.ServingTemperature,
+                vintage.AgingAdvice,
+                vintage.ImageUrl
+            }, transaction: transaction, cancellationToken: ct));
 
         if (rows == 0)
         {
@@ -124,12 +131,12 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         }
 
         await connection.ExecuteAsync(
-            new CommandDefinition(deleteGrapesSql, new { VintageId = id }, transaction: transaction, cancellationToken: ct));
+            new CommandDefinition(deleteGrapesSql, new { VintageId = vintage.Id }, transaction: transaction, cancellationToken: ct));
 
         foreach (var grape in grapes)
         {
             await connection.ExecuteAsync(
-                new CommandDefinition(insertGrapeSql, new { WineVintageId = id, grape.GrapeId, grape.Percentage },
+                new CommandDefinition(insertGrapeSql, new { WineVintageId = vintage.Id, grape.GrapeId, grape.Percentage },
                     transaction: transaction, cancellationToken: ct));
         }
 

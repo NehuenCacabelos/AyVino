@@ -1,6 +1,6 @@
-using AyVino.Api.Features.Cities.Models;
+using AyVino.Api.Features.Locations.Models;
 
-namespace AyVino.Api.Features.Cities.DTOs;
+namespace AyVino.Api.Features.Locations.DTOs;
 
 public static class CityMappingExtensions
 {

@@ -25,9 +25,9 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20260809002` | `SeedStates.cs` | `states` | Carga inicial (seed) de las 24 jurisdicciones de Argentina (Mendoza, San Juan, Salta, Río Negro, La Rioja, etc.). |
 | `20260809003` | `CreateCitiesTable.cs` | `cities` | Ciudades y departamentos vitivinícolas con clave foránea a `states` y estado de moderación (`status`). |
 | `20260809004` | `CreateLocationsTable.cs` | `locations` | Terruños y zonas específicas de producción con clave foránea a `cities`. |
-| `20260830002` | `CreateWinesTable.cs` | `wines`, `wine_grapes` | Ficha técnica del vino (año, graduación alcohólica, temperatura de servicio, notas de estiba, estado de moderación) y tabla intermedia `wine_grapes` con clave compuesta y constraint `CK_WineGrapes_Percentage` (porcentaje entre 1 y 100). |
-| `20260830003` | `AddWineClaimFields.cs` | `wines` | Incorpora soporte para el flujo de reclamo (Pieza B y C): columna `winery_name_text` (nombre ingresado por la comunidad), `source_type` (1=Community, 2=Official) y `duplicate_of_wine_id` (self-FK para merge de duplicados). |
+| `20260830002` | `CreateWinesTable.cs` | `wines`, `wine_vintages`, `wine_grapes` | Catálogo de etiquetas base (`wines`), cosechas anuales (`wine_vintages` con constraint de unicidad `UQ_WineVintages_WineId_Year` NULLS NOT DISTINCT) y composición varietal (`wine_grapes` con `CK_WineGrapes_Percentage`). |
 | `20260919001` | `CreatePairingsTable.cs` | `pairings`, `wine_pairings` | Catálogo de maridajes culinarios clasificados por categoría y tabla intermedia de asociación N:M `wine_pairings` con eliminación en cascada. |
+| `20260929001` | `CreateReviewsTable.cs` | `reviews` | Reseñas y calificaciones (1 a 5 estrellas) emitidas por usuarios sobre cosechas específicas (`wine_vintages`), con restricción de unicidad (`uq_reviews_user_wine_vintage`) y cascade rollup. |
 
 ---
 
@@ -38,7 +38,8 @@ erDiagram
     USERS ||--o| USER_CREDENTIALS : "tiene credenciales"
     USERS ||--o{ REFRESH_TOKENS : "posee sesiones"
     USERS ||--o{ WINERIES : "administra (opcional)"
-    USERS ||--o{ WINES : "sube botellas"
+    USERS ||--o{ WINE_VINTAGES : "sube cosechas"
+    USERS ||--o{ REVIEWS : "escribe"
 
     STATES ||--o{ CITIES : "contiene"
     CITIES ||--o{ LOCATIONS : "alberga terruños"
@@ -47,13 +48,16 @@ erDiagram
 
     WINERIES ||--o{ WINES : "produce botellas oficiales"
     
-    WINES ||--o{ WINE_GRAPES : "compuesto por"
+    WINES ||--o{ WINE_VINTAGES : "posee añadas"
+    WINE_VINTAGES ||--o{ WINE_GRAPES : "compuesto por"
     GRAPES ||--o{ WINE_GRAPES : "participa en corte"
 
     WINES ||--o{ WINE_PAIRINGS : "recomienda"
     PAIRINGS ||--o{ WINE_PAIRINGS : "asociado a"
 
     WINES ||--o| WINES : "es duplicado de (self-FK)"
+
+    WINE_VINTAGES ||--o{ REVIEWS : "recibe"
 
     USERS {
         int id PK
@@ -106,21 +110,30 @@ erDiagram
         string description
         int wine_type
         int location_id FK "nullable"
+        string winery_name_text "nullable"
+        int source_type "1=Community, 2=Official"
+        int duplicate_of_wine_id FK "nullable"
+        int rating_sum
+        int review_count
+    }
+
+    WINE_VINTAGES {
+        int id PK
+        int wine_id FK
         int year "nullable"
         decimal alcohol_content "nullable"
         int serving_temperature "nullable"
         string aging_advice
-        string label_image_url
+        string image_url
         int approval_status
         int uploaded_by_user_id FK
-        string winery_name_text "nullable"
-        int source_type "1=Community, 2=Official"
-        int duplicate_of_wine_id FK "nullable"
         datetime register_date
+        int rating_sum
+        int review_count
     }
 
     WINE_GRAPES {
-        int wine_id PK, FK
+        int wine_vintage_id PK, FK
         int grape_id PK, FK
         decimal percentage "1.00 a 100.00"
     }
@@ -134,6 +147,16 @@ erDiagram
     WINE_PAIRINGS {
         int wine_id PK, FK
         int pairing_id PK, FK
+    }
+
+    REVIEWS {
+        int id PK
+        int user_id FK
+        int wine_vintage_id FK
+        int rating "1 a 5"
+        string comment
+        datetime created_at
+        datetime updated_at
     }
 ```
 

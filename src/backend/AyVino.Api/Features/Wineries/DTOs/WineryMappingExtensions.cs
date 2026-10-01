@@ -17,6 +17,16 @@ public static class WineryMappingExtensions
         RegisterDate = DateTime.UtcNow
     };
 
+    public static Winery ToEntity(this UpdateWineryRequestDto dto, int id) => new()
+    {
+        Id = id,
+        Name = dto.Name,
+        Description = dto.Description,
+        LocationId = dto.LocationId,
+        FoundationYear = dto.FoundationYear,
+        Website = dto.Website
+    };
+
     public static WineryResponseDto ToResponseDto(this Winery winery) => new(
         winery.Id,
         winery.Name,

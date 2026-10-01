@@ -1,6 +1,6 @@
-using AyVino.Api.Features.Cities.Models;
+using AyVino.Api.Features.Locations.Models;
 
-namespace AyVino.Api.Features.Cities.Repositories;
+namespace AyVino.Api.Features.Locations.Repositories;
 
 public interface ICityRepository
 {

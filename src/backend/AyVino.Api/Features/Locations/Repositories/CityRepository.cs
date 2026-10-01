@@ -1,8 +1,8 @@
 using AyVino.Api.Common.Data;
-using AyVino.Api.Features.Cities.Models;
+using AyVino.Api.Features.Locations.Models;
 using Dapper;
 
-namespace AyVino.Api.Features.Cities.Repositories;
+namespace AyVino.Api.Features.Locations.Repositories;
 
 public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepository
 {

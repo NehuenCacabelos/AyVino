@@ -8,6 +8,6 @@ public interface IWineVintageService
     Task<IEnumerable<WineVintageResponseDto>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default);
     Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, CancellationToken ct = default);
     Task<WineVintageResponseDto> UpdateAsync(int wineId, int vintageId, UpdateWineVintageRequestDto dto, CancellationToken ct = default);
-    Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, string status, CancellationToken ct = default);
+    Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, ChangeWineVintageStatusRequestDto dto, CancellationToken ct = default);
     Task DeleteAsync(int wineId, int vintageId, CancellationToken ct = default);
 }

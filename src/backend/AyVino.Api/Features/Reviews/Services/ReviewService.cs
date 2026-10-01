@@ -27,7 +27,7 @@ public class ReviewService(IReviewRepository reviewRepository) : IReviewService
             ?? throw new NotFoundException($"Review con ID {id} no encontrada.");
 
         if (existing.UserId != userId)
-            throw new UnauthorizedException("No podés editar la reseña de otro usuario.");
+            throw new ForbiddenException("No podés editar la reseña de otro usuario.");
 
         var updated = existing with
         {
@@ -49,7 +49,7 @@ public class ReviewService(IReviewRepository reviewRepository) : IReviewService
             ?? throw new NotFoundException($"Review con ID {id} no encontrada.");
 
         if (existing.UserId != userId)
-            throw new UnauthorizedException("No podés borrar la reseña de otro usuario.");
+            throw new ForbiddenException("No podés borrar la reseña de otro usuario.");
 
         var success = await reviewRepository.DeleteAsync(id, ct);
         if (!success) throw new NotFoundException($"Review con ID {id} no encontrada.");

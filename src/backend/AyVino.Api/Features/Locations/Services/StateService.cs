@@ -1,8 +1,8 @@
 using AyVino.Api.Common.Exceptions;
-using AyVino.Api.Features.States.DTOs;
-using AyVino.Api.Features.States.Repositories;
+using AyVino.Api.Features.Locations.DTOs;
+using AyVino.Api.Features.Locations.Repositories;
 
-namespace AyVino.Api.Features.States.Services;
+namespace AyVino.Api.Features.Locations.Services;
 
 public class StateService(IStateRepository stateRepository) : IStateService
 {

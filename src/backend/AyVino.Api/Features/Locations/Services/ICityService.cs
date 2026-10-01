@@ -1,6 +1,6 @@
-using AyVino.Api.Features.Cities.DTOs;
+using AyVino.Api.Features.Locations.DTOs;
 
-namespace AyVino.Api.Features.Cities.Services;
+namespace AyVino.Api.Features.Locations.Services;
 
 public interface ICityService
 {

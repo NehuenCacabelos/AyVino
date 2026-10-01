@@ -25,7 +25,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
     public async Task<ReviewResponseDto?> GetResponseByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT r.id AS Id, r.user_id AS UserId, u.nombre_usuario AS UserName,
+            SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
                    r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
@@ -42,7 +42,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT r.id AS Id, r.user_id AS UserId, u.nombre_usuario AS UserName,
+            SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
                    r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
@@ -66,7 +66,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByWineAsync(int wineId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT r.id AS Id, r.user_id AS UserId, u.nombre_usuario AS UserName,
+            SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
                    r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt

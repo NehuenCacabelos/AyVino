@@ -30,7 +30,7 @@ Features/
 │   └── Services/      # IUserService.cs y UserService.cs
 │
 ├── Wineries/          # Bodegas (oficiales y comunitarias), registro y perfiles
-│   ├── DTOs/          # RegisterWineryRequestDto, WineryResponseDto, etc.
+│   ├── DTOs/          # RegisterWineryRequestDto, WineryResponseDto, ChangeWineryStatusRequestDto, etc.
 │   ├── Endpoints/     # WineryEndpoints.cs
 │   ├── Enums/         # WineryStatus (Pending, Approved, Rejected)
 │   ├── Models/        # Winery.cs
@@ -53,13 +53,13 @@ Features/
 │   ├── Repositories/  # IGrapeRepository.cs y GrapeRepository.cs
 │   └── Services/      # IGrapeService.cs y GrapeService.cs
 │
-├── Wines/             # Catálogo de botellas, cortes (blends) y reclamo oficial
-│   ├── DTOs/          # CreateWineRequestDto, WineResponseDto, ClaimWinesRequestDto, etc.
-│   ├── Endpoints/     # WineEndpoints.cs
-│   ├── Enums/         # WineType, WineApprovalStatus, SourceType
-│   ├── Models/        # Wine.cs, WineGrape.cs
-│   ├── Repositories/  # IWineRepository.cs y WineRepository.cs
-│   └── Services/      # IWineService.cs y WineService.cs
+├── Wines/             # Catálogo de botellas, cosechas (vintages), cortes (blends) y reclamo oficial
+│   ├── DTOs/          # CreateWineRequestDto, WineResponseDto, WineVintageResponseDto, ChangeWineVintageStatusRequestDto, etc.
+│   ├── Endpoints/     # WineEndpoints.cs y WineVintageEndpoints.cs
+│   ├── Enums/         # WineType, ApprovalStatus, SourceType
+│   ├── Models/        # Wine.cs, WineVintage.cs, WineGrape.cs
+│   ├── Repositories/  # IWineRepository, WineRepository, IWineVintageRepository, WineVintageRepository
+│   └── Services/      # IWineService, WineService, IWineVintageService, WineVintageService
 │
 ├── Pairings/          # Maridajes culinarios y asociaciones N:M con etiquetas de vino
 │   ├── DTOs/          # CreatePairingRequestDto, PairingResponseDto, etc.
@@ -69,8 +69,12 @@ Features/
 │   ├── Repositories/  # IPairingRepository.cs y PairingRepository.cs
 │   └── Services/      # IPairingService.cs y PairingService.cs
 │
-└── Reviews/           # Módulo reservado para reseñas, notas de cata y calificaciones
-    └── .gitkeep
+└── Reviews/           # Reseñas por cosecha y etiqueta con cálculo ponderado y cascade rollup
+    ├── DTOs/          # CreateReviewRequestDto, ReviewResponseDto, UpdateReviewRequestDto, etc.
+    ├── Endpoints/     # ReviewEndpoints.cs
+    ├── Models/        # Review.cs
+    ├── Repositories/  # IReviewRepository.cs y ReviewRepository.cs
+    └── Services/      # IReviewService.cs y ReviewService.cs
 ```
 
 ---
@@ -126,3 +130,49 @@ El registro de servicios en `Program.cs` respeta los siguientes alcances:
 - **Singleton**: Servicios sin estado (`IDbConnectionFactory`, `IPasswordHasher`, `IJwtTokenGenerator`).
 - **Scoped**: Servicios de dominio y repositorios por slice (`IWineService`, `IWineRepository`, `IAuthService`, etc.).
 - **HostedService**: `TokenCleanupBackgroundService`, que ejecuta una tarea periódica cada hora para purgar tokens de refresco expirados o revocados hace más de 30 días.
+
+---
+
+## 5. Aislamiento Estricto de Capas (Cero Fuga de DTOs en Persistencia)
+
+Siguiendo el estándar canónico del proyecto (`Users` y `Auth`), la capa de persistencia se encuentra estrictamente desacoplada de los contratos de transporte de la API:
+
+1. **Firmas de Repositorio Puras**:
+   Los repositorios (`IWineryRepository`, `IWineRepository`, `IWineVintageRepository`, `ILocationRepository`, etc.) operan **exclusivamente con modelos de dominio (`Models/`) o parámetros escalares/primitivos**. Ninguna interfaz ni implementación de repositorio importa namespaces de DTOs.
+2. **Transformación DTO -> Entidad en Capa de Servicio**:
+   La conversión de peticiones HTTP a entidades de dominio se realiza dentro de los servicios de aplicación (`Services/`) mediante métodos de extensión puros (`ToEntity(...)`) alojados en `DTOs/*MappingExtensions.cs`.
+3. **Proyección y Mapeo de Salida**:
+   Las consultas de base de datos leen y reconstruyen entidades o proyecciones relacionales internas (`Location`, `Wine`, `Winery`). Es la capa de servicio quien mapea dichas entidades a contratos de respuesta (`ToResponseDto()`).
+
+---
+
+## 6. Organización de Vertical Slices y Convención de Namespaces
+
+Cada slice funcional en `Features/` mantiene una subdivisión estandarizada de carpetas y namespaces canónicos:
+
+```text
+AyVino.Api.Features.<FeatureName>
+├── DTOs          # Request/Response records y clases de extensión de mapeo (*MappingExtensions.cs)
+├── Endpoints     # Definición y registro de Minimal APIs (*Endpoints.cs)
+├── Enums         # Enumeradores y tipos de valor de dominio
+├── Models        # Entidades de dominio y registros de persistencia
+├── Repositories  # Interfaces (I*Repository.cs) e implementaciones con Dapper (*Repository.cs)
+└── Services      # Interfaces (I*Service.cs) e implementaciones de lógica de negocio (*Service.cs)
+```
+
+En particular, la funcionalidad territorial (`Features/Locations/`) unifica de manera coherente los agregados de `States`, `Cities` y `Locations` bajo el espacio de nombres común `AyVino.Api.Features.Locations.*`, garantizando cohesión interna e importaciones limpias en `Program.cs`.
+
+---
+
+## 7. Suite de Pruebas Unitarias (`tests/AyVino.UnitTests`)
+
+Cumpliendo con la **Regla 5 de la Constitución de AyVino**, cada servicio y optimización del backend cuenta con su respectiva suite de pruebas automatizadas:
+
+- **Aislamiento sin mocks pesados**: Se emplean fakes en memoria (`FakeWineRepository`, `FakeWineryRepository`, `FakeLocationRepository`, `FakeGrapeRepository`, `FakeReviewRepository`) que implementan las interfaces canónicas del dominio.
+- **Cobertura de Casos de Negocio**:
+  - `WineryServiceTests`: Pruebas de registro de bodegas, creación comunitaria, actualización de perfil, validaciones de negocio y no existencia.
+  - `WineServiceTests`: Mapeo de DTOs complejos (cortes/uvas y primera añada) hacia entidades de dominio, validaciones de claves foráneas (`WineryId`, `LocationId`), parsing de `WineType` y flujos de actualización.
+  - `LocationServiceTests`: Mapeo relacional de `Location` con `City` y `State`, validaciones de terruño y ciclo de consultas.
+  - `WineOptimizationTests`: Verificación de batching Dapper contra problemas N+1 (`GetByIdsAsync` y `GetGrapesByVintageIdsBatchAsync`).
+  - `ReviewSecurityTests`: Verificación de límites de autorización y segregación de excepciones (`ForbiddenException` 403 vs `UnauthorizedException` 401).
+

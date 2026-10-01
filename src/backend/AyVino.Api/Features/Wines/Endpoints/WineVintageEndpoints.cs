@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
 
@@ -24,16 +25,19 @@ public static class WineVintageEndpoints
             var created = await service.CreateAsync(wineId, request, ct);
             return Results.Created($"/api/wines/{wineId}/vintages/{created.Id}", created);
         })
+            .RequireAuthorization()
             .WithName("CreateWineVintage")
             .WithSummary("Adds a new vintage (starts as Pending) to an existing wine label.");
 
         group.MapPut("/{vintageId:int}", async (int wineId, int vintageId, UpdateWineVintageRequestDto request, IWineVintageService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(wineId, vintageId, request, ct)))
+            .RequireAuthorization()
             .WithName("UpdateWineVintage")
             .WithSummary("Updates a vintage's data and replaces its grape blend.");
 
-        group.MapPut("/{vintageId:int}/status", async (int wineId, int vintageId, string status, IWineVintageService service, CancellationToken ct) =>
-            Results.Ok(await service.ChangeStatusAsync(wineId, vintageId, status, ct)))
+        group.MapPatch("/{vintageId:int}/status", async (int wineId, int vintageId, ChangeWineVintageStatusRequestDto request, IWineVintageService service, CancellationToken ct) =>
+            Results.Ok(await service.ChangeStatusAsync(wineId, vintageId, request, ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("ChangeWineVintageStatus")
             .WithSummary("Changes a vintage's moderation status (Pending/Approved/Rejected).");
 
@@ -42,6 +46,7 @@ public static class WineVintageEndpoints
             await service.DeleteAsync(wineId, vintageId, ct);
             return Results.NoContent();
         })
+            .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWineVintage")
             .WithSummary("Deletes a single vintage.");
 

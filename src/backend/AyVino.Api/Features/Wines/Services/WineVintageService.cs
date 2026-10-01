@@ -24,14 +24,17 @@ public class WineVintageService(
         if (!await wineRepository.ExistsByIdAsync(wineId, ct))
             throw new NotFoundException($"Wine with ID {wineId} not found.");
 
-        var vintages = await vintageRepository.GetAllByWineIdAsync(wineId, ct);
-        var result = new List<WineVintageResponseDto>();
-        foreach (var vintage in vintages)
+        var vintages = (await vintageRepository.GetAllByWineIdAsync(wineId, ct)).ToList();
+        if (vintages.Count == 0)
         {
-            var grapes = await vintageRepository.GetGrapesByVintageIdAsync(vintage.Id, ct);
-            result.Add(vintage.ToResponseDto(grapes));
+            return [];
         }
-        return result;
+
+        var vintageIds = vintages.Select(v => v.Id).ToList();
+        var allGrapes = await vintageRepository.GetGrapesByVintageIdsAsync(vintageIds, ct);
+        var grapesByVintageId = allGrapes.ToLookup(g => g.WineVintageId);
+
+        return vintages.Select(v => v.ToResponseDto(grapesByVintageId[v.Id]));
     }
 
     public async Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, CancellationToken ct = default)
@@ -42,7 +45,8 @@ public class WineVintageService(
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var vintage = await vintageRepository.CreateAsync(wineId, dto, grapes, ct);
+        var vintageEntity = dto.ToEntity(wineId);
+        var vintage = await vintageRepository.CreateAsync(vintageEntity, grapes, ct);
         return vintage.ToResponseDto(grapes);
     }
 
@@ -53,16 +57,17 @@ public class WineVintageService(
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var updated = await vintageRepository.UpdateAsync(vintageId, dto, grapes, ct);
+        var vintageEntity = dto.ToEntity(vintageId, wineId);
+        var updated = await vintageRepository.UpdateAsync(vintageEntity, grapes, ct);
         if (!updated) throw new NotFoundException($"Vintage with ID {vintageId} not found.");
 
         return await GetByIdAsync(wineId, vintageId, ct);
     }
 
-    public async Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, string status, CancellationToken ct = default)
+    public async Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, ChangeWineVintageStatusRequestDto dto, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var parsedStatus))
-            throw new ValidationException($"Invalid status: '{status}'.");
+        if (string.IsNullOrWhiteSpace(dto.Status) || !Enum.TryParse<ApprovalStatus>(dto.Status, ignoreCase: true, out var parsedStatus))
+            throw new ValidationException($"Invalid status: '{dto.Status}'.");
 
         await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
 

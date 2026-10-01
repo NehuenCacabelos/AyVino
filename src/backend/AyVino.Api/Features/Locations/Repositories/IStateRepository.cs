@@ -1,6 +1,6 @@
-using AyVino.Api.Features.States.Models;
+using AyVino.Api.Features.Locations.Models;
 
-namespace AyVino.Api.Features.States.Repositories;
+namespace AyVino.Api.Features.Locations.Repositories;
 
 public interface IStateRepository
 {

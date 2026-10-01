@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Pairings.DTOs;
 using AyVino.Api.Features.Pairings.Services;
 
@@ -13,7 +14,10 @@ public static class PairingEndpoints
         {
             var created = await service.CreateAsync(request, ct);
             return Results.Created($"/api/pairings/{created.Id}", created);
-        }).WithName("CreatePairing").WithSummary("Creates a new pairing catalog entry.");
+        })
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("CreatePairing")
+        .WithSummary("Creates a new pairing catalog entry.");
 
         group.MapGet("/", async (int pageNumber, int pageSize, string? category, IPairingService service, CancellationToken ct) =>
             Results.Ok(await service.GetAllAsync(pageNumber, pageSize, category, ct))
@@ -25,13 +29,19 @@ public static class PairingEndpoints
 
         group.MapPut("/{id:int}", async (int id, UpdatePairingRequestDto request, IPairingService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct))
-        ).WithName("UpdatePairing").WithSummary("Updates an existing pairing.");
+        )
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("UpdatePairing")
+        .WithSummary("Updates an existing pairing.");
 
         group.MapDelete("/{id:int}", async (int id, IPairingService service, CancellationToken ct) =>
         {
             await service.DeleteAsync(id, ct);
             return Results.NoContent();
-        }).WithName("DeletePairing").WithSummary("Deletes a pairing.");
+        })
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("DeletePairing")
+        .WithSummary("Deletes a pairing.");
 
         // Sub-recurso: asociación entre un vino y sus maridajes.
         var wineGroup = app.MapGroup("/api/wines/{wineId:int}/pairings").WithTags("Pairings");
@@ -44,13 +54,19 @@ public static class PairingEndpoints
         {
             await service.AddToWineAsync(wineId, pairingId, ct);
             return Results.NoContent();
-        }).WithName("AddWinePairing").WithSummary("Associates a pairing with a wine.");
+        })
+        .RequireAuthorization()
+        .WithName("AddWinePairing")
+        .WithSummary("Associates a pairing with a wine.");
 
         wineGroup.MapDelete("/{pairingId:int}", async (int wineId, int pairingId, IPairingService service, CancellationToken ct) =>
         {
             await service.RemoveFromWineAsync(wineId, pairingId, ct);
             return Results.NoContent();
-        }).WithName("RemoveWinePairing").WithSummary("Removes a pairing from a wine.");
+        })
+        .RequireAuthorization()
+        .WithName("RemoveWinePairing")
+        .WithSummary("Removes a pairing from a wine.");
 
         return app;
     }

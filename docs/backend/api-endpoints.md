@@ -42,11 +42,11 @@ Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wineries` | Público | Listado paginado con filtros opcionales de estado (`status`) y región (`locationId`). | Query params: `pageNumber`, `pageSize`, `status?`, `locationId?` | `200 OK` (`IEnumerable<WineryResponseDto>`) |
 | `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil público de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
-| `POST` | `/api/wineries` | Público | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
+| `POST` | `/api/wineries` | Autenticado | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
 | `POST` | `/api/wineries/register` | Público | Onboarding unificado: crea usuario con rol `Winery` y entidad bodega en una transacción, devolviendo JWT. | `RegisterWineryRequestDto` | `201 Created` (`RegisterWineryResponseDto`) |
 | `PUT` | `/api/wineries/{id}` | Autenticado | Actualiza los datos informativos y de contacto de una bodega. | `UpdateWineryRequestDto` | `200 OK` (`WineryResponseDto`) |
-| `PUT` | `/api/wineries/{id}/status` | Admin | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). | Query param: `status` | `200 OK` (`WineryResponseDto`) |
-| `DELETE`| `/api/wineries/{id}` | Autenticado | Elimina una bodega del catálogo. | - | `204 NoContent` |
+| `PATCH` | `/api/wineries/{id}/status` | Admin (`RequireAdmin`) | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). | `ChangeWineryStatusRequestDto` | `200 OK` (`WineryResponseDto`) |
+| `DELETE`| `/api/wineries/{id}` | Admin (`RequireAdmin`) | Elimina una bodega del catálogo. | - | `204 NoContent` |
 
 ---
 
@@ -70,7 +70,7 @@ Gestión de municipios y ciudades vitivinícolas con patrón `GetOrCreate`.
 | `POST` | `/api/cities` | Público | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
 | `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber`, `pageSize`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
 | `GET` | `/api/cities/{id}` | Público | Detalle de una ciudad por su ID. | - | `200 OK` (`CityResponseDto`) |
-| `PATCH`| `/api/cities/{id}/status` | Admin | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
+| `PATCH`| `/api/cities/{id}/status` | Admin (`RequireAdmin`) | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
 
 ---
 
@@ -92,11 +92,11 @@ Catálogo maestro de cepas (Malbec, Cabernet Sauvignon, Torrontés, Bonarda, etc
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/grapes` | Público / Admin | Crea un nuevo varietal en el catálogo. | `CreateGrapeRequestDto` | `201 Created` (`GrapeResponseDto`) |
+| `POST` | `/api/grapes` | Admin (`RequireAdmin`) | Crea un nuevo varietal en el catálogo maestro. | `CreateGrapeRequestDto` | `201 Created` (`GrapeResponseDto`) |
 | `GET` | `/api/grapes` | Público | Lista paginada de uvas, con filtro opcional por color (`colorType`). | Query params: `pageNumber`, `pageSize`, `colorType?` | `200 OK` (`IEnumerable<GrapeResponseDto>`) |
 | `GET` | `/api/grapes/{id}` | Público | Obtiene el detalle de un varietal. | - | `200 OK` (`GrapeResponseDto`) |
-| `PUT` | `/api/grapes/{id}` | Público / Admin | Actualiza la información de un varietal. | `UpdateGrapeRequestDto` | `200 OK` (`GrapeResponseDto`) |
-| `DELETE`| `/api/grapes/{id}` | Público / Admin | Elimina un varietal del catálogo maestro. | - | `204 NoContent` |
+| `PUT` | `/api/grapes/{id}` | Admin (`RequireAdmin`) | Actualiza la información de un varietal en el catálogo maestro. | `UpdateGrapeRequestDto` | `200 OK` (`GrapeResponseDto`) |
+| `DELETE`| `/api/grapes/{id}` | Admin (`RequireAdmin`) | Elimina un varietal del catálogo maestro. | - | `204 NoContent` |
 
 ---
 
@@ -108,12 +108,17 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wines` | Público | Listado paginado de vinos con filtros combinados por bodega, varietal y rango de añadas. | Query params: `pageNumber`, `pageSize`, `wineryId?`, `grapeId?`, `yearFrom?`, `yearTo?` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
-| `POST` | `/api/wines` | Público | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
+| `POST` | `/api/wines` | Autenticado | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
 | `PUT` | `/api/wines/{id}` | Autenticado | Actualiza los datos de la botella y reemplaza la composición de uvas. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
-| `PUT` | `/api/wines/{id}/status` | Admin | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). | Query param: `status` | `200 OK` (`WineResponseDto`) |
-| `DELETE`| `/api/wines/{id}` | Autenticado | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
-| `GET` | `/api/wines/claim-candidates/{wineryId}` | Bodega / Admin | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
-| `POST` | `/api/wines/claim/{wineryId}` | Bodega / Admin | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
+| `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `POST` | `/api/wines/claim/{wineryId}` | Autenticado | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `GET` | `/api/wines/{wineId}/vintages` | Público | Lista todas las cosechas/añadas de una etiqueta de vino con sus cortes de uvas. | - | `200 OK` (`IEnumerable<WineVintageResponseDto>`) |
+| `GET` | `/api/wines/{wineId}/vintages/{vintageId}` | Público | Obtiene una cosecha individual con su corte de uvas y calificación. | - | `200 OK` (`WineVintageResponseDto`) |
+| `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
+| `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
+| `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
+| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica de la etiqueta. | - | `204 NoContent` |
 
 ---
 
@@ -123,11 +128,11 @@ Catálogo de maridajes (carnes, pescados, pastas, quesos, postres) y relaciones 
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/pairings` | Autenticado | Registra una nueva opción gastronómica en el catálogo maestro. | `CreatePairingRequestDto` | `201 Created` (`PairingResponseDto`) |
+| `POST` | `/api/pairings` | Admin (`RequireAdmin`) | Registra una nueva opción gastronómica en el catálogo maestro. | `CreatePairingRequestDto` | `201 Created` (`PairingResponseDto`) |
 | `GET` | `/api/pairings` | Público | Listado paginado de maridajes, filtrable por categoría. | Query params: `pageNumber`, `pageSize`, `category?` | `200 OK` (`IEnumerable<PairingResponseDto>`) |
 | `GET` | `/api/pairings/{id}` | Público | Obtiene el detalle de un maridaje. | - | `200 OK` (`PairingResponseDto`) |
-| `PUT` | `/api/pairings/{id}` | Autenticado | Actualiza nombre o categoría de un maridaje existente. | `UpdatePairingRequestDto` | `200 OK` (`PairingResponseDto`) |
-| `DELETE`| `/api/pairings/{id}` | Autenticado | Elimina un maridaje del catálogo maestro. | - | `204 NoContent` |
+| `PUT` | `/api/pairings/{id}` | Admin (`RequireAdmin`) | Actualiza nombre o categoría de un maridaje existente en el catálogo. | `UpdatePairingRequestDto` | `200 OK` (`PairingResponseDto`) |
+| `DELETE`| `/api/pairings/{id}` | Admin (`RequireAdmin`) | Elimina un maridaje del catálogo maestro. | - | `204 NoContent` |
 | `GET` | `/api/wines/{wineId}/pairings` | Público | Lista todos los maridajes asociados a una botella de vino. | - | `200 OK` (`IEnumerable<PairingResponseDto>`) |
 | `POST` | `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado | Asocia un maridaje a un vino en la tabla intermedia `wine_pairings`. | - | `204 NoContent` |
 | `DELETE`| `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado | Desvincula un maridaje de un vino. | - | `204 NoContent` |

@@ -1,6 +1,6 @@
 using FluentMigrator;
 
-namespace AyVino.Api.Database.Migrations;
+namespace AyVino.Api.Migrations;
 
 [Migration(20260929001)]
 public class M20260929001_CreateReviewsTable : Migration

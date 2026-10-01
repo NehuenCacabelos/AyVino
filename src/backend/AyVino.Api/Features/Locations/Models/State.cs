@@ -1,4 +1,4 @@
-namespace AyVino.Api.Features.States.Models;
+namespace AyVino.Api.Features.Locations.Models;
 
 public record State
 {

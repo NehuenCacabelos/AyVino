@@ -1,4 +1,4 @@
-namespace AyVino.Api.Features.Cities.Enums;
+namespace AyVino.Api.Features.Locations.Enums;
 
 public enum CityStatus
 {

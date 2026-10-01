@@ -43,8 +43,9 @@ public class WineryService(
     public async Task<WineryResponseDto> CreateAsync(CreateWineryRequestDto dto, CancellationToken ct = default)
     {
         await ValidateRequestAsync(dto.Name, dto.LocationId, ct);
-        var winery = await wineryRepository.CreateAsync(userId: null, dto, ct);
-        return winery.ToResponseDto();
+        var winery = dto.ToEntity(userId: null);
+        var created = await wineryRepository.CreateAsync(winery, ct);
+        return created.ToResponseDto();
     }
 
     public async Task<WineryResponseDto> UpdateAsync(int id, UpdateWineryRequestDto dto, CancellationToken ct = default)
@@ -54,17 +55,18 @@ public class WineryService(
         var exists = await wineryRepository.ExistsByIdAsync(id, ct);
         if (!exists) throw new NotFoundException($"Winery with ID {id} not found.");
 
-        var updated = await wineryRepository.UpdateAsync(id, dto, ct);
+        var winery = dto.ToEntity(id);
+        var updated = await wineryRepository.UpdateAsync(winery, ct);
         if (!updated) throw new NotFoundException($"Winery with ID {id} not found.");
 
-        var winery = await wineryRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Winery with ID {id} not found.");
-        return winery.ToResponseDto();
+        var savedWinery = await wineryRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Winery with ID {id} not found.");
+        return savedWinery.ToResponseDto();
     }
 
-    public async Task<WineryResponseDto> ChangeStatusAsync(int id, string status, CancellationToken ct = default)
+    public async Task<WineryResponseDto> ChangeStatusAsync(int id, ChangeWineryStatusRequestDto dto, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<WineryStatus>(status, ignoreCase: true, out var parsedStatus))
-            throw new ValidationException($"Invalid status: '{status}'.");
+        if (string.IsNullOrWhiteSpace(dto.Status) || !Enum.TryParse<WineryStatus>(dto.Status, ignoreCase: true, out var parsedStatus))
+            throw new ValidationException($"Invalid status: '{dto.Status}'.");
 
         var exists = await wineryRepository.ExistsByIdAsync(id, ct);
         if (!exists) throw new NotFoundException($"Winery with ID {id} not found.");
@@ -93,7 +95,7 @@ public class WineryService(
         WineryResponseDto createdWinery;
         try
         {
-            var winery = await wineryRepository.CreateAsync(createdUser.Id, wineryDto, ct);
+            var winery = await wineryRepository.CreateAsync(wineryDto.ToEntity(createdUser.Id), ct);
             createdWinery = winery.ToResponseDto();
         }
         catch

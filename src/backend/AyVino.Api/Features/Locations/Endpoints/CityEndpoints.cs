@@ -1,10 +1,11 @@
-using AyVino.Api.Features.Cities.DTOs;
-using AyVino.Api.Features.Cities.Services;
+using AyVino.Api.Common.Constants;
+using AyVino.Api.Features.Locations.DTOs;
+using AyVino.Api.Features.Locations.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace AyVino.Api.Features.Cities.Endpoints;
+namespace AyVino.Api.Features.Locations.Endpoints;
 
 public static class CityEndpoints
 {
@@ -32,6 +33,7 @@ public static class CityEndpoints
 
         group.MapPatch("/{id:int}/status", async (int id, UpdateCityStatusRequestDto request, ICityService cityService, CancellationToken ct) =>
             Results.Ok(await cityService.UpdateStatusAsync(id, request, ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("UpdateCityStatus")
             .WithSummary("Admin: approves or rejects a pending city");
 

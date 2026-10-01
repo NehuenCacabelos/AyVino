@@ -1,5 +1,4 @@
 using AyVino.Api.Common.Data;
-using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Models;
 using Dapper;
@@ -36,7 +35,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             new CommandDefinition(sql, new { Status = status, LocationId = locationId, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
     }
 
-    public async Task<Winery> CreateAsync(int? userId, CreateWineryRequestDto dto, CancellationToken ct = default)
+    public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
     {
         const string sql = """
             INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date)
@@ -45,37 +44,23 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
 
-        var registerDate = DateTime.UtcNow;
-        const int pendingStatus = (int)WineryStatus.Pending;
-
         var id = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(sql, new
             {
-                dto.Name,
-                dto.Description,
-                dto.LocationId,
-                dto.FoundationYear,
-                dto.Website,
-                UserId = userId,
-                Status = pendingStatus,
-                RegisterDate = registerDate
+                winery.Name,
+                winery.Description,
+                winery.LocationId,
+                winery.FoundationYear,
+                winery.Website,
+                winery.UserId,
+                Status = (int)winery.Status,
+                winery.RegisterDate
             }, cancellationToken: ct));
 
-        return new Winery
-        {
-            Id = id,
-            Name = dto.Name,
-            Description = dto.Description,
-            LocationId = dto.LocationId,
-            FoundationYear = dto.FoundationYear,
-            Website = dto.Website,
-            UserId = userId,
-            Status = WineryStatus.Pending,
-            RegisterDate = registerDate
-        };
+        return winery with { Id = id };
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateWineryRequestDto dto, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(Winery winery, CancellationToken ct = default)
     {
         const string sql = """
             UPDATE wineries
@@ -88,7 +73,15 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, dto.Name, dto.Description, dto.LocationId, dto.FoundationYear, dto.Website }, cancellationToken: ct));
+            new CommandDefinition(sql, new
+            {
+                winery.Id,
+                winery.Name,
+                winery.Description,
+                winery.LocationId,
+                winery.FoundationYear,
+                winery.Website
+            }, cancellationToken: ct));
         return rowsAffected > 0;
     }
 

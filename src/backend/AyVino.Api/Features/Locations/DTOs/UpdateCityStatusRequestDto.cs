@@ -1,3 +1,3 @@
-namespace AyVino.Api.Features.Cities.DTOs;
+namespace AyVino.Api.Features.Locations.DTOs;
 
 public record UpdateCityStatusRequestDto(string Status);

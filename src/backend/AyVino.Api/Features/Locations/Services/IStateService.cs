@@ -1,6 +1,6 @@
-using AyVino.Api.Features.States.DTOs;
+using AyVino.Api.Features.Locations.DTOs;
 
-namespace AyVino.Api.Features.States.Services;
+namespace AyVino.Api.Features.Locations.Services;
 
 public interface IStateService
 {

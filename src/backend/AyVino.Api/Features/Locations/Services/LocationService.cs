@@ -1,5 +1,4 @@
 using AyVino.Api.Common.Exceptions;
-using AyVino.Api.Features.Cities.Repositories;
 using AyVino.Api.Features.Locations.DTOs;
 using AyVino.Api.Features.Locations.Repositories;
 
@@ -9,8 +8,9 @@ public class LocationService(ILocationRepository locationRepository, ICityReposi
 {
     public async Task<LocationResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        return await locationRepository.GetByIdAsync(id, ct)
+        var location = await locationRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Location with ID {id} not found.");
+        return location.ToResponseDto();
     }
 
     public async Task<LocationResponseDto> CreateAsync(CreateLocationRequestDto dto, CancellationToken ct = default)
@@ -22,18 +22,20 @@ public class LocationService(ILocationRepository locationRepository, ICityReposi
         var location = dto.ToEntity();
         var generatedId = await locationRepository.CreateAsync(location, ct);
 
-        return await locationRepository.GetByIdAsync(generatedId, ct)
+        var created = await locationRepository.GetByIdAsync(generatedId, ct)
             ?? throw new NotFoundException("Location was created but could not be retrieved.");
+        return created.ToResponseDto();
     }
 
     public async Task<IEnumerable<LocationResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
-{
-    if (pageNumber <= 0)
-        throw new ValidationException("Page number must be greater than 0.");
+    {
+        if (pageNumber <= 0)
+            throw new ValidationException("Page number must be greater than 0.");
 
-    if (pageSize <= 0 || pageSize > 100)
-        throw new ValidationException("Page size must be between 1 and 100.");
+        if (pageSize <= 0 || pageSize > 100)
+            throw new ValidationException("Page size must be between 1 and 100.");
 
-    return await locationRepository.GetAllAsync(pageNumber, pageSize, ct);
-}
+        var locations = await locationRepository.GetAllAsync(pageNumber, pageSize, ct);
+        return locations.Select(l => l.ToResponseDto());
+    }
 }

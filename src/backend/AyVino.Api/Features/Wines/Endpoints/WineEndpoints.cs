@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
 
@@ -24,11 +25,13 @@ public static class WineEndpoints
             var created = await service.CreateAsync(request, ct);
             return Results.Created($"/api/wines/{created.Id}", created);
         })
+            .RequireAuthorization()
             .WithName("CreateWine")
             .WithSummary("Creates a new wine label together with its first vintage.");
 
         group.MapPut("/{id:int}", async (int id, UpdateWineRequestDto request, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct)))
+            .RequireAuthorization()
             .WithName("UpdateWine")
             .WithSummary("Updates a wine label's data (name, type, winery, location, description).");
 
@@ -37,16 +40,19 @@ public static class WineEndpoints
             await service.DeleteAsync(id, ct);
             return Results.NoContent();
         })
+            .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWine")
             .WithSummary("Deletes a wine label and all of its vintages (cascade).");
 
         group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.GetClaimCandidatesAsync(wineryId, ct)))
+            .RequireAuthorization()
             .WithName("GetWineClaimCandidates")
             .WithSummary("Lists unclaimed community wine labels whose typed winery name matches this winery.");
 
         group.MapPost("/claim/{wineryId:int}", async (int wineryId, ClaimWinesRequestDto request, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.ClaimWinesAsync(wineryId, request.WineIds, ct)))
+            .RequireAuthorization()
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
 

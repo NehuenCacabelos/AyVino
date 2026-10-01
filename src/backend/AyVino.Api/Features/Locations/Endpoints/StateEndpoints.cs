@@ -1,9 +1,9 @@
-using AyVino.Api.Features.States.Services;
+using AyVino.Api.Features.Locations.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace AyVino.Api.Features.States.Endpoints;
+namespace AyVino.Api.Features.Locations.Endpoints;
 
 public static class StateEndpoints
 {

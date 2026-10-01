@@ -1,6 +1,6 @@
-using AyVino.Api.Features.Cities.Enums;
+using AyVino.Api.Features.Locations.Enums;
 
-namespace AyVino.Api.Features.Cities.Models;
+namespace AyVino.Api.Features.Locations.Models;
 
 public record City
 {
