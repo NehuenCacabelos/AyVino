@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Star, MapPin, Award, CheckCircle, Sparkles, Utensils, Droplets, ShieldCheck } from 'lucide-react';
 import type { CuratedWine } from '../../../types/wine';
 import type { AuthMode } from '../../auth/types';
@@ -15,6 +16,8 @@ interface WineDetailModalProps {
  * cumpliendo el requerimiento de visualización libre sin bloqueo de contenido demo.
  */
 export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetailModalProps) {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && wine) onClose();
@@ -165,7 +168,11 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetai
             type="button"
             onClick={() => {
               onClose();
-              onOpenAuth?.('register');
+              if (onOpenAuth) {
+                onOpenAuth('register');
+              } else {
+                navigate('/register');
+              }
             }}
             className="w-full sm:w-auto px-5 py-2 rounded-xl bg-wine-900 hover:bg-wine-800 text-cream-50 text-xs font-semibold transition-colors cursor-pointer"
           >

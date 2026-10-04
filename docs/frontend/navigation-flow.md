@@ -10,6 +10,8 @@ Este documento detalla la arquitectura de información, las vistas de la aplicac
 flowchart TD
     subgraph PublicRoutes["Rutas Públicas"]
         Landing["/ -> Landing.tsx (Hero + Muestra Curada)"]
+        Login["/login -> LoginPage.tsx (Acceso con Estilo Editorial)"]
+        Register["/register -> RegisterPage.tsx (Alta de Usuario Libre)"]
         DetailModal["WineDetailModal (Ficha Técnica Contextual)"]
         AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
     end
@@ -20,21 +22,28 @@ flowchart TD
     end
 
     subgraph ProtectedRoutes["Rutas Protegidas (Requieren Sesión)"]
+        Dashboard["/dashboard (o /app) -> DashboardPage.tsx (Cava & Métricas)"]
         Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
         WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx (Exclusivo Bodega/Admin)"]
     end
 
     Landing -->|"Click en tarjeta de vino"| DetailModal
     Landing -->|"Click en 'Iniciar Sesión' / 'Crear Cuenta'"| AuthDrawer
-    AuthDrawer -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
+    Landing -->|"Navegación /login"| Login
+    Landing -->|"Navegación /register"| Register
+    Login -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
+    Register -->|"Registro exitoso"| AuthContext
+    AuthContext -->|"Redirección post-login"| Dashboard
 
+    Landing -->|"Navegación /dashboard"| Guard
     Landing -->|"Navegación /catalogo"| Guard
     Landing -->|"Navegación /bodega/dashboard"| Guard
 
-    Guard -->|"!isAuthenticated"| Landing
-    Guard -->|"isAuthenticated (Cualquier rol)"| Catalog
+    Guard -->|"!isAuthenticated"| Login
+    Guard -->|"isAuthenticated (Cualquier rol)"| Dashboard
+    Guard -->|"Navegación /catalogo (Autenticado)"| Catalog
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryDash
-    Guard -->|"Rol no autorizado"| Landing
+    Guard -->|"Rol no autorizado"| Dashboard
 
     Fallback["Ruta desconocida (*)"] -->|"Redirect"| Landing
 ```
@@ -54,24 +63,43 @@ flowchart TD
   - Visualización 3D simulada de la botella ([`WineBottleMock.tsx`](../../src/frontend/src/features/wines/components/WineBottleMock.tsx)).
   - Desglose técnico: añada, notas de cata completas, maridajes y características de terroir.
 
-### 2.2 Cajón Lateral de Autenticación (`AuthDrawer.tsx`)
-- Panel deslizante derecho que preserva el contexto de lectura.
-- **Modo Inicio de Sesión**:
-  - Envío reactivo a `POST /api/auth/login` mediante [`loginApi`](../../src/frontend/src/features/auth/api/authApi.ts).
-  - Manejo integral de errores con alertas visuales:
-    - `401 Unauthorized`: Feedback de credenciales incorrectas.
-    - `429 Rate Limit`: Advertencia de exceso de intentos fallidos.
-- **Modo Registro**:
-  - Formulario de alta para sumarse a la comunidad vitivinícola.
+### 2.2 Pantallas de Autenticación Integradas (`LoginPage.tsx` y `RegisterPage.tsx`)
+- Vistas completas (`/login` y `/register`) con la identidad editorial de AyVino:
+  - Fondos cálidos pergamino (`bg-cream-50`), tarjetas blancas con bordes tenues (`border-cream-200`).
+  - Inputs con esquinas redondeadas (`rounded-xl`), fondo limpio y focos en borgoña (`focus:border-wine-800`).
+  - Botones principales de acción tipo píldora (`rounded-full bg-wine-900 text-cream-50`).
+  - Feedback visual de carga y manejo de errores tipados.
 
-### 2.3 Barra de Navegación Contextual (`Navbar.tsx`)
+### 2.3 Homepage / Dashboard Autenticado (`DashboardPage.tsx`)
+- Vista post-login accesible en `/dashboard` (y alias `/app`):
+  - **Barra de Navegación del Dashboard (`DashboardNavbar.tsx`)**:
+    - Logotipo e isotipo oficial de AyVino (sustituyendo MiCava).
+    - Enlaces a Explorar, Mi Cava (con contador dinámico), Historial, Maridaje y Deseados.
+    - Selector interactivo de ubicación/cava (*Casa Principal*, *Departamento*, *Casa de campo*).
+    - Menú desplegable con avatar del usuario, rol activo y botón de salida (*logout*).
+  - **Acciones Rápidas (`QuickActions.tsx`)**:
+    - Saludo dinámico según horario (*"Buenas noches, [Nombre]. ¿Qué vamos a descorchar hoy?"*).
+    - Barra de búsqueda píldora (`rounded-full`) y botón *"Registrar botella"*.
+  - **Sección Mi Cava (`DashboardSection.tsx`)**:
+    - Conmutador de vista: *"Con Stock"* vs *"Usuario Nuevo"*.
+    - **Métricas (`Metrics.tsx`)**: botellas en cava, catados en historial, lista de deseos y ubicaciones.
+    - **Carrusel de Consumo Óptimo (`StockCarousel.tsx`)**: botellas listas para descorchar, navegación horizontal y tarjetas con badges.
+    - **Diálogo de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata.
+    - **Banner de Incorporación (`OnboardingBanner.tsx`)**: guía en 3 pasos para nuevos sommeliers.
+  - **Bloques Promocionales y de Maridaje (`PromoBlocks.tsx`)**: selecciones destacadas de tintos y blancos de altura.
+  - **Catálogo por Bodegas (`FilterChips.tsx` y `WineryBlock.tsx`)**:
+    - Filtros rápidos por cepa y región (Malbec, Cabernet, Blancos, Mendoza, Salta, Patagonia).
+    - Agrupación por bodega (*Catena Zapata*, *Zuccardi*) con monograma circular y botón *"Añadir a Cava"*.
+
+### 2.4 Barra de Navegación Contextual (`Navbar.tsx`)
 - Integración con React Router (`<Link>`) y reactiva al estado global de [`useAuth()`](../../src/frontend/src/features/auth/context/AuthContext.tsx):
-  - **Estado Anónimo**: Exhibe enlaces de sección y botones *"Iniciar Sesión"* y *"Crear Cuenta"*.
+  - **Estado Anónimo**: Exhibe enlaces de sección y botones *"Iniciar Sesión"* (`/login`) y *"Crear Cuenta"* (`/register`).
   - **Estado Autenticado**:
-    - Píldora con nombre de usuario y badge de rol (`User`, `Winery`, `Admin`).
+    - Enlace destacado a **Mi Cava** (`/dashboard`).
     - Enlace al Catálogo Protegido (`/catalogo`).
     - Enlace al Panel de Bodega (`/bodega/dashboard`) únicamente visible para roles `Winery` y `Admin`.
-    - Botón de cierre de sesión (*"Salir"* / *"Cerrar Sesión"*), con revocación remota en backend y reseteo local.
+    - Píldora con nombre de usuario y badge de rol (`User`, `Winery`, `Admin`).
+    - Botón de cierre de sesión (*"Salir"* / *"Cerrar Sesión"*).
 
 ---
 
@@ -80,6 +108,10 @@ flowchart TD
 | Ruta | Componente | Acceso Permitido | Comportamiento si no cumple |
 | :--- | :--- | :--- | :--- |
 | `/` | `Landing.tsx` | Público (todos) | N/A |
-| `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
-| `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Redirige a `/` |
+| `/login` | `LoginPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
+| `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
+| `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` |
+| `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
+| `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` |
+| `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Redirige a `/dashboard` |
 | `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |

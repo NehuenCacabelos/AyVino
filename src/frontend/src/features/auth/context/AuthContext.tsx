@@ -15,6 +15,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginRequestDto) => Promise<void>;
+  loginDemo: (customUser?: Partial<UserProfileDto>) => void;
   logout: () => Promise<void>;
 }
 
@@ -78,6 +79,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const loginDemo = useCallback((customUser?: Partial<UserProfileDto>): void => {
+    const demoUser: UserProfileDto = {
+      id: customUser?.id ?? 1,
+      username: customUser?.username ?? 'Martina Sommelier',
+      email: customUser?.email ?? 'sommelier@ayvino.com',
+      role: customUser?.role ?? 'User',
+      registerDate: new Date().toISOString(),
+      isActive: true,
+      bio: 'Amante de los terruños andinos y cepas de altura.',
+      ...customUser,
+    };
+
+    const demoToken = 'demo-jwt-token-ayvino';
+    localStorage.setItem(TOKEN_KEY, demoToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, 'demo-refresh-token');
+    localStorage.setItem(USER_KEY, JSON.stringify(demoUser));
+
+    setUser(demoUser);
+    setIsAuthenticated(true);
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
@@ -105,6 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated,
         isLoading,
         login,
+        loginDemo,
         logout,
       }}
     >

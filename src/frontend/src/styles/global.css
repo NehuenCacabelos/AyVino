@@ -14,6 +14,8 @@
   --color-wine-700: var(--token-wine-700, #9f1239);
   --color-wine-800: var(--token-wine-800, #881337);
   --color-wine-900: var(--token-wine-900, #4c0519);
+  --color-wine-bordeaux: #722F37;
+  --color-wine-bordeaux-hover: #5c1d24;
 
   --color-cream-50: var(--token-cream-50, #fcfbf9);
   --color-cream-100: var(--token-cream-100, #f7f4ed);
@@ -24,13 +26,22 @@
   --color-earth-700: var(--token-earth-700, #44403c);
   --color-earth-500: var(--token-earth-500, #78716c);
 
-  --font-serif: var(--token-font-serif, "Playfair Display", Georgia, serif);
-  --font-sans: var(--token-font-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --color-gold: #b48c36;
+  --color-gold-hover: #967024;
+  --color-gold-light: #fef9ed;
+
+  --color-dark-bg: #0f0f11;
+  --color-dark-surface: #121214;
+  --color-dark-card: #161619;
+
+  --font-serif: "Fraunces", "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 body {
-  background-color: var(--color-bg-main, #fcfbf9);
-  color: var(--color-text-main, #1c1917);
+  background-color: #0f0f11;
+  color: #e5e5e5;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

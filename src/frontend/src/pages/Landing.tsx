@@ -1,7 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import AuthDrawer from '../features/auth/components/AuthDrawer';
-import type { AuthMode } from '../features/auth/types';
 import WineCard from '../features/wines/components/WineCard';
 import WineBottleMock from '../features/wines/components/WineBottleMock';
 import WineDetailModal from '../features/wines/components/WineDetailModal';
@@ -106,18 +105,7 @@ const CURATED_WINES: CuratedWine[] = [
 ];
 
 export default function Landing() {
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
   const [selectedWine, setSelectedWine] = useState<CuratedWine | null>(null);
-
-  const handleOpenAuth = (mode: AuthMode = 'login') => {
-    setAuthModalMode(mode);
-    setAuthModalOpen(true);
-  };
-
-  const handleCloseAuth = () => {
-    setAuthModalOpen(false);
-  };
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -130,7 +118,7 @@ export default function Landing() {
     <div className="min-h-screen bg-cream-50 text-earth-900 font-sans selection:bg-wine-100 selection:text-wine-900">
       
       {/* 1. Navbar persistente */}
-      <Navbar onOpenAuth={handleOpenAuth} />
+      <Navbar />
 
       {/* 2. Hero Section */}
       <section className="relative overflow-hidden pt-8 pb-16 sm:pt-14 sm:pb-24 border-b border-cream-200/80">
@@ -176,14 +164,13 @@ export default function Landing() {
                   <ArrowDown className="w-4 h-4 text-cream-200" />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenAuth('register')}
+                <Link
+                  to="/register"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-cream-100 hover:bg-cream-200/80 text-earth-900 border border-cream-200 font-medium text-base transition-all duration-200 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-wine-800" />
                   <span>Crear Cuenta Libre</span>
-                </button>
+                </Link>
               </div>
 
               {/* Micro métricas editoriales */}
@@ -298,21 +285,19 @@ export default function Landing() {
 
               {/* Botón CTA del Banner */}
               <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3 justify-center">
-                <button
-                  type="button"
-                  onClick={() => handleOpenAuth('register')}
+                <Link
+                  to="/register"
                   className="w-full py-3.5 px-6 rounded-2xl bg-cream-50 hover:bg-cream-100 text-wine-900 font-bold text-sm sm:text-base transition-all duration-200 shadow-xl hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Crear Cuenta Gratuita</span>
                   <ArrowRight className="w-4 h-4 text-wine-900" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenAuth('login')}
+                </Link>
+                <Link
+                  to="/login"
                   className="w-full py-3 px-6 rounded-2xl bg-white/10 hover:bg-white/15 text-cream-100 text-xs sm:text-sm font-medium transition-colors text-center cursor-pointer"
                 >
                   ¿Ya tenés perfil? Iniciar Sesión
-                </button>
+                </Link>
               </div>
 
             </div>
@@ -400,13 +385,12 @@ export default function Landing() {
               <a href="#filosofia" className="hover:text-wine-900 transition-colors">
                 Filosofía
               </a>
-              <button
-                type="button"
-                onClick={() => handleOpenAuth('login')}
+              <Link
+                to="/login"
                 className="hover:text-wine-900 transition-colors cursor-pointer"
               >
                 Acceso Miembros
-              </button>
+              </Link>
             </div>
 
           </div>
@@ -419,18 +403,10 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Panel lateral de Autenticación (Slide-Over Drawer) */}
-      <AuthDrawer
-        isOpen={authModalOpen}
-        onClose={handleCloseAuth}
-        initialMode={authModalMode}
-      />
-
       {/* Modal de Ficha de Cata Completa (Sin bloqueo para la muestra) */}
       <WineDetailModal
         wine={selectedWine}
         onClose={() => setSelectedWine(null)}
-        onOpenAuth={handleOpenAuth}
       />
 
     </div>

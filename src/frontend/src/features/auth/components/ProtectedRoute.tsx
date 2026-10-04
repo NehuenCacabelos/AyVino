@@ -27,11 +27,11 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role as UserRole))) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;

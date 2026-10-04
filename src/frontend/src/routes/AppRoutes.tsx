@@ -1,20 +1,39 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Landing from '../pages/Landing';
+import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
+import DashboardPage from '../pages/DashboardPage';
 import CatalogPage from '../pages/CatalogPage';
 import WineryDashboardPage from '../pages/WineryDashboardPage';
 import { ProtectedRoute } from '../features/auth';
 
 /**
  * Configuración Central de Rutas de la Aplicación (AyVino).
- * Integra rutas públicas, protegidas generales y protegidas por rol.
+ * Integra rutas públicas (Landing, Login, Register), protegidas generales
+ * (Dashboard, Catálogo) y protegidas por rol de bodega/administrador.
  */
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Ruta Pública */}
+      {/* Rutas Públicas */}
       <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-      {/* Ruta Protegida General (cualquier rol autenticado) */}
+      {/* Ruta Protegida: Dashboard / Cava Personal Post-Login */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Alias /app hacia /dashboard */}
+      <Route path="/app" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Ruta Protegida General: Catálogo */}
       <Route
         path="/catalogo"
         element={
@@ -39,4 +58,3 @@ export default function AppRoutes() {
     </Routes>
   );
 }
-

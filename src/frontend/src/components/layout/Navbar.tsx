@@ -11,18 +11,13 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth';
-import type { AuthMode } from '../../features/auth/types';
-
-interface NavbarProps {
-  onOpenAuth?: (mode: AuthMode) => void;
-}
 
 /**
  * Navbar Component
  * Fija/flotante con efecto glassmorphism sutil (bg-cream-50/80 backdrop-blur-md),
  * logo tipográfico editorial en Playfair Display y acciones de acceso rápido.
  */
-export default function Navbar({ onOpenAuth }: NavbarProps) {
+export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
 
@@ -64,13 +59,23 @@ export default function Navbar({ onOpenAuth }: NavbarProps) {
 
             {/* Enlaces contextuales protegidos */}
             {isAuthenticated && (
-              <Link
-                to="/catalogo"
-                className="text-sm font-medium tracking-wide text-earth-900/80 hover:text-wine-900 transition-colors relative py-1 flex items-center gap-1.5"
-              >
-                <Compass className="w-3.5 h-3.5 text-wine-700" />
-                Catálogo
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-semibold tracking-wide text-wine-900 hover:text-wine-800 transition-colors relative py-1 flex items-center gap-1.5"
+                >
+                  <Wine className="w-3.5 h-3.5 text-wine-800" />
+                  Mi Cava
+                </Link>
+
+                <Link
+                  to="/catalogo"
+                  className="text-sm font-medium tracking-wide text-earth-900/80 hover:text-wine-900 transition-colors relative py-1 flex items-center gap-1.5"
+                >
+                  <Compass className="w-3.5 h-3.5 text-wine-700" />
+                  Catálogo
+                </Link>
+              </>
             )}
 
             {isWineryOrAdmin && (
@@ -111,21 +116,19 @@ export default function Navbar({ onOpenAuth }: NavbarProps) {
               </div>
             ) : (
               <>
-                <button
-                  onClick={() => onOpenAuth?.('login')}
-                  type="button"
+                <Link
+                  to="/login"
                   className="text-sm font-medium text-earth-900/80 hover:text-wine-900 px-3 py-2 transition-colors cursor-pointer"
                 >
                   Iniciar Sesión
-                </button>
-                <button
-                  onClick={() => onOpenAuth?.('register')}
-                  type="button"
+                </Link>
+                <Link
+                  to="/register"
                   className="inline-flex items-center gap-1.5 text-sm font-medium bg-wine-900 hover:bg-wine-800 text-cream-50 px-4 py-2 rounded-full transition-all duration-200 hover:shadow-md hover:shadow-wine-900/20 active:scale-98 cursor-pointer"
                 >
                   <span>Crear Cuenta</span>
                   <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                </Link>
               </>
             )}
           </div>
@@ -161,14 +164,25 @@ export default function Navbar({ onOpenAuth }: NavbarProps) {
             ))}
 
             {isAuthenticated && (
-              <Link
-                to="/catalogo"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-base font-medium text-earth-900/90 hover:text-wine-900 py-1 flex items-center gap-2"
-              >
-                <Compass className="w-4 h-4 text-wine-700" />
-                Catálogo
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-base font-semibold text-wine-900 hover:text-wine-800 py-1 flex items-center gap-2"
+                >
+                  <Wine className="w-4 h-4 text-wine-800" />
+                  Mi Cava
+                </Link>
+
+                <Link
+                  to="/catalogo"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-base font-medium text-earth-900/90 hover:text-wine-900 py-1 flex items-center gap-2"
+                >
+                  <Compass className="w-4 h-4 text-wine-700" />
+                  Catálogo
+                </Link>
+              </>
             )}
 
             {isWineryOrAdmin && (
@@ -201,33 +215,27 @@ export default function Navbar({ onOpenAuth }: NavbarProps) {
                     void logout();
                   }}
                   type="button"
-                  className="w-full text-center py-2.5 text-sm font-medium text-wine-900 border border-wine-200 rounded-lg hover:bg-wine-50 cursor-pointer"
+                  className="w-full text-center py-2.5 text-sm font-medium text-wine-900 border border-wine-200 rounded-full hover:bg-wine-50 cursor-pointer"
                 >
                   Cerrar Sesión
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAuth?.('login');
-                  }}
-                  type="button"
-                  className="w-full text-center py-2.5 text-sm font-medium text-earth-900 border border-cream-200 rounded-lg hover:bg-cream-100 cursor-pointer"
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 text-sm font-medium text-earth-900 border border-cream-200 rounded-full hover:bg-cream-100 cursor-pointer"
                 >
                   Iniciar Sesión
-                </button>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAuth?.('register');
-                  }}
-                  type="button"
-                  className="w-full text-center py-2.5 text-sm font-medium bg-wine-900 text-cream-50 rounded-lg hover:bg-wine-800 cursor-pointer"
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 text-sm font-medium bg-wine-900 text-cream-50 rounded-full hover:bg-wine-800 cursor-pointer"
                 >
                   Crear Cuenta
-                </button>
+                </Link>
               </>
             )}
           </div>

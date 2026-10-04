@@ -22,19 +22,22 @@ El frontend de AyVino es una Single Page Application (SPA) desarrollada en **Rea
 
 AyVino implementa una estética de **revista editorial de vinos**: cálida, noble, sofisticada y limpia, distanciándose del diseño corporativo frío.
 
-### 2.1 Paleta Cromática
-- **Gama Vinícola (`wine-*`)**: Tonos borravino profundo, rubí y granate noble para acciones principales, acentos y estados activos.
-- **Gama Papel / Pergamino (`cream-*`)**: Fondos basados en tonos marfil, papel encerado y pergamino suave (`bg-cream-50`, `bg-cream-100`) para generar calidez visual y lectura descansada.
-- **Gama Tierra (`earth-*`)**: Tipografía en tonos carbón vegetal y tierra tostada para garantizar contraste óptimo según las pautas WCAG sin la dureza del negro puro.
+### 2.1 Paleta Cromática y Acabados (Fondo Oscuro Mate)
+- **Fondo Base Carbón Mate (`#0f0f11` / `#121214`)**: Evita el negro puro ofreciendo una textura sobria, descansada y elegante para la interfaz nocturna de cava.
+- **Acento Bordó Vino Sobrio (`#722F37` / `#5c1d24`)**: Utilizado exclusivamente en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Descorchar"`) e insignias activas, sin saturación chillona.
+- **Bordes de Estructura Limpia (`border-neutral-800` / `border-white/5`)**: Delimitación milimétrica de 1px para tarjetas, buscador e inputs.
 
-### 2.2 Tipografías
-- **`Playfair Display` (Serif)**: Encabezados editoriales, nombres de bodegas y títulos de botellas. Aporta elegancia clásica.
-- **`Plus Jakarta Sans` (Sans-Serif)**: Textos de cuerpo, notas de cata, tablas técnicas y formularios. Prioriza la legibilidad en pantallas retina y móviles.
+### 2.2 Tipografías y Jerarquía Editorial
+- **`Fraunces` / `Cormorant Garamond` (Serif 600)**: Títulos principales (`h1`, `h2`) en peso semi-bold, sin cursivas ni trazos ultra finos, con `tracking-tight` y color `text-neutral-100`.
+- **`Plus Jakarta Sans` / `Geist Sans` (Sans-Serif 400 y 500)**: Interfaz, botones, textos de bajada y tablas técnicas.
+- **`font-mono` (Caja alta & tracking amplio)**: Eyebrows y saludos (`text-[11px] font-mono tracking-[0.25em] uppercase text-neutral-400 font-medium`).
+- **Navegación Superior**: `text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100`.
 
-### 2.3 Micro-interacciones y UX
-- Elevaciones sutiles (`hover:-translate-y-1`), transiciones graduales (`transition-all duration-300`) y sombras orgánicas.
-- **Paneles Deslizantes Laterales (`AuthDrawer`)**: La autenticación se resuelve mediante un cajón lateral deslizante que preserva el contexto de lectura del usuario, evitando modales invasivos en pantalla completa.
-- **Modales Contextuales de Botella (`WineDetailModal`)**: Despliegue de ficha técnica detallada (añada, graduación alcohólica, notas de cata y maridajes sugeridos).
+### 2.3 Micro-interacciones y Tratamiento de Componentes
+- **Hero de Dos Columnas**: Columna izquierda con saludo monospace, titular Fraunces semi-bold con línea divisoria sutil, bajada y buscador integrado en bloque unificado (`bg-neutral-900/60`, `backdrop-blur-sm`, `border-neutral-800`) con botón `+ REGISTRAR BOTELLA`. Columna derecha con composición de botellas en mesa rústica y transición orgánica mediante viñetas degradadas.
+- **Cinta Compacta de KPIs (`Metrics`)**: Franja horizontal con fondo `#121214`, micro-iconos lineales y métricas con tipografía Fraunces y font-mono.
+- **Bento Grid Modular (`PromoBlocks` y `StockCarousel`)**: Mosaico con tarjetas oscuras estructuradas, micro-datos técnicos de servicio y guarda.
+- **Modal de Descorche (`UncorkDialog`)**: Ficha técnica de cata dividida con escaparate visual y registro sensorial.
 
 ---
 
@@ -43,21 +46,27 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 ```text
 src/frontend/src/
 ├── assets/                    # Recursos visuales estáticos (hero.png, logos)
-├── components/                # Componentes UI atómicos y genéricos
+├── components/                # Componentes UI atómicos y modulares
+│   ├── dashboard/             # Módulos del Dashboard/Cava post-login (QuickActions, Metrics, StockCarousel, etc.)
 │   └── layout/                # Estructura visual global
-│       └── Navbar.tsx         # Barra de navegación con acciones de usuario
+│       └── Navbar.tsx         # Barra de navegación contextual
 ├── features/                  # Arquitectura híbrida orientada a características
 │   ├── auth/                  # Módulo de Autenticación
 │   │   ├── api/               # Llamadas API del módulo (authApi.ts)
-│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthDrawer.tsx, AuthModal.tsx, ProtectedRoute.tsx)
+│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthDrawer.tsx, ProtectedRoute.tsx)
 │   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
 │   └── wines/                 # Módulo de Vinos y Catálogo
 │       └── components/        # Componentes de presentación (WineCard.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
+├── lib/                       # Utilidades transversales
+│   └── utils.ts               # Función cn con clsx y tailwind-merge
 ├── pages/                     # Páginas y vistas principales
 │   ├── CatalogPage.tsx        # Catálogo general protegido
+│   ├── DashboardPage.tsx      # Homepage / Cava autenticada post-login
 │   ├── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
+│   ├── LoginPage.tsx          # Formulario de acceso editorial
+│   ├── RegisterPage.tsx       # Formulario de registro de sommelier
 │   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
@@ -69,7 +78,7 @@ src/frontend/src/
 │   └── global.css             # Reglas tipográficas, integración Tailwind v4 y animaciones
 ├── types/                     # Tipos globales y re-exportaciones
 │   ├── auth.ts                # Re-exportación centralizada de auth types
-│   └── wine.ts                # Modelos de presentación (CuratedWine)
+│   └── wine.ts                # Modelos de presentación (CuratedWine, DashboardWine, etc.)
 ├── App.tsx                    # Componente contenedor raíz con BrowserRouter y AuthProvider
 └── main.tsx                   # Punto de entrada de React 19 (carga en cascada de estilos)
 ```
