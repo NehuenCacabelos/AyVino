@@ -56,6 +56,13 @@ public static class WineEndpoints
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
 
+        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, ct)))
+            .WithName("SearchWines")
+            .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
+
+        
+
         return app;
     }
 }

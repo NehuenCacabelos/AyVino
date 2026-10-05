@@ -136,6 +136,27 @@ public class WineService(
             throw new ValidationException("The sum of the grape percentages cannot exceed 100%.");
     }
 
+    public async Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        if (pageNumber <= 0) throw new ValidationException("Page number must be greater than 0.");
+        if (pageSize is <= 0 or > 100) throw new ValidationException("Page size must be between 1 and 100.");
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(winery) && year is null && string.IsNullOrWhiteSpace(wineType))
+            throw new ValidationException("At least one search criterion (name, winery, year, or type) is required.");
+
+        WineType? parsedType = null;
+        if (!string.IsNullOrWhiteSpace(wineType))
+        {
+            if (!Enum.TryParse<WineType>(wineType, ignoreCase: true, out var parsed))
+                throw new ValidationException($"Invalid wine type: '{wineType}'.");
+            parsedType = parsed;
+        }
+
+        var wines = await wineRepository.SearchAsync(name, winery, year, parsedType, pageNumber, pageSize, ct);
+        return wines.Select(w => w.ToResponseDto());
+    }
+
     private static List<WineGrape> ToWineGrapes(List<WineGrapeRequestDto>? grapes) =>
         grapes?.Select(g => new WineGrape { GrapeId = g.GrapeId, Percentage = g.Percentage }).ToList() ?? [];
+
+        
 }
