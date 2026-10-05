@@ -32,7 +32,6 @@ public class WineServiceTests
             ServingTemperature: 16,
             AgingAdvice: "Beber antes de 2028",
             ImageUrl: "https://example.com/vintage.jpg",
-            UploadedByUserId: 1,
             Grapes: [new WineGrapeRequestDto(GrapeId: 5, Percentage: 100)]
         );
 
@@ -47,7 +46,7 @@ public class WineServiceTests
         );
 
         // Act
-        var result = await service.CreateAsync(wineDto);
+        var result = await service.CreateAsync(wineDto, 1);
 
         // Assert
         Assert.NotNull(result);
@@ -62,11 +61,42 @@ public class WineServiceTests
         Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
         Assert.Equal(2021, fakeWineRepo.CapturedFirstVintage.Year);
         Assert.Equal(14.2m, fakeWineRepo.CapturedFirstVintage.AlcoholContent);
+        Assert.Equal(1, fakeWineRepo.CapturedFirstVintage.UploadedByUserId);
 
         Assert.NotNull(fakeWineRepo.CapturedGrapes);
         Assert.Single(fakeWineRepo.CapturedGrapes);
         Assert.Equal(5, fakeWineRepo.CapturedGrapes[0].GrapeId);
         Assert.Equal(100, fakeWineRepo.CapturedGrapes[0].Percentage);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SetsUploadedByUserIdFromParameter()
+    {
+        // Arrange
+        var fakeWineRepo = new FakeWineRepository();
+        var fakeWineryRepo = new FakeWineryRepository { ExistingWineryId = 10 };
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeGrapeRepo = new FakeGrapeRepository { ExistingGrapeId = 5 };
+
+        var service = new WineService(fakeWineRepo, fakeWineryRepo, fakeLocationRepo, fakeGrapeRepo);
+
+        var wineDto = new CreateWineRequestDto(
+            WineryId: 10,
+            WineryNameText: null,
+            Name: "Test Wine",
+            Description: null,
+            WineType: "Red",
+            LocationId: 1,
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2020, Grapes: [new WineGrapeRequestDto(GrapeId: 5, Percentage: 100)])
+        );
+        const int expectedUserId = 42;
+
+        // Act
+        await service.CreateAsync(wineDto, expectedUserId);
+
+        // Assert
+        Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
+        Assert.Equal(expectedUserId, fakeWineRepo.CapturedFirstVintage.UploadedByUserId);
     }
 
     [Fact]
@@ -84,11 +114,11 @@ public class WineServiceTests
             Description: null,
             WineType: "Red",
             LocationId: null,
-            FirstVintage: new CreateWineVintageRequestDto(UploadedByUserId: 1, Year: 2020)
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2020)
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
         Assert.Contains("Winery with ID 999 does not exist", ex.Message);
     }
 
@@ -108,11 +138,11 @@ public class WineServiceTests
             Description: null,
             WineType: "Red",
             LocationId: 999,
-            FirstVintage: new CreateWineVintageRequestDto(UploadedByUserId: 1, Year: 2020)
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2020)
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
         Assert.Contains("Location with ID 999 does not exist", ex.Message);
     }
 
@@ -130,11 +160,11 @@ public class WineServiceTests
             Description: null,
             WineType: "BeerType",
             LocationId: null,
-            FirstVintage: new CreateWineVintageRequestDto(UploadedByUserId: 1, Year: 2020)
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2020)
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
         Assert.Contains("Invalid wine type", ex.Message);
     }
 

@@ -37,7 +37,7 @@ public class WineVintageService(
         return vintages.Select(v => v.ToResponseDto(grapesByVintageId[v.Id]));
     }
 
-    public async Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, CancellationToken ct = default)
+    public async Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, int userId, CancellationToken ct = default)
     {
         if (!await wineRepository.ExistsByIdAsync(wineId, ct))
             throw new NotFoundException($"Wine with ID {wineId} not found.");
@@ -45,7 +45,7 @@ public class WineVintageService(
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var vintageEntity = dto.ToEntity(wineId);
+        var vintageEntity = dto.ToEntity(userId, wineId);
         var vintage = await vintageRepository.CreateAsync(vintageEntity, grapes, ct);
         return vintage.ToResponseDto(grapes);
     }

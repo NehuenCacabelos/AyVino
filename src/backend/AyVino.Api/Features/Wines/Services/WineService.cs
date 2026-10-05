@@ -32,7 +32,7 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
-    public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, CancellationToken ct = default)
+    public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, int userId, CancellationToken ct = default)
     {
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
@@ -40,7 +40,7 @@ public class WineService(
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
         var wineEntity = dto.ToEntity(wineType, sourceType);
-        var firstVintageEntity = dto.FirstVintage.ToEntity();
+        var firstVintageEntity = dto.FirstVintage.ToEntity(userId);
 
         var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
         return wine.ToResponseDto();
