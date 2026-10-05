@@ -47,6 +47,8 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 src/frontend/src/
 ├── assets/                    # Recursos visuales estáticos (hero.png, logos)
 ├── components/                # Componentes UI atómicos y modulares
+│   ├── community/             # Módulo de comunidad
+│   │   └── CommunityModal.tsx # Modal editorial de "Próximamente" para catas y clubes
 │   ├── dashboard/             # Módulos del Dashboard/Cava post-login (QuickActions, Metrics, StockCarousel, etc.)
 │   └── layout/                # Estructura visual global
 │       └── Navbar.tsx         # Barra de navegación contextual
@@ -58,7 +60,7 @@ src/frontend/src/
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
 │   └── wines/                 # Módulo de Vinos y Catálogo
-│       └── components/        # Componentes de presentación (WineCard.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
+│       └── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
 ├── lib/                       # Utilidades transversales
 │   └── utils.ts               # Función cn con clsx y tailwind-merge
 ├── pages/                     # Páginas y vistas principales
@@ -121,7 +123,7 @@ La capa de comunicación HTTP reside en [`src/frontend/src/services/apiClient.ts
    - Lee el `refreshToken` desde `localStorage`.
    - Lanza una llamada a `POST /api/auth/refresh`.
    - Si la renovación tiene éxito, guarda las nuevas claves en `localStorage`, actualiza las cabeceras de la petición original y la reintenta sin intervención del usuario.
-   - Si la renovación falla (token revocado o expirado), purga el almacenamiento local, dispara el evento `'auth:unauthorized'` y redirige al usuario a la página de bienvenida.
+   - Si la renovación falla (token revocado o expirado) o se recibe un 401 fuera de login, purga el almacenamiento local (`localStorage`) y redirige forzosamente a la Landing pública (`window.location.href = '/'`), garantizando que nunca se desvíe al usuario al formulario de login.
 
 ---
 

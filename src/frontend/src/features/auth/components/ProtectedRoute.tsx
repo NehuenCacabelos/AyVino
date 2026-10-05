@@ -16,18 +16,18 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#0f0f11]">
         <div
           role="status"
           aria-label="Cargando sesión..."
-          className="w-8 h-8 border-3 border-wine-800/20 border-t-wine-800 rounded-full animate-spin"
+          className="w-8 h-8 border-2 border-neutral-800 border-t-[#6b1d28] rounded-full animate-spin"
         />
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role as UserRole))) {
