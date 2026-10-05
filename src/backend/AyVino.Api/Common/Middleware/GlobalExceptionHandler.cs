@@ -21,6 +21,11 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 GetTitleForStatusCode(appEx.StatusCode),
                 appEx.Message
             ),
+            BadHttpRequestException badReq => (
+                badReq.StatusCode,
+                GetTitleForStatusCode(badReq.StatusCode),
+                "La solicitud es inválida o está mal formada."
+            ),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Error interno del servidor",
