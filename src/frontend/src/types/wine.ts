@@ -6,26 +6,92 @@ export type BottleKind =
   | 'white-flute'
   | 'sparkling';
 
+export type WineTypeEnum =
+  | 'Red'
+  | 'White'
+  | 'Rose'
+  | 'Sparkling'
+  | 'Fortified'
+  | 'Dessert';
+
+export type SourceTypeEnum = 'Official' | 'Community';
+
+export type ApprovalStatusEnum = 'Pending' | 'Approved' | 'Rejected';
+
 /**
- * Modelo de vino curado para la Landing y catálogo público.
- * Alineado estrictamente con los campos reales del backend y extensibilidad opcional.
+ * DTOs exactos que expone la API REST de .NET en camelCase.
+ * Todos con identificador entero estricto (id: number).
+ */
+export interface WineGrapeApiDto {
+  grapeId: number;
+  percentage: number | null;
+}
+
+export interface WineApiDto {
+  id: number;
+  wineryId: number | null;
+  wineryNameText: string | null;
+  name: string;
+  description: string | null;
+  wineType: WineTypeEnum | string;
+  locationId: number | null;
+  sourceType: SourceTypeEnum | string;
+  duplicateOfWineId: number | null;
+  averageRating: number | null;
+  reviewCount: number;
+}
+
+export interface WineVintageApiDto {
+  id: number;
+  wineId: number;
+  year: number | null;
+  alcoholContent: number | null;
+  servingTemperature: number | null;
+  agingAdvice: string | null;
+  imageUrl: string | null;
+  approvalStatus: ApprovalStatusEnum | string;
+  uploadedByUserId: number;
+  registerDate: string;
+  averageRating: number | null;
+  reviewCount: number;
+  grapes: WineGrapeApiDto[];
+}
+
+export interface WinePairingApiDto {
+  id: number;
+  name: string;
+  category: string;
+}
+
+/**
+ * Modelo de vino curado (ViewModel) para la Landing, catálogo público y modales de cata.
+ * Alineado estrictamente con el contrato de la API:
+ * - id: number estricto (entero de backend).
+ * - rating: number | null (null cuando reviewCount == 0).
+ * - alcoholContent y servingTemperature provistos por la cosecha.
  */
 export interface CuratedWine {
-  id: string;
+  id: number;
   name: string;
   winery: string;
   grape: string;
   vintage: string;
   region: string;
-  rating: number;
+  rating: number | null;
   reviewCount: number;
   imageUrl?: string;
-  sourceType?: 'winery' | 'community' | 'Official' | 'Community';
+  sourceType?: 'Official' | 'Community' | 'winery' | 'community';
   isOfficial?: boolean;
+
+  // Datos de cosecha provistos por el backend
+  aging?: string;
+  alcoholContent?: number | null;
+  servingTemperature?: number | null;
+
+  // Datos extendidos opcionales (mock de muestra / notas de cata / maridaje)
   tastingNotes?: string;
   longDescription?: string;
   descriptors?: string[];
-  aging?: string;
   pairing?: string;
   altitude?: string;
   colorAccent?: string;

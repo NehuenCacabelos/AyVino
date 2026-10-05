@@ -36,7 +36,7 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetai
 
   if (!wine) return null;
 
-  const isWineryOfficial = wine.sourceType === 'winery' || wine.isOfficial;
+  const isWineryOfficial = wine.sourceType === 'Official' || wine.sourceType === 'winery' || wine.isOfficial;
 
   return (
     <div
@@ -73,10 +73,17 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetai
             )}
           </div>
 
-          <div className="mt-3 text-center">
+          <div className="mt-3 text-center space-y-1">
             <span className="font-mono text-[11px] uppercase tracking-widest text-neutral-400 block">
               {wine.grape} · {wine.vintage}
             </span>
+            {(wine.alcoholContent != null || wine.servingTemperature != null) && (
+              <div className="inline-flex items-center gap-1.5 text-[10px] font-mono text-neutral-500 tracking-wider">
+                {wine.alcoholContent != null && <span>{wine.alcoholContent}% Vol.</span>}
+                {wine.alcoholContent != null && wine.servingTemperature != null && <span>·</span>}
+                {wine.servingTemperature != null && <span>{wine.servingTemperature}°C Serv.</span>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -84,15 +91,25 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetai
         <div className="flex-1 py-4 px-5 md:py-4 md:px-6 overflow-y-auto flex flex-col justify-between space-y-3">
           <div className="space-y-3">
             
-            {/* Encabezado: Procedencia y Título */}
+            {/* Encabezado: Procedencia, Título y Metadatos Técnicos */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
                 <span className="bg-neutral-900 border border-neutral-800 text-neutral-300 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-sm">
                   {isWineryOfficial ? 'Ficha Oficial' : 'Aporte de Comunidad'}
                 </span>
                 <span className="text-neutral-500 font-mono text-[11px] uppercase tracking-wider">
                   {wine.winery}
                 </span>
+                {wine.alcoholContent != null && (
+                  <span className="font-mono text-[10px] text-neutral-400 bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded-sm">
+                    {wine.alcoholContent}% Vol.
+                  </span>
+                )}
+                {wine.servingTemperature != null && (
+                  <span className="font-mono text-[10px] text-neutral-400 bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded-sm">
+                    {wine.servingTemperature}°C Serv.
+                  </span>
+                )}
               </div>
 
               <h3 className="font-serif text-xl sm:text-2xl font-semibold leading-tight text-neutral-100">
@@ -113,7 +130,7 @@ export default function WineDetailModal({ wine, onClose, onOpenAuth }: WineDetai
                 </span>
                 <span className="text-base font-bold text-neutral-100 flex items-center justify-center gap-1 my-0.5 font-mono">
                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  {wine.rating.toFixed(1)}
+                  {wine.rating !== null ? wine.rating.toFixed(1) : 'S/C'}
                 </span>
                 <span className="text-[10px] font-mono text-neutral-500 block">
                   {wine.reviewCount} notas

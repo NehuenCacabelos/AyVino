@@ -60,7 +60,8 @@ src/frontend/src/
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
 │   └── wines/                 # Módulo de Vinos y Catálogo
-│       └── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
+│       ├── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
+│       └── utils/             # Adaptadores de dominio y mapeadores (wineMapper.ts)
 ├── lib/                       # Utilidades transversales
 │   └── utils.ts               # Función cn con clsx y tailwind-merge
 ├── pages/                     # Páginas y vistas principales

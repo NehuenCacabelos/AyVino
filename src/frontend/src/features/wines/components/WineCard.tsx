@@ -27,7 +27,7 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
     isOfficial,
   } = wine;
 
-  const isWineryOfficial = sourceType === 'winery' || isOfficial;
+  const isWineryOfficial = sourceType === 'Official' || sourceType === 'winery' || isOfficial;
 
   return (
     <article
@@ -78,7 +78,7 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
           <div className="flex items-center gap-1.5">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
             <span className="text-xs font-semibold text-neutral-200 font-mono">
-              {rating.toFixed(1)}
+              {rating !== null ? rating.toFixed(1) : 'S/C'}
             </span>
             <span className="text-[11px] font-mono text-neutral-500">
               ({reviewCount})
