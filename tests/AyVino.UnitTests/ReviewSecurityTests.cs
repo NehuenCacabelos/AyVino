@@ -3,6 +3,8 @@ using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Models;
 using AyVino.Api.Features.Reviews.Repositories;
 using AyVino.Api.Features.Reviews.Services;
+using AyVino.Api.Features.Wines.Models;
+using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.UnitTests;
 
@@ -25,7 +27,7 @@ public class ReviewSecurityTests
             }
         };
 
-        var service = new ReviewService(fakeRepo);
+        var service = new ReviewService(fakeRepo, new FakeWineVintageRepository());
         var updateDto = new UpdateReviewRequestDto(Rating: 5, Comment: "Modificado");
 
         // Act & Assert (usuario 99 intenta modificar reseña de usuario 42)
@@ -52,7 +54,7 @@ public class ReviewSecurityTests
             }
         };
 
-        var service = new ReviewService(fakeRepo);
+        var service = new ReviewService(fakeRepo, new FakeWineVintageRepository());
 
         // Act & Assert (usuario 99 intenta borrar reseña de usuario 42)
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
@@ -78,7 +80,7 @@ public class ReviewSecurityTests
             }
         };
 
-        var service = new ReviewService(fakeRepo);
+        var service = new ReviewService(fakeRepo, new FakeWineVintageRepository());
         var updateDto = new UpdateReviewRequestDto(Rating: 5, Comment: "Excelente");
 
         // Act
@@ -88,6 +90,22 @@ public class ReviewSecurityTests
         Assert.NotNull(result);
         Assert.Equal(5, result.Rating);
         Assert.Equal("Excelente", result.Comment);
+    }
+
+    [Fact]
+    public async Task ReviewService_CreateAsync_ThrowsNotFoundException_WhenWineVintageDoesNotExist()
+    {
+        // Arrange
+        var fakeRepo = new FakeReviewRepository();
+        var fakeVintageRepo = new FakeWineVintageRepository { ExistsResult = false };
+        var service = new ReviewService(fakeRepo, fakeVintageRepo);
+        var createDto = new CreateReviewRequestDto(WineVintageId: 999, Rating: 5, Comment: "Excelente");
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.CreateAsync(createDto, userId: 1));
+
+        Assert.Contains("999", ex.Message);
     }
 
     private sealed class FakeReviewRepository : IReviewRepository
@@ -142,6 +160,38 @@ public class ReviewSecurityTests
             }
             return Task.FromResult(false);
         }
+    }
+
+    private sealed class FakeWineVintageRepository : IWineVintageRepository
+    {
+        public bool ExistsResult { get; set; } = true;
+
+        public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(ExistsResult);
+
+        public Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IEnumerable<WineGrape>> GetGrapesByVintageIdAsync(int vintageId, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<IEnumerable<WineGrape>> GetGrapesByVintageIdsAsync(IEnumerable<int> vintageIds, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<WineVintage> CreateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<bool> UpdateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default) =>
+            throw new NotImplementedException();
+
+        public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
+            throw new NotImplementedException();
     }
 }
 

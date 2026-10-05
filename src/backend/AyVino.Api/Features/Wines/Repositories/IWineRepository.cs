@@ -14,4 +14,5 @@ public interface IWineRepository
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default);
     Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default);
+    Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default);
 }

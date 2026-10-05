@@ -45,17 +45,22 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
         const string sql = """
             SELECT id, username, email, role, register_date, is_active, photo, bio
             FROM users
-            ORDER BY id ASC;
+            ORDER BY id ASC
+            OFFSET @Offset LIMIT @PageSize;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<User>(
-            new CommandDefinition(sql, cancellationToken: ct));
+            new CommandDefinition(sql, new
+            {
+                Offset = (pageNumber - 1) * pageSize,
+                PageSize = pageSize
+            }, cancellationToken: ct));
     }
 
     public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)

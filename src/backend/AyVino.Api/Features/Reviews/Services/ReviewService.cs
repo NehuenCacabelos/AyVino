@@ -1,14 +1,18 @@
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Repositories;
+using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Reviews.Services;
 
-public class ReviewService(IReviewRepository reviewRepository) : IReviewService
+public class ReviewService(IReviewRepository reviewRepository, IWineVintageRepository wineVintageRepository) : IReviewService
 {
     public async Task<ReviewResponseDto> CreateAsync(CreateReviewRequestDto request, int userId, CancellationToken ct = default)
     {
         ValidateRating(request.Rating);
+
+        if (!await wineVintageRepository.ExistsByIdAsync(request.WineVintageId, ct))
+            throw new NotFoundException($"Cosecha con ID {request.WineVintageId} no encontrada.");
 
         if (await reviewRepository.ExistsForUserAndVintageAsync(userId, request.WineVintageId, ct))
             throw new ConflictException("Ya reseñaste esta cosecha.");

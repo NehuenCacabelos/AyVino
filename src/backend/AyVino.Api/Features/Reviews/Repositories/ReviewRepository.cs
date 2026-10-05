@@ -27,7 +27,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   r.rating AS Rating, r.comment AS Comment,
+                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
@@ -44,7 +44,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   r.rating AS Rating, r.comment AS Comment,
+                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
@@ -68,7 +68,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   r.rating AS Rating, r.comment AS Comment,
+                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id

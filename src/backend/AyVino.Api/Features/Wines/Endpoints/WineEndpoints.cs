@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
@@ -20,9 +21,10 @@ public static class WineEndpoints
             .WithName("GetWineById")
             .WithSummary("Gets a wine label with its overall rating. See /vintages for the per-year breakdown.");
 
-        group.MapPost("/", async (CreateWineRequestDto request, IWineService service, CancellationToken ct) =>
+        group.MapPost("/", async (CreateWineRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
         {
-            var created = await service.CreateAsync(request, ct);
+            var userId = user.GetUserId();
+            var created = await service.CreateAsync(request, userId, ct);
             return Results.Created($"/api/wines/{created.Id}", created);
         })
             .RequireAuthorization()
@@ -55,6 +57,13 @@ public static class WineEndpoints
             .RequireAuthorization()
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
+
+        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, ct)))
+            .WithName("SearchWines")
+            .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
+
+        
 
         return app;
     }

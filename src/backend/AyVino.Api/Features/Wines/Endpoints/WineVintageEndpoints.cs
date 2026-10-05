@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
@@ -20,9 +21,10 @@ public static class WineVintageEndpoints
             .WithName("GetWineVintageById")
             .WithSummary("Gets a single vintage with its grape blend and rating.");
 
-        group.MapPost("/", async (int wineId, CreateWineVintageRequestDto request, IWineVintageService service, CancellationToken ct) =>
+        group.MapPost("/", async (int wineId, CreateWineVintageRequestDto request, ClaimsPrincipal user, IWineVintageService service, CancellationToken ct) =>
         {
-            var created = await service.CreateAsync(wineId, request, ct);
+            var userId = user.GetUserId();
+            var created = await service.CreateAsync(wineId, request, userId, ct);
             return Results.Created($"/api/wines/{wineId}/vintages/{created.Id}", created);
         })
             .RequireAuthorization()

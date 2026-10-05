@@ -74,9 +74,10 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         return user.ToResponseDto();
     }
 
-    public async Task<IEnumerable<UserResponseDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IEnumerable<UserResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
-        var users = await userRepository.GetAllAsync(ct);
+        ValidatePagination(pageNumber, pageSize);
+        var users = await userRepository.GetAllAsync(pageNumber, pageSize, ct);
         return users.ToResponseDtoList();
     }
 
@@ -187,5 +188,13 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         {
             throw new ValidationException($"El rol '{dto.Role}' no es válido. Roles permitidos: Admin, Winery, User.");
         }
+    }
+
+    private static void ValidatePagination(int pageNumber, int pageSize)
+    {
+        if (pageNumber <= 0)
+            throw new ValidationException("pageNumber debe ser mayor a 0.");
+        if (pageSize is < 1 or > 100)
+            throw new ValidationException("pageSize debe estar entre 1 y 100.");
     }
 }

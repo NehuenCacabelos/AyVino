@@ -205,4 +205,56 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 WineIds = wineIds.ToArray()
             }, cancellationToken: ct));
     }
+
+        // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
+    // 0.25 tolera errores de tipeo normales (letras de más/de menos, mayúsculas) sin devolver basura.
+    private const double SimilarityThreshold = 0.25;
+    public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        // Cada criterio de texto matchea por substring (ILIKE, rápido y exacto) O por similitud
+        // de trigramas (tolera errores de tipeo que ILIKE no perdona). LEFT JOIN a wineries porque
+        // la bodega "real" solo existe si winery_id está seteado; si es un vino comunitario sin
+        // bodega, el nombre está en winery_name_text.
+        const string sql = """
+            SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
+                w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE (@Name IS NULL
+                OR w.name ILIKE @NamePattern
+                OR similarity(w.name, @Name) > @Threshold)
+            AND (@Winery IS NULL
+                OR w.winery_name_text ILIKE @WineryPattern
+                OR wy.name ILIKE @WineryPattern
+                OR similarity(COALESCE(w.winery_name_text, ''), @Winery) > @Threshold
+                OR similarity(COALESCE(wy.name, ''), @Winery) > @Threshold)
+            AND (@WineType IS NULL OR w.wine_type = @WineType)
+            AND (@Year IS NULL OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year))
+            ORDER BY
+            GREATEST(
+                CASE WHEN @Name IS NULL THEN 0 ELSE similarity(w.name, @Name) END,
+                CASE WHEN @Winery IS NULL THEN 0 ELSE GREATEST(
+                    similarity(COALESCE(w.winery_name_text, ''), @Winery),
+                    similarity(COALESCE(wy.name, ''), @Winery)
+                ) END
+            ) DESC,
+            w.id
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Wine>(
+            new CommandDefinition(sql, new
+            {
+                Name = name,
+                NamePattern = name is null ? null : $"%{name}%",
+                Winery = winery,
+                WineryPattern = winery is null ? null : $"%{winery}%",
+                Threshold = SimilarityThreshold,
+                WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
+                Year = year,
+                Offset = (pageNumber - 1) * pageSize,
+                PageSize = pageSize
+            }, cancellationToken: ct));
+    }
 }

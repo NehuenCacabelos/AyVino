@@ -5,7 +5,7 @@ namespace AyVino.Api.Features.Wines.DTOs;
 
 public static class WineVintageMappingExtensions
 {
-    public static WineVintage ToEntity(this CreateWineVintageRequestDto dto, int wineId = 0) => new()
+    public static WineVintage ToEntity(this CreateWineVintageRequestDto dto, int userId, int wineId = 0) => new()
     {
         WineId = wineId,
         Year = dto.Year,
@@ -14,7 +14,7 @@ public static class WineVintageMappingExtensions
         AgingAdvice = dto.AgingAdvice,
         ImageUrl = dto.ImageUrl,
         ApprovalStatus = ApprovalStatus.Pending,
-        UploadedByUserId = dto.UploadedByUserId,
+        UploadedByUserId = userId,
         RegisterDate = DateTime.UtcNow
     };
 

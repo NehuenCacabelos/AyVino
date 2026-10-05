@@ -69,12 +69,28 @@ public class UserSecurityTests
         Assert.Contains("8 caracteres", exception.Message);
     }
 
+    [Theory]
+    [InlineData(0, 10)]
+    [InlineData(-1, 10)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task UserService_GetAllAsync_InvalidPagination_ThrowsValidationException(int pageNumber, int pageSize)
+    {
+        // Arrange
+        var fakeRepo = new FakeUserRepository();
+        var hasher = new PasswordHasher();
+        var userService = new UserService(fakeRepo, hasher);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => userService.GetAllAsync(pageNumber, pageSize));
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
         public Task<User?> GetByIdAsync(int id, CancellationToken ct = default) => Task.FromResult<User?>(null);
         public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) => Task.FromResult<User?>(null);
         public Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default) => Task.FromResult<User?>(null);
-        public Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default) => Task.FromResult<IEnumerable<User>>([]);
+        public Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<User>>([]);
         public Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default) => Task.FromResult<(User?, UserCredential?)>((null, null));
         public Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default) => Task.FromResult(1);
         public Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default) => Task.FromResult(true);
