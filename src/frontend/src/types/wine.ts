@@ -6,6 +6,10 @@ export type BottleKind =
   | 'white-flute'
   | 'sparkling';
 
+/**
+ * Modelo de vino curado para la Landing y catálogo público.
+ * Alineado estrictamente con los campos reales del backend y extensibilidad opcional.
+ */
 export interface CuratedWine {
   id: string;
   name: string;
@@ -13,13 +17,14 @@ export interface CuratedWine {
   grape: string;
   vintage: string;
   region: string;
-  tastingNotes: string;
-  longDescription: string;
-  descriptors: string[];
-  price: number;
   rating: number;
   reviewCount: number;
-  isOfficial: boolean;
+  imageUrl?: string;
+  sourceType?: 'winery' | 'community' | 'Official' | 'Community';
+  isOfficial?: boolean;
+  tastingNotes?: string;
+  longDescription?: string;
+  descriptors?: string[];
   aging?: string;
   pairing?: string;
   altitude?: string;
@@ -41,6 +46,7 @@ export interface DashboardWine {
   units?: number;
   location?: string;
   isFavorite?: boolean;
+  imageUrl?: string;
 }
 
 /**
