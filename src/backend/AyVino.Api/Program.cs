@@ -37,6 +37,12 @@ using AyVino.Api.Features.Follows.Services;
 using AyVino.Api.Features.UserWines.Endpoints;
 using AyVino.Api.Features.UserWines.Repositories;
 using AyVino.Api.Features.UserWines.Services;
+using AyVino.Api.Features.Cellars.Endpoints;
+using AyVino.Api.Features.Cellars.Repositories;
+using AyVino.Api.Features.Cellars.Services;
+using AyVino.Api.Features.WineCare.Endpoints;
+using AyVino.Api.Features.WineCare.Repositories;
+using AyVino.Api.Features.WineCare.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -171,6 +177,13 @@ builder.Services.AddScoped<IFollowRepository, FollowRepository>();
 builder.Services.AddScoped<IFollowService, FollowService>();
 builder.Services.AddScoped<IUserWineRepository, UserWineRepository>();
 builder.Services.AddScoped<IUserWineService, UserWineService>();
+builder.Services.AddScoped<ICellarRepository, CellarRepository>();
+builder.Services.AddScoped<ICellarService, CellarService>();
+builder.Services.AddScoped<ICellarItemRepository, CellarItemRepository>();
+builder.Services.AddScoped<ICellarItemService, CellarItemService>();
+builder.Services.AddScoped<ICellarCareService, CellarCareService>();
+builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
+builder.Services.AddScoped<IWineCareService, WineCareService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -238,6 +251,12 @@ app.MapWineVintageEndpoints();
 app.MapReviewEndpoints();
 app.MapFollowEndpoints();
 app.MapUserWineEndpoints();
+app.MapCellarEndpoints();
+app.MapCellarItemEndpoints();
+app.MapCellarCareEndpoints();
+app.MapWineCareEndpoints();
+
+
 
 app.Run();
 
