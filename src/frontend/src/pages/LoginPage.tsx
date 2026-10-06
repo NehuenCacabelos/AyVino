@@ -107,16 +107,16 @@ export default function LoginPage() {
           </div>
 
           {/* Cuerpo Central: Formulario */}
-          <div className="flex-1 flex flex-col justify-center py-2 -mt-2">
+          <div className="flex-1 flex flex-col justify-center pt-0 pb-2 -mt-5">
             {/* Cabecera Editorial */}
             <div className="mb-6">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-amber-200/60 font-sans block mb-2">
+              <span className="text-xs uppercase tracking-[0.25em] text-amber-200/60 font-sans block mb-2">
                 Colección Privada
               </span>
-              <h1 className="font-serif text-3xl text-zinc-100 font-normal tracking-tight">
+              <h1 className="font-serif text-3xl sm:text-4xl text-zinc-100 font-normal tracking-tight leading-tight">
                 Bienvenido de nuevo
               </h1>
-              <p className="text-xs text-zinc-400 mt-2 font-sans font-light">
+              <p className="text-sm text-zinc-400 mt-2 font-sans font-light">
                 Ingresá a tu cava personal y gestioná tus etiquetas.
               </p>
             </div>
