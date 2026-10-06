@@ -112,4 +112,12 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
             new CommandDefinition(sql, new { CellarId = cellarId, WineVintageId = wineVintageId }, cancellationToken: ct));
         return rowsAffected > 0;
     }
+        public async Task<IReadOnlyList<int>> GetVintageIdsAsync(int cellarId, CancellationToken ct = default)
+    {
+        const string sql = "SELECT wine_vintage_id FROM cellar_items WHERE cellar_id = @CellarId ORDER BY wine_vintage_id;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var ids = await connection.QueryAsync<int>(
+            new CommandDefinition(sql, new { CellarId = cellarId }, cancellationToken: ct));
+        return ids.ToList();
+    }
 }
