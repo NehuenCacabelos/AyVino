@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { ArrowLeft, ArrowRight, MapPin, Star, Thermometer, Clock, Wine as WineIcon } from 'lucide-react';
 import SectionHeading from './SectionHeading';
 import BottleVector from './BottleVector';
-import type { DashboardWine } from '../../types/wine';
+import type { DashboardWine } from '../../../types/wine';
 
 export interface StockCarouselProps {
   wines?: DashboardWine[];

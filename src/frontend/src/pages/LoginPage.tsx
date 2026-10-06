@@ -1,50 +1,77 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Wine, Mail, Lock, ArrowRight, Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, type FormEvent } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Wine, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../features/auth';
+import authVineyardImg from '../assets/auth-vineyard.webp';
 
 /**
  * LoginPage Component
- * Vista de inicio de sesión (/login) con la estética editorial de cava oscura (carbón mate #0f0f11).
- * Integra autenticación con useAuth(), campos oscuros con foco bordó (#6b1d28) y acceso rápido demo.
+ * Vista de inicio de sesión (/login) con diseño Clean Dark y minimalista.
+ * Inputs directos sin labels externas (solo placeholder amplio interior).
+ * Botón primario y campos con curvas uniformes (rounded-xl h-12).
+ * Columna derecha: Foto vertical con degradado hacia la columna izquierda.
  */
 export default function LoginPage() {
-  const { login, loginDemo, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Redirigir al Dashboard si ya tiene sesión activa
-  if (isAuthenticated) {
-    navigate('/dashboard', { replace: true });
-  }
+  const redirectPath =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
 
-  const handleDemoAccess = () => {
-    loginDemo({
-      username: 'Martina Sommelier',
-      email: email || 'martina@ayvino.com',
-      role: 'User',
-    });
-    navigate('/dashboard');
+  // Redirigir a la ruta original o al Dashboard si ya tiene sesión activa
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [isAuthenticated, navigate, redirectPath]);
+
+  const clearError = (field: string) => {
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setErrorMessage(null);
 
+    const newErrors: Record<string, string> = {};
+    if (!email.trim()) {
+      newErrors.email = 'El correo es requerido';
+    }
+    if (!password) {
+      newErrors.password = 'La contraseña es requerida';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsLoading(true);
+
     try {
-      await login({ email, password });
-      navigate('/dashboard');
+      await login({ email: email.trim(), password });
+      navigate(redirectPath, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string; title?: string } } };
       const detail = error.response?.data?.detail || error.response?.data?.title;
       setErrorMessage(
         detail ||
-          'No se pudo conectar con el servidor backend o las credenciales no son válidas. Podés usar el Acceso Rápido Demo abajo para explorar la plataforma.'
+          'No se pudo conectar con el servidor backend o las credenciales no son válidas.'
       );
     } finally {
       setIsLoading(false);
@@ -52,178 +79,190 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f11] text-neutral-100 font-sans flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 selection:bg-[#6b1d28] selection:text-white">
-      
-      {/* Barra Superior con Enlace de Retorno */}
-      <header className="max-w-7xl mx-auto w-full flex items-center justify-between">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-[11px] font-mono font-medium uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Volver al inicio</span>
-        </Link>
-
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full border border-neutral-800 bg-neutral-900 flex items-center justify-center text-neutral-300 shadow-sm">
-            <Wine className="w-3.5 h-3.5 text-neutral-300" strokeWidth={1.8} />
-          </div>
-          <span className="font-serif text-lg font-semibold tracking-tight text-neutral-100">
-            AyVino
-          </span>
-        </Link>
-      </header>
-
-      {/* Contenedor Central / Tarjeta de Autenticación */}
-      <main className="my-auto py-8 flex justify-center">
-        <div className="bg-[#141416] border border-neutral-800 p-8 rounded-sm max-w-md w-full">
+    <div className="h-screen overflow-hidden bg-[#0e0e11] text-neutral-100 font-sans flex items-center justify-center p-4 selection:bg-[#6b1d2f] selection:text-white">
+      {/* Tarjeta Central Flotante */}
+      <div className="relative w-full max-w-5xl h-[88vh] max-h-[640px] bg-[#141416] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/80 grid grid-cols-1 lg:grid-cols-2">
+        
+        {/* Columna Izquierda: Formulario de Login */}
+        <div className="p-8 md:p-10 flex flex-col justify-between h-full overflow-y-auto lg:overflow-hidden bg-[#141416]">
           
-          {/* Encabezado Editorial */}
-          <div className="text-center mb-8">
-            <p className="font-mono text-[10px] tracking-[0.25em] uppercase text-neutral-400 font-medium mb-3">
-              Acceso a tu cava
-            </p>
+          {/* Header Superior: Volver a la izquierda, Logo a la derecha */}
+          <div className="flex items-center justify-between">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Volver</span>
+            </Link>
 
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-100 leading-tight">
-              Bienvenido de nuevo,
-              <span className="block font-normal italic text-neutral-300 mt-1">
-                copa a copa.
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <span className="font-serif text-xl font-bold tracking-tight text-white group-hover:text-rose-200 transition-colors">
+                AyVino
               </span>
-            </h1>
-
-            <p className="mt-2 text-xs sm:text-sm text-neutral-400 font-sans leading-relaxed">
-              Ingresá para gestionar tus botellas en cava, registrar descorches y notas de cata.
-            </p>
+              <div className="w-8 h-8 rounded-xl border border-zinc-800 bg-zinc-950 flex items-center justify-center text-rose-300 group-hover:border-[#6b1d2f] transition-colors shadow-sm">
+                <Wine className="w-4 h-4 text-rose-300" strokeWidth={1.8} />
+              </div>
+            </Link>
           </div>
 
-          {/* Alerta de Error */}
-          {errorMessage && (
-            <div
-              role="alert"
-              className="mb-6 flex items-start gap-3 rounded-sm border border-rose-900/60 bg-rose-950/30 p-4 text-xs text-rose-300"
-            >
-              <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
-              <p className="leading-relaxed font-sans">{errorMessage}</p>
+          {/* Cuerpo Central: Formulario */}
+          <div className="flex-1 flex flex-col justify-center py-2 -mt-2">
+            {/* Cabecera Editorial */}
+            <div className="mb-6">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-amber-200/60 font-sans block mb-2">
+                Colección Privada
+              </span>
+              <h1 className="font-serif text-3xl text-zinc-100 font-normal tracking-tight">
+                Bienvenido de nuevo
+              </h1>
+              <p className="text-xs text-zinc-400 mt-2 font-sans font-light">
+                Ingresá a tu cava personal y gestioná tus etiquetas.
+              </p>
             </div>
-          )}
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Correo Electrónico */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-[11px] font-mono uppercase tracking-widest text-neutral-400 mb-1.5"
+            {/* Alerta de Error del Servidor */}
+            {errorMessage && (
+              <div
+                role="alert"
+                className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300"
               >
-                Correo Electrónico
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+                <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                <p className="leading-snug font-sans">{errorMessage}</p>
+              </div>
+            )}
+
+            {/* Formulario Clean Dark sin etiquetas externas */}
+            <form noValidate onSubmit={handleSubmit} className="space-y-4">
+              {/* Correo Electrónico */}
+              <div>
                 <input
                   id="email"
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="sommelier@tudominio.com"
-                  className="w-full pl-11 pr-4 py-3 rounded-sm bg-[#18181b] border border-neutral-700 text-neutral-100 placeholder:text-neutral-500 focus:border-[#6b1d28] focus:ring-0 focus:outline-none text-sm transition-colors"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearError('email');
+                  }}
+                  placeholder="Correo electrónico"
+                  autoComplete="email"
+                  aria-label="Correo electrónico"
+                  className={`h-12 w-full rounded-xl px-4 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                    errors.email
+                      ? 'border-rose-500/70 focus:border-rose-500'
+                      : 'border-zinc-800/80 focus:border-zinc-500'
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.email}</p>
+                )}
               </div>
-            </div>
 
-            {/* Contraseña */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  htmlFor="password"
-                  className="block text-[11px] font-mono uppercase tracking-widest text-neutral-400"
-                >
-                  Contraseña
-                </label>
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
-                >
-                  ¿Olvidaste tu clave?
-                </a>
+              {/* Contraseña con botón integrado de alternancia */}
+              <div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearError('password');
+                    }}
+                    placeholder="Contraseña"
+                    autoComplete="current-password"
+                    aria-label="Contraseña"
+                    className={`h-12 w-full rounded-xl px-4 pr-11 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                      errors.password
+                        ? 'border-rose-500/70 focus:border-rose-500'
+                        : 'border-zinc-800/80 focus:border-zinc-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer focus:outline-none"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-1.5 px-0.5">
+                  {errors.password ? (
+                    <p className="text-[11px] text-rose-400 pl-0.5">{errors.password}</p>
+                  ) : (
+                    <span />
+                  )}
+                  <a
+                    href="#"
+                    onClick={(e) => e.preventDefault()}
+                    className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors ml-auto"
+                  >
+                    ¿Olvidaste tu clave?
+                  </a>
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-11 pr-4 py-3 rounded-sm bg-[#18181b] border border-neutral-700 text-neutral-100 placeholder:text-neutral-500 focus:border-[#6b1d28] focus:ring-0 focus:outline-none text-sm transition-colors"
-                />
-              </div>
-            </div>
 
-            {/* Botón de Submit Principal */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-sm bg-[#6b1d28] hover:bg-[#7e2432] text-white tracking-wider uppercase text-xs font-semibold py-3 transition-colors cursor-pointer disabled:opacity-60"
-            >
-              {isLoading ? (
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Ingresar a Mi Cava</span>
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
+              {/* Botón Primario Estilo Sello de Cava con rounded-xl h-12 */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="h-12 w-full rounded-xl bg-[#4f131f] hover:bg-[#5e1725] border border-rose-400/20 text-xs uppercase tracking-widest text-rose-100 font-medium transition-colors shadow-sm mt-2 inline-flex items-center justify-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-rose-200/30 border-t-rose-100 rounded-full animate-spin" />
+                ) : (
+                  <span>Iniciar sesión</span>
+                )}
+              </button>
+            </form>
+          </div>
 
-            {/* Separador de Modo Exploración */}
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-800" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#141416] px-3 text-neutral-500 text-[10px] font-mono uppercase tracking-widest">
-                  o acceso instantáneo
-                </span>
-              </div>
-            </div>
-
-            {/* Botón de Acceso Demo */}
-            <button
-              type="button"
-              onClick={handleDemoAccess}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-sm border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 text-neutral-300 hover:border-neutral-600 hover:text-white py-3 px-5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-neutral-400" />
-              <span>Acceso Rápido Demo / Desarrollador</span>
-            </button>
-
-          </form>
-
-          {/* Enlace para Registro */}
-          <div className="mt-8 pt-6 border-t border-neutral-800 text-center text-xs text-neutral-400">
+          {/* Footer Inferior Fijo */}
+          <div className="text-center text-xs text-zinc-400">
             <p>
               ¿Todavía no tenés tu perfil?{' '}
               <Link
                 to="/register"
-                className="text-neutral-200 hover:text-white font-medium underline transition-colors"
+                className="text-zinc-200 hover:text-white font-medium underline transition-colors"
               >
                 Crear cuenta acá
               </Link>
             </p>
           </div>
-
         </div>
-      </main>
 
-      {/* Pie de Página */}
-      <footer className="max-w-7xl mx-auto w-full text-center text-[10px] font-mono text-neutral-500 uppercase tracking-widest">
-        AyVino · Plataforma Enológica Editorial · Beber con moderación
-      </footer>
+        {/* Columna Derecha: Foto Vertical con Degradado de Fusión */}
+        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full">
+          {/* Imagen de Fondo vertical de viñedos y cordillera */}
+          <img
+            src={authVineyardImg}
+            alt="Viñedos y cordillera en Valle de Uco, Mendoza"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
 
+          {/* Tinte suave */}
+          <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+          {/* Capa de degradado hacia el borde izquierdo para fundirse con la columna del formulario */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#141416] via-transparent to-transparent pointer-events-none" />
+
+          {/* Sutil degradado inferior */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+
+          {/* Texto tipográfico plano */}
+          <div className="relative z-10">
+            <p className="text-xs tracking-[0.3em] text-white/80 font-light uppercase">
+              VALLE DE UCO · MENDOZA
+            </p>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

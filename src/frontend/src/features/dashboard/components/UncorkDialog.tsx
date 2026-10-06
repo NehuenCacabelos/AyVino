@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Star, X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react';
 import BottleVector from './BottleVector';
-import type { DashboardWine, UncorkSubmission } from '../../types/wine';
+import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
 
 interface UncorkDialogProps {
   wine: DashboardWine | null;

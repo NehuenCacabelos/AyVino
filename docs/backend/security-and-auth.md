@@ -106,3 +106,23 @@ Mapeados a políticas en `Program.cs`:
 - `AppPolicies.RequireUser` -> `RequireRole(AppRoles.User)`
 - `AppPolicies.RequireWinery` -> `RequireRole(AppRoles.Winery)`
 
+---
+
+## 6. Gestión Segura de Secretos y Configuración JWT
+
+Para evitar la fuga de credenciales en repositorios públicos, **ninguna clave ni contraseña debe ser versionada en `appsettings.json`**.
+
+### 6.1 Desarrollo Local: `dotnet user-secrets`
+El secreto criptográfico para la firma de tokens JWT (`Jwt:SecretKey`) debe poseer un mínimo de 32 caracteres (256 bits) y se gestiona fuera del control de versiones:
+
+```bash
+# Inicializar y configurar el secreto local en la máquina del desarrollador:
+dotnet user-secrets set "Jwt:SecretKey" "TuClaveSecretaDeDesarrolloMin32Bytes!" --project src/backend/AyVino.Api/AyVino.Api.csproj
+```
+
+### 6.2 Entornos Productivos / CI-CD: Variables de Entorno
+En servidores de despliegue, Docker o plataformas en la nube, se configuran mediante variables de entorno estándar de ASP.NET Core:
+- `Jwt__SecretKey`: Clave criptográfica HMAC-SHA256 de alta entropía.
+- `ConnectionStrings__DefaultConnection`: Cadena de conexión hacia PostgreSQL.
+
+

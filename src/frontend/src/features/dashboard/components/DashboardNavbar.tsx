@@ -12,7 +12,7 @@ import {
   LayoutDashboard,
   Sparkles,
 } from 'lucide-react';
-import { useAuth } from '../../features/auth';
+import { useAuth } from '../../auth';
 
 interface DashboardNavbarProps {
   stockCount?: number;

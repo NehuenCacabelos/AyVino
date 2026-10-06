@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Heart, Plus, Star } from 'lucide-react';
 import BottleVector from './BottleVector';
-import type { DashboardWine } from '../../types/wine';
+import type { DashboardWine } from '../../../types/wine';
 
 export interface WineryBlockProps {
   name: string;

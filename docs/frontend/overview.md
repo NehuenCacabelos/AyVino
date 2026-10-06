@@ -34,10 +34,11 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 - **Navegación Superior**: `text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100`.
 
 ### 2.3 Micro-interacciones y Tratamiento de Componentes
-- **Hero de Dos Columnas**: Columna izquierda con saludo monospace, titular Fraunces semi-bold con línea divisoria sutil, bajada y buscador integrado en bloque unificado (`bg-neutral-900/60`, `backdrop-blur-sm`, `border-neutral-800`) con botón `+ REGISTRAR BOTELLA`. Columna derecha con composición de botellas en mesa rústica y transición orgánica mediante viñetas degradadas.
+- **Hero Editorial Minimalista**: En `Landing.tsx`, composición a dos columnas sobre fondo carbón mate `#0f0f11` con halos sutiles de luz ambiental (`bg-[#6b1d28]/10 blur-3xl`). Columna izquierda con tipografía Fraunces, eyebrows mono y métricas clave. Columna derecha con escaparate 3D interactivo (`WineBottleMock` con chips técnicos de terroir y puntaje) descansando orgánicamente sobre el fondo oscuro sin sobrecargas visuales.
 - **Cinta Compacta de KPIs (`Metrics`)**: Franja horizontal con fondo `#121214`, micro-iconos lineales y métricas con tipografía Fraunces y font-mono.
 - **Bento Grid Modular (`PromoBlocks` y `StockCarousel`)**: Mosaico con tarjetas oscuras estructuradas, micro-datos técnicos de servicio y guarda.
 - **Modal de Descorche (`UncorkDialog`)**: Ficha técnica de cata dividida con escaparate visual y registro sensorial.
+- **Split-Card Flotante de Autenticación (`LoginPage.tsx` y `RegisterPage.tsx`)**: Arquitectura visual a dos columnas encajada en pantalla (`h-screen overflow-hidden p-4 bg-[#0e0e11]`) con estética *Clean Dark & Editorial Clásica de Bodega*. Tarjeta contenida (`h-[88vh] max-h-[640px] w-full max-w-5xl bg-[#141416]`), esquinas `rounded-3xl`, sombra profunda `shadow-2xl shadow-black/80` y borde `border-white/10`. Columna izquierda con encabezado superior invertido (Volver a la izquierda, AyVino a la derecha), cabecera editorial con tags de colección (`"Colección Privada"` / `"Membresía"` en `text-[10px] uppercase tracking-[0.25em] text-amber-200/60`), títulos en tipografía serif clásica (`font-serif text-3xl text-zinc-100 font-normal tracking-tight`) y subtítulo explicativo (`text-xs text-zinc-400 mt-2 font-sans font-light`). Formulario con `<form noValidate>` y validación reactiva de campos obligatorios en estado de React (`errors: Record<string, string>`), inputs minimalistas Clean Dark sin etiquetas externas (solo placeholder amplio interior, altura `h-12`, esquinas `rounded-xl`, padding `px-4`, fondo `bg-zinc-900/50 hover:bg-zinc-900/70`, borde `border-zinc-800/80 focus:border-zinc-500 focus:bg-zinc-900`, texto `text-zinc-100 placeholder:text-zinc-500`), alternancia de visibilidad de contraseña con botón integrado (`pr-11`, `Eye`/`EyeOff` en `text-zinc-500 hover:text-zinc-300`), feedback contextual inline mínimo (`text-[11px] text-rose-400 mt-1 pl-1`) con borde `border-rose-500/70`, y botón primario estilo sello de cava con radio coincidente (`h-12 w-full rounded-xl bg-[#4f131f] hover:bg-[#5e1725] border border-rose-400/20 text-xs uppercase tracking-widest text-rose-100 font-medium transition-colors shadow-sm mt-2`) con textos directos (*"Iniciar sesión"* y *"Crear cuenta"*). Columna derecha con foto vertical nativa en WebP de viñedos y cordillera (`auth-vineyard.webp`), tinte suave, capa de degradado hacia el borde izquierdo (`bg-gradient-to-r from-[#141416] via-transparent to-transparent`) que fusiona suavemente la imagen con la columna oscura del formulario, degradado inferior y texto tipográfico plano (*"VALLE DE UCO · MENDOZA"*).
 
 ---
 
@@ -45,42 +46,42 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 
 ```text
 src/frontend/src/
-├── assets/                    # Recursos visuales estáticos (hero.png, logos)
-├── components/                # Componentes UI atómicos y modulares
-│   ├── community/             # Módulo de comunidad
-│   │   └── CommunityModal.tsx # Modal editorial de "Próximamente" para catas y clubes
-│   ├── dashboard/             # Módulos del Dashboard/Cava post-login (QuickActions, Metrics, StockCarousel, etc.)
-│   └── layout/                # Estructura visual global
-│       └── Navbar.tsx         # Barra de navegación contextual
-├── features/                  # Arquitectura híbrida orientada a características
+├── assets/                    # Recursos visuales estáticos optimizados (hero-bottles.webp, auth-vineyard.webp)
+├── components/                # Componentes transversales y reutilizables en toda la aplicación
+│   ├── community/             # Modales comunitarios transversales (CommunityModal.tsx)
+│   └── layout/                # Estructura visual global compartida (Navbar.tsx)
+├── features/                  # Arquitectura orientada a características (Feature-Driven Architecture)
 │   ├── auth/                  # Módulo de Autenticación
 │   │   ├── api/               # Llamadas API del módulo (authApi.ts)
-│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthDrawer.tsx, ProtectedRoute.tsx)
+│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthField.tsx, ProtectedRoute.tsx)
 │   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
+│   ├── dashboard/             # Módulo del Dashboard / Mi Cava Personal
+│   │   ├── components/        # Componentes del dominio (QuickActions, Metrics, StockCarousel, UncorkDialog, etc.)
+│   │   └── index.ts           # Barrel export público del feature dashboard
 │   └── wines/                 # Módulo de Vinos y Catálogo
 │       ├── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
 │       └── utils/             # Adaptadores de dominio y mapeadores (wineMapper.ts)
 ├── lib/                       # Utilidades transversales
 │   └── utils.ts               # Función cn con clsx y tailwind-merge
-├── pages/                     # Páginas y vistas principales
+├── pages/                     # Páginas y vistas principales (*Page.tsx)
 │   ├── CatalogPage.tsx        # Catálogo general protegido
 │   ├── DashboardPage.tsx      # Homepage / Cava autenticada post-login
 │   ├── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
 │   ├── LoginPage.tsx          # Formulario de acceso editorial
-│   ├── RegisterPage.tsx       # Formulario de registro de sommelier
+│   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
+│   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
 │   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
 ├── services/                  # Infraestructura y clientes compartidos
 │   └── apiClient.ts           # Instancia centralizada de Axios con interceptores JWT y refresh token
-├── styles/                    # Sistema de estilización centralizado (Sección 4 de la cátedra)
+├── styles/                    # Sistema de estilización centralizado
 │   ├── tokens.css             # Variables de diseño (:root, paleta vinícola, múltiplos de 4px)
 │   ├── reset.css              # Normalización y reseteo base
 │   └── global.css             # Reglas tipográficas, integración Tailwind v4 y animaciones
-├── types/                     # Tipos globales y re-exportaciones
-│   ├── auth.ts                # Re-exportación centralizada de auth types
+├── types/                     # Tipos globales transversales
 │   └── wine.ts                # Modelos de presentación (CuratedWine, DashboardWine, etc.)
 ├── App.tsx                    # Componente contenedor raíz con BrowserRouter y AuthProvider
 └── main.tsx                   # Punto de entrada de React 19 (carga en cascada de estilos)
@@ -109,7 +110,9 @@ El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque decl
 - **Guardia de Rutas (`ProtectedRoute.tsx`)**:
   - Valida el estado de autenticación (`isAuthenticated`) y los roles permitidos (`allowedRoles?: UserRole[]`).
   - Si la sesión se encuentra cargando (`isLoading = true`), presenta un indicador de espera accesible.
-  - Si no está autenticado o el rol no coincide, redirige de forma atómica a `/` (`<Navigate to="/" replace />`).
+  - Si no está autenticado, redirige hacia `/login` preservando la ubicación previa en el estado de navegación (`<Navigate to="/login" state={{ from: location }} replace />`).
+  - Al completar el inicio de sesión en `LoginPage.tsx`, se redirige al usuario a `location.state?.from?.pathname || '/dashboard'` respetando la navegación original.
+  - Si el usuario está autenticado pero su rol no coincide con `allowedRoles`, redirige a `/dashboard` (`<Navigate to="/dashboard" replace />`).
   - Si cumple los criterios, renderiza la vista solicitada.
 
 ---
@@ -118,13 +121,17 @@ El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque decl
 
 La capa de comunicación HTTP reside en [`src/frontend/src/services/apiClient.ts`](../../src/frontend/src/services/apiClient.ts) y opera en estrecha sincronía con [`AuthContext.tsx`](../../src/frontend/src/features/auth/context/AuthContext.tsx):
 
-1. **Inyección Automática de Bearer Token**: El interceptor de request adjunta `Authorization: Bearer <accessToken>` en cada solicitud saliente.
-2. **Interceptación de `401 Unauthorized`**:
+1. **Hidratación Perezosa Síncrona (`useState` Lazy Initialization)**:
+   - En `AuthContext.tsx`, `user` e `isAuthenticated` se inicializan síncronamente en el primer ciclo de render mediante funciones proveedoras en `useState(() => ...)`.
+   - Esto erradica estados parpadeantes (`flicker`) y desactiva la necesidad de supresiones de reglas de ESLint (`react-hooks/set-state-in-effect`).
+2. **Inyección Automática de Bearer Token**: El interceptor de request adjunta `Authorization: Bearer <accessToken>` en cada solicitud saliente.
+3. **Interceptación de `401 Unauthorized` Desacoplada**:
    - Detecta respuestas 401 excluyendo endpoints de autenticación (`/auth/login`, `/auth/refresh`).
    - Lee el `refreshToken` desde `localStorage`.
    - Lanza una llamada a `POST /api/auth/refresh`.
    - Si la renovación tiene éxito, guarda las nuevas claves en `localStorage`, actualiza las cabeceras de la petición original y la reintenta sin intervención del usuario.
-   - Si la renovación falla (token revocado o expirado) o se recibe un 401 fuera de login, purga el almacenamiento local (`localStorage`) y redirige forzosamente a la Landing pública (`window.location.href = '/'`), garantizando que nunca se desvíe al usuario al formulario de login.
+   - Si la renovación falla (token revocado o expirado) o se recibe un 401 fuera de login, purga el almacenamiento local (`localStorage`) y emite el evento global `window.dispatchEvent(new CustomEvent('auth:unauthorized'))`.
+   - El proveedor `AuthContext.tsx` escucha este evento en un `useEffect`, limpia el estado reactivo (`user = null`, `isAuthenticated = false`) y ejecuta la navegación limpia por SPA a `/login` sin recargar la página (`window.location.href`).
 
 ---
 

@@ -30,7 +30,8 @@ apiClient.interceptors.request.use(
 
 /**
  * Interceptor de respuesta para capturar errores 401 (expiración o token inválido),
- * reintentar la renovación del token y redirigir siempre a la Landing pública ('/') en caso de fallo.
+ * reintentar la renovación del token y notificar al frontend mediante el evento
+ * 'auth:unauthorized' en caso de fallo, desacoplando la redirección del transporte HTTP.
  */
 apiClient.interceptors.response.use(
   (response) => response,
@@ -67,24 +68,24 @@ apiClient.interceptors.response.use(
 
             return apiClient(originalRequest);
           } catch {
-            // Si la renovación falla, purgar el almacenamiento y redirigir a Landing pública ('/')
+            // Si la renovación falla, purgar el almacenamiento y emitir evento de desautorización
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/';
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
             return Promise.reject(error);
           }
         }
       }
 
-      // Si no hay refresh token o falló fuera de login, purgar y redirigir a Landing pública ('/')
+      // Si no hay refresh token o falló fuera de login, purgar y emitir evento de desautorización
       if (!isAuthEndpoint) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/';
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
     }
 
