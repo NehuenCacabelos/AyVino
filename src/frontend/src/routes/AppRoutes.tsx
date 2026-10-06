@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Landing from '../pages/Landing';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
+import TermsPage from '../pages/TermsPage';
 import DashboardPage from '../pages/DashboardPage';
 import CatalogPage from '../pages/CatalogPage';
 import WineryDashboardPage from '../pages/WineryDashboardPage';
@@ -9,7 +10,7 @@ import { ProtectedRoute } from '../features/auth';
 
 /**
  * Configuración Central de Rutas de la Aplicación (AyVino).
- * Integra rutas públicas (Landing, Login, Register), protegidas generales
+ * Integra rutas públicas (Landing, Login, Register, Terms), protegidas generales
  * (Dashboard, Catálogo) y protegidas por rol de bodega/administrador.
  */
 export default function AppRoutes() {
@@ -19,6 +20,7 @@ export default function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Ruta Protegida: Dashboard / Cava Personal Post-Login */}
       <Route

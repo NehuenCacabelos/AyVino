@@ -34,10 +34,11 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 - **Navegación Superior**: `text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100`.
 
 ### 2.3 Micro-interacciones y Tratamiento de Componentes
-- **Hero de Dos Columnas**: Columna izquierda con saludo monospace, titular Fraunces semi-bold con línea divisoria sutil, bajada y buscador integrado en bloque unificado (`bg-neutral-900/60`, `backdrop-blur-sm`, `border-neutral-800`) con botón `+ REGISTRAR BOTELLA`. Columna derecha con composición de botellas en mesa rústica y transición orgánica mediante viñetas degradadas.
+- **Hero Editorial Minimalista**: En `Landing.tsx`, composición a dos columnas sobre fondo carbón mate `#0f0f11` con halos sutiles de luz ambiental (`bg-[#6b1d28]/10 blur-3xl`). Columna izquierda con tipografía Fraunces, eyebrows mono y métricas clave. Columna derecha con escaparate 3D interactivo (`WineBottleMock` con chips técnicos de terroir y puntaje) descansando orgánicamente sobre el fondo oscuro sin sobrecargas visuales.
 - **Cinta Compacta de KPIs (`Metrics`)**: Franja horizontal con fondo `#121214`, micro-iconos lineales y métricas con tipografía Fraunces y font-mono.
 - **Bento Grid Modular (`PromoBlocks` y `StockCarousel`)**: Mosaico con tarjetas oscuras estructuradas, micro-datos técnicos de servicio y guarda.
 - **Modal de Descorche (`UncorkDialog`)**: Ficha técnica de cata dividida con escaparate visual y registro sensorial.
+- **Split-Card Flotante de Autenticación (`LoginPage.tsx` y `RegisterPage.tsx`)**: Arquitectura visual a dos columnas encajada en pantalla (`h-screen overflow-hidden p-4 bg-[#0e0e11]`). Tarjeta contenida (`h-[88vh] max-h-[640px] w-full max-w-5xl`), esquinas `rounded-3xl`, sombra profunda `shadow-2xl shadow-black/80` y borde `border-white/10`. Columna izquierda con encabezado superior invertido (Volver a la izquierda, AyVino a la derecha), títulos en Cormorant Garamond semi-bold (`font-serif font-semibold text-3xl lg:text-[34px] leading-tight`), formulario con `<form noValidate>` y validación reactiva de campos obligatorios en estado de React (`errors: Record<string, string>`), inputs con diseño Outlined Notch y volumen (etiquetas incrustadas en el borde superior `absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium text-zinc-200 tracking-wide`, fondo `bg-black/25`, altura `h-11`, borde `border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50`), alternancia de visibilidad de contraseña (`Eye`/`EyeOff`), bordes de error sutiles en rosa/rojo (`border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50`), feedback contextual inline (`text-[10px] text-rose-400 mt-1 pl-1`) con limpieza al tipear (`onChange`), y botón primario en rojo vino (`#6b1d2f`) con textos concretos (*"Iniciar sesión"* y *"Crear cuenta"*). Columna derecha con foto vertical nativa en WebP de viñedos y cordillera (`auth-vineyard.webp`), tinte suave, degradado inferior y texto tipográfico plano (*"VALLE DE UCO · MENDOZA"*).
 
 ---
 
@@ -45,7 +46,7 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 
 ```text
 src/frontend/src/
-├── assets/                    # Recursos visuales estáticos (hero.png, logos)
+├── assets/                    # Recursos visuales estáticos (hero-bottles.png, logos)
 ├── components/                # Componentes UI atómicos y modulares
 │   ├── community/             # Módulo de comunidad
 │   │   └── CommunityModal.tsx # Modal editorial de "Próximamente" para catas y clubes
@@ -70,6 +71,7 @@ src/frontend/src/
 │   ├── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
 │   ├── LoginPage.tsx          # Formulario de acceso editorial
 │   ├── RegisterPage.tsx       # Formulario de registro de sommelier
+│   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
 │   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom

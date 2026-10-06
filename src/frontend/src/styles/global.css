@@ -34,7 +34,7 @@
   --color-dark-surface: #121214;
   --color-dark-card: #161619;
 
-  --font-serif: "Fraunces", "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-serif: "Cormorant Garamond", "Fraunces", "Playfair Display", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

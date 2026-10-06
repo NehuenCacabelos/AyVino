@@ -12,6 +12,7 @@ flowchart TD
         Landing["/ -> Landing.tsx (Hero + Muestra Curada)"]
         Login["/login -> LoginPage.tsx (Acceso con Estilo Editorial)"]
         Register["/register -> RegisterPage.tsx (Alta de Usuario Libre)"]
+        Terms["/terms -> TermsPage.tsx (Términos y Condiciones)"]
         DetailModal["WineDetailModal (Ficha Técnica a 2 Columnas)"]
         CommunityModal["CommunityModal (Próximamente Editorial)"]
         AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
@@ -33,6 +34,8 @@ flowchart TD
     Landing -->|"Click en 'Iniciar Sesión' / 'Crear Cuenta'"| AuthDrawer
     Landing -->|"Navegación /login"| Login
     Landing -->|"Navegación /register"| Register
+    Login -->|"Enlace a términos"| Terms
+    Register -->|"Enlace a términos"| Terms
     Login -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
     Register -->|"Registro exitoso"| AuthContext
     AuthContext -->|"Redirección post-login"| Dashboard
@@ -75,14 +78,37 @@ flowchart TD
   - Titular en Serif noble, gráfico minimalista SVG en trazo fino (copas y mesa de cata) y texto explicativo sobre catas compartidas y clubes enológicos locales.
 
 ### 2.2 Pantalla de Inicio de Sesión (`LoginPage.tsx`) y Registro (`RegisterPage.tsx`)
-- Vistas dedicadas (`/login` y `/register`) con la identidad editorial de cava oscura de AyVino:
-  - Fondo completo en `bg-[#0f0f11]`, contenedores sobrios `#141416` con bordes de 1px `border-neutral-800` y radios mínimos (`rounded-sm`).
-  - Inputs estructurados (`bg-[#18181b] border-neutral-700 text-neutral-100 placeholder:text-neutral-500 focus:border-[#6b1d28] focus:ring-0`).
-  - Botón de submit principal en bordó sólido `bg-[#6b1d28] hover:bg-[#7e2432] text-white tracking-wider uppercase text-xs font-semibold py-3`.
-  - Botón de *"Acceso Rápido Demo / Desarrollador"* sobrio en `border-neutral-800 bg-neutral-900/40 text-neutral-300 hover:border-neutral-600`.
-  - Manejo de errores tipados y feedback accesible.
+- Vistas dedicadas (`/login` y `/register`) con layout split-card sobrio, equilibrado y sin scroll:
+  - **Viewport**: Contenedor controlado sin scroll vertical (`h-screen overflow-hidden flex items-center justify-center p-4 bg-[#0e0e11]`).
+  - **Tarjeta Central (Split Card)**: Altura contenida en desktop (`h-[88vh] max-h-[640px] w-full max-w-5xl`), esquinas redondeadas (`rounded-3xl`), desbordamiento oculto (`overflow-hidden`), sombra profunda (`shadow-2xl shadow-black/80`), borde sutil (`border border-white/10`) y grilla responsive a 2 columnas (`grid-cols-1 lg:grid-cols-2`).
+  - **Columna Izquierda (Formulario)**:
+    - Fondo oscuro grafito (`bg-zinc-900`) con distribución equilibrada (`p-8 md:p-10 flex flex-col justify-between h-full`).
+    - Encabezado superior invertido: enlace de retorno `← Volver` a la izquierda y marca/isotipo de `AyVino` a la derecha.
+    - Cuerpo central (`flex-1 flex flex-col justify-center`): título destacado en tipografía Cormorant Garamond Serif semi-bold (`font-serif font-semibold text-3xl lg:text-[34px] tracking-tight leading-tight`, *"¡Bienvenido de nuevo!"* en Login y *"¡Creá tu bodega personal!"* en Registro).
+    - **Validación Frontend Reactiva (sin popups del navegador)**:
+      * Formulario configurado con `<form noValidate onSubmit={handleSubmit}>` para silenciar tooltips nativos.
+      * Estado reactivo local de errores (`errors: Record<string, string>`) que valida campos obligatorios en el submit (`.trim()`).
+      * En Registro: valida `name`, `email`, `password`, `confirmPassword` y correspondencia exacta de contraseñas.
+      * Feedback visual contextual y sutil: borde rojizo `border-rose-500/70 focus:border-rose-500` y mensaje discreto debajo de cada campo (`text-[10px] text-rose-400 mt-1 pl-1`).
+      * Limpieza instantánea del error en el evento `onChange` al reanudar la escritura.
+    - **Estilo Outlined Notch**: Inputs con etiqueta incrustada en el borde superior (`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium text-zinc-200 tracking-wide`), altura `h-11`, fondo con profundidad `bg-black/25`, bordes `border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50` y padding ajustado para iconos (`Mail`, `Lock`, `User` en `pl-10`, `Eye`/`EyeOff` en `pr-10`).
+    - Campo de contraseña interactivo con botón toggle de ver/ocultar clave (`Eye` / `EyeOff` de `lucide-react`).
+    - Botón de submit primario en rojo vino (`bg-[#6b1d2f] hover:bg-[#7e2432] rounded-xl text-sm font-medium` con *"Iniciar sesión"* en Login y *"Crear cuenta"* en Register).
+    - Footer inferior fijo abajo: enlace sobrio para alternar entre Iniciar Sesión y Crear Cuenta (sin botones demo ni texto legal redundante).
+  - **Columna Derecha (Foto Vertical Limpia)**:
+    - Oculta en móviles y visible en desktop (`hidden lg:flex h-full`).
+    - Fotografía vertical nativa WebP de viñedos y cordillera (`auth-vineyard.webp`, `w-full h-full object-cover object-center`).
+    - Tinte suave `bg-black/20` y sutil degradado inferior `bg-gradient-to-t from-black/70 via-transparent to-transparent`.
+    - Sin cajas ni contenedores artificiales: texto tipográfico plano en la parte inferior *"VALLE DE UCO · MENDOZA"* (`text-xs tracking-[0.3em] text-white/80 font-light uppercase`).
 
-### 2.3 Homepage / Dashboard Autenticado (`DashboardPage.tsx`)
+### 2.3 Pantalla Provisional de Términos y Condiciones (`TermsPage.tsx`)
+- Vista pública accesible en `/terms` con estética editorial de cava oscura (`min-h-screen bg-[#0e0e11] text-zinc-100 flex flex-col items-center justify-center p-6`):
+  - Tarjeta central flotante en `bg-zinc-900 border border-white/10 rounded-3xl p-8 md:p-10`.
+  - Botón de navegación `← Volver` con retorno inteligente (`history.back()` o redirección al home).
+  - Título en Serif noble (*"Términos y Condiciones"*) y mensaje explicativo de disponibilidad próxima.
+  - Accesible desde los enlaces integrados en los formularios de autenticación (`/register` y `/login`).
+
+### 2.4 Homepage / Dashboard Autenticado (`DashboardPage.tsx`)
 - Vista post-login accesible en `/dashboard` (y alias `/app`):
   - **Barra de Navegación del Dashboard (`DashboardNavbar.tsx`)**:
     - Logotipo e isotipo oficial de AyVino / MiCava.
@@ -102,7 +128,7 @@ flowchart TD
     - Filtros rápidos por cepa y región (Malbec, Cabernet, Blancos, Mendoza, Salta, Patagonia).
     - Agrupación por bodega (*Catena Zapata*, *Zuccardi*) con monograma circular y botón *"Añadir a Cava"*.
 
-### 2.4 Barra de Navegación Contextual (`Navbar.tsx`)
+### 2.5 Barra de Navegación Contextual (`Navbar.tsx`)
 - Barra superior con diseño de cava oscura (`bg-[#0f0f11]/90 border-b border-neutral-800 text-neutral-200`) y tipografía `font-mono`:
   - **Estado Anónimo**: Exhibe enlaces de sección y accesos a *"Iniciar Sesión"* (`/login`) y *"Crear Cuenta"* (`/register`).
   - **Estado Autenticado**:
@@ -121,6 +147,7 @@ flowchart TD
 | `/` | `Landing.tsx` | Público (todos) | N/A |
 | `/login` | `LoginPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
+| `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
 | `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
 | `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
