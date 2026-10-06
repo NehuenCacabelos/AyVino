@@ -80,9 +80,9 @@ flowchart TD
   - **Viewport**: Contenedor controlado sin scroll vertical (`h-screen overflow-hidden flex items-center justify-center p-4 bg-[#0e0e11]`).
   - **Tarjeta Central (Split Card)**: Altura contenida en desktop (`h-[88vh] max-h-[640px] w-full max-w-5xl`), esquinas redondeadas (`rounded-3xl`), desbordamiento oculto (`overflow-hidden`), sombra profunda (`shadow-2xl shadow-black/80`), borde sutil (`border border-white/10`) y grilla responsive a 2 columnas (`grid-cols-1 lg:grid-cols-2`).
   - **Columna Izquierda (Formulario)**:
-    - Fondo oscuro grafito (`bg-zinc-900`) con distribución equilibrada (`p-8 md:p-10 flex flex-col justify-between h-full`).
+    - Fondo oscuro grafito (`bg-[#141416]`) con distribución equilibrada (`p-8 md:p-10 flex flex-col justify-between h-full`).
     - Encabezado superior invertido: enlace de retorno `← Volver` a la izquierda y marca/isotipo de `AyVino` a la derecha.
-    - Cuerpo central (`flex-1 flex flex-col justify-center`): título destacado en tipografía Cormorant Garamond Serif semi-bold (`font-serif font-semibold text-3xl lg:text-[34px] tracking-tight leading-tight`, *"¡Bienvenido de nuevo!"* en Login y *"¡Creá tu bodega personal!"* en Registro).
+    - Cabecera editorial con tags de colección (`"Colección Privada"` en Login y `"Membresía"` en Registro, `text-[10px] uppercase tracking-[0.25em] text-amber-200/60`), título destacado en tipografía Serif clásica (`font-serif text-3xl text-zinc-100 font-normal tracking-tight`, *"Bienvenido de nuevo"* en Login y *"Creá tu bodega personal"* en Registro) y subtítulo editorial descriptivo (`text-xs text-zinc-400 mt-2 font-sans font-light`).
     - **Validación Frontend Reactiva (sin popups del navegador)**:
       * Formulario configurado con `<form noValidate onSubmit={handleSubmit}>` para silenciar tooltips nativos.
       * Estado reactivo local de errores (`errors: Record<string, string>`) que valida campos obligatorios en el submit (`.trim()`).
@@ -90,14 +90,14 @@ flowchart TD
       * Conexión persistente: invoca `registerApi` (`POST /api/users`) seguido de `loginApi` (`POST /api/auth/login`) para emisión de JWT real, sin depender de mocks ni demos en memoria.
       * Feedback visual contextual y sutil: borde rojizo `border-rose-500/70 focus:border-rose-500`, alerta de servidor ante conflictos (409) o desconexión, y mensaje discreto debajo de cada campo (`text-[10px] text-rose-400 mt-1 pl-1`).
       * Limpieza instantánea del error en el evento `onChange` al reanudar la escritura.
-    - **Estilo Outlined Notch**: Inputs con etiqueta incrustada en el borde superior (`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium text-zinc-200 tracking-wide`), altura `h-11`, fondo con profundidad `bg-black/25`, bordes `border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50` y padding ajustado para iconos (`Mail`, `Lock`, `User` en `pl-10`, `Eye`/`EyeOff` en `pr-10`).
-    - Campo de contraseña interactivo con botón toggle de ver/ocultar clave (`Eye` / `EyeOff` de `lucide-react`).
-    - Botón de submit primario en rojo vino (`bg-[#6b1d2f] hover:bg-[#7e2432] rounded-xl text-sm font-medium` con *"Iniciar sesión"* en Login y *"Crear cuenta"* en Register).
+    - **Estilo de Inputs Clean Dark (Minimalista sin etiquetas externas)**: Solo cajón con placeholder descriptivo interior (`h-12 w-full rounded-xl px-4 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 border border-zinc-800/80 focus:border-zinc-500 focus:bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 transition-colors`).
+    - Campos de contraseña interactivos con botón toggle sutil de ver/ocultar clave integrado a la derecha (`pr-11`, `Eye` / `EyeOff` en `text-zinc-500 hover:text-zinc-300`).
+    - Botón de submit primario estilo sello de cava con curvas uniformes (`h-12 w-full rounded-xl bg-[#4f131f] hover:bg-[#5e1725] border border-rose-400/20 text-xs uppercase tracking-widest text-rose-100 font-medium transition-colors shadow-sm mt-2` con *"Iniciar sesión"* en Login y *"Crear cuenta"* en Register).
     - Footer inferior fijo abajo: enlace sobrio para alternar entre Iniciar Sesión y Crear Cuenta (sin botones demo ni texto legal redundante).
-  - **Columna Derecha (Foto Vertical Limpia)**:
+  - **Columna Derecha (Foto Vertical con Fusión Orgánica)**:
     - Oculta en móviles y visible en desktop (`hidden lg:flex h-full`).
     - Fotografía vertical nativa WebP de viñedos y cordillera (`auth-vineyard.webp`, `w-full h-full object-cover object-center`).
-    - Tinte suave `bg-black/20` y sutil degradado inferior `bg-gradient-to-t from-black/70 via-transparent to-transparent`.
+    - Tinte suave `bg-black/20`, capa superpuesta con degradado hacia el borde izquierdo (`bg-gradient-to-r from-[#141416] via-transparent to-transparent`) para fundirse armónicamente con la columna del formulario, y sutil degradado inferior `bg-gradient-to-t from-black/70 via-transparent to-transparent`.
     - Sin cajas ni contenedores artificiales: texto tipográfico plano en la parte inferior *"VALLE DE UCO · MENDOZA"* (`text-xs tracking-[0.3em] text-white/80 font-light uppercase`).
 
 ### 2.3 Pantalla Provisional de Términos y Condiciones (`TermsPage.tsx`)
