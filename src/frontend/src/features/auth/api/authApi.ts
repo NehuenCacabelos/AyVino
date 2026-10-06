@@ -4,8 +4,18 @@ import type {
   LoginResponseDto,
   RefreshRequestDto,
   RefreshResponseDto,
+  RegisterRequestDto,
   RevokeTokenRequestDto,
+  UserProfileDto,
 } from '../types';
+
+/**
+ * Registra un nuevo usuario en la plataforma AyVino y persiste sus credenciales.
+ */
+export async function registerApi(data: RegisterRequestDto): Promise<UserProfileDto> {
+  const response = await apiClient.post<UserProfileDto>('/users', data);
+  return response.data;
+}
 
 /**
  * Inicia sesión con las credenciales de usuario y obtiene los tokens de acceso y perfil.

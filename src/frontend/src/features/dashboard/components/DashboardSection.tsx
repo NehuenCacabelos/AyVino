@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import StockCarousel from './StockCarousel';
 import OnboardingBanner from './OnboardingBanner';
-import type { DashboardWine, UncorkSubmission } from '../../types/wine';
+import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
 
 type ViewMode = 'stock' | 'new';
 

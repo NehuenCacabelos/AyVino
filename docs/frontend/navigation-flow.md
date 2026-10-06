@@ -15,7 +15,6 @@ flowchart TD
         Terms["/terms -> TermsPage.tsx (Términos y Condiciones)"]
         DetailModal["WineDetailModal (Ficha Técnica a 2 Columnas)"]
         CommunityModal["CommunityModal (Próximamente Editorial)"]
-        AuthDrawer["AuthDrawer (Panel Lateral Deslizante)"]
     end
 
     subgraph AuthPipeline["Autenticación & Autorización"]
@@ -31,20 +30,19 @@ flowchart TD
 
     Landing -->|"Click en tarjeta de vino"| DetailModal
     Landing -->|"Click en 'Comunidad' (Navbar / Footer)"| CommunityModal
-    Landing -->|"Click en 'Iniciar Sesión' / 'Crear Cuenta'"| AuthDrawer
     Landing -->|"Navegación /login"| Login
     Landing -->|"Navegación /register"| Register
     Login -->|"Enlace a términos"| Terms
     Register -->|"Enlace a términos"| Terms
     Login -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
     Register -->|"Registro exitoso"| AuthContext
-    AuthContext -->|"Redirección post-login"| Dashboard
+    AuthContext -->|"Redirección post-login"| TargetRoute["Ruta original (from) o /dashboard"]
 
     Landing -->|"Navegación /dashboard"| Guard
     Landing -->|"Navegación /catalogo"| Guard
     Landing -->|"Navegación /bodega/dashboard"| Guard
 
-    Guard -->|"!isAuthenticated"| Landing
+    Guard -->|"!isAuthenticated (con state.from)"| Login
     Guard -->|"isAuthenticated (Cualquier rol)"| Dashboard
     Guard -->|"Navegación /catalogo (Autenticado)"| Catalog
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryDash
@@ -88,8 +86,9 @@ flowchart TD
     - **Validación Frontend Reactiva (sin popups del navegador)**:
       * Formulario configurado con `<form noValidate onSubmit={handleSubmit}>` para silenciar tooltips nativos.
       * Estado reactivo local de errores (`errors: Record<string, string>`) que valida campos obligatorios en el submit (`.trim()`).
-      * En Registro: valida `name`, `email`, `password`, `confirmPassword` y correspondencia exacta de contraseñas.
-      * Feedback visual contextual y sutil: borde rojizo `border-rose-500/70 focus:border-rose-500` y mensaje discreto debajo de cada campo (`text-[10px] text-rose-400 mt-1 pl-1`).
+      * En Registro: valida `name` (mapeado a `username`), `email`, `password` (mínimo 8 caracteres exigido por el backend), `confirmPassword`, coincidencia exacta de contraseñas y aceptación de términos.
+      * Conexión persistente: invoca `registerApi` (`POST /api/users`) seguido de `loginApi` (`POST /api/auth/login`) para emisión de JWT real, sin depender de mocks ni demos en memoria.
+      * Feedback visual contextual y sutil: borde rojizo `border-rose-500/70 focus:border-rose-500`, alerta de servidor ante conflictos (409) o desconexión, y mensaje discreto debajo de cada campo (`text-[10px] text-rose-400 mt-1 pl-1`).
       * Limpieza instantánea del error en el evento `onChange` al reanudar la escritura.
     - **Estilo Outlined Notch**: Inputs con etiqueta incrustada en el borde superior (`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium text-zinc-200 tracking-wide`), altura `h-11`, fondo con profundidad `bg-black/25`, bordes `border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50` y padding ajustado para iconos (`Mail`, `Lock`, `User` en `pl-10`, `Eye`/`EyeOff` en `pr-10`).
     - Campo de contraseña interactivo con botón toggle de ver/ocultar clave (`Eye` / `EyeOff` de `lucide-react`).
@@ -145,11 +144,11 @@ flowchart TD
 | Ruta | Componente | Acceso Permitido | Comportamiento si no cumple |
 | :--- | :--- | :--- | :--- |
 | `/` | `Landing.tsx` | Público (todos) | N/A |
-| `/login` | `LoginPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
+| `/login` | `LoginPage.tsx` | Público (redirige a `state.from` o `/dashboard` si ya está autenticado) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
-| `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
+| `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
-| `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/` |
-| `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Redirige a `/dashboard` |
+| `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
+| `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
 | `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |

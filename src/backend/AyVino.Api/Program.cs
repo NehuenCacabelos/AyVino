@@ -94,8 +94,11 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Authentication & JWT Bearer
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
-    ?? throw new InvalidOperationException("Configuración JWT 'SecretKey' no encontrada.");
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
+if (string.IsNullOrWhiteSpace(jwtSecretKey) || jwtSecretKey.Length < 32)
+{
+    throw new InvalidOperationException("Configuración JWT 'SecretKey' no encontrada o inválida (debe contener al menos 32 caracteres / 256 bits). Configure el secreto mediante 'dotnet user-secrets set \"Jwt:SecretKey\" \"<valor>\"' en desarrollo o mediante la variable de entorno 'Jwt__SecretKey' en producción.");
+}
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Configuración JWT 'Issuer' no encontrada.");
 var jwtAudience = builder.Configuration["Jwt:Audience"]

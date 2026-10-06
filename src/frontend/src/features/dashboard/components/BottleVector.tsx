@@ -1,4 +1,4 @@
-import type { BottleKind } from '../../types/wine';
+import type { BottleKind } from '../../../types/wine';
 
 interface BottleVectorProps {
   kind: BottleKind;

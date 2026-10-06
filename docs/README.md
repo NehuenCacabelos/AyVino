@@ -26,7 +26,7 @@ docs/
 │
 ├── frontend/                          # Documentación del frontend (React 19 + TypeScript + Vite)
 │   ├── overview.md                    # Stack técnico, Tailwind CSS v4, tipado y diseño editorial
-│   └── navigation-flow.md             # Mapa de navegación, UX, AuthDrawer y pantallas
+│   └── navigation-flow.md             # Mapa de navegación, UX, rutas protegidas y pantallas
 │
 └── guides/                            # Guías prácticas para el equipo de desarrollo
     └── getting-started.md             # Puesta en marcha paso a paso (Docker, Backend, Frontend, Tests)
@@ -52,7 +52,7 @@ docs/
 
 ### 4. Frontend (React 19 + TypeScript + Vite)
 - 📄 [**Diseño y Arquitectura Frontend (`frontend/overview.md`)**](frontend/overview.md): Stack tecnológico, Tailwind CSS v4, identidad editorial vinícola y tipado estricto sin `any`.
-- 📄 [**Flujo de Navegación y Experiencia de Usuario (`frontend/navigation-flow.md`)**](frontend/navigation-flow.md): Arquitectura de vistas, panel lateral deslizable (`AuthDrawer`), modales contextuales y flujos de usuario.
+- 📄 [**Flujo de Navegación y Experiencia de Usuario (`frontend/navigation-flow.md`)**](frontend/navigation-flow.md): Arquitectura de vistas, páginas dedicadas de autenticación, modales contextuales y flujos de usuario.
 
 ### 5. Guías de Ingeniería
 - 📄 [**Guía de Inicio Rápido (`guides/getting-started.md`)**](guides/getting-started.md): Instrucciones completas para levantar PostgreSQL en Docker, ejecutar la API con migraciones automáticas, iniciar la SPA en Vite y correr las suites de pruebas.

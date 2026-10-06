@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wine, Mail, Lock, User, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../features/auth';
+import { Wine, Mail, Lock, User, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { useAuth, AuthField } from '../features/auth';
 import authVineyardImg from '../assets/auth-vineyard.webp';
 
 /**
@@ -13,19 +13,18 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
  * Columna derecha: foto vertical de viñedos y cordillera con texto plano tipográfico.
  */
 export default function RegisterPage() {
-  const { login, loginDemo, isAuthenticated } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Redirigir al Dashboard si ya tiene sesión activa
   useEffect(() => {
@@ -46,6 +45,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
 
     const newErrors: Record<string, string> = {};
 
@@ -55,10 +55,14 @@ export default function RegisterPage() {
 
     if (!email.trim()) {
       newErrors.email = 'El correo es requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'El formato del correo no es válido';
     }
 
     if (!password) {
       newErrors.password = 'La contraseña es requerida';
+    } else if (password.length < 8) {
+      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
     }
 
     if (!confirmPassword) {
@@ -80,20 +84,31 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      try {
-        await login({ email: email.trim(), password });
-      } catch {
-        loginDemo({
-          username: name.trim() || 'Nuevo Sommelier',
-          email: email.trim(),
-          role: 'User',
-        });
-      }
+      await register({
+        username: name.trim(),
+        email: email.trim(),
+        password,
+      });
 
       setIsSuccess(true);
       setTimeout(() => {
         navigate('/dashboard');
       }, 900);
+    } catch (err: unknown) {
+      const error = err as {
+        response?: {
+          status?: number;
+          data?: { detail?: string; title?: string };
+        };
+      };
+      const detail = error.response?.data?.detail || error.response?.data?.title;
+      if (error.response?.status === 409) {
+        setErrorMessage(detail || 'El correo electrónico o apodo ya se encuentra registrado.');
+      } else {
+        setErrorMessage(
+          detail || 'No se pudo registrar la cuenta. Verificá los datos ingresados o la conexión con el servidor.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -149,182 +164,86 @@ export default function RegisterPage() {
                 </p>
               </div>
             ) : (
-              /* Formulario Optimizado con Estilo Outlined Notch */
-              <form noValidate onSubmit={handleSubmit} className="space-y-3.5">
-                {/* Nombre o Apodo */}
-                <div>
-                  <div className="relative group">
-                    <label
-                      htmlFor="register-name"
-                      className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                        errors.name ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                      }`}
-                    >
-                      Nombre o Apodo
-                    </label>
-                    <User
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                        errors.name ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                      }`}
-                    />
-                    <input
-                      id="register-name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        setName(e.target.value);
-                        clearError('name');
-                      }}
-                      placeholder="Ej. Martina Berasategui"
-                      className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-3.5 pt-1 focus:outline-none transition-colors ${
-                        errors.name
-                          ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                          : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                      }`}
-                    />
+              <>
+                {/* Alerta de Error del Servidor */}
+                {errorMessage && (
+                  <div
+                    role="alert"
+                    className="mb-3.5 flex items-start gap-2.5 rounded-xl border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300"
+                  >
+                    <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                    <p className="leading-snug font-sans">{errorMessage}</p>
                   </div>
-                  {errors.name && (
-                    <p className="text-[10px] text-rose-400 mt-1 pl-1">{errors.name}</p>
-                  )}
-                </div>
+                )}
 
-                {/* Correo Electrónico */}
-                <div>
-                  <div className="relative group">
-                    <label
-                      htmlFor="register-email"
-                      className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                        errors.email ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                      }`}
-                    >
-                      Correo Electrónico
-                    </label>
-                    <Mail
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                        errors.email ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                      }`}
-                    />
-                    <input
-                      id="register-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        clearError('email');
-                      }}
-                      placeholder="sommelier@tudominio.com"
-                      className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-3.5 pt-1 focus:outline-none transition-colors ${
-                        errors.email
-                          ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                          : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                      }`}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-[10px] text-rose-400 mt-1 pl-1">{errors.email}</p>
-                  )}
-                </div>
+                {/* Formulario Optimizado con Estilo Outlined Notch */}
+                <form noValidate onSubmit={handleSubmit} className="space-y-3.5">
+                  {/* Nombre o Apodo */}
+                  <AuthField
+                    id="register-name"
+                    label="Nombre o Apodo"
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      clearError('name');
+                    }}
+                    placeholder="Ej. Martina Berasategui"
+                    icon={User}
+                    error={errors.name}
+                    autoComplete="name"
+                  />
 
-                {/* Contraseña con alternancia de visibilidad */}
-                <div>
-                  <div className="relative group">
-                    <label
-                      htmlFor="register-password"
-                      className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                        errors.password ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                      }`}
-                    >
-                      Contraseña
-                    </label>
-                    <Lock
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                        errors.password ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                      }`}
-                    />
-                    <input
-                      id="register-password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        clearError('password');
-                        if (errors.confirmPassword === 'Las contraseñas no coinciden') {
-                          clearError('confirmPassword');
-                        }
-                      }}
-                      placeholder="Al menos 8 caracteres"
-                      className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-10 pt-1 focus:outline-none transition-colors ${
-                        errors.password
-                          ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                          : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-[10px] text-rose-400 mt-1 pl-1">{errors.password}</p>
-                  )}
-                </div>
+                  {/* Correo Electrónico */}
+                  <AuthField
+                    id="register-email"
+                    label="Correo Electrónico"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearError('email');
+                    }}
+                    placeholder="sommelier@tudominio.com"
+                    icon={Mail}
+                    error={errors.email}
+                    autoComplete="email"
+                  />
 
-                {/* Confirmar Contraseña con alternancia de visibilidad */}
-                <div>
-                  <div className="relative group">
-                    <label
-                      htmlFor="register-confirm-password"
-                      className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                        errors.confirmPassword ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                      }`}
-                    >
-                      Confirmar Contraseña
-                    </label>
-                    <Lock
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                        errors.confirmPassword ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                      }`}
-                    />
-                    <input
-                      id="register-confirm-password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
+                  {/* Contraseña */}
+                  <AuthField
+                    id="register-password"
+                    label="Contraseña"
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearError('password');
+                      if (errors.confirmPassword === 'Las contraseñas no coinciden') {
                         clearError('confirmPassword');
-                      }}
-                      placeholder="Repetí tu contraseña"
-                      className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-10 pt-1 focus:outline-none transition-colors ${
-                        errors.confirmPassword
-                          ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                          : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                      aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-[10px] text-rose-400 mt-1 pl-1">{errors.confirmPassword}</p>
-                  )}
-                </div>
+                      }
+                    }}
+                    placeholder="Al menos 8 caracteres"
+                    icon={Lock}
+                    error={errors.password}
+                    autoComplete="new-password"
+                  />
+
+                  {/* Confirmar Contraseña */}
+                  <AuthField
+                    id="register-confirm-password"
+                    label="Confirmar Contraseña"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      clearError('confirmPassword');
+                    }}
+                    placeholder="Repetí tu contraseña"
+                    icon={Lock}
+                    error={errors.confirmPassword}
+                    autoComplete="new-password"
+                  />
 
                 {/* Checkbox de Términos y Condiciones */}
                 <div className="pt-0.5">
@@ -368,7 +287,8 @@ export default function RegisterPage() {
                   )}
                 </button>
               </form>
-            )}
+            </>
+          )}
           </div>
 
           {/* Footer Inferior Fijo */}

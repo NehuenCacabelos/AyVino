@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Wine, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../features/auth';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Wine, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useAuth, AuthField } from '../features/auth';
 import authVineyardImg from '../assets/auth-vineyard.webp';
 
 /**
@@ -15,20 +15,23 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Redirigir al Dashboard si ya tiene sesión activa
+  const redirectPath =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
+
+  // Redirigir a la ruta original o al Dashboard si ya tiene sesión activa
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectPath]);
 
   const clearError = (field: string) => {
     if (errors[field]) {
@@ -62,7 +65,7 @@ export default function LoginPage() {
 
     try {
       await login({ email: email.trim(), password });
-      navigate('/dashboard');
+      navigate(redirectPath, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string; title?: string } } };
       const detail = error.response?.data?.detail || error.response?.data?.title;
@@ -125,92 +128,36 @@ export default function LoginPage() {
             {/* Formulario con validación personalizada y estilo Outlined Notch */}
             <form noValidate onSubmit={handleSubmit} className="space-y-4">
               {/* Correo Electrónico */}
-              <div>
-                <div className="relative group">
-                  <label
-                    htmlFor="email"
-                    className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                      errors.email ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                    }`}
-                  >
-                    Correo Electrónico
-                  </label>
-                  <Mail
-                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                      errors.email ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                    }`}
-                  />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      clearError('email');
-                    }}
-                    placeholder="sommelier@tudominio.com"
-                    className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-3.5 pt-1 focus:outline-none transition-colors ${
-                      errors.email
-                        ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                        : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                    }`}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-[10px] text-rose-400 mt-1 pl-1">{errors.email}</p>
-                )}
-              </div>
+              <AuthField
+                id="email"
+                label="Correo Electrónico"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearError('email');
+                }}
+                placeholder="sommelier@tudominio.com"
+                icon={Mail}
+                error={errors.email}
+                autoComplete="email"
+              />
 
               {/* Contraseña con alternancia de visibilidad */}
-              <div>
-                <div className="relative group">
-                  <label
-                    htmlFor="password"
-                    className={`absolute -top-2 left-3 px-1.5 bg-[#18181b] text-xs font-medium tracking-wide z-10 transition-all pointer-events-none ${
-                      errors.password ? 'text-rose-400' : 'text-zinc-200 group-focus-within:text-rose-300'
-                    }`}
-                  >
-                    Contraseña
-                  </label>
-                  <Lock
-                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors ${
-                      errors.password ? 'text-rose-400/80' : 'text-zinc-500 group-focus-within:text-zinc-300'
-                    }`}
-                  />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      clearError('password');
-                    }}
-                    placeholder="••••••••"
-                    className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm pl-10 pr-10 pt-1 focus:outline-none transition-colors ${
-                      errors.password
-                        ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
-                        : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between mt-1.5 px-0.5">
-                  {errors.password ? (
-                    <p className="text-[10px] text-rose-400 pl-1">{errors.password}</p>
-                  ) : (
-                    <span />
-                  )}
+              <AuthField
+                id="password"
+                label="Contraseña"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearError('password');
+                }}
+                placeholder="••••••••"
+                icon={Lock}
+                error={errors.password}
+                autoComplete="current-password"
+                bottomExtra={
                   <a
                     href="#"
                     onClick={(e) => e.preventDefault()}
@@ -218,8 +165,8 @@ export default function LoginPage() {
                   >
                     ¿Olvidaste tu clave?
                   </a>
-                </div>
-              </div>
+                }
+              />
 
               {/* Botón Primario en Rojo Vino */}
               <button

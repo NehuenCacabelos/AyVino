@@ -5,7 +5,6 @@
 
 export * from './types';
 export * from './context/AuthContext';
-export { default as AuthDrawer } from './components/AuthDrawer';
-export { default as AuthModal } from './components/AuthModal';
 export { default as ProtectedRoute, type ProtectedRouteProps } from './components/ProtectedRoute';
+export { default as AuthField, type AuthFieldProps } from './components/AuthField';
 export * from './api/authApi';

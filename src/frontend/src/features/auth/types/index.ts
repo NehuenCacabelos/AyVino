@@ -26,6 +26,17 @@ export interface LoginRequestDto {
 }
 
 /**
+ * Contrato de solicitud de registro de nuevo usuario (C# RegisterUserRequestDto).
+ */
+export interface RegisterRequestDto {
+  username: string;
+  email: string;
+  password: string;
+  bio?: string | null;
+  photo?: string | null;
+}
+
+/**
  * Perfil / DTO de respuesta de usuario (C# UserResponseDto).
  */
 export interface UserProfileDto {

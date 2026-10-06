@@ -10,7 +10,7 @@ import {
   SectionHeading,
   WineryBlock,
   UncorkDialog,
-} from '../components/dashboard';
+} from '../features/dashboard';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 const catenaWines: DashboardWine[] = [

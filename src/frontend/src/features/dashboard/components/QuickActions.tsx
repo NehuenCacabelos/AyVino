@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
-import { useAuth } from '../../features/auth';
-import heroBottlesImg from '../../assets/hero-bottles.png';
-import type { DashboardWine } from '../../types/wine';
+import { useAuth } from '../../auth';
+import heroBottlesImg from '../../../assets/hero-bottles.webp';
+import type { DashboardWine } from '../../../types/wine';
 
 interface QuickActionsProps {
   onSearch?: (query: string) => void;
