@@ -136,10 +136,25 @@ export default function Landing() {
       {/* 2. Hero Section */}
       <section className="relative overflow-hidden min-h-screen flex flex-col justify-between pt-20 md:pt-24 pb-12 sm:pb-16 border-b border-zinc-800/60">
         
-        {/* Glow central/superior con degradado enológico */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[440px] rounded-full bg-gradient-to-tr from-rose-950/30 via-red-900/20 to-amber-900/10 blur-[140px] pointer-events-none -z-10" />
+        {/* Textura de lienzo técnica (Dot Pattern sutil y atenuado al 7% con máscara elíptica) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_60%,transparent_100%)]"
+        />
 
-        <div className="max-w-5xl mx-auto flex flex-col items-center justify-between flex-1 w-full px-4 sm:px-6">
+        {/* Refuerzo de iluminación enológica de fondo (Ambient Glow visible en z-0) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+        >
+          {/* Halo borravino principal (centro superior) */}
+          <div className="h-[450px] w-[700px] rounded-full bg-rose-700/25 blur-[120px] -translate-y-10" />
+          {/* Halo cálido/ámbar de soporte */}
+          <div className="absolute h-[300px] w-[450px] rounded-full bg-amber-600/20 blur-[90px] translate-y-8" />
+        </div>
+
+        {/* Contenido principal en capa frontal z-10 */}
+        <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center justify-between flex-1 w-full px-4 sm:px-6">
           
           {/* Bloque superior/medio: Título principal y bajada */}
           <div className="flex flex-col items-center text-center my-auto pt-6 pb-8 w-full">
