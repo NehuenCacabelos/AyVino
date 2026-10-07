@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import WineCard from '../features/wines/components/WineCard';
-import WineDetailModal from '../features/wines/components/WineDetailModal';
+import { WineCard, WineDetailModal, CURATED_WINES } from '../features/wines';
 import CommunityModal from '../components/community/CommunityModal';
 import type { CuratedWine } from '../types/wine';
 import {
@@ -15,98 +14,6 @@ import {
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react';
-
-/**
- * Datos mockeados de la muestra curada (Demo abierta sin bloqueo).
- * Representa la diversidad del terroir vitivinícola argentino y cumple RF-1.3 (Comunidad vs Bodega Oficial).
- * Alineado con el backend: sin precios, con campos extendidos opcionales.
- */
-const CURATED_WINES: CuratedWine[] = [
-  {
-    id: 1,
-    name: 'Piedra Infinita Malbec',
-    winery: 'Zuccardi',
-    grape: 'Malbec',
-    vintage: '2021',
-    region: 'Paraje Altamira, Valle de Uco (Mendoza)',
-    tastingNotes: 'Ciruelas silvestres, tiza mineral, violetas andinas y taninos aterciopelados con persistencia infinita.',
-    longDescription:
-      'Proveniente de suelos aluviales con costra calcárea a 1.100 msnm. Fermentado en piletas de hormigón sin epoxi con levaduras nativas. Posee una frescura vibrante que expresa la pureza extrema del terroir de Altamira.',
-    descriptors: ['Ciruela Negra', 'Tiza Calcárea', 'Violetas', 'Hierbas de Montaña'],
-    rating: 4.9,
-    reviewCount: 58,
-    sourceType: 'Official',
-    isOfficial: true,
-    aging: 'Sin paso por madera, hormigón puro',
-    alcoholContent: 14.0,
-    servingTemperature: 16,
-    pairing: 'Chivito andino a las brasas, ojo de bife con romero o quesos curados de oveja.',
-    altitude: '1.100 msnm · Suelo calcáreo aluvial',
-  },
-  {
-    id: 2,
-    name: 'El Enemigo Cabernet Franc',
-    winery: 'Bodega Aleanna',
-    grape: 'Cabernet Franc',
-    vintage: '2020',
-    region: 'Gualtallary, Tupungato (Mendoza)',
-    tastingNotes: 'Pimientos asados dulces, grosellas negras maduras, vainilla noble y acidez lineal electrizante.',
-    longDescription:
-      'Cofermentado con un toque de Malbec. Crianza en foudres centenarios durante 15 meses. Elegancia rústica con un balance impecable entre la frescura de la altura y la textura de sus taninos minerales.',
-    descriptors: ['Pimiento Asado', 'Grosellas', 'Especiado', 'Cedro'],
-    rating: 4.8,
-    reviewCount: 84,
-    sourceType: 'Official',
-    isOfficial: true,
-    aging: '15 meses en foudres alsacianos centenarios',
-    alcoholContent: 13.5,
-    servingTemperature: 17,
-    pairing: 'Cordero braseado, empanadas mendocinas cortadas a cuchillo y pastas rellenas.',
-    altitude: '1.470 msnm · Caliche y gravas profundas',
-  },
-  {
-    id: 3,
-    name: 'Cara Sur Criolla Chica',
-    winery: 'Cara Sur Viticultores',
-    grape: 'Criolla Chica',
-    vintage: '2022',
-    region: 'Barreal, Valle de Calingasta (San Juan)',
-    tastingNotes: 'Frutillas del bosque, té negro, cáscara de naranja y hierbas autóctonas en un trago etéreo y fresco.',
-    longDescription:
-      'Vino de mínima intervención elaborado a partir de parrales centenarios rescatados en las faldas de la Cordillera de Ansilta. Ligero en color pero profundamente aromático, fluido y gastronómico.',
-    descriptors: ['Frutilla Silvestre', 'Té Negro', 'Hierbas Frescas', 'Jugo Puro'],
-    rating: 4.7,
-    reviewCount: 31,
-    sourceType: 'Community',
-    isOfficial: false,
-    aging: 'Huevos de hormigón y barricas viejas neutras',
-    alcoholContent: 12.8,
-    servingTemperature: 14,
-    pairing: 'Charcutería artesanal, trucha patagónica a la plancha o platos con hongos silvestres.',
-    altitude: '1.500 msnm · Clima desértico andino',
-  },
-  {
-    id: 4,
-    name: 'Lote Especial Torrontés',
-    winery: 'Bodega Colomé',
-    grape: 'Torrontés',
-    vintage: '2023',
-    region: 'Altos Valles Calchaquíes (Salta)',
-    tastingNotes: 'Jazmín, cáscara de pomelo rosado, flores blancas y un final seco, fresco y cítrico sin dulzores engañosos.',
-    longDescription:
-      'Nacido a más de 2.300 metros sobre el nivel del mar, bajo el sol más radiante de Argentina. Un Torrontés moderno, vertical, de paladar seco y crocante, que redefine el potencial de la cepa emblema blanca.',
-    descriptors: ['Jazmín', 'Pomelo Rosado', 'Flor de Azahar', 'Mineral Salino'],
-    rating: 4.6,
-    reviewCount: 42,
-    sourceType: 'Official',
-    isOfficial: true,
-    aging: '6 meses sobre lías en tanques de acero inoxidable',
-    alcoholContent: 13.5,
-    servingTemperature: 10,
-    pairing: 'Ceviche clásico, empanadas salteñas de carne picante o sushi de pesca blanca.',
-    altitude: '2.300 msnm · Extrema radiación UV y noches frías',
-  },
-];
 
 /**
  * Landing Page Component
@@ -164,7 +71,6 @@ export default function Landing() {
                 coleccioná cada copa.
               </span>
             </h1>
-
             {/* Bajada con centrado estricto */}
             <p className="w-full max-w-3xl mx-auto text-center text-neutral-400 text-base md:text-lg leading-relaxed text-balance px-4">
               Tu cava digital en un solo lugar: gestioná tu stock, calificá etiquetas, encontrá el maridaje perfecto y descubrí bodegas únicas.
@@ -189,7 +95,7 @@ export default function Landing() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-300 rounded-xl px-6 py-3 text-sm font-medium backdrop-blur-md transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-zinc-400" />
-                <span>Crear cuenta libre</span>
+                <span>Crear cuenta gratis</span>
               </Link>
             </div>
 
@@ -219,9 +125,6 @@ export default function Landing() {
         {/* Cabecera de la sección */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
-            <p className="font-mono text-[10px] tracking-[0.25em] uppercase text-neutral-400 font-medium mb-2">
-              Cata abierta y fichas libres
-            </p>
             <h2 className="text-3xl sm:text-4xl font-serif font-semibold text-neutral-100 mt-1">
               Selección Curada de la Semana
             </h2>

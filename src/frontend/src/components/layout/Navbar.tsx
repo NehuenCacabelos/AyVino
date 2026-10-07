@@ -39,24 +39,24 @@ export default function Navbar() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0a0c]/80 backdrop-blur-md transition-all">
-        <div className="h-16 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
+        <div className="h-18 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
           
-          {/* Columna 1 (Logo): texto limpio alineado al inicio */}
+          {/* Columna 1 (Logo): texto con mayor presencia y punto borravino */}
           <div className="flex items-center md:justify-self-start">
-            <Link to="/" className="text-base font-semibold tracking-tight text-zinc-100 hover:text-white transition-colors">
-              AyVino
+            <Link to="/" className="text-xl font-bold tracking-tight text-zinc-100 hover:text-white transition-colors">
+              AyVino<span className="text-rose-500">.</span>
             </Link>
           </div>
 
-          {/* Columna 2 (Nav links): centrada exactamente en escritorio, oculta en móvil */}
-          <nav className="hidden md:flex justify-center gap-8">
+          {/* Columna 2 (Nav links): centrada exactamente en escritorio, mayor escala y gap-10 */}
+          <nav className="hidden md:flex justify-center gap-10">
             {navLinks.map((link) =>
               link.label === 'Comunidad' ? (
                 <button
                   key={link.label}
                   type="button"
                   onClick={() => setCommunityOpen(true)}
-                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 cursor-pointer"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 cursor-pointer"
                 >
                   {link.label}
                 </button>
@@ -64,7 +64,7 @@ export default function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150"
                 >
                   {link.label}
                 </a>
@@ -76,7 +76,7 @@ export default function Navbar() {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
                 >
                   <Wine className="w-3.5 h-3.5 text-zinc-400" />
                   Mi Cava
@@ -84,7 +84,7 @@ export default function Navbar() {
 
                 <Link
                   to="/catalogo"
-                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
                 >
                   <Compass className="w-3.5 h-3.5 text-zinc-400" />
                   Catálogo
@@ -95,7 +95,7 @@ export default function Navbar() {
             {isWineryOrAdmin && (
               <Link
                 to="/bodega/dashboard"
-                className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold"
+                className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400" />
                 Panel Bodega

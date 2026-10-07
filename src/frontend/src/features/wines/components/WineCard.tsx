@@ -9,9 +9,8 @@ interface WineCardProps {
 
 /**
  * WineCard Component
- * Tarjeta de vino minimalista a dos columnas optimizada para escaneo visual rápido.
- * Exclusivamente: botella, varietal/añada, nombre/bodega, puntuación/notas y botón sobrio.
- * Sin precios, sin notas de cata largas ni descriptores redundantes.
+ * Tarjeta de vino editorial a dos columnas para escaneo visual rápido en la Landing.
+ * Escala tipográfica generosa, alto contraste y sin cápsulas/badges.
  */
 export default function WineCard({ wine, onSelect }: WineCardProps) {
   const {
@@ -32,15 +31,15 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
   return (
     <article
       onClick={() => onSelect?.(wine)}
-      className="group relative bg-[#141416] rounded-sm border border-neutral-800 hover:border-neutral-700 transition-colors duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer"
+      className="group relative bg-[#121214] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl"
     >
-      {/* Columna Izquierda: Espacio para botella (foto o silueta SVG sobria) */}
-      <div className="w-full sm:w-36 h-48 sm:h-auto bg-neutral-900/60 sm:border-r border-b sm:border-b-0 border-neutral-800 flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-neutral-900/80">
+      {/* Columna Izquierda: Espacio para botella con imagen real */}
+      <div className="w-full sm:w-40 h-52 sm:h-auto bg-[#0a0a0c] sm:border-r border-b sm:border-b-0 border-white/5 flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#0c0c0e] relative overflow-hidden">
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={name}
-            className="max-h-36 sm:max-h-44 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            className="max-h-40 sm:max-h-48 w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
@@ -49,38 +48,44 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
       </div>
 
       {/* Columna Derecha: Información técnica esencial y escaneo rápido */}
-      <div className="flex-1 p-5 flex flex-col justify-between">
+      <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
         <div>
-          {/* Cabecera: Varietal, Añada y Tag sobrio de procedencia */}
+          {/* Cabecera: Varietal, Añada y Leyenda tipográfica pura sin píldoras */}
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400">
+            <span className="text-xs font-sans font-medium uppercase tracking-wider text-neutral-400">
               {grape} · {vintage}
             </span>
 
-            <span className="bg-neutral-900 border border-neutral-800 text-neutral-300 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-sm">
+            <span
+              className={
+                isWineryOfficial
+                  ? 'text-xs font-sans font-medium uppercase tracking-[0.2em] text-amber-200/70'
+                  : 'text-xs font-sans font-medium uppercase tracking-[0.2em] text-neutral-400'
+              }
+            >
               {isWineryOfficial ? 'Ficha Oficial' : 'Comunidad'}
             </span>
           </div>
 
-          {/* Nombre del vino */}
-          <h4 className="font-serif text-lg sm:text-xl font-semibold text-neutral-100 group-hover:text-white transition-colors leading-tight">
+          {/* Nombre del vino con mayor escala */}
+          <h4 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight leading-tight">
             {name}
           </h4>
 
-          {/* Bodega y Región */}
-          <p className="text-xs text-neutral-400 mt-1 font-sans">
-            {winery} <span className="text-neutral-600">—</span> {region}
+          {/* Bodega y Región con mayor jerarquía */}
+          <p className="text-sm text-neutral-300 font-normal leading-relaxed mt-1">
+            {winery} <span className="text-neutral-500">·</span> {region}
           </p>
         </div>
 
-        {/* Pie: Calificación y Botón Sobrio "Ver ficha" */}
-        <div className="mt-5 pt-3 border-t border-neutral-800/80 flex items-center justify-between gap-4">
+        {/* Pie: Calificación y Enlace "VER FICHA →" */}
+        <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-semibold text-neutral-200 font-mono">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
+            <span className="text-sm font-medium text-neutral-200">
               {rating !== null ? rating.toFixed(1) : 'S/C'}
             </span>
-            <span className="text-[11px] font-mono text-neutral-500">
+            <span className="text-xs font-medium text-neutral-400">
               ({reviewCount})
             </span>
           </div>
@@ -91,10 +96,10 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
               e.stopPropagation();
               onSelect?.(wine);
             }}
-            className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-neutral-300 group-hover:text-white hover:text-white transition-colors py-1 px-2 -mr-2 cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-neutral-200 hover:text-white transition-colors py-1 px-2 -mr-2 cursor-pointer"
           >
             <span>Ver ficha</span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
       </div>
