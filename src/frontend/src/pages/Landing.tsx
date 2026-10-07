@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import WineCard from '../features/wines/components/WineCard';
-import WineBottleMock from '../features/wines/components/WineBottleMock';
 import WineDetailModal from '../features/wines/components/WineDetailModal';
 import CommunityModal from '../components/community/CommunityModal';
 import type { CuratedWine } from '../types/wine';
@@ -129,87 +128,73 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f11] text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0a0a0c] text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between overflow-x-hidden">
       
       {/* 1. Navbar persistente en tema oscuro */}
       <Navbar />
 
       {/* 2. Hero Section */}
-      <section className="relative overflow-hidden pt-8 pb-16 sm:pt-14 sm:pb-24 border-b border-neutral-800">
+      <section className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex flex-col justify-between pt-12 md:pt-16 pb-12 sm:pb-16 border-b border-zinc-800/60">
         
-        {/* Fondo sutil con brillo ambiente controlado */}
-        <div className="absolute -top-32 right-1/4 w-96 h-96 rounded-full bg-[#6b1d28]/10 blur-3xl pointer-events-none -z-10" />
-        <div className="absolute top-1/2 left-0 w-80 h-80 rounded-full bg-neutral-800/15 blur-3xl pointer-events-none -z-10" />
+        {/* Glow central/superior con degradado enológico */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[440px] rounded-full bg-gradient-to-tr from-rose-950/30 via-red-900/20 to-amber-900/10 blur-[140px] pointer-events-none -z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            
-            {/* Lado izquierdo: Tipografía y llamados a la acción */}
-            <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-center lg:text-left">
-              
-              {/* Eyebrow editorial plano (sin contenedor, sin sombras ni animación de pulso) */}
-              <p className="font-mono text-[10px] tracking-[0.25em] uppercase text-neutral-400 font-medium">
-                Cultura colectiva del vino
-              </p>
+        <div className="max-w-5xl mx-auto flex flex-col items-center justify-between flex-1 w-full px-4 sm:px-6">
+          
+          {/* Bloque superior/medio: Título principal y bajada */}
+          <div className="flex flex-col items-center text-center my-auto pt-6 pb-8 w-full">
+            <h1 className="w-full text-center text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight text-zinc-100 leading-[1.1] mb-6 px-4">
+              Descorchá nuevas historias,{' '}
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-rose-200 via-rose-300 to-amber-200">
+                coleccioná cada copa.
+              </span>
+            </h1>
 
-              {/* Título principal en dos líneas combinando Sans y Serif en cursiva */}
-              <h1 className="text-4xl sm:text-6xl xl:text-7xl font-sans font-extrabold tracking-tight text-neutral-100 leading-[1.1]">
-                Descorchá nuevas historias,
-                <span className="block font-serif font-semibold italic text-neutral-200 mt-1 sm:mt-2">
-                  coleccioná cada copa.
-                </span>
-              </h1>
-
-              {/* Subtítulo corto y reflexivo */}
-              <p className="text-base sm:text-lg text-neutral-400 max-w-2xl font-normal leading-relaxed mx-auto lg:mx-0 font-sans">
-                El catálogo vivo donde bodegas independientes y amantes del buen beber reseñan,
-                descubren terruños singulares y construyen su memoria sensorial sin pretensiones.
-              </p>
-
-              {/* Botones de acción */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('seleccion-curada')}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-sm bg-[#6b1d28] hover:bg-[#7e2432] text-white font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  <span>Explorar Selección</span>
-                  <ArrowDown className="w-4 h-4 text-white/80" />
-                </button>
-
-                <Link
-                  to="/register"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-sm bg-transparent border border-neutral-700 text-neutral-200 hover:border-neutral-500 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-neutral-400" />
-                  <span>Crear Cuenta Libre</span>
-                </Link>
-              </div>
-
-              {/* Micro métricas editoriales */}
-              <div className="pt-6 border-t border-neutral-800 grid grid-cols-3 gap-4 max-w-lg mx-auto lg:mx-0">
-                <div>
-                  <p className="font-serif text-2xl font-semibold text-neutral-100">+1.400</p>
-                  <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 font-medium">Etiquetas vivas</p>
-                </div>
-                <div>
-                  <p className="font-serif text-2xl font-semibold text-neutral-100">100%</p>
-                  <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 font-medium">Reseñas honestas</p>
-                </div>
-                <div>
-                  <p className="font-serif text-2xl font-semibold text-neutral-100">0 Fricción</p>
-                  <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 font-medium">Cata abierta</p>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Lado derecho: Mock visual de botella integrado en el fondo oscuro */}
-            <div className="lg:col-span-5 flex justify-center">
-              <WineBottleMock />
-            </div>
-
+            {/* Bajada con centrado estricto */}
+            <p className="w-full max-w-3xl mx-auto text-center text-neutral-400 text-base md:text-lg leading-relaxed text-balance px-4">
+              Tu cava digital en un solo lugar: gestioná tu stock, calificá etiquetas, encontrá el maridaje perfecto y descubrí bodegas únicas.
+            </p>
           </div>
+
+          {/* Bloque inferior: Botones de acción y métricas */}
+          <div className="w-full flex flex-col items-center mt-auto">
+            {/* Botones de acción centrados */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full px-4 mb-10 md:mb-14">
+              <button
+                type="button"
+                onClick={() => scrollToSection('seleccion-curada')}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl px-6 py-3 text-sm font-medium shadow-lg shadow-rose-950/60 transition-all cursor-pointer"
+              >
+                <span>Explorar catálogo</span>
+                <ArrowDown className="w-4 h-4 text-white/80" />
+              </button>
+
+              <Link
+                to="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-300 rounded-xl px-6 py-3 text-sm font-medium backdrop-blur-md transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-zinc-400" />
+                <span>Crear cuenta libre</span>
+              </Link>
+            </div>
+
+            {/* Fila inferior de métricas centrada */}
+            <div className="grid grid-cols-3 max-w-2xl mx-auto pt-8 border-t border-zinc-800/60 w-full px-4 text-center">
+              <div>
+                <p className="text-xl sm:text-2xl font-semibold text-zinc-100">+1.400</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider mt-1">Etiquetas vivas</p>
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-semibold text-zinc-100">100%</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider mt-1">Reseñas honestas</p>
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-semibold text-zinc-100">0 Fricción</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider mt-1">Cata abierta</p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 

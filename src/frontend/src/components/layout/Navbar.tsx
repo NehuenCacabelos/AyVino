@@ -4,7 +4,6 @@ import {
   Wine,
   Menu,
   X,
-  ArrowRight,
   User as UserIcon,
   LogOut,
   Compass,
@@ -39,60 +38,55 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-[#0f0f11]/90 backdrop-blur-md border-b border-neutral-800 text-neutral-200 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            
-            {/* Logo editorial */}
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-full border border-neutral-800 bg-neutral-900 flex items-center justify-center text-neutral-300 shadow-sm group-hover:scale-105 transition-transform">
-                <Wine className="w-4 h-4 text-neutral-300" strokeWidth={2} />
-              </div>
-              <span className="font-serif text-xl font-semibold tracking-tight text-neutral-100">
-                AyVino
-              </span>
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#6b1d28] mb-1"></span>
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0a0c]/70 backdrop-blur-md transition-all">
+        <div className="h-16 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
+          
+          {/* Columna 1 (Logo): texto limpio alineado al inicio */}
+          <div className="flex items-center md:justify-self-start">
+            <Link to="/" className="text-base font-semibold tracking-tight text-zinc-100 hover:text-white transition-colors">
+              AyVino
             </Link>
+          </div>
 
-            {/* Navegación central (desktop) */}
-            <nav className="hidden md:flex items-center gap-7">
-              {navLinks.map((link) =>
-                link.label === 'Comunidad' ? (
-                  <button
-                    key={link.label}
-                    type="button"
-                    onClick={() => setCommunityOpen(true)}
-                    className="text-xs font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors relative py-1 cursor-pointer"
-                  >
-                    {link.label}
-                  </button>
-                ) : (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className="text-xs font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors relative py-1"
-                  >
-                    {link.label}
-                  </a>
-                )
-              )}
+          {/* Columna 2 (Nav links): centrada exactamente en escritorio, oculta en móvil */}
+          <nav className="hidden md:flex justify-center gap-8">
+            {navLinks.map((link) =>
+              link.label === 'Comunidad' ? (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => setCommunityOpen(true)}
+                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 cursor-pointer"
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
 
             {/* Enlaces contextuales protegidos */}
             {isAuthenticated && (
               <>
                 <Link
                   to="/dashboard"
-                  className="text-xs font-mono uppercase tracking-widest text-neutral-200 hover:text-white transition-colors relative py-1 flex items-center gap-1.5"
+                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
                 >
-                  <Wine className="w-3.5 h-3.5 text-neutral-400" />
+                  <Wine className="w-3.5 h-3.5 text-zinc-400" />
                   Mi Cava
                 </Link>
 
                 <Link
                   to="/catalogo"
-                  className="text-xs font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors relative py-1 flex items-center gap-1.5"
+                  className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
                 >
-                  <Compass className="w-3.5 h-3.5 text-neutral-400" />
+                  <Compass className="w-3.5 h-3.5 text-zinc-400" />
                   Catálogo
                 </Link>
               </>
@@ -101,72 +95,79 @@ export default function Navbar() {
             {isWineryOrAdmin && (
               <Link
                 to="/bodega/dashboard"
-                className="text-xs font-mono uppercase tracking-widest text-neutral-300 hover:text-white transition-colors relative py-1 flex items-center gap-1.5 font-semibold"
+                className="text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 text-neutral-400" />
+                <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400" />
                 Panel Bodega
               </Link>
             )}
           </nav>
 
-          {/* Acciones de Autenticación (desktop) */}
-          <div className="hidden md:flex items-center gap-4">
-            {isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-neutral-900 border border-neutral-800">
-                  <UserIcon className="w-3.5 h-3.5 text-neutral-400" />
-                  <span className="text-xs font-medium text-neutral-200">
-                    {user?.username || 'Usuario'}
-                  </span>
-                  {user?.role && (
-                    <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-neutral-400 bg-neutral-800 px-1.5 py-0.5 rounded-sm">
-                      {user.role}
+          {/* Columna 3 (Acciones): alineada al final */}
+          <div className="flex items-center gap-4 md:justify-self-end">
+            <div className="hidden md:flex items-center gap-4">
+              {isAuthenticated ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                    <UserIcon className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="text-xs font-medium text-zinc-200">
+                      {user?.username || 'Usuario'}
                     </span>
-                  )}
+                    {user?.role && (
+                      <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => void handleLogout()}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+                    title="Cerrar Sesión"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Salir</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => void handleLogout()}
-                  type="button"
-                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-rose-400 px-2.5 py-1.5 rounded-sm hover:bg-neutral-900 transition-colors cursor-pointer"
-                  title="Cerrar Sesión"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Salir</span>
-                </button>
-              </div>
-            ) : (
-              <>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-sm font-medium text-zinc-300 hover:text-white transition-colors px-3 py-1.5 cursor-pointer"
+                  >
+                    Iniciar sesión
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    Crear cuenta
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* En mobile: acción esencial + botón menú móvil */}
+            <div className="md:hidden flex items-center gap-2">
+              {!isAuthenticated && (
                 <Link
                   to="/login"
-                  className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-neutral-100 px-3 py-2 transition-colors cursor-pointer"
+                  className="text-xs font-medium text-zinc-300 hover:text-white transition-colors px-2 py-1 cursor-pointer"
                 >
-                  Iniciar Sesión
+                  Ingresar
                 </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-[#6b1d28] hover:bg-[#7e2432] text-white px-4 py-2 rounded-sm transition-colors cursor-pointer"
-                >
-                  <span>Crear Cuenta</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </>
-            )}
+              )}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                type="button"
+                className="p-1.5 text-zinc-400 hover:text-zinc-100 focus:outline-none cursor-pointer"
+                aria-label="Abrir menú"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
-
-          {/* Botón menú móvil */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              type="button"
-              className="p-2 text-neutral-400 hover:text-neutral-100 focus:outline-none"
-              aria-label="Abrir menú"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-
         </div>
-      </div>
 
       {/* Menú desplegable móvil */}
       {mobileMenuOpen && (
@@ -266,7 +267,7 @@ export default function Navbar() {
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2.5 text-xs font-semibold uppercase tracking-wider bg-[#6b1d28] hover:bg-[#7e2432] text-white rounded-sm cursor-pointer"
+                  className="w-full text-center py-2.5 text-xs font-semibold uppercase tracking-wider bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-lg cursor-pointer transition-all"
                 >
                   Crear Cuenta
                 </Link>
