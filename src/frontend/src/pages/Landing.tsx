@@ -134,7 +134,7 @@ export default function Landing() {
       <Navbar />
 
       {/* 2. Hero Section */}
-      <section className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex flex-col justify-between pt-12 md:pt-16 pb-12 sm:pb-16 border-b border-zinc-800/60">
+      <section className="relative overflow-hidden min-h-screen flex flex-col justify-between pt-20 md:pt-24 pb-12 sm:pb-16 border-b border-zinc-800/60">
         
         {/* Glow central/superior con degradado enológico */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[440px] rounded-full bg-gradient-to-tr from-rose-950/30 via-red-900/20 to-amber-900/10 blur-[140px] pointer-events-none -z-10" />
@@ -163,10 +163,10 @@ export default function Landing() {
               <button
                 type="button"
                 onClick={() => scrollToSection('seleccion-curada')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl px-6 py-3 text-sm font-medium shadow-lg shadow-rose-950/60 transition-all cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-xl px-6 py-3 text-sm font-medium shadow-sm transition-all active:scale-[0.98] cursor-pointer"
               >
                 <span>Explorar catálogo</span>
-                <ArrowDown className="w-4 h-4 text-white/80" />
+                <ArrowDown className="w-4 h-4 text-zinc-300" />
               </button>
 
               <Link

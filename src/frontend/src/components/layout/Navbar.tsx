@@ -38,7 +38,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0a0c]/70 backdrop-blur-md transition-all">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0a0c]/80 backdrop-blur-md transition-all">
         <div className="h-16 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
           
           {/* Columna 1 (Logo): texto limpio alineado al inicio */}
