@@ -1,13 +1,4 @@
-import { Wine, Clock, Layers, Award, type LucideIcon } from 'lucide-react';
-
-interface MetricItem {
-  id: string;
-  label: string;
-  value: string | number;
-  detail: string;
-  icon: LucideIcon;
-  hasOptimalIndicator?: boolean;
-}
+import { Wine, Clock, Layers, Award } from 'lucide-react';
 
 export interface MetricsProps {
   customStats?: {
@@ -20,83 +11,83 @@ export interface MetricsProps {
 }
 
 /**
- * Metrics Component (Grid de Cards Flotantes de KPIs)
- * Rediseño desacoplado del monolito con estética limpia y moderna:
- * - Grid flotante a 4 columnas (2 en mobile): grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4
- * - Tarjetas individuales con fondo translúcido, borde suave y hover reactivo:
- *   bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60 border border-white/5 hover:border-white/10 rounded-2xl p-5 shadow-lg shadow-black/20
- * - Chip circular para íconos: w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-stone-300
- * - Título uppercase sutil (text-xs font-medium tracking-wider text-stone-400 uppercase)
- * - Valor destacado en serif (text-2xl font-serif text-white mt-3)
- * - Subtítulo / detalle (text-xs text-stone-500 mt-1) con indicador esmeralda en "Listas para tomar"
+ * Metrics Component (Cava Strip - Barra de Métricas Horizontal Compacta)
+ * Cierra la sección Hero con un diseño aireado, tipográfico y limpio:
+ * - Total en Cava (Wine): 24 Botellas · Colección activa
+ * - Listas para Descorchar (Clock): 3 Etiquetas · En ventana óptima (con punto verde)
+ * - Varietal Insignia (Layers): Malbec (58%) · 8 cepas registradas
+ * - Prestigio / Calificación (Award): 4.9 ★ · Nivel Gran Reserva
  */
 export default function Metrics({ customStats }: MetricsProps) {
-  const stats: MetricItem[] = [
-    {
-      id: 'total',
-      label: 'Total en Cava',
-      value: `${customStats?.bottles ?? 24} Botellas`,
-      detail: 'Listas para descorchar',
-      icon: Wine,
-    },
-    {
-      id: 'ready',
-      label: 'Listas para tomar',
-      value: `${customStats?.readyToDrink ?? 3} Botellas`,
-      detail: 'En ventana óptima',
-      icon: Clock,
-      hasOptimalIndicator: true,
-    },
-    {
-      id: 'varietal',
-      label: 'Varietal dominante',
-      value: customStats?.dominantVarietal ?? 'Malbec (58%)',
-      detail: '8 cepas en inventario',
-      icon: Layers,
-    },
-    {
-      id: 'rating',
-      label: 'Valoración promedio',
-      value: customStats?.topRated ?? '4.8 / 5.0 ★',
-      detail: 'Nivel Gran Reserva',
-      icon: Award,
-    },
-  ];
+  const totalBottles = customStats?.bottles ?? 24;
+  const readyToDrink = customStats?.readyToDrink ?? 3;
+  const dominantVarietal = customStats?.dominantVarietal ?? 'Malbec (58%)';
+  const rawRating = customStats?.topRated ? String(customStats.topRated) : '4.9';
+  const cleanRating = rawRating.replace(' ★', '').split('/')[0].trim();
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4">
-      {stats.map(({ id, label, value, detail, icon: Icon, hasOptimalIndicator }) => (
-        <article
-          key={id}
-          className="bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60 transition-all duration-300 border border-white/5 hover:border-white/10 rounded-2xl p-5 shadow-lg shadow-black/20 flex flex-col justify-between"
-        >
-          {/* Encabezado: Ícono en chip circular tenue junto al título pequeño en mayúsculas */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-stone-300 shrink-0">
-              <Icon className="w-5 h-5" strokeWidth={1.5} aria-hidden="true" />
-            </div>
-            <span className="text-xs font-medium tracking-wider text-stone-400 uppercase">
-              {label}
-            </span>
+    <div className="w-full max-w-5xl mx-auto pt-6 border-t border-white/5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center text-left">
+        {/* 1. Total en Cava */}
+        <div>
+          <div className="text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
+            <Wine className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
+            <span>Total en Cava</span>
           </div>
+          <p className="text-xl font-serif text-white mt-1">
+            {totalBottles} Botellas
+          </p>
+          <p className="text-[11px] text-stone-400 mt-0.5 font-sans">
+            Colección activa
+          </p>
+        </div>
 
-          {/* Cuerpo: Valor principal destacado y Subtítulo / Detalle */}
-          <div>
-            <p className="text-2xl font-serif text-white mt-3">
-              {value}
-            </p>
-            <p className="text-xs text-stone-500 mt-1 flex items-center">
-              {hasOptimalIndicator && (
-                <span
-                  className="inline-block w-2 h-2 rounded-full bg-emerald-500/80 mr-1.5 shrink-0"
-                  aria-hidden="true"
-                />
-              )}
-              <span>{detail}</span>
-            </p>
+        {/* 2. Listas para Descorchar */}
+        <div>
+          <div className="text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
+            <span>Listas para Descorchar</span>
           </div>
-        </article>
-      ))}
+          <p className="text-xl font-serif text-white mt-1">
+            {readyToDrink} Etiquetas
+          </p>
+          <p className="text-[11px] text-stone-400 mt-0.5 flex items-center font-sans">
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block mr-1 shrink-0"
+              aria-hidden="true"
+            />
+            <span>En ventana óptima</span>
+          </p>
+        </div>
+
+        {/* 3. Varietal Insignia */}
+        <div>
+          <div className="text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
+            <span>Varietal Insignia</span>
+          </div>
+          <p className="text-xl font-serif text-white mt-1">
+            {dominantVarietal}
+          </p>
+          <p className="text-[11px] text-stone-400 mt-0.5 font-sans">
+            8 cepas registradas
+          </p>
+        </div>
+
+        {/* 4. Prestigio / Calificación */}
+        <div>
+          <div className="text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
+            <Award className="w-3.5 h-3.5 text-amber-400/80 shrink-0" aria-hidden="true" />
+            <span>Prestigio / Calificación</span>
+          </div>
+          <p className="text-xl font-serif text-amber-200 mt-1">
+            {cleanRating} ★
+          </p>
+          <p className="text-[11px] text-stone-400 mt-0.5 font-sans">
+            Nivel Gran Reserva
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

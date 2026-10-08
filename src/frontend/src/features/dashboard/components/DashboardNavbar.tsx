@@ -135,10 +135,10 @@ export default function DashboardNavbar({
   const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
 
   // Solo secciones de descubrimiento general en la barra horizontal central
-  const discoveryLinks = [
-    { label: 'Explorar', href: '#catalogo' },
-    { label: 'Maridaje', href: '#maridaje' },
-    { label: 'Comunidad', href: '#comunidad', isModal: true },
+  const discoveryLinks: { label: string; to?: string; isModal?: boolean }[] = [
+    { label: 'Explorar', to: '/dashboard#catalogo' },
+    { label: 'Maridaje', to: '/maridaje' },
+    { label: 'Comunidad', isModal: true },
   ];
 
   return (
@@ -179,13 +179,13 @@ export default function DashboardNavbar({
                   {link.label}
                 </button>
               ) : (
-                <a
+                <Link
                   key={link.label}
-                  href={link.href}
+                  to={link.to!}
                   className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 whitespace-nowrap"
                 >
                   {link.label}
-                </a>
+                </Link>
               )
             )}
 
@@ -240,9 +240,9 @@ export default function DashboardNavbar({
                   {/* Bloque Colección Personal */}
                   <div className="space-y-0.5 text-xs font-medium">
                     {/* Mi Cava */}
-                    <a
+                    <Link
                       role="menuitem"
-                      href="#cava"
+                      to="/cava"
                       onClick={() => setProfileOpen(false)}
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                     >
@@ -251,7 +251,7 @@ export default function DashboardNavbar({
                       <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 font-mono text-[11px] text-zinc-300">
                         {stockCount}
                       </span>
-                    </a>
+                    </Link>
 
                     {/* Mi historial */}
                     <a
@@ -364,21 +364,21 @@ export default function DashboardNavbar({
                     {link.label}
                   </button>
                 ) : (
-                  <a
+                  <Link
                     key={link.label}
-                    href={link.href}
+                    to={link.to!}
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 )
               )}
 
               <hr className="my-1 border-t border-white/5" />
 
-              <a
-                href="#cava"
+              <Link
+                to="/cava"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
               >
@@ -386,7 +386,7 @@ export default function DashboardNavbar({
                 <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-xs text-zinc-400">
                   {stockCount}
                 </span>
-              </a>
+              </Link>
 
               <a
                 href="#historial"

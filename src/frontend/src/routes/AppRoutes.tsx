@@ -8,6 +8,8 @@ const LoginPage = lazy(() => import('../pages/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage'));
 const TermsPage = lazy(() => import('../pages/TermsPage'));
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
+const CavaPage = lazy(() => import('../pages/CavaPage'));
+const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 
@@ -43,12 +45,32 @@ export default function AppRoutes() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/terms" element={<TermsPage />} />
 
-        {/* Ruta Protegida: Dashboard / Cava Personal Post-Login */}
+        {/* Ruta Protegida: Dashboard Principal Post-Login */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta Protegida: Mi Cava Personal */}
+        <Route
+          path="/cava"
+          element={
+            <ProtectedRoute>
+              <CavaPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta Protegida: Recomendaciones y Maridajes */}
+        <Route
+          path="/maridaje"
+          element={
+            <ProtectedRoute>
+              <PairingPage />
             </ProtectedRoute>
           }
         />

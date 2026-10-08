@@ -4,13 +4,12 @@ import {
   DashboardNavbar,
   QuickActions,
   Metrics,
-  DashboardSection,
-  PromoBlocks,
   FilterChips,
   SectionHeading,
   WineryBlock,
   UncorkDialog,
 } from '../features/dashboard';
+import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 const catenaWines: DashboardWine[] = [
@@ -107,23 +106,121 @@ const zuccardiWines: DashboardWine[] = [
   },
 ];
 
+const elEnemigoWines: DashboardWine[] = [
+  {
+    name: 'El Enemigo Cabernet Franc',
+    winery: 'El Enemigo',
+    region: 'Gualtallary, Mendoza',
+    varietal: 'Cabernet Franc',
+    vintage: 2019,
+    rating: 4.9,
+    units: 2,
+    location: 'Cava Principal · Estante A1',
+    bottle: 'red-burgundy',
+  },
+  {
+    name: 'Gran Enemigo Gualtallary Single Vineyard',
+    winery: 'El Enemigo',
+    region: 'Gualtallary, Mendoza',
+    varietal: 'Cabernet Franc',
+    vintage: 2018,
+    rating: 5.0,
+    units: 1,
+    location: 'Cava Principal · Estante A1',
+    bottle: 'red-black',
+  },
+  {
+    name: 'El Enemigo Chardonnay',
+    winery: 'El Enemigo',
+    region: 'Gualtallary, Mendoza',
+    varietal: 'Blancos',
+    vintage: 2021,
+    rating: 4.6,
+    units: 2,
+    location: 'Heladera Cava · Nivel 1',
+    bottle: 'white',
+  },
+  {
+    name: 'El Enemigo Malbec',
+    winery: 'El Enemigo',
+    region: 'Gualtallary, Mendoza',
+    varietal: 'Malbec',
+    vintage: 2020,
+    rating: 4.7,
+    units: 2,
+    location: 'Cava Principal · Estante A2',
+    bottle: 'red-cream',
+  },
+];
+
+const colomeWines: DashboardWine[] = [
+  {
+    name: 'Colomé Altura Máxima Malbec',
+    winery: 'Colomé',
+    region: 'Molinos, Salta',
+    varietal: 'Malbec',
+    vintage: 2018,
+    rating: 4.9,
+    units: 1,
+    location: 'Cava Principal · Estante C1',
+    bottle: 'red-black',
+  },
+  {
+    name: 'Colomé Estate Malbec',
+    winery: 'Colomé',
+    region: 'Valle Calchaquí, Salta',
+    varietal: 'Malbec',
+    vintage: 2020,
+    rating: 4.6,
+    units: 2,
+    location: 'Cava Principal · Estante C2',
+    bottle: 'red-cream',
+  },
+  {
+    name: 'Colomé Torrontés del Valle',
+    winery: 'Colomé',
+    region: 'Cafayate, Salta',
+    varietal: 'Blancos',
+    vintage: 2022,
+    rating: 4.5,
+    units: 2,
+    location: 'Heladera Cava · Nivel 2',
+    bottle: 'white',
+  },
+  {
+    name: 'Colomé Auténtico Malbec Blend',
+    winery: 'Colomé',
+    region: 'Molinos, Salta',
+    varietal: 'Blends',
+    vintage: 2021,
+    rating: 4.8,
+    units: 2,
+    location: 'Cava Principal · Estante C3',
+    bottle: 'red-burgundy',
+  },
+];
+
 /**
- * DashboardPage Component
- * Vista principal con estética editorial oscura mate (#0f0f11):
- * - Distribución a 2 columnas preservada intacta.
- * - Tipografía Fraunces semi-bold para encabezados principales.
- * - Fondo carbón profundo mate #0f0f11 y superficies #121214.
- * - Acento bordó sobrio #722F37 y bordes sutiles border-neutral-800.
+ * DashboardPage Component (/dashboard)
+ * Vista principal enfocada en Exploración de Bodegas y Catálogo de etiquetas:
+ * - Hero centrado con saludo, buscador simétrico y Segmented Filter Control.
+ * - Barra de métricas "Cava Strip" horizontal como cierre de la primera pantalla.
+ * - Catálogo "Explorá por Bodegas" inmediatamente debajo, responsivo a los filtros superiores.
  */
 export default function DashboardPage() {
   const [stockCount, setStockCount] = useState(24);
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [heroFilters, setHeroFilters] = useState<HeroFilterState>({
+    query: '',
+    varietal: 'Todos',
+    region: 'Todas',
+    winery: 'Todas',
+  });
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Limpiar temporizador de notificación en desmontaje
   useEffect(() => {
     return () => {
       clearTimeout(notificationTimerRef.current);
@@ -148,51 +245,113 @@ export default function DashboardPage() {
     showNotification(`"${wine.name}" fue agregado con éxito a tu Cava.`);
   };
 
-  // Filtrado reactivo de vinos por chip y buscador
+  // Filtrado reactivo de vinos conectando filtros del Hero, chips y búsqueda
   const filterWineList = useCallback(
-    (list: DashboardWine[]) => {
+    (list: DashboardWine[], wineryLabel?: string) => {
+      // Si hay un filtro de bodega activo en el Hero y la bodega no coincide, retornar vacío
+      if (heroFilters.winery !== 'Todas' && wineryLabel) {
+        if (!wineryLabel.toLowerCase().includes(heroFilters.winery.toLowerCase())) {
+          return [];
+        }
+      }
+
       return list.filter((wine) => {
-        const matchesSearch =
-          searchQuery === '' ||
-          wine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          wine.winery.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          wine.varietal.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          wine.region.toLowerCase().includes(searchQuery.toLowerCase());
+        // 1. Filtro de bodega del Hero
+        if (heroFilters.winery !== 'Todas') {
+          if (!wine.winery.toLowerCase().includes(heroFilters.winery.toLowerCase())) {
+            return false;
+          }
+        }
 
-        if (!matchesSearch) return false;
+        // 2. Filtro de región del Hero
+        if (heroFilters.region !== 'Todas') {
+          if (!wine.region.toLowerCase().includes(heroFilters.region.toLowerCase())) {
+            return false;
+          }
+        }
 
-        if (activeFilter === 'Todos') return true;
-        if (activeFilter === 'Blancos')
-          return (
-            wine.varietal.toLowerCase().includes('blanco') ||
-            wine.varietal.toLowerCase().includes('chardonnay') ||
-            wine.varietal.toLowerCase().includes('torrontés')
-          );
-        if (activeFilter === 'Espumantes')
-          return wine.varietal.toLowerCase().includes('espumante') || wine.bottle === 'sparkling';
-        if (activeFilter === 'Malbec') return wine.varietal.toLowerCase().includes('malbec');
-        if (activeFilter === 'Cabernet Sauvignon')
-          return wine.varietal.toLowerCase().includes('cabernet');
-        if (activeFilter === 'Mendoza') return wine.region.toLowerCase().includes('mendoza');
-        if (activeFilter === 'Salta') return wine.region.toLowerCase().includes('salta');
-        if (activeFilter === 'Patagonia')
-          return (
-            wine.region.toLowerCase().includes('río negro') ||
-            wine.region.toLowerCase().includes('patagonia')
-          );
+        // 3. Filtro de varietal del Hero
+        if (heroFilters.varietal !== 'Todos') {
+          if (heroFilters.varietal === 'Blancos') {
+            const isWhite =
+              wine.varietal.toLowerCase().includes('blanco') ||
+              wine.varietal.toLowerCase().includes('chardonnay') ||
+              wine.varietal.toLowerCase().includes('torrontés') ||
+              wine.bottle === 'white';
+            if (!isWhite) return false;
+          } else if (heroFilters.varietal === 'Blends') {
+            if (!wine.varietal.toLowerCase().includes('blend')) return false;
+          } else {
+            if (!wine.varietal.toLowerCase().includes(heroFilters.varietal.toLowerCase())) {
+              return false;
+            }
+          }
+        }
+
+        // 4. Búsqueda por texto (query)
+        const effectiveQuery = searchQuery.trim() || heroFilters.query.trim();
+        if (effectiveQuery !== '') {
+          const q = effectiveQuery.toLowerCase();
+          const matches =
+            wine.name.toLowerCase().includes(q) ||
+            wine.winery.toLowerCase().includes(q) ||
+            wine.varietal.toLowerCase().includes(q) ||
+            wine.region.toLowerCase().includes(q);
+          if (!matches) return false;
+        }
+
+        // 5. Chips de filtros rápidos inferiores
+        if (activeFilter !== 'Todos') {
+          if (activeFilter === 'Blancos') {
+            const isWhite =
+              wine.varietal.toLowerCase().includes('blanco') ||
+              wine.varietal.toLowerCase().includes('chardonnay') ||
+              wine.varietal.toLowerCase().includes('torrontés') ||
+              wine.bottle === 'white';
+            if (!isWhite) return false;
+          } else if (activeFilter === 'Espumantes') {
+            if (wine.varietal.toLowerCase().includes('espumante') || wine.bottle === 'sparkling') return false;
+          } else if (activeFilter === 'Malbec') {
+            if (!wine.varietal.toLowerCase().includes('malbec')) return false;
+          } else if (activeFilter === 'Cabernet Sauvignon') {
+            if (!wine.varietal.toLowerCase().includes('cabernet')) return false;
+          } else if (activeFilter === 'Mendoza') {
+            if (!wine.region.toLowerCase().includes('mendoza')) return false;
+          } else if (activeFilter === 'Salta') {
+            if (!wine.region.toLowerCase().includes('salta')) return false;
+          } else if (activeFilter === 'Patagonia') {
+            const isPatagonia =
+              wine.region.toLowerCase().includes('río negro') ||
+              wine.region.toLowerCase().includes('patagonia');
+            if (!isPatagonia) return false;
+          }
+        }
 
         return true;
       });
     },
-    [activeFilter, searchQuery],
+    [heroFilters, searchQuery, activeFilter],
   );
 
-  const filteredCatena = useMemo(() => filterWineList(catenaWines), [filterWineList]);
-  const filteredZuccardi = useMemo(() => filterWineList(zuccardiWines), [filterWineList]);
+  const filteredCatena = useMemo(
+    () => filterWineList(catenaWines, 'Catena Zapata'),
+    [filterWineList],
+  );
+  const filteredZuccardi = useMemo(
+    () => filterWineList(zuccardiWines, 'Zuccardi'),
+    [filterWineList],
+  );
+  const filteredElEnemigo = useMemo(
+    () => filterWineList(elEnemigoWines, 'El Enemigo'),
+    [filterWineList],
+  );
+  const filteredColome = useMemo(
+    () => filterWineList(colomeWines, 'Colomé'),
+    [filterWineList],
+  );
 
   return (
     <div className="min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
-      
       {/* Toast de Notificación Flotante */}
       {notification && (
         <aside
@@ -208,22 +367,37 @@ export default function DashboardPage() {
       {/* 1. Navbar Superior */}
       <DashboardNavbar stockCount={stockCount} />
 
-      {/* 2. Hero Section Completo (Primer pliegue de la página que finaliza con las Cards de KPIs) */}
+      {/* 2. Hero Section Unificado con Cava Strip Horizontal cerrando el viewport */}
       <section
         id="hero-section"
         aria-labelledby="welcome-title"
-        className="relative isolate overflow-hidden bg-[#0f0f11] text-neutral-200 border-b border-neutral-800/80 min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-8 sm:pb-12"
+        className="relative bg-[#0f0f11] text-neutral-200 border-b border-neutral-800/80 min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-6 sm:pb-8"
       >
-        {/* Luz ambiental sutil y cálida en el centro */}
+        {/* Textura de lienzo técnica (Dot Pattern sutil con máscara elíptica estilo Landing) */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 h-96 w-full max-w-3xl rounded-full bg-rose-950/15 blur-[130px] pointer-events-none"
           aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 opacity-20 [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_65%_55%_at_50%_45%,#000_60%,transparent_100%)]"
         />
 
-        {/* Contenido Central: Saludo, Titular, Subtítulo y Buscador */}
-        <div className="my-auto w-full py-6">
+        {/* Resplandor radial suave enológico centrado detrás del título */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+        >
+          {/* Resplandor radial vino/borgoña suave */}
+          <div className="h-[520px] w-[850px] rounded-full bg-gradient-to-b from-rose-950/25 via-rose-900/10 to-transparent blur-[130px] -translate-y-8" />
+          {/* Halo cálido ámbar de soporte */}
+          <div className="absolute h-[320px] w-[500px] rounded-full bg-amber-900/10 blur-[100px] translate-y-12" />
+        </div>
+
+        {/* Contenido Central: Saludo, Titular, Subtítulo, Buscador y Filtros */}
+        <div className="relative z-30 my-auto w-full py-4 px-4 sm:px-6 lg:px-8">
           <QuickActions
             onSearch={(query) => setSearchQuery(query)}
+            onFilterChange={(filters) => {
+              setHeroFilters(filters);
+              setSearchQuery(filters.query);
+            }}
             onRegisterBottle={() =>
               showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
             }
@@ -237,46 +411,30 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* 3. Bloque de Métricas Flotantes: Cierra el primer pliegue de la pantalla */}
-        <div className="w-full mt-auto pt-6 pb-2 z-20">
+        {/* 3. Barra de Métricas "Cava Strip" Horizontal: Al pie del Hero cerrando la pantalla */}
+        <div className="relative z-10 w-full mt-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
           <Metrics
             customStats={{
               bottles: stockCount,
               readyToDrink: 3,
               dominantVarietal: 'Malbec (58%)',
-              topRated: '4.9 / 5.0 ★',
+              topRated: '4.9 ★',
             }}
           />
         </div>
       </section>
 
-      {/* 4. Contenido Principal */}
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-20 sm:gap-24 px-4 sm:px-6 lg:px-8 pb-24 pt-12 sm:pt-16">
-        
-        {/* Sección de Cava Personal (Inventario Activo) */}
-        <DashboardSection
-          onUncorkRequested={(wine) => setUncorkingWine(wine)}
-          onAddBottleRequested={() => {
-            const catalogEl = document.getElementById('catalogo');
-            catalogEl?.scrollIntoView({ behavior: 'smooth' });
-          }}
-        />
-
-        {/* Bloques Bento Grid: Guarda y Maridaje */}
-        <section id="maridaje" aria-label="Recomendaciones y Maridajes">
-          <PromoBlocks />
-        </section>
-
+      {/* 4. Contenido Principal: Explorá por Bodegas */}
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-12 sm:gap-16 px-4 sm:px-6 lg:px-8 pb-24 pt-12 sm:pt-16">
         {/* Sección de Catálogo Oficial por Bodegas */}
         <section id="catalogo" aria-labelledby="catalog-title" className="flex flex-col gap-12 sm:gap-16">
-          
           <div className="flex flex-col items-center gap-6 text-center">
             <SectionHeading
               id="catalog-title"
               align="center"
-              eyebrow="CATÁLOGO EXCLUSIVO"
-              title="Explorá por bodegas"
-              description="Etiquetas oficiales y aportes certificados de la comunidad, organizadas por productor y región."
+              eyebrow="CATÁLOGO EXCLUSIVO & TERROIR"
+              title="Explorá por Bodegas"
+              description="Etiquetas oficiales y colecciones organizadas por productor y región vitivinícola."
             />
 
             {/* Chips de Filtros Rápidos */}
@@ -293,7 +451,7 @@ export default function DashboardPage() {
                 name="Bodega Catena Zapata"
                 region="Mendoza, Argentina"
                 initials="CZ"
-                total={12}
+                total={filteredCatena.length}
                 wines={filteredCatena}
                 onAddToCellar={handleAddToCellar}
                 onToggleFavorite={(wine, isFav) =>
@@ -307,7 +465,7 @@ export default function DashboardPage() {
                 name="Bodega Zuccardi"
                 region="Valle de Uco, Mendoza"
                 initials="Z"
-                total={10}
+                total={filteredZuccardi.length}
                 wines={filteredZuccardi}
                 onAddToCellar={handleAddToCellar}
                 onToggleFavorite={(wine, isFav) =>
@@ -316,31 +474,66 @@ export default function DashboardPage() {
               />
             )}
 
-            {filteredCatena.length === 0 && filteredZuccardi.length === 0 && (
-              <div className="rounded-xl border border-neutral-800 bg-[#121214] p-12 text-center flex flex-col items-center justify-center gap-3 shadow-sm">
-                <Wine className="h-8 w-8 text-neutral-500" />
-                <h4 className="font-serif text-xl font-semibold text-neutral-100">
-                  No se encontraron etiquetas
-                </h4>
-                <p className="text-xs sm:text-sm text-neutral-400 max-w-sm">
-                  Probá ajustando los filtros o el término de búsqueda para ver más bodegas.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveFilter('Todos');
-                    setSearchQuery('');
-                  }}
-                  className="mt-2 rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white cursor-pointer"
-                >
-                  Restablecer filtros
-                </button>
-              </div>
+            {filteredElEnemigo.length > 0 && (
+              <WineryBlock
+                name="Bodega El Enemigo"
+                region="Gualtallary, Mendoza"
+                initials="EE"
+                total={filteredElEnemigo.length}
+                wines={filteredElEnemigo}
+                onAddToCellar={handleAddToCellar}
+                onToggleFavorite={(wine, isFav) =>
+                  showNotification(`${wine.name} ${isFav ? 'añadido a tus Deseados' : 'removido de Deseados'}.`)
+                }
+              />
             )}
+
+            {filteredColome.length > 0 && (
+              <WineryBlock
+                name="Bodega Colomé"
+                region="Molinos, Salta"
+                initials="C"
+                total={filteredColome.length}
+                wines={filteredColome}
+                onAddToCellar={handleAddToCellar}
+                onToggleFavorite={(wine, isFav) =>
+                  showNotification(`${wine.name} ${isFav ? 'añadido a tus Deseados' : 'removido de Deseados'}.`)
+                }
+              />
+            )}
+
+            {filteredCatena.length === 0 &&
+              filteredZuccardi.length === 0 &&
+              filteredElEnemigo.length === 0 &&
+              filteredColome.length === 0 && (
+                <div className="rounded-xl border border-neutral-800 bg-[#121214] p-12 text-center flex flex-col items-center justify-center gap-3 shadow-sm">
+                  <Wine className="h-8 w-8 text-neutral-500" />
+                  <h4 className="font-serif text-xl font-semibold text-neutral-100">
+                    No se encontraron etiquetas
+                  </h4>
+                  <p className="text-xs sm:text-sm text-neutral-400 max-w-sm">
+                    Probá ajustando los filtros o el término de búsqueda para ver más bodegas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveFilter('Todos');
+                      setSearchQuery('');
+                      setHeroFilters({
+                        query: '',
+                        varietal: 'Todos',
+                        region: 'Todas',
+                        winery: 'Todas',
+                      });
+                    }}
+                    className="mt-2 rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white cursor-pointer"
+                  >
+                    Restablecer filtros
+                  </button>
+                </div>
+              )}
           </div>
-
         </section>
-
       </main>
 
       {/* Modal Profesional de Descorche y Ficha Técnica */}
@@ -364,7 +557,6 @@ export default function DashboardPage() {
           </span>
         </div>
       </footer>
-
     </div>
   );
 }

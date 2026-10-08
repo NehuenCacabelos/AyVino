@@ -23,7 +23,9 @@ flowchart TD
     end
 
     subgraph ProtectedRoutes["Rutas Protegidas (Requieren Sesión)"]
-        Dashboard["/dashboard (o /app) -> DashboardPage.tsx (Cava & Métricas)"]
+        Dashboard["/dashboard (o /app) -> DashboardPage.tsx (Exploración & Bodegas)"]
+        Cava["/cava -> CavaPage.tsx (Mi Cava & Inventario Personal)"]
+        Pairing["/maridaje -> PairingPage.tsx (Curaduría & Maridaje)"]
         Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
         WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx (Exclusivo Bodega/Admin)"]
     end
@@ -39,11 +41,15 @@ flowchart TD
     AuthContext -->|"Redirección post-login"| TargetRoute["Ruta original (from) o /dashboard"]
 
     Landing -->|"Navegación /dashboard"| Guard
+    Landing -->|"Navegación /cava"| Guard
+    Landing -->|"Navegación /maridaje"| Guard
     Landing -->|"Navegación /catalogo"| Guard
     Landing -->|"Navegación /bodega/dashboard"| Guard
 
     Guard -->|"!isAuthenticated (con state.from)"| Login
     Guard -->|"isAuthenticated (Cualquier rol)"| Dashboard
+    Guard -->|"Navegación /cava (Autenticado)"| Cava
+    Guard -->|"Navegación /maridaje (Autenticado)"| Pairing
     Guard -->|"Navegación /catalogo (Autenticado)"| Catalog
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryDash
     Guard -->|"Rol no autorizado"| Dashboard
@@ -108,40 +114,61 @@ flowchart TD
   - Título en Serif noble (*"Términos y Condiciones"*) y mensaje explicativo de disponibilidad próxima.
   - Accesible desde los enlaces integrados en los formularios de autenticación (`/register` y `/login`).
 
-### 2.4 Homepage / Dashboard Autenticado (`DashboardPage.tsx`)
-- Vista post-login accesible en `/dashboard` (y alias `/app`):
+### 2.4 Homepage / Exploración y Bodegas (`DashboardPage.tsx`)
+- Vista principal post-login accesible en `/dashboard` (y alias `/app`):
   - **Barra de Navegación del Dashboard (`DashboardNavbar.tsx`)**:
     - Estética idéntica al Landing: completamente transparente en el tope (`scrollY <= 20`, `bg-transparent border-transparent`) y fondo translúcido mínimo con blur y borde sutil al reaparecer tras scrollear hacia arriba (`backdrop-blur-md bg-stone-950/60 border-b border-white/5`).
     - Efecto de scroll Smart Autohide: se mantiene visible durante todo el Hero inicial (`scrollY <= heroThreshold`) y solo se oculta al scrollear hacia abajo una vez superado el Hero (`-translate-y-full transition-all duration-300`), reapareciendo al scrollear hacia arriba (`translate-y-0`).
-    - Navegación Central de Descubrimiento Global: reúne únicamente *"Explorar"*, *"Maridaje"* y *"Comunidad"* (con apertura de modal editorial `CommunityModal`), con tipografía y espaciado holgado (`gap-8` a `gap-10` con `whitespace-nowrap`).
+    - Navegación Central de Descubrimiento Global: reúne únicamente *"Explorar"* (scroll anclado a `#catalogo`), *"Maridaje"* (enlace a `/maridaje`) y *"Comunidad"* (con apertura de modal editorial `CommunityModal`), con tipografía y espaciado holgado (`gap-8` a `gap-10` con `whitespace-nowrap`).
     - Identidad de marca oficial `AyVino.` (con tipografía del Landing y punto borravino) con enlace directo a `/dashboard`.
     - Eliminación total del selector/píldora de ubicación.
     - Menú Desplegable Personal en Avatar (`z-50` y click-outside listener):
       * Encabezado: Nombre de usuario, email y badge de rol actual.
-      * Bloque Colección: *"Mi Cava"* (con badge dinámico de botellas), *"Mi historial"* y *"Deseados"*.
+      * Bloque Colección: *"Mi Cava"* (enlace a `/cava` con badge dinámico de botellas), *"Mi historial"* y *"Deseados"*.
       * Separador sutil (`border-t border-white/5`).
       * Bloque Cuenta: *"Cuenta"* y *"Cerrar sesión"*.
-  - **Hero Completo y Métricas de Cierre de Pliegue (`QuickActions.tsx` y `Metrics.tsx`)**:
-    - Estructura `min-h-screen flex flex-col justify-between` que abarca el primer pliegue completo de la pantalla, posicionando el saludo, titular y buscador al centro, y finalizando la vista inicial exactamente con el grid de 4 tarjetas flotantes de KPIs al pie antes de la siguiente sección (`#cava`).
-    - Saludo dinámico según horario (*"Buenas noches, [Nombre]. ¿Qué vamos a descorchar hoy?"*).
-    - Barra de búsqueda única centrada tipo píldora simétrica (`rounded-full bg-stone-900/50 border border-white/10 max-w-2xl mx-auto`) con ícono de lupa `Search` integrado a la izquierda y sin botón adyacente.
-  - **Métricas y Estadísticas Flotantes (`Metrics.tsx`)**:
-    - Grid de 4 tarjetas individuales flotantes desacopladas (`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4`).
-    - Estilo Clean Dark con `bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60`, borde `border-white/5 hover:border-white/10 rounded-2xl p-5` y sombra sutil `shadow-lg shadow-black/20`.
-    - Encabezado con chip circular tenue para íconos (`w-10 h-10 rounded-full bg-white/5`) y título en mayúsculas (`text-xs font-medium tracking-wider text-stone-400 uppercase`).
-    - Valores principales en tipografía grande y elegante (`text-2xl font-serif text-white mt-3`) y subtítulos (`text-xs text-stone-500 mt-1`) con indicador esmeralda de ventana óptima para botellas listas para tomar.
-    - **Carrusel de Consumo Óptimo (`StockCarousel.tsx`)**: botellas listas para descorchar, navegación horizontal y tarjetas con badges.
-    - **Diálogo de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata.
-  - **Bloques Promocionales y de Maridaje (`PromoBlocks.tsx`)**: selecciones destacadas de tintos y blancos de altura.
-  - **Catálogo por Bodegas (`FilterChips.tsx` y `WineryBlock.tsx`)**:
-    - Filtros rápidos por cepa y región (Malbec, Cabernet, Blancos, Mendoza, Salta, Patagonia).
-    - Agrupación por bodega (*Catena Zapata*, *Zuccardi*) con monograma circular y botón *"Añadir a Cava"*.
+  - **Hero Unificado y Barra de Métricas "Cava Strip" (`QuickActions.tsx` y `Metrics.tsx`)**:
+    - Altura completa del primer pliegue (`min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-6 sm:pb-8 border-b border-neutral-800/80`):
+      1. Saludo sutil: `"BUENOS DÍAS, NEHUEN"` (`text-xs tracking-[0.2em] text-stone-500 uppercase font-mono font-medium`).
+      2. Título principal: *"¿Qué vamos a descorchar hoy?"* con acento gradiente en *"descorchar"* (`bg-gradient-to-r from-stone-100 via-rose-200 to-amber-200 bg-clip-text text-transparent`).
+      3. Subtítulo: *"Tu cava, tu historial de cata y las mejores bodegas argentinas..."* (`text-sm text-stone-400 max-w-xl mx-auto`).
+      4. Barra de búsqueda única centrada tipo píldora (`rounded-full bg-stone-900/50 border border-white/10 max-w-2xl mx-auto`) con ícono `Search`, `pr-12` y botón circular `ArrowRight`.
+      5. Segmented Filter Control integrado (`Varietal`, `Región`, `Bodega`) en cápsula de `w-full max-w-lg mx-auto` con popovers `z-50` que emite cambios de filtro hacia la vista.
+      6. **Barra de Métricas "Cava Strip" Horizontal (`Metrics.tsx`)**: Posicionada al fondo (`mt-auto`) como lo último visible en la pantalla inicial, cerrando el viewport (`w-full max-w-5xl mx-auto pt-6 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-6 items-center text-left`):
+        * **Total en Cava** (`Wine`): `24 Botellas` en Serif + micro-texto *"Colección activa"*.
+        * **Listas para Descorchar** (`Clock`): `3 Etiquetas` en Serif + micro-texto con punto verde esmeralda *"En ventana óptima"*.
+        * **Varietal Insignia** (`Layers`): `Malbec (58%)` en Serif + micro-texto *"8 cepas registradas"*.
+        * **Prestigio / Calificación** (`Award`): `4.9 ★` en Serif dorado + micro-texto *"Nivel Gran Reserva"*.
+  - **Catálogo Exclusivo & Terroir ("Explorá por Bodegas") (`FilterChips.tsx` y `WineryBlock.tsx`)**:
+    - Ubicado inmediatamente debajo del Hero y la Cava Strip (`pt-12 sm:pt-16 max-w-6xl mx-auto px-4`):
+      * Eyebrow editorial: `"CATÁLOGO EXCLUSIVO & TERROIR"` (`font-mono tracking-[0.2em] text-rose-300/80`).
+      * Titular en Serif: *"Explorá por Bodegas"* (`font-serif text-3xl sm:text-4xl text-stone-100`).
+      * Subtítulo: *"Etiquetas oficiales y colecciones organizadas por productor y región vitivinícola."* (`text-stone-400 text-sm`).
+    - Filtros por chips de cepa y región (Malbec, Cabernet, Blancos, Mendoza, Salta, Patagonia) combinados reactivamente con los filtros del Hero (`Varietal`, `Región`, `Bodega` y buscador de texto).
+    - Agrupación por bodega (*Catena Zapata*, *Zuccardi*, *El Enemigo*, *Colomé*) con monograma circular y catálogo de etiquetas con botón *"Añadir a Cava"*.
 
-### 2.5 Barra de Navegación Contextual (`Navbar.tsx`)
+### 2.5 Página de Mi Cava Personal (`CavaPage.tsx`)
+- Vista post-login dedicada accesible en `/cava` (vinculada desde el menú desplegable del Avatar de usuario):
+  - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
+  - **Inventario y Gestión Personal de Cava (`DashboardSection.tsx`)**:
+    - Control de demostración interactivo para conmutar entre estado *"Con stock registrado"* y *"Usuario nuevo (cava vacía)"*.
+    - **Carrusel de Consumo Óptimo (`StockCarousel.tsx`)**: botellas listas para descorchar, navegación horizontal y tarjetas con badges de ventana de consumo recomendada.
+    - **Diálogo Modal de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata personales con guardado de descorche.
+  - Pie de página editorial integrado consistente con la plataforma.
+
+### 2.6 Página de Recomendaciones & Maridaje (`PairingPage.tsx`)
+- Vista post-login dedicada accesible en `/maridaje` (vinculada desde el enlace *"Maridaje"* del Navbar central):
+  - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
+  - **Bloques Editoriales de Maridaje (`PromoBlocks.tsx`)**:
+    - Curadurías gastronómicas y sugerencias de platos para tintos estructurados, blancos de altura y espumantes.
+    - Desglose sensorial de notas de cata y combinaciones de terroir.
+  - Pie de página editorial integrado consistente con la plataforma.
+
+### 2.7 Barra de Navegación Contextual (`Navbar.tsx`)
 - Barra superior con diseño de cava oscura (`bg-[#0f0f11]/90 border-b border-neutral-800 text-neutral-200`) y tipografía `font-mono`:
   - **Estado Anónimo**: Exhibe enlaces de sección y accesos a *"Iniciar Sesión"* (`/login`) y *"Crear Cuenta"* (`/register`).
   - **Estado Autenticado**:
-    - Enlace destacado a **Mi Cava** (`/dashboard`).
+    - Enlace destacado a **Explorar** (`/dashboard`).
     - Enlace al Catálogo Protegido (`/catalogo`).
     - Enlace al Panel de Bodega (`/bodega/dashboard`) únicamente visible para roles `Winery` y `Admin`.
     - Píldora con nombre de usuario y badge de rol (`User`, `Winery`, `Admin`).
@@ -158,6 +185,8 @@ flowchart TD
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
 | `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
+| `/cava` | `CavaPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
+| `/maridaje` | `PairingPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
