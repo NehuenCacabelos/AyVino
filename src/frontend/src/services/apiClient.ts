@@ -15,11 +15,18 @@ export const apiClient = axios.create({
   },
 });
 
+/** Origen permitido para inyectar tokens de autorización. */
+const apiOrigin = new URL(API_BASE_URL).origin;
+
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Solo inyectar el Bearer token cuando el destino coincide con el host de la API
+      const targetUrl = new URL(config.url ?? '', config.baseURL);
+      if (targetUrl.origin === apiOrigin) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -29,10 +36,22 @@ apiClient.interceptors.request.use(
 );
 
 /**
- * Interceptor de respuesta para capturar errores 401 (expiración o token inválido),
- * reintentar la renovación del token y notificar al frontend mediante el evento
- * 'auth:unauthorized' en caso de fallo, desacoplando la redirección del transporte HTTP.
+ * Purga completa de tokens y señal global de desautorización.
  */
+function purgeAndSignalUnauthorized(): void {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+}
+
+/**
+ * Mutex de refresco: promesa compartida que evita disparar múltiples llamadas
+ * concurrentes a /auth/refresh cuando varios requests reciben 401 simultáneamente.
+ */
+let refreshPromise: Promise<string> | null = null;
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -45,47 +64,51 @@ apiClient.interceptors.response.use(
 
       // Intentar refresco solo si no es un endpoint de autenticación y no se ha reintentado
       if (!isAuthEndpoint && !originalRequest._retry) {
-        const refreshToken = localStorage.getItem('refreshToken');
+        originalRequest._retry = true;
 
-        if (refreshToken) {
-          originalRequest._retry = true;
-          try {
-            const refreshResponse = await axios.post<{
-              accessToken: string;
-              refreshToken?: string;
-            }>(`${API_BASE_URL}/auth/refresh`, { refreshToken });
-
-            const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data;
-
-            localStorage.setItem('accessToken', accessToken);
-            if (newRefreshToken) {
-              localStorage.setItem('refreshToken', newRefreshToken);
+        try {
+          // Reutilizar la promesa existente o crear una nueva para el refresh
+          if (!refreshPromise) {
+            const storedRefreshToken = localStorage.getItem('refreshToken');
+            if (!storedRefreshToken) {
+              purgeAndSignalUnauthorized();
+              return Promise.reject(error);
             }
 
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            }
-
-            return apiClient(originalRequest);
-          } catch {
-            // Si la renovación falla, purgar el almacenamiento y emitir evento de desautorización
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-            return Promise.reject(error);
+            refreshPromise = axios
+              .post<{ accessToken: string; refreshToken?: string }>(
+                `${API_BASE_URL}/auth/refresh`,
+                { refreshToken: storedRefreshToken },
+              )
+              .then((res) => {
+                const { accessToken, refreshToken: newRefreshToken } = res.data;
+                localStorage.setItem('accessToken', accessToken);
+                if (newRefreshToken) {
+                  localStorage.setItem('refreshToken', newRefreshToken);
+                }
+                return accessToken;
+              })
+              .finally(() => {
+                refreshPromise = null;
+              });
           }
+
+          const newAccessToken = await refreshPromise;
+
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
+
+          return apiClient(originalRequest);
+        } catch {
+          purgeAndSignalUnauthorized();
+          return Promise.reject(error);
         }
       }
 
-      // Si no hay refresh token o falló fuera de login, purgar y emitir evento de desautorización
+      // Sin refresh token o ya reintentado fuera de login: purgar y señalizar
       if (!isAuthEndpoint) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        purgeAndSignalUnauthorized();
       }
     }
 

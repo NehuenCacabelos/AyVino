@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Wine,
@@ -10,18 +10,61 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth';
+import { cn } from '../../lib/utils';
 import CommunityModal from '../community/CommunityModal';
 
 /**
  * Navbar Component
- * Barra de navegación principal alineada con la estética editorial de cava oscura (#0f0f11),
- * bordes estructurales border-neutral-800, tipografía font-mono para metadatos y acento #6b1d28.
+ * Barra de navegación principal con patrón Smart Autohide:
+ * - En el tope (scrollY < 50px): visible y transparente.
+ * - Desplazamiento hacia abajo (scrollY > umbral Hero y scrollY > lastScrollY): se oculta deslizándose hacia arriba.
+ * - Desplazamiento hacia arriba (scrollY < lastScrollY): reaparece con fondo carbón (#0a0a0c)/90 con backdrop-blur.
  */
 export default function Navbar() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
+  const lastScrollY = useRef(0);
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      const heroThreshold = window.innerHeight * 0.7; // 70% del primer pliegue
+
+      // Fondo dinámico: transparente cerca del tope, carbón al alejarse
+      setIsScrolled(currentScrollY > 50);
+
+      // Comportamiento de visibilidad (Smart Autohide)
+      if (currentScrollY <= heroThreshold) {
+        // Dentro del Hero siempre se mantiene visible
+        setIsVisible(true);
+      } else {
+        const delta = currentScrollY - lastScrollY.current;
+        // Margen de tolerancia de 5px para evitar parpadeos
+        if (delta > 5) {
+          // Scrolleando hacia abajo -> ocultar
+          setIsVisible(false);
+          setMobileMenuOpen(false); // Cerrar menú móvil si se scrollea hacia abajo
+        } else if (delta < -5) {
+          // Scrolleando hacia arriba -> mostrar
+          setIsVisible(true);
+        }
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -38,7 +81,15 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0a0c]/80 backdrop-blur-md transition-all">
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 transform',
+          isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none',
+          isScrolled
+            ? 'bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/[0.08] shadow-lg shadow-black/40'
+            : 'bg-transparent border-b border-transparent shadow-none'
+        )}
+      >
         <div className="h-18 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
           
           {/* Columna 1 (Logo): texto con mayor presencia y punto borravino */}
@@ -49,7 +100,7 @@ export default function Navbar() {
           </div>
 
           {/* Columna 2 (Nav links): centrada exactamente en escritorio, mayor escala y gap-10 */}
-          <nav className="hidden md:flex justify-center gap-10">
+          <nav className="hidden md:flex justify-center gap-10 transition-all duration-300">
             {navLinks.map((link) =>
               link.label === 'Comunidad' ? (
                 <button

@@ -87,6 +87,7 @@ export interface RevokeTokenRequestDto {
 
 /**
  * Payload decodificado del JWT emitido por JwtTokenGenerator.
+ * @deprecated Reservado para integración futura con decodificación de JWT en el cliente.
  */
 export interface UserTokenPayload {
   sub: string;

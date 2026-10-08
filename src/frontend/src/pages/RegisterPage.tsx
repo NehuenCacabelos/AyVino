@@ -1,4 +1,5 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { isAxiosError } from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wine, ArrowLeft, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../features/auth';
@@ -26,6 +27,14 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Limpiar temporizador de redirección en desmontaje
+  useEffect(() => {
+    return () => {
+      clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
 
   // Redirigir al Dashboard si ya tiene sesión activa
   useEffect(() => {
@@ -92,22 +101,21 @@ export default function RegisterPage() {
       });
 
       setIsSuccess(true);
-      setTimeout(() => {
+      redirectTimerRef.current = setTimeout(() => {
         navigate('/dashboard');
       }, 900);
     } catch (err: unknown) {
-      const error = err as {
-        response?: {
-          status?: number;
-          data?: { detail?: string; title?: string };
-        };
-      };
-      const detail = error.response?.data?.detail || error.response?.data?.title;
-      if (error.response?.status === 409) {
-        setErrorMessage(detail || 'El correo electrónico o apodo ya se encuentra registrado.');
+      let detail: string | undefined;
+      let status: number | undefined;
+      if (isAxiosError<{ detail?: string; title?: string }>(err)) {
+        detail = err.response?.data?.detail ?? err.response?.data?.title;
+        status = err.response?.status;
+      }
+      if (status === 409) {
+        setErrorMessage(detail ?? 'El correo electrónico o apodo ya se encuentra registrado.');
       } else {
         setErrorMessage(
-          detail || 'No se pudo registrar la cuenta. Verificá los datos ingresados o la conexión con el servidor.'
+          detail ?? 'No se pudo registrar la cuenta. Verificá los datos ingresados o la conexión con el servidor.'
         );
       }
     } finally {
@@ -370,22 +378,23 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Columna Derecha: Foto Vertical con Degradado de Fusión */}
-        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full">
+        {/* Columna Derecha: Foto Vertical con División Nítida Editorial */}
+        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full border-l border-white/10">
           {/* Imagen de Fondo vertical de viñedos y cordillera */}
           <img
             src={authVineyardImg}
             alt="Viñedos y cordillera en Valle de Uco, Mendoza"
+            loading="lazy"
+            decoding="async"
+            width={600}
+            height={900}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
 
           {/* Tinte suave */}
           <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-          {/* Capa de degradado hacia el borde izquierdo para fundirse con la columna del formulario */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#141416] via-transparent to-transparent pointer-events-none" />
-
-          {/* Sutil degradado inferior */}
+          {/* Sutil degradado inferior para legibilidad tipográfica */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
           {/* Texto tipográfico plano */}

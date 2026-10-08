@@ -55,15 +55,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return null;
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    try {
-      const token = localStorage.getItem(TOKEN_KEY);
-      const storedUser = localStorage.getItem(USER_KEY);
-      return Boolean(token && storedUser);
-    } catch {
-      return false;
-    }
-  });
+  // Estado derivado: la autenticación se determina directamente desde la presencia de usuario
+  const isAuthenticated = user !== null;
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -74,7 +67,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
       setUser(null);
-      setIsAuthenticated(false);
       navigate('/login', { replace: true });
     };
 
@@ -93,7 +85,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
       setUser(response.user);
-      setIsAuthenticated(true);
     } finally {
       setIsLoading(false);
     }
@@ -109,13 +100,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem(USER_KEY, JSON.stringify(loginResponse.user));
 
       setUser(loginResponse.user);
-      setIsAuthenticated(true);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const loginDemo = useCallback((customUser?: Partial<UserProfileDto>): void => {
+    if (!import.meta.env.DEV) {
+      console.warn('loginDemo solo está disponible en entorno de desarrollo.');
+      return;
+    }
+
     const demoUser: UserProfileDto = {
       id: customUser?.id ?? 1,
       username: customUser?.username ?? 'Martina Sommelier',
@@ -133,7 +128,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem(USER_KEY, JSON.stringify(demoUser));
 
     setUser(demoUser);
-    setIsAuthenticated(true);
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
@@ -151,7 +145,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(USER_KEY);
 
       setUser(null);
-      setIsAuthenticated(false);
       setIsLoading(false);
     }
   }, []);

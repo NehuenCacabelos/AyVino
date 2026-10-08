@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { isAxiosError } from 'axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Wine, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../features/auth';
@@ -23,8 +24,18 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Validación segura de la ruta de redirección desde el state de navegación
+  const locationState = location.state as Record<string, unknown> | null;
   const redirectPath =
-    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
+    locationState &&
+    typeof locationState === 'object' &&
+    'from' in locationState &&
+    locationState.from &&
+    typeof locationState.from === 'object' &&
+    'pathname' in (locationState.from as Record<string, unknown>) &&
+    typeof (locationState.from as Record<string, unknown>).pathname === 'string'
+      ? ((locationState.from as Record<string, unknown>).pathname as string)
+      : '/dashboard';
 
   // Redirigir a la ruta original o al Dashboard si ya tiene sesión activa
   useEffect(() => {
@@ -67,10 +78,12 @@ export default function LoginPage() {
       await login({ email: email.trim(), password });
       navigate(redirectPath, { replace: true });
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string; title?: string } } };
-      const detail = error.response?.data?.detail || error.response?.data?.title;
+      let detail: string | undefined;
+      if (isAxiosError<{ detail?: string; title?: string }>(err)) {
+        detail = err.response?.data?.detail ?? err.response?.data?.title;
+      }
       setErrorMessage(
-        detail ||
+        detail ??
           'No se pudo conectar con el servidor backend o las credenciales no son válidas.'
       );
     } finally {
@@ -236,22 +249,23 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Columna Derecha: Foto Vertical con Degradado de Fusión */}
-        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full">
+        {/* Columna Derecha: Foto Vertical con División Nítida Editorial */}
+        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full border-l border-white/10">
           {/* Imagen de Fondo vertical de viñedos y cordillera */}
           <img
             src={authVineyardImg}
             alt="Viñedos y cordillera en Valle de Uco, Mendoza"
+            loading="lazy"
+            decoding="async"
+            width={600}
+            height={900}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
 
           {/* Tinte suave */}
           <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-          {/* Capa de degradado hacia el borde izquierdo para fundirse con la columna del formulario */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#141416] via-transparent to-transparent pointer-events-none" />
-
-          {/* Sutil degradado inferior */}
+          {/* Sutil degradado inferior para legibilidad tipográfica */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
           {/* Texto tipográfico plano */}

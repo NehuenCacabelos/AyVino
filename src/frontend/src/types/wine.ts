@@ -57,6 +57,7 @@ export interface WineVintageApiDto {
   grapes: WineGrapeApiDto[];
 }
 
+/** @deprecated Reservado para integración futura con endpoint de maridajes. */
 export interface WinePairingApiDto {
   id: number;
   name: string;
@@ -117,6 +118,7 @@ export interface DashboardWine {
 
 /**
  * Agrupación de vinos por bodega para la vista de catálogo en el dashboard.
+ * @deprecated Reservado para integración futura con vista de catálogo dinámico.
  */
 export interface WineryGroup {
   name: string;
@@ -128,6 +130,7 @@ export interface WineryGroup {
 
 /**
  * Métricas consolidadas de la cava personal.
+ * @deprecated Reservado para integración futura con endpoint de métricas.
  */
 export interface CellarMetrics {
   bottlesInCellar: number;

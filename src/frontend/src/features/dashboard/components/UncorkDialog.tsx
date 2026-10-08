@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Star, X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react';
 import BottleVector from './BottleVector';
 import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
@@ -26,6 +26,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
   const [tastingNotes, setTastingNotes] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,6 +45,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
     return () => {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(closeTimerRef.current);
     };
   }, [wine, onClose]);
 
@@ -64,7 +66,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
       tastingNotes,
     });
 
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
       setIsSaved(false);
       onClose();
     }, 900);

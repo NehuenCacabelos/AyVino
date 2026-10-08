@@ -39,8 +39,11 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
           <img
             src={imageUrl}
             alt={name}
-            className="max-h-40 sm:max-h-48 w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
+            width={160}
+            height={192}
+            className="max-h-40 sm:max-h-48 w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <WineBottleSilhouette className="w-14 h-36 sm:w-16 sm:h-40 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />

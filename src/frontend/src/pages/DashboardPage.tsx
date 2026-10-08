@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Wine, CheckCircle2 } from 'lucide-react';
 import {
   DashboardNavbar,
@@ -121,10 +121,19 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Limpiar temporizador de notificación en desmontaje
+  useEffect(() => {
+    return () => {
+      clearTimeout(notificationTimerRef.current);
+    };
+  }, []);
 
   const showNotification = (msg: string) => {
+    clearTimeout(notificationTimerRef.current);
     setNotification(msg);
-    setTimeout(() => {
+    notificationTimerRef.current = setTimeout(() => {
       setNotification(null);
     }, 3500);
   };

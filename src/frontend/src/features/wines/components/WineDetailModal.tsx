@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Star, MapPin, ShieldCheck } from 'lucide-react';
 import type { CuratedWine } from '../../../types/wine';
-import type { AuthMode } from '../../auth/types';
+import type { AuthMode } from '../../auth';
 import WineBottleSilhouette from './WineBottleSilhouette';
 
 interface WineDetailModalProps {
@@ -70,13 +70,13 @@ export default function WineDetailModal({ wine, onClose }: WineDetailModalProps)
       aria-modal="true"
       aria-labelledby="wine-detail-title"
     >
-      <div className="relative w-full max-w-4xl h-auto max-h-[90vh] md:max-h-[85vh] overflow-y-auto md:overflow-hidden bg-[#141417] border border-white/10 rounded-2xl shadow-2xl flex flex-col md:flex-row text-neutral-200">
+      <div className="relative w-full max-w-4xl h-auto max-h-[92dvh] md:max-h-[85vh] overflow-y-auto md:overflow-hidden bg-[#141417] border border-white/10 rounded-2xl shadow-2xl flex flex-col md:flex-row text-neutral-200">
         
         {/* Botón flotante accesible de cierre */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-3 right-3 z-30 p-2 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-2 right-2 z-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           aria-label="Cerrar ficha"
         >
           <X className="w-5 h-5" />
@@ -105,6 +105,10 @@ export default function WineDetailModal({ wine, onClose }: WineDetailModalProps)
               <img
                 src={wine.imageUrl}
                 alt={wine.name}
+                loading="lazy"
+                decoding="async"
+                width={200}
+                height={340}
                 className="max-h-[260px] sm:max-h-[300px] md:max-h-[340px] w-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)] transition-transform duration-500 hover:scale-[1.02]"
               />
             ) : (
@@ -253,7 +257,7 @@ export default function WineDetailModal({ wine, onClose }: WineDetailModalProps)
                 onClose();
                 navigate('/login', { state: { from: location } });
               }}
-              className="bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-xl px-5 py-2.5 text-xs uppercase tracking-wider font-medium shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+              className="bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-xl px-5 py-2.5 min-h-[44px] text-xs uppercase tracking-wider font-medium shadow-sm transition-all active:scale-[0.98] cursor-pointer"
             >
               Guardar en mi colección
             </button>
