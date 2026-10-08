@@ -26,7 +26,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
   const [tastingNotes, setTastingNotes] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

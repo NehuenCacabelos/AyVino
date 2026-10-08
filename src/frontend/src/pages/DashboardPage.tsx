@@ -121,7 +121,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
-  const notificationTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Limpiar temporizador de notificación en desmontaje
   useEffect(() => {
@@ -208,34 +208,46 @@ export default function DashboardPage() {
       {/* 1. Navbar Superior */}
       <DashboardNavbar stockCount={stockCount} />
 
-      {/* 2. Hero Principal (Distribución a Dos Columnas con Buscador Integrado) */}
-      <QuickActions
-        onSearch={(query) => setSearchQuery(query)}
-        onRegisterBottle={() =>
-          showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
-        }
-        onSelectSpotlightWine={(wineName) => {
-          setSearchQuery(wineName);
-          showNotification(`Filtrando catálogo por "${wineName}".`);
-          const catalogEl = document.getElementById('catalogo');
-          catalogEl?.scrollIntoView({ behavior: 'smooth' });
-        }}
-        onUncorkSpotlight={(wine) => setUncorkingWine(wine)}
-      />
-
-      {/* 3. Cinta Compacta de Métricas y KPIs */}
+      {/* 2. Hero Section Completo (Primer pliegue de la página que finaliza con las Cards de KPIs) */}
       <section
-        aria-label="Cinta de Métricas de Cava"
-        className="relative -mt-6 sm:-mt-8 z-20 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
+        id="hero-section"
+        aria-labelledby="welcome-title"
+        className="relative isolate overflow-hidden bg-[#0f0f11] text-neutral-200 border-b border-neutral-800/80 min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-8 sm:pb-12"
       >
-        <Metrics
-          customStats={{
-            bottles: stockCount,
-            readyToDrink: 3,
-            dominantVarietal: 'Malbec (58%)',
-            topRated: '4.9 / 5.0 ★',
-          }}
+        {/* Luz ambiental sutil y cálida en el centro */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 h-96 w-full max-w-3xl rounded-full bg-rose-950/15 blur-[130px] pointer-events-none"
+          aria-hidden="true"
         />
+
+        {/* Contenido Central: Saludo, Titular, Subtítulo y Buscador */}
+        <div className="my-auto w-full py-6">
+          <QuickActions
+            onSearch={(query) => setSearchQuery(query)}
+            onRegisterBottle={() =>
+              showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
+            }
+            onSelectSpotlightWine={(wineName) => {
+              setSearchQuery(wineName);
+              showNotification(`Filtrando catálogo por "${wineName}".`);
+              const catalogEl = document.getElementById('catalogo');
+              catalogEl?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            onUncorkSpotlight={(wine) => setUncorkingWine(wine)}
+          />
+        </div>
+
+        {/* 3. Bloque de Métricas Flotantes: Cierra el primer pliegue de la pantalla */}
+        <div className="w-full mt-auto pt-6 pb-2 z-20">
+          <Metrics
+            customStats={{
+              bottles: stockCount,
+              readyToDrink: 3,
+              dominantVarietal: 'Malbec (58%)',
+              topRated: '4.9 / 5.0 ★',
+            }}
+          />
+        </div>
       </section>
 
       {/* 4. Contenido Principal */}
@@ -342,11 +354,8 @@ export default function DashboardPage() {
       <footer className="border-t border-neutral-800 bg-[#0c0c0e] transition-colors">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-8 text-xs text-neutral-500">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-300">
-              <Wine className="h-3 w-3" />
-            </div>
-            <span className="font-serif text-base font-semibold text-neutral-200">
-              MiCava
+            <span className="text-base font-bold tracking-tight text-zinc-100">
+              AyVino<span className="text-rose-500">.</span>
             </span>
           </div>
 

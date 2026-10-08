@@ -111,16 +111,25 @@ flowchart TD
 ### 2.4 Homepage / Dashboard Autenticado (`DashboardPage.tsx`)
 - Vista post-login accesible en `/dashboard` (y alias `/app`):
   - **Barra de Navegación del Dashboard (`DashboardNavbar.tsx`)**:
-    - Logotipo e isotipo oficial de AyVino / MiCava.
-    - Enlaces a Explorar, Mi Cava (con contador dinámico), Historial, Maridaje y Deseados.
-    - Selector interactivo de ubicación/cava (*Casa Principal*, *Departamento*, *Casa de campo*).
-    - Menú desplegable con avatar del usuario, rol activo y botón de salida (*logout*) que redirige a `/` con `{ replace: true }`.
-  - **Acciones Rápidas (`QuickActions.tsx`)**:
+    - Estética idéntica al Landing: completamente transparente en el tope (`scrollY <= 20`, `bg-transparent border-transparent`) y fondo translúcido mínimo con blur y borde sutil al reaparecer tras scrollear hacia arriba (`backdrop-blur-md bg-stone-950/60 border-b border-white/5`).
+    - Efecto de scroll Smart Autohide: se mantiene visible durante todo el Hero inicial (`scrollY <= heroThreshold`) y solo se oculta al scrollear hacia abajo una vez superado el Hero (`-translate-y-full transition-all duration-300`), reapareciendo al scrollear hacia arriba (`translate-y-0`).
+    - Navegación Central de Descubrimiento Global: reúne únicamente *"Explorar"*, *"Maridaje"* y *"Comunidad"* (con apertura de modal editorial `CommunityModal`), con tipografía y espaciado holgado (`gap-8` a `gap-10` con `whitespace-nowrap`).
+    - Identidad de marca oficial `AyVino.` (con tipografía del Landing y punto borravino) con enlace directo a `/dashboard`.
+    - Eliminación total del selector/píldora de ubicación.
+    - Menú Desplegable Personal en Avatar (`z-50` y click-outside listener):
+      * Encabezado: Nombre de usuario, email y badge de rol actual.
+      * Bloque Colección: *"Mi Cava"* (con badge dinámico de botellas), *"Mi historial"* y *"Deseados"*.
+      * Separador sutil (`border-t border-white/5`).
+      * Bloque Cuenta: *"Cuenta"* y *"Cerrar sesión"*.
+  - **Hero Completo y Métricas de Cierre de Pliegue (`QuickActions.tsx` y `Metrics.tsx`)**:
+    - Estructura `min-h-screen flex flex-col justify-between` que abarca el primer pliegue completo de la pantalla, posicionando el saludo, titular y buscador al centro, y finalizando la vista inicial exactamente con el grid de 4 tarjetas flotantes de KPIs al pie antes de la siguiente sección (`#cava`).
     - Saludo dinámico según horario (*"Buenas noches, [Nombre]. ¿Qué vamos a descorchar hoy?"*).
-    - Barra de búsqueda y botón *"Registrar botella"*.
-  - **Sección Mi Cava (`DashboardSection.tsx`)**:
-    - Conmutador de vista: *"Con Stock"* vs *"Usuario Nuevo"*.
-    - **Métricas (`Metrics.tsx`)**: botellas en cava, catados en historial, lista de deseos y ubicaciones.
+    - Barra de búsqueda única centrada tipo píldora simétrica (`rounded-full bg-stone-900/50 border border-white/10 max-w-2xl mx-auto`) con ícono de lupa `Search` integrado a la izquierda y sin botón adyacente.
+  - **Métricas y Estadísticas Flotantes (`Metrics.tsx`)**:
+    - Grid de 4 tarjetas individuales flotantes desacopladas (`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4`).
+    - Estilo Clean Dark con `bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60`, borde `border-white/5 hover:border-white/10 rounded-2xl p-5` y sombra sutil `shadow-lg shadow-black/20`.
+    - Encabezado con chip circular tenue para íconos (`w-10 h-10 rounded-full bg-white/5`) y título en mayúsculas (`text-xs font-medium tracking-wider text-stone-400 uppercase`).
+    - Valores principales en tipografía grande y elegante (`text-2xl font-serif text-white mt-3`) y subtítulos (`text-xs text-stone-500 mt-1`) con indicador esmeralda de ventana óptima para botellas listas para tomar.
     - **Carrusel de Consumo Óptimo (`StockCarousel.tsx`)**: botellas listas para descorchar, navegación horizontal y tarjetas con badges.
     - **Diálogo de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata.
   - **Bloques Promocionales y de Maridaje (`PromoBlocks.tsx`)**: selecciones destacadas de tintos y blancos de altura.

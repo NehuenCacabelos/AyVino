@@ -27,7 +27,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const redirectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Limpiar temporizador de redirección en desmontaje
   useEffect(() => {

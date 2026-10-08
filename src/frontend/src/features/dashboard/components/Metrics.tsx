@@ -1,10 +1,12 @@
-import { Wine, Clock, Layers, Award } from 'lucide-react';
+import { Wine, Clock, Layers, Award, type LucideIcon } from 'lucide-react';
 
 interface MetricItem {
+  id: string;
   label: string;
   value: string | number;
   detail: string;
-  icon: typeof Wine;
+  icon: LucideIcon;
+  hasOptimalIndicator?: boolean;
 }
 
 export interface MetricsProps {
@@ -18,33 +20,42 @@ export interface MetricsProps {
 }
 
 /**
- * Metrics Component (Cinta de Métricas y KPIs — Estilo Oscuro Mate)
- * Franja horizontal compacta con estética sobria y fondo carbón profundo (#121214):
- * - Bordes de 1px con border-neutral-800.
- * - Etiquetas en font-mono uppercase tracking-[0.2em] text-neutral-400.
- * - Números y valores en Fraunces font-semibold text-neutral-100.
+ * Metrics Component (Grid de Cards Flotantes de KPIs)
+ * Rediseño desacoplado del monolito con estética limpia y moderna:
+ * - Grid flotante a 4 columnas (2 en mobile): grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4
+ * - Tarjetas individuales con fondo translúcido, borde suave y hover reactivo:
+ *   bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60 border border-white/5 hover:border-white/10 rounded-2xl p-5 shadow-lg shadow-black/20
+ * - Chip circular para íconos: w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-stone-300
+ * - Título uppercase sutil (text-xs font-medium tracking-wider text-stone-400 uppercase)
+ * - Valor destacado en serif (text-2xl font-serif text-white mt-3)
+ * - Subtítulo / detalle (text-xs text-stone-500 mt-1) con indicador esmeralda en "Listas para tomar"
  */
 export default function Metrics({ customStats }: MetricsProps) {
   const stats: MetricItem[] = [
     {
+      id: 'total',
       label: 'Total en Cava',
       value: `${customStats?.bottles ?? 24} Botellas`,
       detail: 'Listas para descorchar',
       icon: Wine,
     },
     {
+      id: 'ready',
       label: 'Listas para tomar',
       value: `${customStats?.readyToDrink ?? 3} Botellas`,
       detail: 'En ventana óptima',
       icon: Clock,
+      hasOptimalIndicator: true,
     },
     {
+      id: 'varietal',
       label: 'Varietal dominante',
       value: customStats?.dominantVarietal ?? 'Malbec (58%)',
       detail: '8 cepas en inventario',
       icon: Layers,
     },
     {
+      id: 'rating',
       label: 'Valoración promedio',
       value: customStats?.topRated ?? '4.8 / 5.0 ★',
       detail: 'Nivel Gran Reserva',
@@ -53,33 +64,39 @@ export default function Metrics({ customStats }: MetricsProps) {
   ];
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-neutral-800 bg-[#121214] shadow-sm transition-all">
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-neutral-800">
-        {stats.map(({ label, value, detail, icon: Icon }) => (
-          <li
-            key={label}
-            className="flex items-center gap-4 px-6 py-4 sm:py-5 hover:bg-neutral-800/30 transition-colors group"
-          >
-            {/* Micro-icono lineal en círculo sutil */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 group-hover:border-neutral-700 group-hover:text-neutral-200 transition-colors">
-              <Icon className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto px-4">
+      {stats.map(({ id, label, value, detail, icon: Icon, hasOptimalIndicator }) => (
+        <article
+          key={id}
+          className="bg-stone-900/40 backdrop-blur-sm hover:bg-stone-900/60 transition-all duration-300 border border-white/5 hover:border-white/10 rounded-2xl p-5 shadow-lg shadow-black/20 flex flex-col justify-between"
+        >
+          {/* Encabezado: Ícono en chip circular tenue junto al título pequeño en mayúsculas */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-stone-300 shrink-0">
+              <Icon className="w-5 h-5" strokeWidth={1.5} aria-hidden="true" />
             </div>
+            <span className="text-xs font-medium tracking-wider text-stone-400 uppercase">
+              {label}
+            </span>
+          </div>
 
-            {/* Datos Tipográficos */}
-            <div className="flex flex-col">
-              <span className="text-[11px] font-mono tracking-[0.2em] uppercase text-neutral-400 font-medium">
-                {label}
-              </span>
-              <span className="font-serif text-lg font-semibold text-neutral-100 tracking-tight leading-tight mt-0.5">
-                {value}
-              </span>
-              <span className="text-xs text-neutral-500 font-sans mt-0.5">
-                {detail}
-              </span>
-            </div>
-          </li>
-        ))}
-      </ul>
+          {/* Cuerpo: Valor principal destacado y Subtítulo / Detalle */}
+          <div>
+            <p className="text-2xl font-serif text-white mt-3">
+              {value}
+            </p>
+            <p className="text-xs text-stone-500 mt-1 flex items-center">
+              {hasOptimalIndicator && (
+                <span
+                  className="inline-block w-2 h-2 rounded-full bg-emerald-500/80 mr-1.5 shrink-0"
+                  aria-hidden="true"
+                />
+              )}
+              <span>{detail}</span>
+            </p>
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
