@@ -4,6 +4,98 @@ Este documento detalla exhaustivamente las rutas HTTP expuestas por el backend d
 
 ---
 
+## Validación de Entrada
+
+El backend implementa validación nativa de Minimal APIs en .NET 10 (`AddValidation()`) mediante Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Url]`, `[EnumDataType]`, `[MaxLength]`, `[MinLength]`). La validación se ejecuta en la capa de transporte HTTP previa a la ejecución de los servicios, garantizando respuestas uniformes y consistentes bajo el estándar RFC 7807 (ProblemDetails).
+
+> **Aclaración sobre parámetros de consulta (Query Params):** Los parámetros de consulta (`pageNumber`, `pageSize`, filtros como `wineType`, `year`, etc.) se validan dentro de la capa de servicios (`Services/`) como parte de las reglas de negocio de cada caso de uso.
+
+### Formato de Respuesta 400 de Validación
+
+Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Request`, `Content-Type: application/problem+json` y el siguiente esquema:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Error de validación",
+  "status": 400,
+  "detail": "El año de la cosecha debe estar entre 1800 y 2100.",
+  "errors": {
+    "FirstVintage.Year": [
+      "El año de la cosecha debe estar entre 1800 y 2100."
+    ]
+  },
+  "traceId": "00-5554fdfd120d8a32c00abf0f133b7de1-14b4e6712094a7d3-00"
+}
+```
+
+### Reglas de Validación por Recurso y DTO
+
+| Recurso | DTO | Campo | Reglas y Restricciones | Mensaje de Error |
+| :--- | :--- | :--- | :--- | :--- |
+| **Auth** | `LoginRequestDto` | `Email` | `[Required]`, `[StringLength(100)]` | "El correo electrónico es obligatorio." / "El correo electrónico no puede superar los 100 caracteres." |
+| | | `Password` | `[Required]`, `[StringLength(128)]` | "La contraseña es obligatoria." / "La contraseña no puede superar los 128 caracteres." |
+| | `RefreshRequestDto` | `RefreshToken` | `[Required]`, `[StringLength(500)]` | "El token de refresco es obligatorio." / "El token de refresco no puede superar los 500 caracteres." |
+| | `RevokeTokenRequestDto` | `RefreshToken` | `[Required]`, `[StringLength(500)]` | "El token de refresco es obligatorio." / "El token de refresco no puede superar los 500 caracteres." |
+| | `ChangePasswordRequestDto` | `CurrentPassword` | `[Required]`, `[StringLength(128)]` | "La contraseña actual es obligatoria." / "La contraseña actual no puede superar los 128 caracteres." |
+| | | `NewPassword` | `[Required]`, `[StringLength(128, Min=8)]` | "La nueva contraseña es obligatoria." / "La nueva contraseña debe tener entre 8 y 128 caracteres." |
+| **Users** | `CreateUserRequestDto` | `Username` | `[Required]`, `[StringLength(100)]` | "El nombre de usuario es obligatorio." / "El nombre de usuario no puede superar los 100 caracteres." |
+| | | `Email` | `[Required]`, `[EmailAddress]`, `[StringLength(100)]` | "El correo electrónico es obligatorio." / "El formato del correo electrónico no es válido." / "El correo electrónico no puede superar los 100 caracteres." |
+| | | `Password` | `[Required]`, `[StringLength(128, Min=8)]` | "La contraseña es obligatoria." / "La contraseña debe tener entre 8 y 128 caracteres." |
+| | | `Role` | `[StringLength(100)]` | "El rol no puede superar los 100 caracteres." |
+| | | `Bio` | `[StringLength(1000)]` | "La biografía no puede superar los 1000 caracteres." |
+| | | `Photo` | `[StringLength(100)]` | "La foto no puede superar los 100 caracteres." |
+| | `RegisterUserRequestDto` | Campos idénticos a `CreateUserRequestDto` excepto `Role`. | | |
+| | `UpdateUserProfileRequestDto`| `Username` | `[Required]`, `[StringLength(100)]` | "El nombre de usuario es obligatorio." / "El nombre de usuario no puede superar los 100 caracteres." |
+| | | `Bio`, `Photo` | `[StringLength(1000)]`, `[StringLength(100)]` | "La biografía no puede superar los 1000 caracteres." / "La foto no puede superar los 100 caracteres." |
+| | `ChangeUserStatusRequestDto` | `IsActive` | Tipo `bool` primitivo (sin anotaciones requeridas). | - |
+| **Wineries** | `CreateWineryRequestDto` / `UpdateWineryRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la bodega es obligatorio." / "El nombre de la bodega no puede superar los 100 caracteres." |
+| | | `LocationId` | `[Range(1, int.MaxValue)]` | "El id de la ubicación debe ser mayor a 0." |
+| | | `Description` | `[StringLength(1000)]` | "La descripción no puede superar los 1000 caracteres." |
+| | | `FoundationYear` | `[Range(1000, 2100)]` | "El año de fundación debe estar entre 1000 y 2100." |
+| | | `Website` | `[Url]`, `[StringLength(200)]` | "El sitio web debe ser una URL válida." / "El sitio web no puede superar los 200 caracteres." |
+| | `RegisterWineryRequestDto` | Campos de usuario (`Username`, `Email`, `Password`) + campos de bodega (`WineryName`, `LocationId`, etc.). | | |
+| | `ChangeWineryStatusRequestDto` | `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
+| **Locations**| `CreateCityRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la ciudad es obligatorio." / "El nombre de la ciudad no puede superar los 100 caracteres." |
+| | | `StateId` | `[Range(1, int.MaxValue)]` | "El id de la provincia debe ser mayor a 0." |
+| | `CreateLocationRequestDto` | `CityId` | `[Range(1, int.MaxValue)]` | "El id de la ciudad debe ser mayor a 0." |
+| | `UpdateCityStatusRequestDto`| `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
+| **Grapes** | `CreateGrapeRequestDto` / `UpdateGrapeRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la uva es obligatorio." / "El nombre de la uva no puede superar los 100 caracteres." |
+| | | `ColorType` | `[EnumDataType(typeof(ColorType))]` | "El tipo de color no es válido." |
+| | | `TypicalBody` | `[EnumDataType(typeof(TypicalBody))]` (nullable) | "El cuerpo típico no es válido." |
+| | | `TypicalTannins` | `[EnumDataType(typeof(TypicalTannins))]` (nullable) | "Los taninos típicos no son válidos." |
+| | | `TypicalAcidity` | `[EnumDataType(typeof(TypicalAcidity))]` (nullable) | "La acidez típica no es válida." |
+| | | `Description` | `[StringLength(1000)]` | "La descripción no puede superar los 1000 caracteres." |
+| **Pairings** | `CreatePairingRequestDto` / `UpdatePairingRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre del maridaje es obligatorio." / "El nombre del maridaje no puede superar los 100 caracteres." |
+| | | `Category` | `[EnumDataType(typeof(PairingCategory))]` | "La categoría no es válida." |
+| **Wines** | `CreateWineRequestDto` | `Name` | `[Required]`, `[StringLength(150)]` | "El nombre del vino es obligatorio." / "El nombre del vino no puede superar los 150 caracteres." |
+| | | `WineType` | `[Required]`, `[StringLength(30)]` | "El tipo de vino es obligatorio." / "El tipo de vino no puede superar los 30 caracteres." |
+| | | `FirstVintage` | `[Required]` (valida anidado recursivo) | "La primera cosecha es obligatoria." |
+| | | `WineryId`, `LocationId` | `[Range(1, int.MaxValue)]` (nullable) | "El id de la bodega/ubicación debe ser mayor a 0." |
+| | | `WineryNameText`, `Description` | `[StringLength(150)]`, `[StringLength(1000)]` | "El nombre de la bodega... no puede superar los 150/1000 caracteres." |
+| | `UpdateWineRequestDto` | Igual a `CreateWineRequestDto` sin `FirstVintage`. | | |
+| | `CreateWineVintageRequestDto` / `UpdateWineVintageRequestDto` | `Year` | `[Range(1800, 2100)]` | "El año de la cosecha debe estar entre 1800 y 2100." |
+| | | `AlcoholContent` | `[Range(0.0, 99.99)]` | "El contenido de alcohol debe estar entre 0 y 99.99." |
+| | | `ServingTemperature`| `[Range(0, 30)]` | "La temperatura de servicio debe estar entre 0 y 30 °C." |
+| | | `AgingAdvice` | `[StringLength(500)]` | "El consejo de guarda no puede superar los 500 caracteres." |
+| | | `ImageUrl` | `[Url]`, `[StringLength(300)]` | "La imagen debe ser una URL válida." / "La URL de la imagen no puede superar los 300 caracteres." |
+| | | `Grapes` | `[MaxLength(20)]` (valida items recursivos) | "Una cosecha no puede tener más de 20 uvas." |
+| | `WineGrapeRequestDto` | `GrapeId` | `[Range(1, int.MaxValue)]` | "El id de la uva debe ser mayor a 0." |
+| | | `Percentage` | `[Range(0.01, 100.0)]` | "El porcentaje debe estar entre 0.01 y 100." |
+| | `ChangeWineVintageStatusRequestDto` | `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
+| | `ClaimWinesRequestDto` | `WineIds` | `[Required]`, `[MinLength(1)]` | "La lista de vinos es obligatoria." / "Debe indicar al menos un vino." |
+| **Cellars** | `CreateCellarRequestDto` / `UpdateCellarRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la cava es obligatorio." / "El nombre no puede superar los 100 caracteres." |
+| | `AddCellarItemRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
+| | | `Quantity` | `[Range(1, 999)]` | "La cantidad debe estar entre 1 y 999." |
+| | | `Notes` | `[StringLength(500)]` | "Las notas no pueden superar los 500 caracteres." |
+| | `UpdateCellarItemRequestDto` | `Quantity`, `Notes` | `[Range(1, 999)]`, `[StringLength(500)]` | "La cantidad debe estar entre 1 y 999." / "Las notas no pueden superar los 500 caracteres." |
+| **Reviews** | `CreateReviewRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
+| | | `Rating` | `[Range(1, 5)]` | "El rating debe estar entre 1 y 5." |
+| | | `Comment` | `[StringLength(1000)]` | "El comentario no puede superar los 1000 caracteres." |
+| | `UpdateReviewRequestDto` | `Rating`, `Comment` | `[Range(1, 5)]`, `[StringLength(1000)]` | "El rating debe estar entre 1 y 5." / "El comentario no puede superar los 1000 caracteres." |
+
+---
+
 ## 1. Autenticación (`/api/auth`)
 
 Gestiona las credenciales, emisión de tokens JWT, rotación criptográfica de Refresh Tokens y revocación de sesiones. Protegido contra ataques de fuerza bruta mediante la política de Rate Limiting `AuthLimit` (15 peticiones/minuto por IP).
