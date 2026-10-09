@@ -95,9 +95,27 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+// Validación nativa de Minimal APIs (Data Annotations en DTOs) — .NET 10
+builder.Services.AddValidation();
+
 // Exception Handling & RFC 7807 ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.TryAdd(
+            "traceId", System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
+
+        // Respuestas de validación nativa: mismo idioma y misma forma de "detail"
+        // que usa el GlobalExceptionHandler (el frontend lee detail || title).
+        if (context.ProblemDetails is HttpValidationProblemDetails validation)
+        {
+            validation.Title = "Error de validación";
+            validation.Detail = string.Join(" ", validation.Errors.SelectMany(e => e.Value));
+        }
+    };
+});
 
 // Authentication & JWT Bearer
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
