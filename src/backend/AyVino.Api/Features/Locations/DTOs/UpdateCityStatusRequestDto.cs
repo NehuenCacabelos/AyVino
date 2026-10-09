@@ -1,3 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AyVino.Api.Features.Locations.DTOs;
 
-public record UpdateCityStatusRequestDto(string Status);
+public record UpdateCityStatusRequestDto(
+    [property: Required(ErrorMessage = "El estado es obligatorio."),
+               StringLength(20, ErrorMessage = "El estado no puede superar los 20 caracteres.")] string Status);
