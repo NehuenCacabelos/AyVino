@@ -165,8 +165,8 @@ public class AuthService(
             throw new ValidationException("La nueva contraseña debe ser diferente a la contraseña actual.");
         }
 
-        if(request.NewPassword.Length < 6){
-            throw new ValidationException("La nueva contraseña debe tener al menos 6 caracteres.");
+        if(request.NewPassword.Length < 8){
+            throw new ValidationException("La nueva contraseña debe tener al menos 8 caracteres.");
         }
 
         if(request.NewPassword.Length > 128){
