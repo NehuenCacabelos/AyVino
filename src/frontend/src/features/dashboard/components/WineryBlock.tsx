@@ -40,10 +40,10 @@ export default function WineryBlock({
     <section aria-labelledby={headingId} className="flex flex-col gap-6">
       
       {/* Cabecera de Bodega */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-800 pb-5">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-5">
         <div className="flex items-center gap-4">
           <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900 font-serif text-lg font-semibold text-neutral-200 shadow-sm"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-stone-900/60 backdrop-blur-md font-serif text-lg font-semibold text-neutral-200 shadow-sm"
             aria-hidden="true"
           >
             {initials}
@@ -75,34 +75,48 @@ export default function WineryBlock({
 
           return (
             <li key={wine.name} className="flex">
-              <article className="group relative w-full flex flex-col justify-between rounded-xl border border-neutral-800 bg-[#121214] p-5 hover:border-neutral-700 transition-all duration-200">
+              <article className="group relative w-full flex flex-col justify-between rounded-2xl bg-stone-950/40 backdrop-blur-xl p-5 hover:bg-stone-900/55 hover:shadow-2xl hover:shadow-black/70 transition-all duration-300 shadow-xl shadow-black/50">
                 
-                {/* Botón de Favorito Flotante */}
+                {/* Botón de Favorito Flotante Esmerilado */}
                 <button
                   type="button"
                   aria-label={isFav ? `Quitar ${wine.name} de deseados` : `Añadir ${wine.name} a deseados`}
                   onClick={() => toggleFav(wine.name, wine)}
-                  className={`absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900/90 backdrop-blur-sm transition-all cursor-pointer ${
-                    isFav ? 'text-rose-400 border-rose-900 bg-rose-950/40' : 'text-neutral-500 hover:text-white'
+                  className={`absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/40 backdrop-blur-xl transition-all cursor-pointer ${
+                    isFav
+                      ? 'text-rose-400 bg-rose-950/60'
+                      : 'text-neutral-400 hover:text-white hover:bg-stone-900/80'
                   }`}
                 >
                   <Heart className={`h-4 w-4 ${isFav ? 'fill-rose-400' : ''}`} />
                 </button>
 
-                {/* Ilustración de Botella en Pedestal Oscuro */}
-                <div className="relative mb-3 flex h-48 items-center justify-center rounded-lg bg-[#18181c] border border-neutral-800/80 p-3 group-hover:bg-[#1f1f24] transition-colors">
-                  <BottleVector kind={wine.bottle} className="h-40" alt={wine.name} />
-                  <div className="absolute bottom-2 w-14 h-2 bg-black/60 rounded-full blur-[2px]" />
+                {/* Escaparate Central de Botella Flotante (Limpio, sin marcos ni recuadros) */}
+                <div className="relative mb-3 flex h-52 w-full items-center justify-center p-2 overflow-hidden">
+                  {wine.imageUrl ? (
+                    <img
+                      src={wine.imageUrl}
+                      alt={wine.name}
+                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <BottleVector
+                      kind={wine.bottle}
+                      className="h-44 w-auto max-h-full"
+                      alt={wine.name}
+                    />
+                  )}
                 </div>
 
                 {/* Información y Puntuación */}
                 <div className="flex flex-1 flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="inline-flex items-center rounded bg-neutral-900 px-2 py-0.5 text-[10px] font-mono text-neutral-300 border border-neutral-800">
+                      <span className="inline-flex items-center rounded-md bg-white/[0.08] backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-neutral-200">
                         {wine.varietal}
                       </span>
-                      <span className="text-xs font-mono text-neutral-500">
+                      <span className="text-xs font-mono text-neutral-400">
                         {wine.vintage}
                       </span>
                     </div>
@@ -111,7 +125,7 @@ export default function WineryBlock({
                       {wine.name}
                     </h4>
 
-                    <p className="text-xs text-neutral-500 font-sans mt-1">
+                    <p className="text-xs text-neutral-400 font-sans mt-1">
                       {wine.winery} · {wine.region}
                     </p>
                   </div>
@@ -135,12 +149,12 @@ export default function WineryBlock({
                   </div>
                 </div>
 
-                {/* Botón de Acción Añadir a Cava */}
-                <div className="mt-4 pt-3 border-t border-neutral-800/80">
+                {/* Botón de Acción Añadir a Cava Esmerilado */}
+                <div className="mt-4 pt-1">
                   <button
                     type="button"
                     onClick={() => onAddToCellar?.(wine)}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700 hover:bg-[#722F37] hover:text-white text-xs font-semibold uppercase tracking-wider text-neutral-300 transition-all cursor-pointer"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.07] hover:bg-[#722F37] hover:text-white text-xs font-semibold uppercase tracking-wider text-neutral-200 transition-all cursor-pointer backdrop-blur-md"
                   >
                     <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>Añadir a Cava</span>

@@ -132,15 +132,15 @@ export default function QuickActions({
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
       {/* 1. Saludo sutil: BUENOS DÍAS, NEHUEN */}
-      <p className="text-xs tracking-[0.2em] text-stone-500 uppercase font-mono font-medium">
+      <p className="text-[11px] sm:text-xs tracking-[0.2em] text-stone-500 uppercase font-mono font-medium mb-0.5 sm:mb-1">
         {getGreeting().toUpperCase()}, {displayName.toUpperCase()}
       </p>
 
       {/* 2. Titular Principal con acento de gradiente en "descorchar" */}
-      <div className="flex flex-col items-center gap-3 mt-4">
+      <div className="flex flex-col items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5">
         <h1
           id="welcome-title"
-          className="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold text-neutral-100 tracking-tight leading-[1.12]"
+          className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-neutral-100 tracking-tight leading-[1.14]"
         >
           ¿Qué vamos a{' '}
           <span className="bg-gradient-to-r from-stone-100 via-rose-200 to-amber-200 bg-clip-text text-transparent">
@@ -148,11 +148,11 @@ export default function QuickActions({
           </span>{' '}
           hoy?
         </h1>
-        <div className="h-[1px] w-14 bg-neutral-700/80 mt-1" aria-hidden="true" />
+        <div className="h-[1px] w-12 bg-neutral-700/80 mt-0.5" aria-hidden="true" />
       </div>
 
       {/* 3. Subtítulo con contraste suave y ancho centrado equilibrado */}
-      <p className="mt-3 text-sm text-stone-400 max-w-xl mx-auto font-sans leading-relaxed">
+      <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-stone-400 max-w-lg mx-auto font-sans leading-relaxed">
         Tu cava, tu historial de cata y las mejores bodegas argentinas, reunidas en un solo lugar.
       </p>
 
@@ -160,7 +160,7 @@ export default function QuickActions({
       <form
         onSubmit={handleSearchSubmit}
         role="search"
-        className="relative mt-8 flex w-full max-w-xl sm:max-w-2xl mx-auto items-center rounded-full border border-white/10 bg-stone-900/50 backdrop-blur-md px-5 py-1.5 focus-within:border-white/20 transition-all shadow-xl shadow-black/25 group"
+        className="relative mt-3.5 sm:mt-4 flex w-full max-w-xl sm:max-w-2xl mx-auto items-center rounded-full border border-white/10 bg-stone-900/50 backdrop-blur-md px-4 sm:px-5 py-1 focus-within:border-white/20 transition-all shadow-xl shadow-black/25 group"
       >
         <label htmlFor="wine-search" className="sr-only">
           Buscar vino, bodega, cepa o maridaje...
@@ -168,7 +168,7 @@ export default function QuickActions({
 
         {/* Ícono de Lupa a la izquierda */}
         <Search
-          className="h-5 w-5 text-stone-400 shrink-0 mr-3.5 group-focus-within:text-stone-200 transition-colors"
+          className="h-4 sm:h-5 w-4 sm:w-5 text-stone-400 shrink-0 mr-3 group-focus-within:text-stone-200 transition-colors"
           aria-hidden="true"
         />
 
@@ -188,23 +188,23 @@ export default function QuickActions({
             });
           }}
           placeholder="Buscar vino, bodega, cepa o maridaje..."
-          className="h-11 sm:h-12 w-full bg-transparent text-sm sm:text-base text-neutral-200 placeholder:text-neutral-500 focus:outline-none font-sans pr-12"
+          className="h-10 sm:h-11 w-full bg-transparent text-xs sm:text-sm md:text-base text-neutral-200 placeholder:text-neutral-500 focus:outline-none font-sans pr-10"
         />
 
         {/* Botón circular de acción ArrowRight en el extremo derecho */}
         <button
           type="submit"
           aria-label="Buscar"
-          className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/5 hover:bg-rose-500/20 text-stone-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 sm:h-8 w-7 sm:w-8 rounded-full bg-white/5 hover:bg-rose-500/20 text-stone-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
         >
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
         </button>
       </form>
 
       {/* Segmented Filter Control Integrado (Cápsula Unificada) */}
       <div
         ref={filterContainerRef}
-        className="w-full max-w-lg mx-auto flex items-center justify-between p-1.5 rounded-full bg-stone-900/80 backdrop-blur-md border border-white/10 shadow-lg mt-5 relative z-40"
+        className="w-full max-w-md sm:max-w-lg mx-auto flex items-center justify-between p-1 rounded-full bg-stone-900/80 backdrop-blur-md border border-white/10 shadow-lg mt-2.5 sm:mt-3 relative z-40"
       >
         {/* 1. Varietal Trigger & Popover */}
         <div className="relative flex-1">
@@ -214,13 +214,13 @@ export default function QuickActions({
             aria-expanded={activeDropdown === 'varietal'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-3 sm:px-6 text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
               selectedVarietal !== 'Todos'
                 ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
                 : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
             )}
           >
-            <Wine className="w-4 h-4 text-stone-400 shrink-0" aria-hidden="true" />
+            <Wine className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
             <span className="truncate">{selectedVarietal !== 'Todos' ? selectedVarietal : 'Varietal'}</span>
             <ChevronDown
               className={cn(
@@ -259,7 +259,7 @@ export default function QuickActions({
         </div>
 
         {/* Separador vertical 1 */}
-        <div className="h-5 w-px bg-white/10 shrink-0" aria-hidden="true" />
+        <div className="h-4 w-px bg-white/10 shrink-0" aria-hidden="true" />
 
         {/* 2. Región Trigger & Popover */}
         <div className="relative flex-1">
@@ -269,13 +269,13 @@ export default function QuickActions({
             aria-expanded={activeDropdown === 'region'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-3 sm:px-6 text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
               selectedRegion !== 'Todas'
                 ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
                 : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
             )}
           >
-            <MapPin className="w-4 h-4 text-stone-400 shrink-0" aria-hidden="true" />
+            <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
             <span className="truncate">{selectedRegion !== 'Todas' ? selectedRegion : 'Región'}</span>
             <ChevronDown
               className={cn(
@@ -314,7 +314,7 @@ export default function QuickActions({
         </div>
 
         {/* Separador vertical 2 */}
-        <div className="h-5 w-px bg-white/10 shrink-0" aria-hidden="true" />
+        <div className="h-4 w-px bg-white/10 shrink-0" aria-hidden="true" />
 
         {/* 3. Bodega Trigger & Popover */}
         <div className="relative flex-1">
@@ -324,13 +324,13 @@ export default function QuickActions({
             aria-expanded={activeDropdown === 'winery'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-3 sm:px-6 text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
               selectedWinery !== 'Todas'
                 ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
                 : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
             )}
           >
-            <Building2 className="w-4 h-4 text-stone-400 shrink-0" aria-hidden="true" />
+            <Building2 className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
             <span className="truncate">{selectedWinery !== 'Todas' ? selectedWinery : 'Bodega'}</span>
             <ChevronDown
               className={cn(

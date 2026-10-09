@@ -128,14 +128,14 @@ flowchart TD
       * Separador sutil (`border-t border-white/5`).
       * Bloque Cuenta: *"Cuenta"* y *"Cerrar sesión"*.
   - **Hero Unificado y Barra de Métricas "Cava Strip" (`QuickActions.tsx` y `Metrics.tsx`)**:
-    - Altura completa del primer pliegue (`min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-6 sm:pb-8 border-b border-neutral-800/80`):
-      1. Saludo sutil: `"BUENOS DÍAS, NEHUEN"` (`text-xs tracking-[0.2em] text-stone-500 uppercase font-mono font-medium`).
-      2. Título principal: *"¿Qué vamos a descorchar hoy?"* con acento gradiente en *"descorchar"* (`bg-gradient-to-r from-stone-100 via-rose-200 to-amber-200 bg-clip-text text-transparent`).
-      3. Subtítulo: *"Tu cava, tu historial de cata y las mejores bodegas argentinas..."* (`text-sm text-stone-400 max-w-xl mx-auto`).
-      4. Barra de búsqueda única centrada tipo píldora (`rounded-full bg-stone-900/50 border border-white/10 max-w-2xl mx-auto`) con ícono `Search`, `pr-12` y botón circular `ArrowRight`.
-      5. Segmented Filter Control integrado (`Varietal`, `Región`, `Bodega`) en cápsula de `w-full max-w-lg mx-auto` con popovers `z-50` que emite cambios de filtro hacia la vista.
-      6. **Barra de Métricas "Cava Strip" Horizontal (`Metrics.tsx`)**: Posicionada al fondo (`mt-auto`) como lo último visible en la pantalla inicial, cerrando el viewport (`w-full max-w-5xl mx-auto pt-6 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-6 items-center text-left`):
-        * **Total en Cava** (`Wine`): `24 Botellas` en Serif + micro-texto *"Colección activa"*.
+    - Ajustado exactamente al primer pliegue del viewport (`h-[100dvh] min-h-[560px] flex flex-col justify-between pt-16 sm:pt-18 pb-2 sm:pb-3`):
+      1. Saludo sutil: `"BUENOS DÍAS, [USUARIO]"` (`text-[11px] sm:text-xs tracking-[0.2em] text-stone-500 uppercase font-mono font-medium mb-0.5 sm:mb-1`).
+      2. Título principal: *"¿Qué vamos a descorchar hoy?"* con acento gradiente en *"descorchar"* y escala armónica (`font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.14]`).
+      3. Subtítulo: *"Tu cava, tu historial de cata y las mejores bodegas argentinas..."* (`text-xs sm:text-sm text-stone-400 max-w-lg mx-auto font-sans leading-relaxed`).
+      4. Barra de búsqueda única centrada tipo píldora (`rounded-full bg-stone-900/50 border border-white/10 max-w-xl sm:max-w-2xl mx-auto px-4 sm:px-5 py-1 mt-3.5 sm:mt-4`) con ícono `Search`, input de `h-10 sm:h-11` y botón circular `ArrowRight`.
+      5. Segmented Filter Control integrado (`Varietal`, `Región`, `Bodega`) en cápsula de `w-full max-w-md sm:max-w-lg mx-auto p-1 mt-2.5 sm:mt-3` con botones optimizados (`py-1.5 sm:py-2 text-xs sm:text-sm`) y popovers `z-50`.
+      6. **Barra de Métricas "Cava Strip" Horizontal (`Metrics.tsx`)**: Integrada limpiamente al pie (`mt-auto w-full pb-1 sm:pb-2`) en la misma vista inicial que el buscador sin recortes (`w-full max-w-5xl mx-auto pt-3 sm:pt-3.5 border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 items-center text-left`):
+        * **Total en Cava** (`Wine`): `24 Botellas` en Serif (`text-lg sm:text-xl`) + micro-texto *"Colección activa"*.
         * **Listas para Descorchar** (`Clock`): `3 Etiquetas` en Serif + micro-texto con punto verde esmeralda *"En ventana óptima"*.
         * **Varietal Insignia** (`Layers`): `Malbec (58%)` en Serif + micro-texto *"8 cepas registradas"*.
         * **Prestigio / Calificación** (`Award`): `4.9 ★` en Serif dorado + micro-texto *"Nivel Gran Reserva"*.
