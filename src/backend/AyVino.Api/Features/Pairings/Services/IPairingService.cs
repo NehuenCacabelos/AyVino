@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Pairings.DTOs;
 
 namespace AyVino.Api.Features.Pairings.Services;
@@ -11,6 +12,6 @@ public interface IPairingService
     Task DeleteAsync(int id, CancellationToken ct = default);
 
     Task<IEnumerable<PairingResponseDto>> GetByWineIdAsync(int wineId, CancellationToken ct = default);
-    Task AddToWineAsync(int wineId, int pairingId, CancellationToken ct = default);
-    Task RemoveFromWineAsync(int wineId, int pairingId, CancellationToken ct = default);
+    Task AddToWineAsync(int wineId, int pairingId, Actor actor, CancellationToken ct = default);
+    Task RemoveFromWineAsync(int wineId, int pairingId, Actor actor, CancellationToken ct = default);
 }

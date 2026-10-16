@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Pairings.DTOs;
 using AyVino.Api.Features.Pairings.Services;
@@ -50,18 +51,18 @@ public static class PairingEndpoints
             Results.Ok(await service.GetByWineIdAsync(wineId, ct))
         ).WithName("GetWinePairings").WithSummary("Lists the pairings associated with a wine.");
 
-        wineGroup.MapPost("/{pairingId:int}", async (int wineId, int pairingId, IPairingService service, CancellationToken ct) =>
+        wineGroup.MapPost("/{pairingId:int}", async (int wineId, int pairingId, ClaimsPrincipal user, IPairingService service, CancellationToken ct) =>
         {
-            await service.AddToWineAsync(wineId, pairingId, ct);
+            await service.AddToWineAsync(wineId, pairingId, user.GetActor(), ct);
             return Results.NoContent();
         })
         .RequireAuthorization()
         .WithName("AddWinePairing")
         .WithSummary("Associates a pairing with a wine.");
 
-        wineGroup.MapDelete("/{pairingId:int}", async (int wineId, int pairingId, IPairingService service, CancellationToken ct) =>
+        wineGroup.MapDelete("/{pairingId:int}", async (int wineId, int pairingId, ClaimsPrincipal user, IPairingService service, CancellationToken ct) =>
         {
-            await service.RemoveFromWineAsync(wineId, pairingId, ct);
+            await service.RemoveFromWineAsync(wineId, pairingId, user.GetActor(), ct);
             return Results.NoContent();
         })
         .RequireAuthorization()
