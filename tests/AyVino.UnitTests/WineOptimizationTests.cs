@@ -41,7 +41,7 @@ public class WineOptimizationTests
             ]
         };
 
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act
         var result = (await service.GetAllByWineIdAsync(1)).ToList();
@@ -68,7 +68,7 @@ public class WineOptimizationTests
         // Arrange
         var fakeWineRepo = new FakeWineRepo { ExistingWineId = 1 };
         var fakeVintageRepo = new FakeVintageRepo();
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
@@ -86,7 +86,7 @@ public class WineOptimizationTests
         {
             Vintages = [new WineVintage { Id = 101, WineId = 1, Year = 2020, ApprovalStatus = ApprovalStatus.Pending }]
         };
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act
         var result = await service.ChangeStatusAsync(1, 101, new ChangeWineVintageStatusRequestDto("Approved"));
