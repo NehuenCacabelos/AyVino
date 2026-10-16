@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Services;
@@ -38,8 +39,8 @@ public static class WineryEndpoints
             .WithName("RegisterWinery")
             .WithSummary("Creates a User (Role=Winery) and its associated Winery in a single flow, returns a JWT.");
 
-        group.MapPut("/{id:int}", async (int id, UpdateWineryRequestDto request, IWineryService service, CancellationToken ct) =>
-            Results.Ok(await service.UpdateAsync(id, request, ct)))
+        group.MapPut("/{id:int}", async (int id, UpdateWineryRequestDto request, ClaimsPrincipal user, IWineryService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateAsync(id, request, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("UpdateWinery")
             .WithSummary("Updates an existing winery's data.");

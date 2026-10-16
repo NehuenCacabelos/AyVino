@@ -1,4 +1,6 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Locations.Models;
 using AyVino.Api.Features.Locations.Repositories;
 using AyVino.Api.Features.Wineries.DTOs;
@@ -89,7 +91,7 @@ public class WineryServiceTests
         var dto = new UpdateWineryRequestDto("Updated Name", 1, "Updated Desc", 1950, "https://updated.com");
 
         // Act
-        var result = await service.UpdateAsync(1, dto);
+        var result = await service.UpdateAsync(1, dto, new Actor(1, AppRoles.Admin));
 
         // Assert
         Assert.NotNull(result);
@@ -110,7 +112,7 @@ public class WineryServiceTests
         var dto = new UpdateWineryRequestDto("Any Name", 1, null, null, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(999, dto));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(999, dto, new Actor(1, AppRoles.Admin)));
     }
 
     [Fact]

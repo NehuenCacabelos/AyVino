@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Locations.Repositories;
 using AyVino.Api.Features.Users.DTOs;
@@ -7,6 +8,7 @@ using AyVino.Api.Features.Users.Services;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Rules;
 
 namespace AyVino.Api.Features.Wineries.Services;
 
@@ -48,12 +50,17 @@ public class WineryService(
         return created.ToResponseDto();
     }
 
-    public async Task<WineryResponseDto> UpdateAsync(int id, UpdateWineryRequestDto dto, CancellationToken ct = default)
+    public async Task<WineryResponseDto> UpdateAsync(int id, UpdateWineryRequestDto dto, Actor actor, CancellationToken ct = default)
     {
         await ValidateRequestAsync(dto.Name, dto.LocationId, ct);
 
-        var exists = await wineryRepository.ExistsByIdAsync(id, ct);
-        if (!exists) throw new NotFoundException($"Winery with ID {id} not found.");
+        var existing = await wineryRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Winery with ID {id} not found.");
+
+        if (!WineryAccessRules.CanManage(existing, actor))
+            throw new ForbiddenException(existing.UserId is null
+                ? "Solo un administrador puede editar una bodega sin dueño."
+                : "No tenés permiso para editar esta bodega.");
 
         var winery = dto.ToEntity(id);
         var updated = await wineryRepository.UpdateAsync(winery, ct);
