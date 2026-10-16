@@ -1,4 +1,6 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Models;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.DTOs;
@@ -122,7 +124,7 @@ public class WineOptimizationTests
         var service = new WineService(fakeWineRepo, fakeWineryRepo, new FakeLocationRepo(), new FakeGrapeRepo());
 
         // Act
-        var result = (await service.ClaimWinesAsync(10, [1, 2])).ToList();
+        var result = (await service.ClaimWinesAsync(10, [1, 2], new Actor(1, AppRoles.Admin))).ToList();
 
         // Assert
         Assert.Equal(2, result.Count);

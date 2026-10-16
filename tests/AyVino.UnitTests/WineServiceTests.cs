@@ -1,4 +1,6 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Models;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.Models;
@@ -46,7 +48,7 @@ public class WineServiceTests
         );
 
         // Act
-        var result = await service.CreateAsync(wineDto, 1);
+        var result = await service.CreateAsync(wineDto, new Actor(1, AppRoles.Admin));
 
         // Assert
         Assert.NotNull(result);
@@ -92,7 +94,7 @@ public class WineServiceTests
         const int expectedUserId = 42;
 
         // Act
-        await service.CreateAsync(wineDto, expectedUserId);
+        await service.CreateAsync(wineDto, new Actor(expectedUserId, AppRoles.Admin));
 
         // Assert
         Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
@@ -118,7 +120,7 @@ public class WineServiceTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, new Actor(1, AppRoles.Admin)));
         Assert.Contains("Winery with ID 999 does not exist", ex.Message);
     }
 
@@ -142,7 +144,7 @@ public class WineServiceTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, new Actor(1, AppRoles.Admin)));
         Assert.Contains("Location with ID 999 does not exist", ex.Message);
     }
 
@@ -164,7 +166,7 @@ public class WineServiceTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, 1));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(wineDto, new Actor(1, AppRoles.Admin)));
         Assert.Contains("Invalid wine type", ex.Message);
     }
 
@@ -194,7 +196,7 @@ public class WineServiceTests
         );
 
         // Act
-        var result = await service.UpdateAsync(1, updateDto);
+        var result = await service.UpdateAsync(1, updateDto, new Actor(1, AppRoles.Admin));
 
         // Assert
         Assert.NotNull(result);
@@ -214,7 +216,7 @@ public class WineServiceTests
         var updateDto = new UpdateWineRequestDto(Name: "Any", WineType: "Red");
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(999, updateDto));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(999, updateDto, new Actor(1, AppRoles.Admin)));
     }
 
     [Fact]

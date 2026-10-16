@@ -16,7 +16,7 @@ public static class WineMappingExtensions
         SourceType = sourceType
     };
 
-    public static Wine ToEntity(this UpdateWineRequestDto dto, int id, WineType wineType) => new()
+    public static Wine ToEntity(this UpdateWineRequestDto dto, int id, WineType wineType, SourceType sourceType) => new()
     {
         Id = id,
         WineryId = dto.WineryId,
@@ -24,7 +24,8 @@ public static class WineMappingExtensions
         Name = dto.Name,
         Description = dto.Description,
         WineType = wineType,
-        LocationId = dto.LocationId
+        LocationId = dto.LocationId,
+        SourceType = sourceType
     };
 
     public static WineResponseDto ToResponseDto(this Wine wine) => new(

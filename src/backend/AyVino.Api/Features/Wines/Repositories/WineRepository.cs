@@ -139,7 +139,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 name = @Name,
                 description = @Description,
                 wine_type = @WineType,
-                location_id = @LocationId
+                location_id = @LocationId,
+                source_type = @SourceType
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -152,7 +153,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 wine.Name,
                 wine.Description,
                 WineType = (int)wine.WineType,
-                wine.LocationId
+                wine.LocationId,
+                SourceType = (int)wine.SourceType
             }, cancellationToken: ct));
         return rows > 0;
     }
