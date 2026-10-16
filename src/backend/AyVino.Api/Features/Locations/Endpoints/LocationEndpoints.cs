@@ -17,6 +17,7 @@ public static class LocationEndpoints
             var created = await locationService.CreateAsync(request, ct);
             return Results.Created($"/api/locations/{created.Id}", created);
         })
+        .RequireAuthorization()
         .WithName("CreateLocation")
         .WithSummary("Creates a new location from an existing CityId");
 

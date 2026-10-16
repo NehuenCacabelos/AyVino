@@ -18,6 +18,7 @@ public static class CityEndpoints
             var city = await cityService.GetOrCreateAsync(request, ct);
             return Results.Created($"/api/cities/{city.Id}", city);
         })
+        .RequireAuthorization()
         .WithName("GetOrCreateCity")
         .WithSummary("Returns an existing city or creates it as Pending if it doesn't exist");
 
