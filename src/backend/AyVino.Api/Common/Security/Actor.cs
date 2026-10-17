@@ -7,3 +7,4 @@ public sealed record Actor(int UserId, string Role)
 {
     public bool IsAdmin => string.Equals(Role, AppRoles.Admin, StringComparison.Ordinal);
 }
+

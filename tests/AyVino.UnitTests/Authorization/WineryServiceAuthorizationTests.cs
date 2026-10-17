@@ -160,3 +160,4 @@ public class WineryServiceAuthorizationTests
         await wineryRepo.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
     }
 }
+

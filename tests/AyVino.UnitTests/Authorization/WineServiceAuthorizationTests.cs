@@ -557,3 +557,4 @@ public class WineServiceAuthorizationTests
 
     #endregion
 }
+

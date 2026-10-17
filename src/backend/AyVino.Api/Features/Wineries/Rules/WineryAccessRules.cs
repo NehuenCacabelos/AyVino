@@ -18,3 +18,4 @@ public static class WineryAccessRules
     public static bool CanPublish(Winery? winery, Actor actor)
         => actor.IsAdmin || (IsOwner(winery, actor) && winery!.Status == WineryStatus.Approved);
 }
+

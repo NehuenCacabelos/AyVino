@@ -293,3 +293,4 @@ public class WineVintageServiceAuthorizationTests
         Assert.Contains("Vintage with ID 101 not found for wine 1", ex.Message);
     }
 }
+

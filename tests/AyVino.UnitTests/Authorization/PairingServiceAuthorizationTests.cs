@@ -246,3 +246,4 @@ public class PairingServiceAuthorizationTests
         Assert.Equal("Wine with ID 999 not found.", ex.Message);
     }
 }
+
