@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using AyVino.Api.Common.Data;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Common.Middleware;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Hashing;
@@ -50,15 +51,11 @@ using Scalar.AspNetCore;
 
 // 1. Configuraciones iniciales de serialización / mapeo
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+DapperConfiguration.Configure();
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-});
+builder.Services.ConfigureJsonOptions();
 
 // CORS configuration
 const string frontendCorsPolicy = "FrontendPolicy";

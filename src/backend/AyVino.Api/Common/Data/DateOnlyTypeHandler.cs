@@ -11,8 +11,9 @@ public class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateOnly>
         parameter.Value = value.ToDateTime(TimeOnly.MinValue);
     }
 
-    public override DateOnly Parse(object value) => value switch
+    public override DateOnly Parse(object? value) => value switch
     {
+        null or DBNull => default,
         DateOnly d => d,
         DateTime dt => DateOnly.FromDateTime(dt),
         _ => DateOnly.Parse(value.ToString()!)

@@ -8,6 +8,17 @@ Este documento detalla exhaustivamente las rutas HTTP expuestas por el backend d
 
 El backend implementa validación nativa de Minimal APIs en .NET 10 (`AddValidation()`) mediante Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Url]`, `[EnumDataType]`, `[MaxLength]`, `[MinLength]`). La validación se ejecuta en la capa de transporte HTTP previa a la ejecución de los servicios, garantizando respuestas uniformes y consistentes bajo el estándar RFC 7807 (ProblemDetails).
 
+### Contrato de Serialización JSON y Fechas (Enums y DateOnly)
+
+- **Enums en JSON**:
+  - Los enums se envían y reciben como texto (`string`) en las respuestas y solicitudes JSON con sus identificadores válidos (por ejemplo `"Red"`, `"White"`, `"Rose"`, `"Orange"` para `ColorType`, o valores textuales para `TypicalBody`, `TypicalTannins`, `TypicalAcidity` y `PairingCategory`).
+  - Para retrocompatibilidad y flexibilidad en clientes, los valores numéricos subyacentes (por ejemplo `1` para `Red`, `2` para `White`, etc.) siguen siendo aceptados de forma válida en los payloads entrantes.
+  - Los valores de texto inexistentes o mal tipados son rechazados durante la deserialización JSON devolviendo `400 Bad Request`.
+  - Los valores numéricos fuera de los definidos en el enum son rechazados por la validación de modelo mediante `[EnumDataType]`, devolviendo `400 Bad Request` con su mensaje específico en español.
+
+- **DateOnly en JSON**:
+  - Las propiedades de tipo `DateOnly` (como `PurchaseDate` en los ítems de cava) se serializan y reciben bajo el formato ISO-8601 estándar: `"yyyy-MM-dd"` (ejemplo: `"2026-05-15"`).
+
 > **Aclaración sobre parámetros de consulta (Query Params):** Los parámetros de consulta (`pageNumber`, `pageSize`, filtros como `wineType`, `year`, etc.) se validan dentro de la capa de servicios (`Services/`) como parte de las reglas de negocio de cada caso de uso.
 
 ### Formato de Respuesta 400 de Validación
@@ -87,6 +98,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | **Cellars** | `CreateCellarRequestDto` / `UpdateCellarRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la cava es obligatorio." / "El nombre no puede superar los 100 caracteres." |
 | | `AddCellarItemRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
 | | | `Quantity` | `[Range(1, 999)]` | "La cantidad debe estar entre 1 y 999." |
+| | | `PurchaseDate` | Formato fecha ISO `"yyyy-MM-dd"` (opcional) | Formato inválido genera 400 Bad Request en parsing JSON. |
 | | | `Notes` | `[StringLength(500)]` | "Las notas no pueden superar los 500 caracteres." |
 | | `UpdateCellarItemRequestDto` | `Quantity`, `Notes` | `[Range(1, 999)]`, `[StringLength(500)]` | "La cantidad debe estar entre 1 y 999." / "Las notas no pueden superar los 500 caracteres." |
 | **Reviews** | `CreateReviewRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
