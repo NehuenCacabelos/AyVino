@@ -116,20 +116,26 @@ POSTGRES_PORT=5432
 
 ### 2. Configuración del Backend con User Secrets (.NET)
 
-Para configurar la cadena de conexión en tu entorno de desarrollo sin modificar archivos rastreados por Git, ejecuta desde la raíz:
+Para configurar la cadena de conexión y la clave secreta de JWT en tu entorno de desarrollo sin modificar archivos rastreados por Git, ejecuta desde la raíz:
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres" --project src/backend/AyVino.Api
+dotnet user-secrets set "Jwt:SecretKey" "clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino" --project src/backend/AyVino.Api
 ```
 
-O bien mediante variable de entorno:
+O bien mediante variables de entorno:
 ```bash
 # Windows (PowerShell)
 $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres"
+$env:Jwt__SecretKey = "clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino"
 
 # Linux / macOS (Bash)
 export ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres"
+export Jwt__SecretKey="clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino"
 ```
+
+> [!WARNING]
+> **Requisito obligatorio para el arranque**: La clave `Jwt:SecretKey` (o `Jwt__SecretKey`) debe contener un mínimo de 32 caracteres (256 bits). Sin este valor configurado, la API rechazará el arranque y lanzará una excepción al inicializarse.
 
 ---
 
@@ -189,7 +195,6 @@ El proyecto incluye una suite integral de endpoints y pruebas automatizadas en e
    - `Login - Sommelier / Usuario Común` -> Almacena `userToken` y `myUserId`.
    - `Login - Dueño Bodega (Winery)` -> Almacena `ownerToken` y `wineryToken`.
    - `Login - Administrador` -> Almacena `adminToken`.
-   - `Login - Moderador` -> Almacena `moderatorToken`.
 5. Los scripts de prueba automáticos (**Tests**) configurados en cada petición capturan dinámicamente los identificadores generados (`wineryId`, `wineId`, `vintageId`, `cellarId`, `pairingId`, etc.) y los reinyectan en las llamadas subsiguientes, garantizando un flujo de prueba completamente encadenado y sin intervención manual.
 
 ---

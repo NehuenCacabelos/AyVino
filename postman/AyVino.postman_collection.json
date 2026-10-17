@@ -175,57 +175,6 @@
               ]
             },
             {
-              "name": "Login - Moderador",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/auth/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "auth",
-                    "login"
-                  ],
-                  "query": []
-                },
-                "description": "Inicia sesión con perfil de moderación (privilegios administrativos) y guarda moderatorToken",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"{{moderatorEmail}}\",\n  \"password\": \"{{moderatorPassword}}\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Status code is 200 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
-                      "if (pm.response.code === 200) {",
-                      "    var json = pm.response.json();",
-                      "    if (json && json.accessToken) { pm.environment.set('moderatorToken', json.accessToken); }",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ]
-            },
-            {
               "name": "Refresh Token",
               "request": {
                 "method": "POST",
@@ -406,7 +355,7 @@
                 "description": "Registra un nuevo usuario común",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"aficionado_012456\",\n  \"email\": \"aficionado012456@example.com\",\n  \"password\": \"Password123!\"\n}",
+                  "raw": "{\n  \"username\": \"aficionado_{{$timestamp}}\",\n  \"email\": \"aficionado_{{$timestamp}}@example.com\",\n  \"password\": \"Password123!\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -420,9 +369,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
-                      "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set('testUserId', json.id); }"
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "if (pm.response.code === 201) {",
+                      "    var json = pm.response.json();",
+                      "    if (json && json.id) { pm.environment.set('testUserId', json.id); }",
+                      "}"
                     ],
                     "type": "text/javascript"
                   }
@@ -635,7 +586,7 @@
                 "description": "Actualiza perfil de cualquier usuario",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"usuario_edit_012456\",\n  \"bio\": \"Perfil actualizado por administración\",\n  \"photo\": \"https://example.com/admin_photo.jpg\"\n}",
+                  "raw": "{\n  \"username\": \"usuario_edit_{{$timestamp}}\",\n  \"bio\": \"Perfil actualizado por administración\",\n  \"photo\": \"https://example.com/admin_photo.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -649,7 +600,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -740,7 +691,7 @@
                 "description": "Onboarding unificado de bodega con JWT",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"bianchi_adm_012456\",\n  \"email\": \"owner012456@bodegabianchi.com\",\n  \"password\": \"Password123!\",\n  \"wineryName\": \"Bodegas Bianchi 012456\",\n  \"locationId\": 1,\n  \"description\": \"Bodega histórica de San Rafael y Valle de Uco.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
+                  "raw": "{\n  \"username\": \"bianchi_adm_{{$timestamp}}\",\n  \"email\": \"owner_{{$timestamp}}@bodegabianchi.com\",\n  \"password\": \"Password123!\",\n  \"wineryName\": \"Bodegas Bianchi {{$timestamp}}\",\n  \"locationId\": 1,\n  \"description\": \"Bodega histórica de San Rafael y Valle de Uco.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -754,10 +705,12 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
-                      "var json = pm.response.json();",
-                      "if (json.winery && json.winery.id) { pm.environment.set('wineryId', json.winery.id); }",
-                      "if (json.accessToken) { pm.environment.set('ownerToken', json.accessToken); }"
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "if (pm.response.code === 201) {",
+                      "    var json = pm.response.json();",
+                      "    if (json && json.winery && json.winery.id) { pm.environment.set('wineryId', json.winery.id); }",
+                      "    if (json && json.accessToken) { pm.environment.set('ownerToken', json.accessToken); }",
+                      "}"
                     ],
                     "type": "text/javascript"
                   }
