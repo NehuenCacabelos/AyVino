@@ -36,8 +36,8 @@ public class M20260829003_CreateWineriesTable : Migration
 
     public override void Down()
     {
-        Delete.ForeignKey("FK_Wineries_Users");
-        Delete.ForeignKey("FK_Wineries_Locations");
+        Delete.ForeignKey("FK_Wineries_Users").OnTable("wineries");
+        Delete.ForeignKey("FK_Wineries_Locations").OnTable("wineries");
         Delete.Table("wineries");
     }
 }
