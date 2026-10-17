@@ -12,12 +12,9 @@
 *.user
 *.userosscache
 *.sln.docstates
-
-.env
 .vs/
 bin/
 obj/
-*.user
 appsettings.Development.json
 appsettings.*.local.json
 
