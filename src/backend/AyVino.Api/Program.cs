@@ -114,6 +114,16 @@ builder.Services.AddProblemDetails(options =>
             validation.Title = "Error de validación";
             validation.Detail = string.Join(" ", validation.Errors.SelectMany(e => e.Value));
         }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status401Unauthorized)
+        {
+            context.ProblemDetails.Title ??= "No autorizado";
+            context.ProblemDetails.Detail ??= "No está autenticado para acceder a este recurso.";
+        }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status403Forbidden)
+        {
+            context.ProblemDetails.Title ??= "Acceso prohibido";
+            context.ProblemDetails.Detail ??= "No posee permisos suficientes para acceder a este recurso.";
+        }
     };
 });
 
@@ -238,8 +248,9 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Global Exception Handler Middleware
+// Global Exception Handler & Status Code Pages Middleware
 app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
