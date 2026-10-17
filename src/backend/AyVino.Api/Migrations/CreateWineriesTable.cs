@@ -23,7 +23,7 @@ public class M20260829003_CreateWineriesTable : Migration
             .FromTable("wineries").ForeignColumn("location_id")
             .ToTable("locations").PrimaryColumn("id");
 
-        // Nullable on purpose: an "unclaimed" winery (see design in handoff)
+        // user_id es nullable para bodegas comunitarias aún no reclamadas.
         Create.ForeignKey("FK_Wineries_Users")
             .FromTable("wineries").ForeignColumn("user_id")
             .ToTable("users").PrimaryColumn("id")
