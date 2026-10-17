@@ -48,7 +48,7 @@ public class CityServiceTests
     {
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() => _cityService.GetAllAsync(pageNumber, pageSize, null, null));
-        Assert.Contains("Page number", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pageNumber", ex.Message, StringComparison.OrdinalIgnoreCase);
         await _cityRepository.DidNotReceive().GetAllAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
@@ -60,7 +60,7 @@ public class CityServiceTests
     {
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() => _cityService.GetAllAsync(pageNumber, pageSize, null, null));
-        Assert.Contains("Page size", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pageSize", ex.Message, StringComparison.OrdinalIgnoreCase);
         await _cityRepository.DidNotReceive().GetAllAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 }
