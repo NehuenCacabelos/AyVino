@@ -207,8 +207,11 @@ builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
 builder.Services.AddScoped<IWineCareService, WineCareService>();
 
 // FluentMigrator configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Configuración de cadena de conexión 'DefaultConnection' no encontrada o vacía. Configure el secreto mediante 'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<valor>\"' en desarrollo o mediante la variable de entorno 'ConnectionStrings__DefaultConnection' en producción.");
+}
 
 builder.Services.AddFluentMigratorCore()
     .ConfigureRunner(rb => rb
