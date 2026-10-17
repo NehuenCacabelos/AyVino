@@ -28,9 +28,9 @@ stateDiagram-v2
     Approved --> [*]
 ```
 
-- **`0 = Pending`**: El vino fue creado y está a la espera de revisión editorial o verificación de datos.
-- **`1 = Approved`**: El vino es visible en búsquedas públicas y listados generales.
-- **`2 = Rejected`**: El vino no cumple con los estándares mínimos de calidad (ej. datos apócrifos o duplicados manifiestos).
+- **`1 = Pending`**: La cosecha/vino fue creado y está a la espera de revisión editorial o verificación de datos.
+- **`2 = Approved`**: La cosecha/vino es visible en búsquedas públicas y listados generales.
+- **`3 = Rejected`**: La cosecha/vino no cumple con los estándares mínimos de calidad (ej. datos apócrifos o duplicados manifiestos).
 
 ---
 
@@ -78,4 +78,40 @@ La migración `20260830003_AddWineClaimFields` incorporó la columna autoverific
 Esto sienta las bases para consolidar vinos idénticos cargados por múltiples usuarios:
 - Un vino duplicado puede apuntar a su vino canónico (`duplicate_of_wine_id = original_wine_id`).
 - Las calificaciones y reseñas se reasignan al vino maestro mediante cascada lógica, preservando el feedback de la comunidad sin saturar el catálogo.
+
+---
+
+## 6. Catálogo de Enumeradores del Sistema
+
+Valores numéricos e identificadores sincronizados con el código backend:
+
+### A. Vinos y Bodegas
+- **`WineType`**: `Red = 1`, `White = 2`, `Rose = 3`, `Sparkling = 4`, `Orange = 5`
+- **`SourceType`**: `Community = 1`, `Official = 2`
+- **`ApprovalStatus`**: `Pending = 1`, `Approved = 2`, `Rejected = 3`
+- **`WineryStatus`**: `Pending = 1`, `Approved = 2`, `Rejected = 3`
+- **`CityStatus`**: `Approved = 1`, `Pending = 2`, `Rejected = 3`
+
+### B. Varietales y Cepas (Grapes)
+- **`ColorType`**: `Red = 1`, `White = 2`, `Rose = 3`, `Orange = 4`
+- **`TypicalBody`**: `Light = 10`, `MediumLight = 20`, `Medium = 30`, `MediumFull = 40`, `Full = 50`
+- **`TypicalTannins`**: `Soft = 10`, `MediumSoft = 20`, `Medium = 30`, `MediumAstringent = 40`, `Astringent = 50`
+- **`TypicalAcidity`**: `Low = 10`, `MediumLow = 20`, `Medium = 30`, `MediumHigh = 40`, `High = 50`
+
+### C. Maridajes (Pairings)
+- **`PairingCategory`**:
+  - `Meat = 1` (Carnes rojas / blancas)
+  - `Fish = 2` (Pescados)
+  - `Seafood = 3` (Mariscos)
+  - `Cheese = 4` (Quesos)
+  - `Dessert = 5` (Postres)
+  - `Pasta = 6` (Pastas)
+  - `Vegetarian = 7` (Vegetales / vegetariano)
+  - `Appetizer = 8` (Picadas / aperitivos)
+  - `Other = 9` (Otros)
+
+### D. Cuidado y Guarda (WineCare)
+- **`DrinkingStatus`**: `TooYoung = 10`, `InWindow = 20`, `DrinkSoon = 30`, `PastPeak = 40`
+- **`AdviceSource`**: `Declared = 1`, `Inferred = 2`
+
 
