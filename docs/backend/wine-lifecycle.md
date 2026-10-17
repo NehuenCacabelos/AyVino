@@ -22,8 +22,8 @@ Todo vino nuevo ingresa con estado inicial `Pending` para garantizar la calidad 
 ```mermaid
 stateDiagram-v2
     [*] --> Pending: Alta de Vino (Community u Official)
-    Pending --> Approved: Aprobación por Moderador / Admin
-    Pending --> Rejected: Rechazo por Moderador / Admin
+    Pending --> Approved: Aprobación por Admin
+    Pending --> Rejected: Rechazo por Admin
     Rejected --> Pending: Corrección y reenvío por creador
     Approved --> [*]
 ```
