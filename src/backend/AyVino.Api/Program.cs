@@ -51,11 +51,14 @@ using Scalar.AspNetCore;
 // 1. Configuraciones iniciales de serialización / mapeo
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-
-
-
+Dapper.SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 // CORS configuration
 const string frontendCorsPolicy = "FrontendPolicy";
