@@ -116,26 +116,39 @@ POSTGRES_PORT=5432
 
 ### 2. Configuración del Backend con User Secrets (.NET)
 
-Para configurar la cadena de conexión y la clave secreta de JWT en tu entorno de desarrollo sin modificar archivos rastreados por Git, ejecuta desde la raíz:
+Para configurar la cadena de conexión y generar una clave secreta propia para JWT (mínimo 32 caracteres / 256 bits) en desarrollo sin dejar secretos en archivos versionados:
+
+**Generación de clave y configuración con .NET User Secrets:**
 
 ```bash
+# Configurar cadena de conexión
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres" --project src/backend/AyVino.Api
-dotnet user-secrets set "Jwt:SecretKey" "clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino" --project src/backend/AyVino.Api
+
+# Generar y configurar clave JWT en Linux / macOS (Bash con OpenSSL):
+JWT_KEY=$(openssl rand -base64 48)
+dotnet user-secrets set "Jwt:SecretKey" "$JWT_KEY" --project src/backend/AyVino.Api
+
+# Generar y configurar clave JWT en Windows (PowerShell):
+$jwtKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+dotnet user-secrets set "Jwt:SecretKey" $jwtKey --project src/backend/AyVino.Api
 ```
 
-O bien mediante variables de entorno:
-```bash
+**O bien mediante variables de entorno:**
+
+```powershell
 # Windows (PowerShell)
 $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres"
-$env:Jwt__SecretKey = "clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino"
+$env:Jwt__SecretKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+```
 
+```bash
 # Linux / macOS (Bash)
 export ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=ayvino_db;Username=postgres;Password=postgres"
-export Jwt__SecretKey="clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino"
+export Jwt__SecretKey="$(openssl rand -base64 48)"
 ```
 
 > [!WARNING]
-> **Requisito obligatorio para el arranque**: La clave `Jwt:SecretKey` (o `Jwt__SecretKey`) debe contener un mínimo de 32 caracteres (256 bits). Sin este valor configurado, la API rechazará el arranque y lanzará una excepción al inicializarse.
+> **Requisito obligatorio para el arranque**: La clave `Jwt:SecretKey` (o `Jwt__SecretKey`) debe contener un mínimo de 32 caracteres (256 bits). La API valida esta longitud en el arranque y rechaza la inicialización si la clave falta o es menor a dicho límite.
 
 ---
 
