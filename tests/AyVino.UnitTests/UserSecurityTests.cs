@@ -100,6 +100,8 @@ public class UserSecurityTests
         public Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default) => Task.FromResult(false);
         public Task<UserCredential?> GetUserCredentialsByIdAsync(int userId, CancellationToken ct = default) => Task.FromResult<UserCredential?>(null);
         public Task<bool> UpdatePasswordAsync(int userId, string passwordHash, DateTime lastPasswordChange, CancellationToken ct = default) => Task.FromResult(true);
+        public Task RegisterFailedLoginAsync(int userId, int maxAttempts, DateTime nowUtc, DateTime blockedUntilUtc, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task ResetFailedLoginAttemptsAsync(int userId, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }
 
