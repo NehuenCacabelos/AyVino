@@ -72,6 +72,25 @@ Cuando un atacante intenta adivinar qué correos existen en el sistema midiendo 
   ```
   El sistema ejecuta deliberadamente las 100,000 iteraciones de PBKDF2 contra un hash sintético (`DummyHash`), igualando el tiempo de respuesta de usuarios existentes y no existentes.
 
+### 2.3 Bloqueo de Cuenta por Intentos Fallidos (Lockout Policy)
+Para salvaguardar las cuentas frente a ataques de fuerza bruta dirigidos o credential stuffing:
+
+- **Umbral de intentos fallidos**: 5 intentos incorrectos consecutivos (`MaxFailedLoginAttempts = 5`).
+- **Ventana de bloqueo temporal**: 15 minutos (`LockoutDuration = TimeSpan.FromMinutes(15)`).
+- **Disparo del bloqueo**: Al fallar el 5.° intento de autenticación, la petición devuelve `401 Unauthorized` ("Credenciales inválidas.") y persiste de forma atómica en `user_credentials` el contador en 5 y `blocked_until = UtcNow + 15 minutos`.
+- **Comportamiento durante el bloqueo**:
+  - Mientras `blocked_until > UtcNow`, cualquier intento de inicio de sesión (incluso proporcionando la contraseña correcta) es rechazado de inmediato con `401 Unauthorized` y el mensaje informativo:
+    `"La cuenta se encuentra temporalmente bloqueada hasta {yyyy-MM-dd HH:mm:ss} UTC."`
+  - Durante el período de bloqueo activo **no** se verifica la contraseña contra el hash almacenado ni se incrementa el contador de intentos fallidos.
+- **Atomicidad en Base de Datos**: La registración del intento fallido y el cálculo del bloqueo se ejecutan en una única sentencia SQL atómica parametrizada (`UPDATE user_credentials SET ... WHERE user_id = @UserId`), evitando condiciones de carrera ante solicitudes concurrentes. Si un bloqueo previo ya expiró (`blocked_until <= @NowUtc`), el contador reinicia en 1 y se limpia el bloqueo anterior.
+- **Reinicio del contador y desbloqueo**:
+  - **Login exitoso**: Al iniciar sesión con credenciales correctas, si la cuenta poseía intentos fallidos acumulados o un bloqueo vencido, se ejecuta `ResetFailedLoginAttemptsAsync` restableciendo `failed_login_attempts = 0` y `blocked_until = NULL`. Si no había intentos ni bloqueo previo, se omite la escritura a base de datos.
+  - **Cambio de contraseña**: Al realizar un cambio exitoso de contraseña mediante `ChangePasswordAsync`, la consulta SQL en `UserRepository.UpdatePasswordAsync` reinicia automáticamente `failed_login_attempts = 0` y `blocked_until = NULL`.
+- **Protección contra enumeración de usuarios**: Si el correo electrónico no pertenece a ningún usuario registrado, la solicitud sigue la rama de mitigación de temporización (`DummyHash`) y devuelve `401 Unauthorized` ("Credenciales inválidas.") sin registrar intentos ni interactuar con la base de datos.
+- **Interacción con el Rate Limiting por IP (`AuthLimit`)**:
+  - `AuthLimit` limita el tráfico a nivel de transporte HTTP por dirección IP remota (15 peticiones por minuto con respuesta `429 Too Many Requests`).
+  - El **bloqueo de login** opera a nivel de identidad de usuario en base de datos. Un atacante que intente ataques distribuidos desde múltiples direcciones IP bloqueará la cuenta objetivo al 5.° intento fallido. De forma complementaria, un atacante desde una única IP no puede enviar más de 15 peticiones por minuto en total gracias a `AuthLimit`.
+
 ---
 
 ## 3. Rate Limiting (`AuthLimit`)

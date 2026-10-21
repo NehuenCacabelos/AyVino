@@ -17,4 +17,6 @@ public interface IUserRepository
     Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default);
     Task<UserCredential?> GetUserCredentialsByIdAsync(int userId, CancellationToken ct = default);
     Task<bool> UpdatePasswordAsync(int userId, string passwordHash, DateTime lastPasswordChange, CancellationToken ct = default);
-}   
+    Task RegisterFailedLoginAsync(int userId, int maxAttempts, DateTime nowUtc, DateTime blockedUntilUtc, CancellationToken ct = default);
+    Task ResetFailedLoginAttemptsAsync(int userId, CancellationToken ct = default);
+}

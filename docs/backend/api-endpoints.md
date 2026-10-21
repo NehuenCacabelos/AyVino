@@ -116,6 +116,7 @@ La autorización en AyVino se resuelve a nivel de servicios (`Services/`) median
 | **R5** | `GET .../claim-candidates/{wineryId}` y `POST .../claim/{wineryId}` | A, O | O requiere que la bodega esté en estado `Approved`. |
 | **R6** | `POST` y `DELETE /api/wines/{wineId}/pairings/{pairingId}` | A, O | O de la bodega del vino. En vinos comunitarios (`WineryId == null`): solo A. |
 | **R7** | `POST /api/cities`, `POST /api/locations` | X | Requiere autenticación. Las lecturas (`GET`) continúan siendo públicas. |
+| **R8** | Bloqueo de login | — | 5 intentos fallidos consecutivos bloquean la cuenta por 15 minutos. Login exitoso o cambio de contraseña reinicia el contador. Durante el bloqueo se responde 401 con mensaje específico indicando vencimiento UTC. |
 
 > **Nota sobre `PUT /api/wines/{id}`:** La operación `PUT` reemplaza completamente el recurso. El dueño de la bodega debe reenviar en el cuerpo del request el mismo `WineryId`. Enviar `null` o un identificador de otra bodega constituye un cambio de titularidad de la etiqueta, operación que solo puede realizar un Administrador. Al actualizar, el sistema recalcula y persiste el `source_type` (`Official` si posee `WineryId`, o `Community` si no lo posee).
 
@@ -129,7 +130,7 @@ Gestiona las credenciales, emisión de tokens JWT, rotación criptográfica de R
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Público (Rate limited) | Inicia sesión y genera el par Access Token JWT + Refresh Token. Mitiga timing attacks con hash ficticio. | `LoginRequestDto` | `200 OK` (`LoginResponseDto`) |
+| `POST` | `/api/auth/login` | Público (Rate limited) | Inicia sesión y genera el par Access Token JWT + Refresh Token. Mitiga timing attacks con hash ficticio. Bloquea la cuenta por 15 min tras 5 intentos fallidos consecutivos. | `LoginRequestDto` | `200 OK` (`LoginResponseDto`), `401 Unauthorized` (Credenciales inválidas o cuenta temporalmente bloqueada) |
 | `POST` | `/api/auth/refresh` | Público (Rate limited) | Renueva un Access Token expirado. Implementa rotación estricta y revoca toda la familia si detecta reuso. | `RefreshRequestDto` | `200 OK` (`RefreshResponseDto`) |
 | `POST` | `/api/auth/revoke` | Autenticado | Revoca manualmente el Refresh Token especificado (operación de logout). | `RevokeTokenRequestDto` | `204 NoContent` |
 | `POST` | `/api/auth/change-password` | Autenticado | Actualiza la contraseña del usuario conectado y revoca sus refresh tokens activos. | `ChangePasswordRequestDto` | `204 NoContent` |

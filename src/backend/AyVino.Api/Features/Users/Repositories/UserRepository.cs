@@ -219,4 +219,45 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
         return rowsAffected > 0;
     }
+
+    public async Task RegisterFailedLoginAsync(int userId, int maxAttempts, DateTime nowUtc, DateTime blockedUntilUtc, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE user_credentials
+            SET failed_login_attempts = CASE
+                    WHEN blocked_until IS NOT NULL AND blocked_until <= @NowUtc THEN 1
+                    ELSE failed_login_attempts + 1
+                END,
+                blocked_until = CASE
+                    WHEN (CASE WHEN blocked_until IS NOT NULL AND blocked_until <= @NowUtc THEN 1
+                               ELSE failed_login_attempts + 1 END) >= @MaxAttempts THEN @BlockedUntilUtc
+                    WHEN blocked_until IS NOT NULL AND blocked_until <= @NowUtc THEN NULL
+                    ELSE blocked_until
+                END
+            WHERE user_id = @UserId;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            new CommandDefinition(sql, new
+            {
+                UserId = userId,
+                MaxAttempts = maxAttempts,
+                NowUtc = nowUtc,
+                BlockedUntilUtc = blockedUntilUtc
+            }, cancellationToken: ct));
+    }
+
+    public async Task ResetFailedLoginAttemptsAsync(int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE user_credentials
+            SET failed_login_attempts = 0, blocked_until = NULL
+            WHERE user_id = @UserId;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
 }

@@ -18,6 +18,9 @@ public class AuthService(
     IRefreshTokenRepository refreshTokenRepository,
     IOptions<JwtSettings> jwtSettings) : IAuthService
 {
+    private const int MaxFailedLoginAttempts = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request, string? ipAddress, CancellationToken ct = default)
     {
         if (request is null)
@@ -58,7 +61,14 @@ public class AuthService(
         var isPasswordValid = passwordHasher.VerifyPassword(request.Password, credential.PasswordHash);
         if (!isPasswordValid)
         {
+            var now = DateTime.UtcNow;
+            await userRepository.RegisterFailedLoginAsync(user.Id, MaxFailedLoginAttempts, now, now.Add(LockoutDuration), ct);
             throw new UnauthorizedException("Credenciales inválidas.");
+        }
+
+        if (credential.FailedLoginAttempts > 0 || credential.BlockedUntil.HasValue)
+        {
+            await userRepository.ResetFailedLoginAttemptsAsync(user.Id, ct);
         }
 
         var (token, expiresAt) = jwtTokenGenerator.GenerateToken(user);
