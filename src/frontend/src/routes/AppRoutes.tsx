@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from '../features/auth';
+import { ProtectedRoute, useAuth } from '../features/auth';
 
 // Carga diferida de vistas: cada página genera un chunk independiente en Vite
 const Landing = lazy(() => import('../pages/Landing'));
@@ -36,11 +36,17 @@ function RouteFallbackLoader() {
  * Cada vista se carga de forma diferida con React.lazy para optimizar el bundle inicial.
  */
 export default function AppRoutes() {
+  const { isAuthenticated, user } = useAuth();
+  const homePath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+
   return (
     <Suspense fallback={<RouteFallbackLoader />}>
       <Routes>
-        {/* Rutas Públicas */}
-        <Route path="/" element={<Landing />} />
+        {/* Ruta Raíz: Landing para visitantes, Homepage/Dashboard para usuarios autenticados */}
+        <Route
+          path="/"
+          element={isAuthenticated ? <Navigate to={homePath} replace /> : <Landing />}
+        />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/terms" element={<TermsPage />} />

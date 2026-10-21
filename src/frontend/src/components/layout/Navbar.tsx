@@ -72,6 +72,7 @@ export default function Navbar() {
   };
 
   const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
+  const homePath = isAuthenticated ? (user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard') : '/';
 
   const navLinks = [
     { label: 'Destacados', href: '/#seleccion-curada' },
@@ -90,24 +91,24 @@ export default function Navbar() {
             : 'bg-transparent border-b border-transparent shadow-none'
         )}
       >
-        <div className="h-18 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-3 items-center">
+        <div className="h-18 max-w-7xl mx-auto px-6 flex justify-between md:grid md:grid-cols-[auto_1fr_auto] items-center gap-4">
           
           {/* Columna 1 (Logo): texto con mayor presencia y punto borravino */}
-          <div className="flex items-center md:justify-self-start">
-            <Link to="/" className="text-xl font-bold tracking-tight text-zinc-100 hover:text-white transition-colors">
+          <div className="flex items-center md:justify-self-start shrink-0">
+            <Link to={homePath} className="text-xl font-bold tracking-tight text-zinc-100 hover:text-white transition-colors">
               AyVino<span className="text-rose-500">.</span>
             </Link>
           </div>
 
-          {/* Columna 2 (Nav links): centrada exactamente en escritorio, mayor escala y gap-10 */}
-          <nav className="hidden md:flex justify-center gap-10 transition-all duration-300">
+          {/* Columna 2 (Nav links): centrada elásticamente, sin wrap y con espaciado fluido */}
+          <nav className="hidden md:flex justify-center items-center gap-5 lg:gap-7 xl:gap-8 px-2 transition-all duration-300">
             {navLinks.map((link) =>
               link.label === 'Comunidad' ? (
                 <button
                   key={link.label}
                   type="button"
                   onClick={() => setCommunityOpen(true)}
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 cursor-pointer"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 cursor-pointer whitespace-nowrap"
                 >
                   {link.label}
                 </button>
@@ -115,7 +116,7 @@ export default function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 whitespace-nowrap"
                 >
                   {link.label}
                 </a>
@@ -127,18 +128,18 @@ export default function Navbar() {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap"
                 >
-                  <Wine className="w-3.5 h-3.5 text-zinc-400" />
-                  Mi Cava
+                  <Wine className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>Mi Cava</span>
                 </Link>
 
                 <Link
                   to="/catalogo"
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5"
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap"
                 >
-                  <Compass className="w-3.5 h-3.5 text-zinc-400" />
-                  Catálogo
+                  <Compass className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>Catálogo</span>
                 </Link>
               </>
             )}
@@ -146,16 +147,16 @@ export default function Navbar() {
             {isWineryOrAdmin && (
               <Link
                 to="/bodega/dashboard"
-                className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold"
+                className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400" />
-                Panel Bodega
+                <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>Panel Bodega</span>
               </Link>
             )}
           </nav>
 
           {/* Columna 3 (Acciones): alineada al final */}
-          <div className="flex items-center gap-4 md:justify-self-end">
+          <div className="flex items-center gap-4 md:justify-self-end shrink-0">
             <div className="hidden md:flex items-center gap-4">
               {isAuthenticated ? (
                 <div className="flex items-center gap-3">

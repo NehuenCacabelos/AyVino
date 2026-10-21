@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { WineCard, WineDetailModal, CURATED_WINES } from '../features/wines';
+import { useAuth } from '../features/auth';
 import CommunityModal from '../components/community/CommunityModal';
 import type { CuratedWine } from '../types/wine';
 import {
@@ -26,6 +27,7 @@ import {
 export default function Landing() {
   const [selectedWine, setSelectedWine] = useState<CuratedWine | null>(null);
   const [communityModalOpen, setCommunityModalOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -90,13 +92,23 @@ export default function Landing() {
                 <ArrowDown className="w-4 h-4 text-zinc-300" />
               </button>
 
-              <Link
-                to="/register"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-300 rounded-xl px-6 py-3 text-sm font-medium backdrop-blur-md transition-all cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 text-zinc-400" />
-                <span>Crear cuenta gratis</span>
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  to="/dashboard"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-zinc-700 bg-zinc-800/70 hover:bg-zinc-700/80 text-zinc-100 rounded-xl px-6 py-3 text-sm font-medium backdrop-blur-md transition-all cursor-pointer shadow-sm"
+                >
+                  <Wine className="w-4 h-4 text-rose-400" />
+                  <span>Ir a mi Cava</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/register"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 text-zinc-300 rounded-xl px-6 py-3 text-sm font-medium backdrop-blur-md transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-zinc-400" />
+                  <span>Crear cuenta gratis</span>
+                </Link>
+              )}
             </div>
 
             {/* Fila inferior de métricas centrada */}
