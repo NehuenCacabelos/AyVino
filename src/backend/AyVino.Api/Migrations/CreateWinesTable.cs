@@ -32,7 +32,7 @@ public class M20260830002_CreateWinesTable : Migration
             .ToTable("locations").PrimaryColumn("id")
             .OnDelete(Rule.SetNull);
 
-        // Self-FK para Pieza C (merge de duplicados), todavía sin endpoint que la use.
+        // Self-FK para soporte de fusión de etiquetas duplicadas.
         Create.ForeignKey("FK_Wines_Wines_DuplicateOf")
             .FromTable("wines").ForeignColumn("duplicate_of_wine_id")
             .ToTable("wines").PrimaryColumn("id")

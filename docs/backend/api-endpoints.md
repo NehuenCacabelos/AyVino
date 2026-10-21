@@ -8,6 +8,17 @@ Este documento detalla exhaustivamente las rutas HTTP expuestas por el backend d
 
 El backend implementa validación nativa de Minimal APIs en .NET 10 (`AddValidation()`) mediante Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[Url]`, `[EnumDataType]`, `[MaxLength]`, `[MinLength]`). La validación se ejecuta en la capa de transporte HTTP previa a la ejecución de los servicios, garantizando respuestas uniformes y consistentes bajo el estándar RFC 7807 (ProblemDetails).
 
+### Contrato de Serialización JSON y Fechas (Enums y DateOnly)
+
+- **Enums en JSON**:
+  - Los enums se envían y reciben como texto (`string`) en las respuestas y solicitudes JSON con sus identificadores válidos (por ejemplo `"Red"`, `"White"`, `"Rose"`, `"Orange"` para `ColorType`, o valores textuales para `TypicalBody`, `TypicalTannins`, `TypicalAcidity` y `PairingCategory`).
+  - Para retrocompatibilidad y flexibilidad en clientes, los valores numéricos subyacentes (por ejemplo `1` para `Red`, `2` para `White`, etc.) siguen siendo aceptados de forma válida en los payloads entrantes.
+  - Los valores de texto inexistentes o mal tipados son rechazados durante la deserialización JSON devolviendo `400 Bad Request`.
+  - Los valores numéricos fuera de los definidos en el enum son rechazados por la validación de modelo mediante `[EnumDataType]`, devolviendo `400 Bad Request` con su mensaje específico en español.
+
+- **DateOnly en JSON**:
+  - Las propiedades de tipo `DateOnly` (como `PurchaseDate` en los ítems de cava) se serializan y reciben bajo el formato ISO-8601 estándar: `"yyyy-MM-dd"` (ejemplo: `"2026-05-15"`).
+
 > **Aclaración sobre parámetros de consulta (Query Params):** Los parámetros de consulta (`pageNumber`, `pageSize`, filtros como `wineType`, `year`, etc.) se validan dentro de la capa de servicios (`Services/`) como parte de las reglas de negocio de cada caso de uso.
 
 ### Formato de Respuesta 400 de Validación
@@ -87,6 +98,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | **Cellars** | `CreateCellarRequestDto` / `UpdateCellarRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la cava es obligatorio." / "El nombre no puede superar los 100 caracteres." |
 | | `AddCellarItemRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
 | | | `Quantity` | `[Range(1, 999)]` | "La cantidad debe estar entre 1 y 999." |
+| | | `PurchaseDate` | Formato fecha ISO `"yyyy-MM-dd"` (opcional) | Formato inválido genera 400 Bad Request en parsing JSON. |
 | | | `Notes` | `[StringLength(500)]` | "Las notas no pueden superar los 500 caracteres." |
 | | `UpdateCellarItemRequestDto` | `Quantity`, `Notes` | `[Range(1, 999)]`, `[StringLength(500)]` | "La cantidad debe estar entre 1 y 999." / "Las notas no pueden superar los 500 caracteres." |
 | **Reviews** | `CreateReviewRequestDto` | `WineVintageId` | `[Range(1, int.MaxValue)]` | "El id de la cosecha debe ser mayor a 0." |
@@ -146,7 +158,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `POST` | `/api/users` | Público | Registra un nuevo aficionado en la comunidad con rol inmutable `User`. | `RegisterUserRequestDto` | `201 Created` (`UserResponseDto`) |
 | `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
-| `GET` | `/api/users` | Admin (`RequireAdmin`) | Lista todos los usuarios registrados en el sistema. | - | `200 OK` (`IEnumerable<UserResponseDto>`) |
+| `GET` | `/api/users` | Admin (`RequireAdmin`) | Lista paginada de todos los usuarios registrados en el sistema. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UserResponseDto>`) |
 | `GET` | `/api/users/{id}` | Admin (`RequireAdmin`) | Obtiene los detalles de cualquier usuario por ID. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/{id}/profile`| Admin (`RequireAdmin`) | Modifica el perfil de un usuario específico. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
 | `PATCH`| `/api/users/{id}/status` | Admin (`RequireAdmin`) | Activa o desactiva la cuenta de un usuario. | `ChangeUserStatusRequestDto` | `204 NoContent` |
@@ -188,7 +200,7 @@ Gestión de municipios y ciudades vitivinícolas con patrón `GetOrCreate`.
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/cities` | Autenticado | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
-| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber`, `pageSize`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
+| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber = 1`, `pageSize = 10`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
 | `GET` | `/api/cities/{id}` | Público | Detalle de una ciudad por su ID. | - | `200 OK` (`CityResponseDto`) |
 | `PATCH`| `/api/cities/{id}/status` | Admin (`RequireAdmin`) | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
 
@@ -233,6 +245,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
 | `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `GET` | `/api/wines/search` | Público | Búsqueda difusa y avanzada de vinos por nombre, bodega, año o tipo con trigramas PostgreSQL. | Query params: `pageNumber`, `pageSize`, `name?`, `winery?`, `year?`, `wineType?` | `200 OK` (`IEnumerable<WineSearchResponseDto>`) |
 | `GET` | `/api/wines/{wineId}/vintages` | Público | Lista todas las cosechas/añadas de una etiqueta de vino con sus cortes de uvas. | - | `200 OK` (`IEnumerable<WineVintageResponseDto>`) |
 | `GET` | `/api/wines/{wineId}/vintages/{vintageId}` | Público | Obtiene una cosecha individual con su corte de uvas y calificación. | - | `200 OK` (`WineVintageResponseDto`) |
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
@@ -259,7 +272,78 @@ Catálogo de maridajes (carnes, pescados, pastas, quesos, postres) y relaciones 
 
 ---
 
-## 10. Módulos Planificados (Siguientes Slices)
+## 10. Reseñas y Calificaciones (`/api/reviews`)
 
-- **Reseñas y Calificaciones (`/api/reviews`)**: Puntuación numérica ponderada (1-100 o 1-5 estrellas), notas de cata en texto libre y "Likes" rápidos ([RF-2.1](../requirements/spec.md), [RF-2.2](../requirements/spec.md)).
-- **Colecciones Personales (`/api/collections`)**: Listas fijas por usuario ("Favoritos", "Por Probar", "En mi Cava") ([RF-3.1](../requirements/spec.md)).
+Gestión de reseñas comunitarias y valoraciones (1 a 5 estrellas) por cosecha y feed de etiqueta. Requiere mínimo 5 reseñas por cosecha para computar el promedio público.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/reviews` | Autenticado | Crea una reseña y puntaje para una cosecha puntual. | `CreateReviewRequestDto` | `201 Created` (`ReviewResponseDto`) |
+| `PUT` | `/api/reviews/{id}` | Autenticado (Solo autor) | Actualiza el puntaje o comentario de una reseña propia. | `UpdateReviewRequestDto` | `200 OK` (`ReviewResponseDto`) |
+| `DELETE`| `/api/reviews/{id}` | Autenticado (Solo autor) | Elimina una reseña propia y recalcula agregaciones. | - | `204 NoContent` |
+| `GET` | `/api/wine-vintages/{vintageId}/reviews` | Público | Lista paginada de reseñas de una cosecha específica. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
+| `GET` | `/api/wines/{wineId}/reviews` | Público | Feed agregado y paginado de reseñas de una etiqueta (todas sus cosechas). | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
+
+---
+
+## 11. Red Social y Seguimiento (`/api/users/.../follow` y `/api/wineries/.../follow`)
+
+Seguimiento unidireccional entre usuarios y hacia bodegas aprobadas. Protegido contra auto-follow (400) y duplicados (409).
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/users/{id}/follow` | Autenticado | Comienza a seguir a otro usuario aficionado. | - | `204 NoContent` |
+| `DELETE`| `/api/users/{id}/follow` | Autenticado | Deja de seguir a un usuario. | - | `204 NoContent` |
+| `GET` | `/api/users/{id}/followers` | Autenticado | Lista paginada de seguidores de un usuario. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
+| `GET` | `/api/users/me/following` | Autenticado | Lista paginada de usuarios a los que sigue el usuario actual. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
+| `POST` | `/api/wineries/{id}/follow` | Autenticado | Sigue a una bodega oficial aprobada (404 si es pendiente o inexistente). | - | `204 NoContent` |
+| `DELETE`| `/api/wineries/{id}/follow` | Autenticado | Deja de seguir a una bodega. | - | `204 NoContent` |
+| `GET` | `/api/wineries/{id}/followers` | Autenticado | Lista paginada de usuarios seguidores de una bodega aprobada. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
+| `GET` | `/api/users/me/following-wineries` | Autenticado | Lista paginada de bodegas que sigue el usuario actual. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowWineryResponseDto>`) |
+
+---
+
+## 12. Marcas y Listas Personales de Vinos (`/api/wines/...` y `/api/user-wines`)
+
+Marcado rápido de botellas: deseadas (`wanted`), probadas (`tried`, permanente/no desmarcable) y favoritas (`favorite`).
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `PUT` | `/api/wines/{wineId}/wanted` | Autenticado | Marca el vino como deseado (lo agrega a tu lista de deseos). | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{wineId}/wanted` | Autenticado | Desmarca el vino como deseado. Borra la fila si no quedan otras marcas. | - | `204 NoContent` |
+| `PUT` | `/api/wines/{wineId}/tried` | Autenticado | Marca el vino como probado (inmutable: no posee endpoint DELETE). | - | `204 NoContent` |
+| `PUT` | `/api/wines/{wineId}/favorite` | Autenticado | Marca el vino como favorito personal. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{wineId}/favorite` | Autenticado | Desmarca el vino de favoritos. | - | `204 NoContent` |
+| `GET` | `/api/wines/{wineId}/my-marks` | Autenticado | Consulta el estado actual de las 3 marcas del usuario para una etiqueta. | - | `200 OK` (`UserWineMarksResponseDto`) |
+| `GET` | `/api/user-wines/me` | Autenticado | Lista paginada de todos los vinos marcados por el usuario, con filtros combinables. | Query params: `pageNumber = 1`, `pageSize = 10`, `wanted?`, `tried?`, `favorite?` | `200 OK` (`IReadOnlyList<UserWineListItemDto>`) |
+
+---
+
+## 13. Cavas Personales e Inventario (`/api/cellars`)
+
+Administración de cavas virtuales del usuario (ej. Cava Hogar, Cava Quincho) y control de stock por añada.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/cellars` | Autenticado | Crea una nueva cava para el usuario autenticado. | `CreateCellarRequestDto` | `201 Created` (`CellarResponseDto`) |
+| `GET` | `/api/cellars/me` | Autenticado | Lista paginada de cavas del usuario con recuento de botellas y cosechas. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<CellarResponseDto>`) |
+| `GET` | `/api/cellars/{cellarId}` | Autenticado (Solo dueño) | Detalle y totales de una cava propia (404 si pertenece a otro). | - | `200 OK` (`CellarResponseDto`) |
+| `PUT` | `/api/cellars/{cellarId}` | Autenticado (Solo dueño) | Renombra una cava propia (409 si el nombre ya existe para el usuario). | `UpdateCellarRequestDto` | `200 OK` (`CellarResponseDto`) |
+| `DELETE`| `/api/cellars/{cellarId}` | Autenticado (Solo dueño) | Borra una cava propia. Devuelve `409 Conflict` si aún posee botellas. | - | `204 NoContent` |
+| `POST` | `/api/cellars/{cellarId}/items` | Autenticado (Solo dueño) | Agrega una cosecha con cantidad (1-999), fecha de compra y notas. 409 si ya existe. | `AddCellarItemRequestDto` | `201 Created` (`CellarItemResponseDto`) |
+| `GET` | `/api/cellars/{cellarId}/items` | Autenticado (Solo dueño) | Lista paginada del inventario de botellas de la cava con filtros por tipo y año. | Query params: `pageNumber = 1`, `pageSize = 10`, `wineType?`, `year?` | `200 OK` (`IReadOnlyList<CellarItemResponseDto>`) |
+| `GET` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Detalle de una cosecha puntual almacenada en la cava. | - | `200 OK` (`CellarItemResponseDto`) |
+| `PUT` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Reemplaza cantidad (1-999), fecha de compra y notas de la cosecha en la cava. | `UpdateCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
+| `DELETE`| `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Elimina la cosecha de la cava (vacía el stock de esa añada). | - | `204 NoContent` |
+| `GET` | `/api/cellars/{cellarId}/care-summary` | Autenticado (Solo dueño) | Resumen de recomendaciones de temperatura, decantado y ventana de consumo de todas las botellas en cava. | - | `200 OK` (`IReadOnlyList<WineCareResponseDto>`) |
+
+---
+
+## 14. Consejos de Guarda y Servicio (`/api/wines/.../care-recommendations`)
+
+Cálculo de temperatura óptima de servicio, tiempo y conveniencia de decantación, y ventana de consumo estimado.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/wines/{wineId}/vintages/{vintageId}/care-recommendations` | Público | Retorna consejos enológicos basados en datos declarados por la bodega o heurísticas del motor. | - | `200 OK` (`WineCareResponseDto`) |
+

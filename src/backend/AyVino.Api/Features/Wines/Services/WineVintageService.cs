@@ -131,8 +131,7 @@ public class WineVintageService(
                 throw new ValidationException($"Grape with ID {grape.GrapeId} does not exist.");
         }
 
-        // Misma base legal (INV/UE/EEUU) documentada en la sesión original de Wines:
-        // <=100%, no exactamente 100%, por blends encubiertos y "otras uvas" no declaradas.
+        // Base legal (INV/UE/EEUU): <=100%, no exactamente 100%, por blends y uvas no declaradas.
         var total = grapes.Sum(g => g.Percentage ?? 0);
         if (total > 100)
             throw new ValidationException("The sum of the grape percentages cannot exceed 100%.");

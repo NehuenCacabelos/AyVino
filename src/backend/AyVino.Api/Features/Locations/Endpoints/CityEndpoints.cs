@@ -22,7 +22,7 @@ public static class CityEndpoints
         .WithName("GetOrCreateCity")
         .WithSummary("Returns an existing city or creates it as Pending if it doesn't exist");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, int? stateId, string? status, ICityService cityService, CancellationToken ct) =>
+        group.MapGet("/", async (ICityService cityService, CancellationToken ct, int pageNumber = 1, int pageSize = 10, int? stateId = null, string? status = null) =>
             Results.Ok(await cityService.GetAllAsync(pageNumber, pageSize, stateId, status, ct)))
             .WithName("GetAllCities")
             .WithSummary("Gets a paginated list of cities, filterable by state and status");

@@ -30,10 +30,10 @@ public class LocationService(ILocationRepository locationRepository, ICityReposi
     public async Task<IEnumerable<LocationResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
         if (pageNumber <= 0)
-            throw new ValidationException("Page number must be greater than 0.");
+            throw new ValidationException("pageNumber debe ser mayor a 0.");
 
         if (pageSize <= 0 || pageSize > 100)
-            throw new ValidationException("Page size must be between 1 and 100.");
+            throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
         var locations = await locationRepository.GetAllAsync(pageNumber, pageSize, ct);
         return locations.Select(l => l.ToResponseDto());

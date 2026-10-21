@@ -69,8 +69,8 @@ public class GrapeService(IGrapeRepository grapeRepository) : IGrapeService
 
     private static void ValidatePagination(int pageNumber, int pageSize)
     {
-        if (pageNumber <= 0) throw new ValidationException("Page number must be greater than 0.");
-        if (pageSize is <= 0 or > 100) throw new ValidationException("Page size must be between 1 and 100.");
+        if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
+        if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
     }
 
     private static void ValidateRequest(string name)

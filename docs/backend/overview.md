@@ -69,12 +69,40 @@ Features/
 │   ├── Repositories/  # IPairingRepository.cs y PairingRepository.cs
 │   └── Services/      # IPairingService.cs y PairingService.cs
 │
-└── Reviews/           # Reseñas por cosecha y etiqueta con cálculo ponderado y cascade rollup
-    ├── DTOs/          # CreateReviewRequestDto, ReviewResponseDto, UpdateReviewRequestDto, etc.
-    ├── Endpoints/     # ReviewEndpoints.cs
-    ├── Models/        # Review.cs
-    ├── Repositories/  # IReviewRepository.cs y ReviewRepository.cs
-    └── Services/      # IReviewService.cs y ReviewService.cs
+├── Reviews/           # Reseñas por cosecha y etiqueta con cálculo ponderado y cascade rollup
+│   ├── DTOs/          # CreateReviewRequestDto, ReviewResponseDto, UpdateReviewRequestDto, etc.
+│   ├── Endpoints/     # ReviewEndpoints.cs
+│   ├── Models/        # Review.cs
+│   ├── Repositories/  # IReviewRepository.cs y ReviewRepository.cs
+│   └── Services/      # IReviewService.cs y ReviewService.cs
+│
+├── Follows/           # Red social vitivinícola: seguimiento a otros usuarios y a bodegas aprobadas
+│   ├── DTOs/          # FollowUserResponseDto, FollowWineryResponseDto, etc.
+│   ├── Endpoints/     # FollowEndpoints.cs
+│   ├── Models/        # UserFollow.cs, WineryFollow.cs
+│   ├── Repositories/  # IFollowRepository.cs y FollowRepository.cs
+│   └── Services/      # IFollowService.cs y FollowService.cs
+│
+├── UserWines/         # Listas personales y marcas sobre vinos (deseados, probados, favoritos)
+│   ├── DTOs/          # UserWineMarksResponseDto, UserWineListItemDto, etc.
+│   ├── Endpoints/     # UserWineEndpoints.cs
+│   ├── Models/        # UserWine.cs, UserWineListRow.cs
+│   ├── Repositories/  # IUserWineRepository.cs y UserWineRepository.cs
+│   └── Services/      # IUserWineService.cs y UserWineService.cs
+│
+├── Cellars/           # Cavas personales privadas y control de stock de botellas por cosecha
+│   ├── DTOs/          # CreateCellarRequestDto, CellarResponseDto, AddCellarItemRequestDto, etc.
+│   ├── Endpoints/     # CellarEndpoints.cs, CellarItemEndpoints.cs, CellarCareEndpoints.cs
+│   ├── Models/        # Cellar.cs, CellarItem.cs, CellarSummaryRow.cs, CellarItemListRow.cs
+│   ├── Repositories/  # ICellarRepository, CellarRepository, ICellarItemRepository, CellarItemRepository
+│   └── Services/      # ICellarService, CellarService, ICellarItemService, CellarItemService, CellarCareService
+│
+└── WineCare/          # Consejos enológicos: temperaturas óptimas, decantado y ventanas de consumo
+    ├── DTOs/          # WineCareResponseDto, ServingTemperatureDto, DecantingDto, DrinkingWindowDto
+    ├── Endpoints/     # WineCareEndpoints.cs
+    ├── Enums/         # DrinkingStatus, AdviceSource
+    ├── Repositories/  # IWineCareRepository.cs y WineCareRepository.cs
+    └── Services/      # IWineCareService.cs y WineCareService.cs
 ```
 
 ---
@@ -85,7 +113,7 @@ Aquellos aspectos técnicos requeridos transversalmente por múltiples slices se
 
 ### Acceso a Base de Datos ([`Common/Data/`](../../src/backend/AyVino.Api/Common/Data))
 - **`IDbConnectionFactory`**: Interfaz asíncrona y síncrona para obtener conexiones físicas a PostgreSQL.
-- **`NpgsqlConnectionFactory`**: Implementación basada en `NpgsqlConnection` que inyecta la cadena de conexión configurada en `appsettings.json`.
+- **`NpgsqlConnectionFactory`**: Implementación basada en `NpgsqlConnection` que inyecta la cadena de conexión provista mediante User Secrets en desarrollo o variables de entorno en producción.
 
 ### Manejo Global de Excepciones ([`Common/Middleware/`](../../src/backend/AyVino.Api/Common/Middleware))
 - **`GlobalExceptionHandler`**: Interceptor que traduce cualquier excepción de negocio o fallo no controlado al formato estándar RFC 7807 (`ProblemDetails`).
@@ -100,6 +128,9 @@ Aquellos aspectos técnicos requeridos transversalmente por múltiples slices se
 ### Criptografía y Seguridad ([`Common/Security/`](../../src/backend/AyVino.Api/Common/Security))
 - **`PasswordHasher`**: Implementa PBKDF2 (HMAC-SHA256) con 100,000 iteraciones y una sal criptográfica de 16 bytes generada por `RandomNumberGenerator`. Incorpora la propiedad `DummyHash` para neutralizar ataques de temporización (timing attacks) durante el login.
 - **`JwtTokenGenerator`**: Emite JSON Web Tokens firmados con HMAC-SHA256 y claims tipados (`ClaimTypes.NameIdentifier`, `ClaimTypes.Email`, `ClaimTypes.Name`, `ClaimTypes.Role`).
+- **Modelo de Autorización `Actor`**: Desacopla la seguridad de la capa HTTP representando la identidad del usuario (`UserId`, `Role`) con métodos utilitarios como `IsAdmin`.
+- **Reglas de Acceso `WineryAccessRules`**: Centraliza el control de titularidad (`IsOwner(winery, actor)`), exigiendo permisos de administrador o dueño de bodega aprobada para publicaciones oficiales, reclamos y modificaciones.
+- **Bloqueo de Cuentas (Lockout)**: 5 intentos fallidos consecutivos de inicio de sesión bloquean temporalmente la cuenta por 15 minutos en UTC, registrándose en `user_credentials`.
 
 ### Constantes de Seguridad ([`Common/Constants/`](../../src/backend/AyVino.Api/Common/Constants))
 - **`AppRoles`**: Define los roles canónicos (`Admin`, `User`, `Winery`).
@@ -168,11 +199,17 @@ En particular, la funcionalidad territorial (`Features/Locations/`) unifica de m
 
 Cumpliendo con la **Regla 5 de la Constitución de AyVino**, cada servicio y optimización del backend cuenta con su respectiva suite de pruebas automatizadas:
 
-- **Aislamiento sin mocks pesados**: Se emplean fakes en memoria (`FakeWineRepository`, `FakeWineryRepository`, `FakeLocationRepository`, `FakeGrapeRepository`, `FakeReviewRepository`) que implementan las interfaces canónicas del dominio.
+- **Aislamiento sin mocks pesados**: Se emplean fakes en memoria y mocks tipados con `NSubstitute` (`IUserRepository`, `IFollowRepository`, `IUserWineRepository`, `ICellarRepository`, etc.) siguiendo la convención estricta `Metodo_Condicion_Resultado`.
 - **Cobertura de Casos de Negocio**:
-  - `WineryServiceTests`: Pruebas de registro de bodegas, creación comunitaria, actualización de perfil, validaciones de negocio y no existencia.
-  - `WineServiceTests`: Mapeo de DTOs complejos (cortes/uvas y primera añada) hacia entidades de dominio, validaciones de claves foráneas (`WineryId`, `LocationId`), parsing de `WineType` y flujos de actualización.
-  - `LocationServiceTests`: Mapeo relacional de `Location` con `City` y `State`, validaciones de terruño y ciclo de consultas.
-  - `WineOptimizationTests`: Verificación de batching Dapper contra problemas N+1 (`GetByIdsAsync` y `GetGrapesByVintageIdsBatchAsync`).
-  - `ReviewSecurityTests`: Verificación de límites de autorización y segregación de excepciones (`ForbiddenException` 403 vs `UnauthorizedException` 401).
+  - `AuthServiceLockoutTests`: Bloqueo de cuentas por 15 minutos tras 5 intentos fallidos, reseteo tras éxito o cambio de password.
+  - `UserServiceTests`: Paginación y validación de límites (`pageNumber > 0`, `pageSize 1-100`).
+  - `CityServiceTests`: Paginación con defaults y validación en `GetAllAsync`.
+  - `FollowServiceTests`: Auto-follow prohibido (400), duplicados (409), unfollow inexistente (404) y verificación de bodegas aprobadas.
+  - `UserWineServiceTests`: Marcas deseadas, probadas y favoritas, idempotencia, invariabilidad de probadas y 404 por vino inexistente.
+  - `CellarServiceTests`, `CellarItemServiceTests`, `CellarCareServiceTests`: Aislamiento estricto de propiedad (404), conflicto al borrar cavas con botellas (409), reemplazo de cantidad y consejos de guarda.
+  - `WineryServiceTests` y `WineryServiceAuthorizationTests`: Creación, actualización, propiedad y reglas de acceso.
+  - `WineServiceTests` y `WineServiceAuthorizationTests`: Mapeo de DTOs complejos, blends, primera cosecha, claim oficial y validaciones.
+  - `LocationServiceTests`: Mapeo relacional de `Location` con `City` y `State`.
+  - `WineOptimizationTests`: Verificación de batching Dapper contra problemas N+1.
+  - `ReviewSecurityTests`: Autorización y segregación de excepciones (403 vs 401).
 

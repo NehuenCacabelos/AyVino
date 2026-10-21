@@ -17,17 +17,21 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 
 | Versión | Archivo de Migración | Tablas / Objetos Afectados | Descripción y Reglas de Negocio |
 | :--- | :--- | :--- | :--- |
-| `202603200001` | `CreateUsersTable.cs` | `users`, `user_credentials` | Creación de perfiles de usuario (roles: `User`, `Winery`, `Admin`) y credenciales desacopladas (hash PBKDF2, intentos fallidos y bloqueo temporal). |
-| `202603200002` | `CreateRefreshTokensTable.cs` | `refresh_tokens` | Almacenamiento seguro de tokens de refresco, tracking de IP de creación/revocación, enlace de rotación (`replaced_by_token`) y auditoría. |
-| `202603200003` | `CreateWineriesTable.cs` | `wineries` | Catálogo de bodegas con estado (`Pending`, `Approved`, `Rejected`) y relación nullable `user_id` con `users` (soporta bodegas comunitarias sin dueño y bodegas oficiales). |
-| `202603200004` | `CreateGrapesTable.cs` | `grapes` | Variedades de uva y cepas con tipado por color (`color_type`: Tinto, Blanco, Rosado). |
 | `20260809001` | `CreateStatesTable.cs` | `states` | Tabla base para provincias argentinas (id, name). |
 | `20260809002` | `SeedStates.cs` | `states` | Carga inicial (seed) de las 24 jurisdicciones de Argentina (Mendoza, San Juan, Salta, Río Negro, La Rioja, etc.). |
 | `20260809003` | `CreateCitiesTable.cs` | `cities` | Ciudades y departamentos vitivinícolas con clave foránea a `states` y estado de moderación (`status`). |
 | `20260809004` | `CreateLocationsTable.cs` | `locations` | Terruños y zonas específicas de producción con clave foránea a `cities`. |
+| `20260829001` | `CreateUsersTable.cs` | `users`, `user_credentials` | Creación de perfiles de usuario (roles: `User`, `Winery`, `Admin`) y credenciales desacopladas (hash PBKDF2, intentos fallidos y bloqueo temporal). |
+| `20260829003` | `CreateWineriesTable.cs` | `wineries` | Catálogo de bodegas con estado (`Pending`, `Approved`, `Rejected`) y relación nullable `user_id` con `users` (soporta bodegas comunitarias sin dueño y bodegas oficiales). |
+| `20260829004` | `CreateGrapesTable.cs` | `grapes` | Variedades de uva y cepas con tipado por color (`color_type`: Tinto, Blanco, Rosado). |
+| `20260830001` | `CreateRefreshTokensTable.cs` | `refresh_tokens` | Almacenamiento seguro de tokens de refresco, tracking de IP de creación/revocación, enlace de rotación (`replaced_by_token`) y auditoría. |
 | `20260830002` | `CreateWinesTable.cs` | `wines`, `wine_vintages`, `wine_grapes` | Catálogo de etiquetas base (`wines`), cosechas anuales (`wine_vintages` con constraint de unicidad `UQ_WineVintages_WineId_Year` NULLS NOT DISTINCT) y composición varietal (`wine_grapes` con `CK_WineGrapes_Percentage`). |
 | `20260919001` | `CreatePairingsTable.cs` | `pairings`, `wine_pairings` | Catálogo de maridajes culinarios clasificados por categoría y tabla intermedia de asociación N:M `wine_pairings` con eliminación en cascada. |
 | `20260929001` | `CreateReviewsTable.cs` | `reviews` | Reseñas y calificaciones (1 a 5 estrellas) emitidas por usuarios sobre cosechas específicas (`wine_vintages`), con restricción de unicidad (`uq_reviews_user_wine_vintage`) y cascade rollup. |
+| `20260929003` | `CreateFollowTables.cs` | `user_follows`, `winery_follows` | Seguimiento social: usuarios siguen a otros usuarios y a bodegas aprobadas, con timestamps y claves compuestas. |
+| `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
+| `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
+| `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
 
 ---
 
@@ -40,6 +44,14 @@ erDiagram
     USERS ||--o{ WINERIES : "administra (opcional)"
     USERS ||--o{ WINE_VINTAGES : "sube cosechas"
     USERS ||--o{ REVIEWS : "escribe"
+    USERS ||--o{ USER_FOLLOWS : "sigue a usuarios"
+    USERS ||--o{ WINERY_FOLLOWS : "sigue a bodegas"
+    WINERIES ||--o{ WINERY_FOLLOWS : "recibe seguidores"
+    USERS ||--o{ USER_WINES : "marca estado"
+    WINES ||--o{ USER_WINES : "marcado por"
+    USERS ||--o{ CELLARS : "posee"
+    CELLARS ||--o{ CELLAR_ITEMS : "almacena botellas"
+    WINE_VINTAGES ||--o{ CELLAR_ITEMS : "guardado en"
 
     STATES ||--o{ CITIES : "contiene"
     CITIES ||--o{ LOCATIONS : "alberga terruños"
@@ -155,6 +167,45 @@ erDiagram
         int wine_vintage_id FK
         int rating "1 a 5"
         string comment
+        datetime created_at
+        datetime updated_at
+    }
+
+    USER_FOLLOWS {
+        int follower_id PK, FK
+        int followed_user_id PK, FK
+        datetime created_at
+    }
+
+    WINERY_FOLLOWS {
+        int user_id PK, FK
+        int winery_id PK, FK
+        datetime created_at
+    }
+
+    USER_WINES {
+        int user_id PK, FK
+        int wine_id PK, FK
+        boolean is_wanted
+        boolean is_tried
+        boolean is_favorite
+        datetime created_at
+        datetime updated_at
+    }
+
+    CELLARS {
+        int id PK
+        int user_id FK
+        string name
+        datetime created_at
+    }
+
+    CELLAR_ITEMS {
+        int cellar_id PK, FK
+        int wine_vintage_id PK, FK
+        int quantity
+        date purchase_date
+        string notes
         datetime created_at
         datetime updated_at
     }

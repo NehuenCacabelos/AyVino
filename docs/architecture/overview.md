@@ -71,7 +71,7 @@ En concordancia con la constitución del proyecto ([`AGENTS.md`](../../AGENTS.md
 ### ADR-01: Adopción de Vertical Slice Architecture
 
 - **Contexto**: Las arquitecturas por capas técnicas (Clean Architecture tradicional, Onion) separan el código horizontalmente en carpetas como `Controllers`, `Services`, `Repositories` y `Entities`. Cuando una funcionalidad cambia, el desarrollador debe editar archivos en cuatro proyectos o carpetas diferentes, generando acoplamiento innecesario entre casos de uso independientes.
-- **Decisión**: Se implementa **Vertical Slice Architecture**. El código se organiza dentro de [`src/backend/AyVino.Api/Features/`](../../src/backend/AyVino.Api/Features) agrupado por rebanada de negocio (`Auth`, `Users`, `Wineries`, `Locations`, `Grapes`, `Wines`, `Pairings`).
+- **Decisión**: Se implementa **Vertical Slice Architecture**. El código se organiza dentro de [`src/backend/AyVino.Api/Features/`](../../src/backend/AyVino.Api/Features) agrupado por rebanada de negocio (`Auth`, `Users`, `Wineries`, `Locations`, `Grapes`, `Wines`, `Pairings`, `Reviews`, `Follows`, `UserWines`, `Cellars`, `WineCare`).
 - **Consecuencias**: Alta cohesión interna, bajo acoplamiento entre funcionalidades, facilidad para refactorizar o eliminar un slice sin afectar al resto del sistema, y trazabilidad inmediata de cada caso de uso.
 
 ### ADR-02: Micro-ORM Dapper sobre Entity Framework Core
@@ -91,6 +91,25 @@ En concordancia con la constitución del proyecto ([`AGENTS.md`](../../AGENTS.md
 - **Contexto**: Un catálogo exclusivo de bodegas oficiales generaría barreras de entrada iniciales, mientras que un catálogo 100% comunitario provocaría dispersión y baja calidad de datos.
 - **Decisión**: Los usuarios pueden cargar botellas comunitarias (`SourceType = Community`). Cuando una bodega productora se registra oficialmente en la plataforma, tiene a su disposición un flujo de reclamo (`GET /api/wines/claim-candidates/{wineryId}` y `POST /api/wines/claim/{wineryId}`) para asociar las botellas comunitarias a su entidad oficial (`SourceType = Official`), unificando el catálogo sin perder las interacciones históricas.
 
+### ADR-05: Autorización de Dominio con `Actor` y `WineryAccessRules`
+
+- **Contexto**: Las políticas basadas solo en roles HTTP (`RequireRole`) no pueden resolver autorizaciones contextuales de titularidad sobre recursos (ownership de bodegas y vinos).
+- **Decisión**: Se desacopla la identidad HTTP mediante el modelo de dominio `Actor(UserId, Role)` y las reglas de acceso centralizadas en `WineryAccessRules.IsOwner`. Si el usuario no es el dueño ni administrador de un recurso público existente, se retorna `403 Forbidden` (`ForbiddenException`), preservando `404 Not Found` exclusivamente para recursos inexistentes o privados (cavas).
+
+### ADR-06: Bloqueo de Cuentas (Account Lockout) y Paginación Generalizada
+
+- **Contexto**: Mitigación de ataques de fuerza bruta sobre credenciales y control de transferencia en listados masivos.
+- **Decisión**: Se introduce bloqueo temporal por 15 minutos tras 5 intentos fallidos de login consecutivos, registrado en `user_credentials.blocked_until` y `failed_login_attempts`. Asimismo, todos los listados del sistema (`/api/users`, `/api/cities`, `/api/locations`, etc.) implementan paginación estricta y validada en capa de servicios (`pageNumber > 0`, `pageSize 1-100`, con defaults `1` y `10`).
+
+### ADR-07: Dominio Personal y Social (Follows, UserWines, Cellars, WineCare)
+
+- **Contexto**: Los aficionados requieren interactuar socialmente, marcar preferencias y gestionar su stock de botellas con consejos de consumo.
+- **Decisión**:
+  - **Follows**: Relaciones unidireccionales para seguir usuarios o bodegas aprobadas.
+  - **UserWines**: Marcas `wanted`, `tried` (no desmarcable) y `favorite` con persistencia `ON CONFLICT` e higiene de base de datos.
+  - **Cellars**: Gestión multi-cava privada (casa, oficina) con control de stock y prevención de borrado con botellas existentes (409 Conflict).
+  - **WineCare**: Motor de cálculo de temperatura óptima, decantado y ventana de guarda combinando datos declarados por bodegas con heurísticas enológicas basadas en uvas y añadas.
+
 ---
 
 ## 5. Estructura de la Solución
@@ -102,9 +121,8 @@ AyVino/
 ├── docs/                          # Documentación viva y centralizada del proyecto
 ├── src/
 │   ├── backend/
-│   │   ├── AyVino.Api/            # Proyecto Web API principal (Vertical Slices)
-│   │   └── AyVino.Core/           # Librería base para utilidades compartidas
+│   │   └── AyVino.Api/            # Proyecto Web API principal (Vertical Slices)
 │   └── frontend/                  # Proyecto SPA (React 19 + TypeScript + Vite)
 └── tests/
-    └── AyVino.UnitTests/          # Pruebas unitarias y de integración
+    └── AyVino.UnitTests/          # Pruebas unitarias de servicios y validaciones
 ```

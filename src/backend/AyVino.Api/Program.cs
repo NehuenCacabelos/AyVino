@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using AyVino.Api.Common.Data;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Common.Middleware;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Hashing;
@@ -50,12 +51,11 @@ using Scalar.AspNetCore;
 
 // 1. Configuraciones iniciales de serialización / mapeo
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-
-
-
+DapperConfiguration.Configure();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureJsonOptions();
 
 // CORS configuration
 const string frontendCorsPolicy = "FrontendPolicy";
@@ -113,6 +113,16 @@ builder.Services.AddProblemDetails(options =>
         {
             validation.Title = "Error de validación";
             validation.Detail = string.Join(" ", validation.Errors.SelectMany(e => e.Value));
+        }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status401Unauthorized)
+        {
+            context.ProblemDetails.Title ??= "No autorizado";
+            context.ProblemDetails.Detail ??= "No está autenticado para acceder a este recurso.";
+        }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status403Forbidden)
+        {
+            context.ProblemDetails.Title ??= "Acceso prohibido";
+            context.ProblemDetails.Detail ??= "No posee permisos suficientes para acceder a este recurso.";
         }
     };
 });
@@ -207,8 +217,11 @@ builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
 builder.Services.AddScoped<IWineCareService, WineCareService>();
 
 // FluentMigrator configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Configuración de cadena de conexión 'DefaultConnection' no encontrada o vacía. Configure el secreto mediante 'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<valor>\"' en desarrollo o mediante la variable de entorno 'ConnectionStrings__DefaultConnection' en producción.");
+}
 
 builder.Services.AddFluentMigratorCore()
     .ConfigureRunner(rb => rb
@@ -235,8 +248,9 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Global Exception Handler Middleware
+// Global Exception Handler & Status Code Pages Middleware
 app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

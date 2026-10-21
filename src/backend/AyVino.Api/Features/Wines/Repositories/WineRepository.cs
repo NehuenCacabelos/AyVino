@@ -161,8 +161,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        // wine_vintages tiene ON DELETE CASCADE hacia wines, así que borrar la etiqueta
-        // se lleva puestas todas sus cosechas (y wine_grapes en cascada desde ahí también).
+        // wine_vintages tiene ON DELETE CASCADE hacia wines, eliminando en cascada cosechas y uvas asociadas.
         const string sql = "DELETE FROM wines WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rows = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
