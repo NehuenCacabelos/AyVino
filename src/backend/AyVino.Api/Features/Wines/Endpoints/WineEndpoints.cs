@@ -23,16 +23,15 @@ public static class WineEndpoints
 
         group.MapPost("/", async (CreateWineRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
         {
-            var userId = user.GetUserId();
-            var created = await service.CreateAsync(request, userId, ct);
+            var created = await service.CreateAsync(request, user.GetActor(), ct);
             return Results.Created($"/api/wines/{created.Id}", created);
         })
             .RequireAuthorization()
             .WithName("CreateWine")
             .WithSummary("Creates a new wine label together with its first vintage.");
 
-        group.MapPut("/{id:int}", async (int id, UpdateWineRequestDto request, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.UpdateAsync(id, request, ct)))
+        group.MapPut("/{id:int}", async (int id, UpdateWineRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateAsync(id, request, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("UpdateWine")
             .WithSummary("Updates a wine label's data (name, type, winery, location, description).");
@@ -46,14 +45,14 @@ public static class WineEndpoints
             .WithName("DeleteWine")
             .WithSummary("Deletes a wine label and all of its vintages (cascade).");
 
-        group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.GetClaimCandidatesAsync(wineryId, ct)))
+        group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetClaimCandidatesAsync(wineryId, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("GetWineClaimCandidates")
             .WithSummary("Lists unclaimed community wine labels whose typed winery name matches this winery.");
 
-        group.MapPost("/claim/{wineryId:int}", async (int wineryId, ClaimWinesRequestDto request, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.ClaimWinesAsync(wineryId, request.WineIds, ct)))
+        group.MapPost("/claim/{wineryId:int}", async (int wineryId, ClaimWinesRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.ClaimWinesAsync(wineryId, request.WineIds, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");

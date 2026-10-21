@@ -1,4 +1,6 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Models;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.DTOs;
@@ -39,7 +41,7 @@ public class WineOptimizationTests
             ]
         };
 
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act
         var result = (await service.GetAllByWineIdAsync(1)).ToList();
@@ -66,7 +68,7 @@ public class WineOptimizationTests
         // Arrange
         var fakeWineRepo = new FakeWineRepo { ExistingWineId = 1 };
         var fakeVintageRepo = new FakeVintageRepo();
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
@@ -84,7 +86,7 @@ public class WineOptimizationTests
         {
             Vintages = [new WineVintage { Id = 101, WineId = 1, Year = 2020, ApprovalStatus = ApprovalStatus.Pending }]
         };
-        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo());
+        var service = new WineVintageService(fakeVintageRepo, fakeWineRepo, new FakeGrapeRepo(), null!);
 
         // Act
         var result = await service.ChangeStatusAsync(1, 101, new ChangeWineVintageStatusRequestDto("Approved"));
@@ -122,7 +124,7 @@ public class WineOptimizationTests
         var service = new WineService(fakeWineRepo, fakeWineryRepo, new FakeLocationRepo(), new FakeGrapeRepo());
 
         // Act
-        var result = (await service.ClaimWinesAsync(10, [1, 2])).ToList();
+        var result = (await service.ClaimWinesAsync(10, [1, 2], new Actor(1, AppRoles.Admin))).ToList();
 
         // Assert
         Assert.Equal(2, result.Count);

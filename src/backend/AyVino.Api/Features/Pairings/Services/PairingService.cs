@@ -1,14 +1,18 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Pairings.DTOs;
 using AyVino.Api.Features.Pairings.Enums;
 using AyVino.Api.Features.Pairings.Repositories;
+using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Pairings.Services;
 
 public class PairingService(
     IPairingRepository pairingRepository,
-    IWineRepository wineRepository) : IPairingService
+    IWineRepository wineRepository,
+    IWineryRepository wineryRepository) : IPairingService
 {
     public async Task<PairingResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
@@ -75,10 +79,17 @@ public class PairingService(
         return pairings.ToResponseDtoList();
     }
 
-    public async Task AddToWineAsync(int wineId, int pairingId, CancellationToken ct = default)
+    public async Task AddToWineAsync(int wineId, int pairingId, Actor actor, CancellationToken ct = default)
     {
-        if (!await wineRepository.ExistsByIdAsync(wineId, ct))
-            throw new NotFoundException($"Wine with ID {wineId} not found.");
+        var wine = await wineRepository.GetByIdAsync(wineId, ct)
+            ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
+        }
 
         if (!await pairingRepository.ExistsByIdAsync(pairingId, ct))
             throw new NotFoundException($"Pairing with ID {pairingId} not found.");
@@ -89,8 +100,18 @@ public class PairingService(
         await pairingRepository.AddToWineAsync(wineId, pairingId, ct);
     }
 
-    public async Task RemoveFromWineAsync(int wineId, int pairingId, CancellationToken ct = default)
+    public async Task RemoveFromWineAsync(int wineId, int pairingId, Actor actor, CancellationToken ct = default)
     {
+        var wine = await wineRepository.GetByIdAsync(wineId, ct)
+            ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
+        }
+
         var removed = await pairingRepository.RemoveFromWineAsync(wineId, pairingId, ct);
         if (!removed) throw new NotFoundException($"Wine {wineId} is not paired with pairing {pairingId}.");
     }

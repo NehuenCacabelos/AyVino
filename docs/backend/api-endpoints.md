@@ -96,6 +96,33 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 
 ---
 
+## Roles y Permisos (Ownership y Matriz de Acceso)
+
+La autorización en AyVino se resuelve a nivel de servicios (`Services/`) mediante el patrón `Actor(UserId, Role)` derivado de los claims del JWT (`ClaimsPrincipal.GetActor()`).
+
+### Regla Fundamental de Respuestas HTTP
+- **Recurso público existente sin permisos suficientes:** Devuelve `403 Forbidden` (`ForbiddenException`), con ProblemDetails RFC 7807 y mensaje claro en español.
+- **Recurso inexistente:** Devuelve `404 Not Found` (`NotFoundException`). Nunca se utiliza `404` para ocultar recursos públicos; ese comportamiento queda reservado exclusivamente para recursos estrictamente privados (como cavas personales).
+
+### Matriz de Acceso
+(A = Admin, O = Dueño de la bodega relevante, U = Usuario que subió la cosecha, X = Cualquier usuario autenticado)
+
+| Regla | Acción / Endpoint | Quién puede | Detalle y Condiciones |
+|---|---|---|---|
+| **R1** | `PUT /api/wineries/{id}` | A, O | Bodega sin dueño (`UserId == null`): solo A. El dueño puede editar su bodega aunque se encuentre en estado `Pending`. |
+| **R2** | `POST /api/wines` **con `WineryId`** | A, O | O requiere que la bodega esté `Approved`. Sin `WineryId` (vino comunitario): X (cualquier usuario autenticado). |
+| **R3** | `PUT /api/wines/{id}` | A, O | Vino con bodega: A o el dueño (O) de esa misma bodega. Vino comunitario (`WineryId == null`): solo A. **Cambiar o quitar la bodega solo lo hace un Admin.** Mantiene consistencia de `source_type`. |
+| **R4** | `PUT /api/wines/{wineId}/vintages/{vintageId}` | A, O, U | A y O de la bodega del vino siempre. U (quien subió la cosecha) **solo mientras la cosecha esté en estado `Pending`**. Si ya fue moderada (`Approved` o `Rejected`), un usuario común no puede editarla. |
+| **R5** | `GET .../claim-candidates/{wineryId}` y `POST .../claim/{wineryId}` | A, O | O requiere que la bodega esté en estado `Approved`. |
+| **R6** | `POST` y `DELETE /api/wines/{wineId}/pairings/{pairingId}` | A, O | O de la bodega del vino. En vinos comunitarios (`WineryId == null`): solo A. |
+| **R7** | `POST /api/cities`, `POST /api/locations` | X | Requiere autenticación. Las lecturas (`GET`) continúan siendo públicas. |
+
+> **Nota sobre `PUT /api/wines/{id}`:** La operación `PUT` reemplaza completamente el recurso. El dueño de la bodega debe reenviar en el cuerpo del request el mismo `WineryId`. Enviar `null` o un identificador de otra bodega constituye un cambio de titularidad de la etiqueta, operación que solo puede realizar un Administrador. Al actualizar, el sistema recalcula y persiste el `source_type` (`Official` si posee `WineryId`, o `Community` si no lo posee).
+
+> **Nota sobre `POST /api/cities` y `POST /api/locations`:** Ahora exigen autenticación. Consecuencia: Dado que `POST /api/wineries/register` es un endpoint público anónimo que solicita un `LocationId` existente, si se desea registrar una bodega en una nueva ciudad no cargada previamente en el catálogo, un usuario autenticado debe crear primero la ciudad y la ubicación correspondiente.
+
+---
+
 ## 1. Autenticación (`/api/auth`)
 
 Gestiona las credenciales, emisión de tokens JWT, rotación criptográfica de Refresh Tokens y revocación de sesiones. Protegido contra ataques de fuerza bruta mediante la política de Rate Limiting `AuthLimit` (15 peticiones/minuto por IP).
@@ -136,7 +163,7 @@ Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/
 | `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil público de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
 | `POST` | `/api/wineries` | Autenticado | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
 | `POST` | `/api/wineries/register` | Público | Onboarding unificado: crea usuario con rol `Winery` y entidad bodega en una transacción, devolviendo JWT. | `RegisterWineryRequestDto` | `201 Created` (`RegisterWineryResponseDto`) |
-| `PUT` | `/api/wineries/{id}` | Autenticado | Actualiza los datos informativos y de contacto de una bodega. | `UpdateWineryRequestDto` | `200 OK` (`WineryResponseDto`) |
+| `PUT` | `/api/wineries/{id}` | Autenticado (Admin o Dueño) | Actualiza los datos informativos y de contacto de una bodega. | `UpdateWineryRequestDto` | `200 OK` (`WineryResponseDto`) |
 | `PATCH` | `/api/wineries/{id}/status` | Admin (`RequireAdmin`) | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). | `ChangeWineryStatusRequestDto` | `200 OK` (`WineryResponseDto`) |
 | `DELETE`| `/api/wineries/{id}` | Admin (`RequireAdmin`) | Elimina una bodega del catálogo. | - | `204 NoContent` |
 
@@ -159,7 +186,7 @@ Gestión de municipios y ciudades vitivinícolas con patrón `GetOrCreate`.
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/cities` | Público | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
+| `POST` | `/api/cities` | Autenticado | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
 | `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber`, `pageSize`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
 | `GET` | `/api/cities/{id}` | Público | Detalle de una ciudad por su ID. | - | `200 OK` (`CityResponseDto`) |
 | `PATCH`| `/api/cities/{id}/status` | Admin (`RequireAdmin`) | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
@@ -172,7 +199,7 @@ Modelado de regiones vitivinícolas y valles (ej: Valle de Uco, Cafayate, San Pa
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/locations` | Público | Da de alta una nueva ubicación vinculada a una `CityId` existente. | `CreateLocationRequestDto` | `201 Created` (`LocationResponseDto`) |
+| `POST` | `/api/locations` | Autenticado | Da de alta una nueva ubicación vinculada a una `CityId` existente. | `CreateLocationRequestDto` | `201 Created` (`LocationResponseDto`) |
 | `GET` | `/api/locations/{id}` | Público | Obtiene la ubicación con los nombres resueltos de su ciudad y provincia. | - | `200 OK` (`LocationResponseDto`) |
 | `GET` | `/api/locations` | Público | Listado paginado de ubicaciones con nombres geográficos resueltos. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<LocationResponseDto>`) |
 
@@ -200,15 +227,15 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wines` | Público | Listado paginado de vinos con filtros combinados por bodega, varietal y rango de añadas. | Query params: `pageNumber`, `pageSize`, `wineryId?`, `grapeId?`, `yearFrom?`, `yearTo?` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
-| `POST` | `/api/wines` | Autenticado | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
-| `PUT` | `/api/wines/{id}` | Autenticado | Actualiza los datos de la botella y reemplaza la composición de uvas. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
+| `POST` | `/api/wines` | Autenticado (Admin o Dueño si incluye `WineryId`; comunitario: cualquier autenticado) | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
+| `PUT` | `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Actualiza los datos de la botella y mantiene consistente `source_type`. Solo Admin cambia de bodega. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
 | `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
-| `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
-| `POST` | `/api/wines/claim/{wineryId}` | Autenticado | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
+| `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/{wineId}/vintages` | Público | Lista todas las cosechas/añadas de una etiqueta de vino con sus cortes de uvas. | - | `200 OK` (`IEnumerable<WineVintageResponseDto>`) |
 | `GET` | `/api/wines/{wineId}/vintages/{vintageId}` | Público | Obtiene una cosecha individual con su corte de uvas y calificación. | - | `200 OK` (`WineVintageResponseDto`) |
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
-| `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
+| `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica de la etiqueta. | - | `204 NoContent` |
 
@@ -226,8 +253,8 @@ Catálogo de maridajes (carnes, pescados, pastas, quesos, postres) y relaciones 
 | `PUT` | `/api/pairings/{id}` | Admin (`RequireAdmin`) | Actualiza nombre o categoría de un maridaje existente en el catálogo. | `UpdatePairingRequestDto` | `200 OK` (`PairingResponseDto`) |
 | `DELETE`| `/api/pairings/{id}` | Admin (`RequireAdmin`) | Elimina un maridaje del catálogo maestro. | - | `204 NoContent` |
 | `GET` | `/api/wines/{wineId}/pairings` | Público | Lista todos los maridajes asociados a una botella de vino. | - | `200 OK` (`IEnumerable<PairingResponseDto>`) |
-| `POST` | `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado | Asocia un maridaje a un vino en la tabla intermedia `wine_pairings`. | - | `204 NoContent` |
-| `DELETE`| `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado | Desvincula un maridaje de un vino. | - | `204 NoContent` |
+| `POST` | `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado (Admin o Dueño de la bodega del vino) | Asocia un maridaje a un vino en la tabla intermedia `wine_pairings`. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{wineId}/pairings/{pairingId}` | Autenticado (Admin o Dueño de la bodega del vino) | Desvincula un maridaje de un vino. | - | `204 NoContent` |
 
 ---
 

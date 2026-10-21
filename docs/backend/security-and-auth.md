@@ -106,6 +106,13 @@ Mapeados a políticas en `Program.cs`:
 - `AppPolicies.RequireUser` -> `RequireRole(AppRoles.User)`
 - `AppPolicies.RequireWinery` -> `RequireRole(AppRoles.Winery)`
 
+### 5.1 Autorización de Propiedad (Ownership) y Reglas de Dominio
+La autorización no se limita a políticas por rol en los endpoints, sino que evalúa la titularidad (ownership) de los recursos dentro de la capa de servicios mediante el patrón `Actor` (`UserId`, `Role`).
+
+- **Objeto `Actor`**: Estructura inmutable que encapsula la identidad y permisos del invocador proveniente del JWT (`ClaimsPrincipal.GetActor()`).
+- **Reglas puras (`WineryAccessRules`)**: Funciones determinísticas aisladas de base de datos (`IsOwner`, `CanManage`, `CanPublish`) que centralizan la matriz de permisos para bodegas y sus recursos asociados (vinos, cosechas, maridajes).
+- **Manejo de errores**: Si un usuario autenticado intenta modificar un recurso público sin los privilegios requeridos, los servicios arrojan `ForbiddenException` (HTTP 403 Forbidden).
+
 ---
 
 ## 6. Gestión Segura de Secretos y Configuración JWT

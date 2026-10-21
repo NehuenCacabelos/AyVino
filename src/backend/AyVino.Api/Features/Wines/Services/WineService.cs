@@ -1,7 +1,10 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.Repositories;
+using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
@@ -32,27 +35,54 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
-    public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, int userId, CancellationToken ct = default)
+    public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default)
     {
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
+
+        if (dto.WineryId.HasValue && !actor.IsAdmin)
+        {
+            var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct)
+                ?? throw new ValidationException($"Winery with ID {dto.WineryId} does not exist.");
+
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("Solo el dueño de la bodega puede publicar vinos oficiales a su nombre.");
+
+            if (winery.Status != WineryStatus.Approved)
+                throw new ForbiddenException("La bodega debe estar aprobada para publicar vinos oficiales.");
+        }
+
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
         var wineEntity = dto.ToEntity(wineType, sourceType);
-        var firstVintageEntity = dto.FirstVintage.ToEntity(userId);
+        var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId);
 
         var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
         return wine.ToResponseDto();
     }
 
-    public async Task<WineResponseDto> UpdateAsync(int id, UpdateWineRequestDto dto, CancellationToken ct = default)
+    public async Task<WineResponseDto> UpdateAsync(int id, UpdateWineRequestDto dto, Actor actor, CancellationToken ct = default)
     {
-        var exists = await wineRepository.ExistsByIdAsync(id, ct);
-        if (!exists) throw new NotFoundException($"Wine with ID {id} not found.");
+        var existing = await wineRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Wine with ID {id} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            if (existing.WineryId is null)
+                throw new ForbiddenException("Solo un administrador puede editar vinos comunitarios.");
+
+            var winery = await wineryRepository.GetByIdAsync(existing.WineryId.Value, ct);
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("No tenés permiso para editar este vino.");
+
+            if (dto.WineryId != existing.WineryId)
+                throw new ForbiddenException("Solo un administrador puede cambiar la bodega de un vino.");
+        }
 
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
-        var wineEntity = dto.ToEntity(id, wineType);
+        var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
+        var wineEntity = dto.ToEntity(id, wineType, sourceType);
         var updated = await wineRepository.UpdateAsync(wineEntity, ct);
         if (!updated) throw new NotFoundException($"Wine with ID {id} not found.");
 
@@ -65,19 +95,35 @@ public class WineService(
         if (!deleted) throw new NotFoundException($"Wine with ID {id} not found.");
     }
 
-    public async Task<IEnumerable<WineResponseDto>> GetClaimCandidatesAsync(int wineryId, CancellationToken ct = default)
+    public async Task<IEnumerable<WineResponseDto>> GetClaimCandidatesAsync(int wineryId, Actor actor, CancellationToken ct = default)
     {
         var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
             ?? throw new NotFoundException($"Winery with ID {wineryId} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("Solo el dueño de la bodega puede reclamar vinos.");
+            if (winery.Status != WineryStatus.Approved)
+                throw new ForbiddenException("La bodega debe estar aprobada para reclamar vinos.");
+        }
 
         var candidates = await wineRepository.GetUnclaimedByNameLikeAsync(winery.Name, ct);
         return candidates.Select(w => w.ToResponseDto());
     }
 
-    public async Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, CancellationToken ct = default)
+    public async Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, Actor actor, CancellationToken ct = default)
     {
-        var exists = await wineryRepository.ExistsByIdAsync(wineryId, ct);
-        if (!exists) throw new NotFoundException($"Winery with ID {wineryId} not found.");
+        var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
+            ?? throw new NotFoundException($"Winery with ID {wineryId} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("Solo el dueño de la bodega puede reclamar vinos.");
+            if (winery.Status != WineryStatus.Approved)
+                throw new ForbiddenException("La bodega debe estar aprobada para reclamar vinos.");
+        }
 
         if (wineIds is not { Count: > 0 })
             throw new ValidationException("You must provide at least one wine ID to claim.");

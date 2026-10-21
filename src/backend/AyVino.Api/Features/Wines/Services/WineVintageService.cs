@@ -1,5 +1,8 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
@@ -10,7 +13,8 @@ namespace AyVino.Api.Features.Wines.Services;
 public class WineVintageService(
     IWineVintageRepository vintageRepository,
     IWineRepository wineRepository,
-    IGrapeRepository grapeRepository) : IWineVintageService
+    IGrapeRepository grapeRepository,
+    IWineryRepository wineryRepository) : IWineVintageService
 {
     public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, CancellationToken ct = default)
     {
@@ -50,9 +54,28 @@ public class WineVintageService(
         return vintage.ToResponseDto(grapes);
     }
 
-    public async Task<WineVintageResponseDto> UpdateAsync(int wineId, int vintageId, UpdateWineVintageRequestDto dto, CancellationToken ct = default)
+    public async Task<WineVintageResponseDto> UpdateAsync(int wineId, int vintageId, UpdateWineVintageRequestDto dto, Actor actor, CancellationToken ct = default)
     {
-        await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+        var vintage = await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+
+        if (!actor.IsAdmin)
+        {
+            var isUploader = vintage.UploadedByUserId == actor.UserId;
+
+            if (!(isUploader && vintage.ApprovalStatus == ApprovalStatus.Pending))
+            {
+                var wine = await wineRepository.GetByIdAsync(wineId, ct)
+                    ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
+                var winery = wine.WineryId is int wineryId
+                    ? await wineryRepository.GetByIdAsync(wineryId, ct)
+                    : null;
+
+                if (!WineryAccessRules.IsOwner(winery, actor))
+                    throw new ForbiddenException(isUploader
+                        ? "No podés editar una cosecha que ya fue moderada."
+                        : "No tenés permiso para editar esta cosecha.");
+            }
+        }
 
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);

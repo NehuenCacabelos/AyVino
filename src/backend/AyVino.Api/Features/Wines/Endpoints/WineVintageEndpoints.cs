@@ -31,8 +31,8 @@ public static class WineVintageEndpoints
             .WithName("CreateWineVintage")
             .WithSummary("Adds a new vintage (starts as Pending) to an existing wine label.");
 
-        group.MapPut("/{vintageId:int}", async (int wineId, int vintageId, UpdateWineVintageRequestDto request, IWineVintageService service, CancellationToken ct) =>
-            Results.Ok(await service.UpdateAsync(wineId, vintageId, request, ct)))
+        group.MapPut("/{vintageId:int}", async (int wineId, int vintageId, UpdateWineVintageRequestDto request, ClaimsPrincipal user, IWineVintageService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateAsync(wineId, vintageId, request, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("UpdateWineVintage")
             .WithSummary("Updates a vintage's data and replaces its grape blend.");
