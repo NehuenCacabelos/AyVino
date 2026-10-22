@@ -33,7 +33,9 @@ flowchart TD
         subgraph WineryArea["Área Exclusiva de Bodega (/bodega/*)"]
             WineryLayoutComponent["WineryLayout.tsx (Header + Sidebar + Contexto)"]
             WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx"]
+            WineryProfile["/bodega/perfil -> WineryProfilePage.tsx"]
             WineryLayoutComponent --> WineryDash
+            WineryLayoutComponent --> WineryProfile
         end
     end
 
@@ -141,6 +143,13 @@ flowchart TD
   - Previsualización de las últimas botellas oficiales con categoría enológica, puntuación comunitaria y enlace a gestión.
   - Empty state sobrio integrado con botón para cargar la primera etiqueta si el catálogo está vacío.
 
+### 2.6 Perfil Institucional de Bodega (`WineryProfilePage.tsx`)
+- **Edición en Tiempo Real (`PUT /api/wineries/{id}`)**:
+  - Formulario Clean Dark con validación local réplica de backend: nombre requerido, terruño en cascada mediante [`LocationCascadeSelect.tsx`](../../src/frontend/src/features/winery/components/LocationCascadeSelect.tsx), año de fundación numérico, validación de URL para sitio web oficial y semblanza histórica con contador de hasta 2000 caracteres.
+  - Botón primario *"Guardar cambios"* con indicador de carga y botón secundario *"Descartar cambios"* para volver a los valores persistidos.
+- **Vista Previa Editorial en Vivo (Split View)**:
+  - Panel lateral permanente que refleja de manera instantánea el monograma con iniciales enológicas, nombre en tipografía Serif noble, badges de verificación, terruño geográfico y párrafos de la semblanza histórica tal como los miembros de la comunidad los visualizarán en la vidriera pública (`/bodegas/:id`).
+
 ---
 
 ## 3. Vistas Protegidas y Políticas de Acceso
@@ -160,4 +169,5 @@ flowchart TD
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/bodega` | `WineryLayout.tsx` | Exclusivo `Winery` o `Admin` | Redirige internamente a `/bodega/dashboard` |
 | `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
+| `/bodega/perfil` | `WineryProfilePage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
 | `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |

@@ -149,3 +149,4 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
     </div>
   );
 }
+

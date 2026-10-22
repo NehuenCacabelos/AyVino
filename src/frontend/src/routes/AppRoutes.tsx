@@ -19,6 +19,7 @@ const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
 // Layout y vistas del panel de Bodega
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
+const WineryProfilePage = lazy(() => import('../pages/WineryProfilePage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -116,6 +117,7 @@ export default function AppRoutes() {
         >
           <Route index element={<Navigate to="/bodega/dashboard" replace />} />
           <Route path="dashboard" element={<WineryDashboardPage />} />
+          <Route path="perfil" element={<WineryProfilePage />} />
         </Route>
 
         {/* Fallback 404: Redirigir a inicio */}

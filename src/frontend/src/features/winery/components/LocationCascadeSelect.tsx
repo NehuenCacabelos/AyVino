@@ -4,7 +4,7 @@ import type { StateResponseDto, LocationResponseDto } from '../types';
 
 export interface LocationCascadeSelectProps {
   value: number | null;
-  onChange: (locationId: number | null) => void;
+  onChange: (locationId: number | null, location?: LocationResponseDto | null) => void;
   error?: string | null;
   disabled?: boolean;
 }
@@ -21,10 +21,11 @@ export default function LocationCascadeSelect({
 }: LocationCascadeSelectProps) {
   const [states, setStates] = useState<StateResponseDto[]>([]);
   const [locations, setLocations] = useState<LocationResponseDto[]>([]);
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
+  const [explicitStateId, setExplicitStateId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Carga inicial de provincias y ubicaciones una sola vez al montar
   useEffect(() => {
     let isMounted = true;
 
@@ -33,14 +34,6 @@ export default function LocationCascadeSelect({
         if (!isMounted) return;
         setStates(statesData);
         setLocations(locationsData);
-
-        // Si ya hay un LocationId seleccionado inicialmente, sincronizar la provincia
-        if (value) {
-          const match = locationsData.find((loc) => loc.id === value);
-          if (match) {
-            setSelectedStateId(match.stateId);
-          }
-        }
       })
       .catch((err: unknown) => {
         if (!isMounted) return;
@@ -59,7 +52,18 @@ export default function LocationCascadeSelect({
     return () => {
       isMounted = false;
     };
-  }, [value]);
+  }, []);
+
+  // La provincia seleccionada se deriva: si el usuario eligió una provincia explícita, se usa esa;
+  // de lo contrario, se deduce automáticamente a partir del locationId (value) activo.
+  const selectedStateId = useMemo(() => {
+    if (explicitStateId !== null) return explicitStateId;
+    if (value && locations.length > 0) {
+      const match = locations.find((l) => l.id === value);
+      return match ? match.stateId : null;
+    }
+    return null;
+  }, [explicitStateId, value, locations]);
 
   // Filtrar las ubicaciones disponibles según la provincia seleccionada
   const availableLocations = useMemo(() => {
@@ -69,14 +73,15 @@ export default function LocationCascadeSelect({
 
   const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateId = e.target.value ? Number(e.target.value) : null;
-    setSelectedStateId(stateId);
+    setExplicitStateId(stateId);
     // Reiniciar la ubicación seleccionada al cambiar de provincia
-    onChange(null);
+    onChange(null, null);
   };
 
   const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const locId = e.target.value ? Number(e.target.value) : null;
-    onChange(locId);
+    const resolvedLoc = locId ? locations.find((l) => l.id === locId) ?? null : null;
+    onChange(locId, resolvedLoc);
   };
 
   return (
@@ -140,4 +145,3 @@ export default function LocationCascadeSelect({
     </div>
   );
 }
-

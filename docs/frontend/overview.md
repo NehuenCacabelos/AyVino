@@ -24,7 +24,7 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 
 ### 2.1 Paleta Cromática y Acabados (Fondo Oscuro Mate)
 - **Fondo Base Carbón Mate (`#0f0f11` / `#121214` / `#0a0a0c`)**: Evita el negro puro ofreciendo una textura sobria, descansada y elegante para la interfaz nocturna de cava.
-- **Acento Bordó Vino Sobrio (`#6e1a24` / `#831823` y `#4f131f`)**: Utilizado en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Registrar mi bodega"`, `"Nueva etiqueta"`, `"Descorchar"`, `"Crear cuenta"`) y sellos de formulario (`#4f131f`), sin saturación chillona.
+- **Acento Bordó Vino Sobrio (`#6e1a24` / `#831823` y `#4f131f`)**: Utilizado en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Registrar mi bodega"`, `"Nueva etiqueta"`, `"Guardar cambios"`, `"Descorchar"`, `"Crear cuenta"`) y sellos de formulario (`#4f131f`), sin saturación chillona.
 - **Acentos Dorados de Cava (`amber-200/60` a `amber-200/80`)**: Reservados para números de pasos editoriales, sellos de procedencia y microetiquetas (`font-mono tracking-[0.25em]`).
 - **Bordes de Estructura Limpia (`border-neutral-800` / `border-white/5` / `border-white/10`)**: Delimitación milimétrica de 1px para tarjetas, buscador, inputs y separadores de panel.
 
@@ -58,6 +58,10 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
   - **Accesos Rápidos (`WineryQuickActions.tsx`)**: Atajos de navegación rápida para publicar etiquetas, reclamar vinos de la comunidad, editar la ficha institucional de la bodega y explorar el catálogo general.
   - **Checklist Institucional (`WineryChecklistCard.tsx`)**: Guía de completitud del perfil de bodega con cálculo porcentual dinámico (0 a 100%) y enlaces directos para completar ubicación, semblanza histórica, sitio web y primera etiqueta oficial.
   - **Resumen de Etiquetas (`WineryRecentWines.tsx`)**: Grilla de las últimas botellas oficiales incorporadas con chip de varietal/tipo de vino, calificación agregada y enlace a gestión o estado de empty state con llamada a la acción si aún no hay vinos.
+- **Perfil de Bodega con Vista Previa Editorial (`WineryProfilePage.tsx`)**:
+  - **Edición en Tiempo Real (`PUT /api/wineries/{id}`)**: Formulario Clean Dark que actualiza nombre, terruño (`LocationCascadeSelect`), año de fundación, sitio web y semblanza histórica (hasta 2000 caracteres con contador de longitud).
+  - **Previsualización Editorial Interactiva (Split View)**: Columna lateral persistente que refleja en tiempo real cómo se visualiza la vidriera pública (`/bodegas/:id`) con monograma circular grande, metadatos y párrafos enológicos.
+  - **Sincronización Global**: Tras guardar exitosamente, dispara `reload()` en `useWinery()` para actualizar inmediatamente el sidebar, layout y dashboard sin recargar la aplicación.
 
 ---
 
@@ -104,6 +108,7 @@ src/frontend/src/
 │   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
 │   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
 │   ├── WineryDashboardPage.tsx# Vista de inicio del panel oficial de bodega (KPIs, Checklist, Quick Actions, Vinos)
+│   ├── WineryProfilePage.tsx  # Edición de perfil de bodega con previsualización editorial en tiempo real
 │   └── WineryRegisterPage.tsx # Formulario público de alta de bodega unificada (/bodega/registro)
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
@@ -155,7 +160,7 @@ El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque decl
   - Si la sesión se encuentra cargando (`isLoading = true`), presenta un indicador de espera accesible.
   - Si no está autenticado, redirige hacia `/login` preservando la ubicación previa en el estado de navegación (`<Navigate to="/login" state={{ from: location }} replace />`).
   - Si el usuario está autenticado pero su rol no coincide con `allowedRoles`, redirige a `/dashboard` (`<Navigate to="/dashboard" replace />`).
-  - Las rutas de bodega se encuentran anidadas bajo `/bodega/*` envueltas por `<WineryLayout />` con protección `allowedRoles={['Winery', 'Admin']}`.
+  - Las rutas de bodega se encuentran anidadas bajo `/bodega/*` envueltas por `<WineryLayout />` con protección `allowedRoles={['Winery', 'Admin']}` (`/bodega/dashboard`, `/bodega/perfil`).
 
 ---
 
@@ -193,17 +198,13 @@ npm run dev
 
 ### 7.2 Casos de Prueba Interactivos
 
-1. **Inicio del Panel de Bodega (`/bodega/dashboard`)**:
-   - Iniciar sesión con un usuario con rol `Winery` que tenga bodega asociada.
-   - Verificar la cabecera editorial con el nombre de la bodega, badge de estado, terruño y fecha actual.
-   - Comprobar la cinta de 4 KPIs (Etiquetas, Cosechas, Seguidores y Puntaje).
-   - Revisar la tarjeta de primeros pasos (Checklist institucional) y su barra porcentual de progreso.
-   - Explorar los 4 accesos rápidos directos (Publicar etiqueta, Reclamar botellas, Editar perfil, Ver vidriera / Explorar).
-   - Comprobar la grilla de etiquetas recientes o su estado vacío amable si no hay vinos cargados.
-2. **Caso de Cuenta sin Bodega Asociada**:
-   - Iniciar sesión con un usuario con rol `Winery` sin bodega en la base de datos (o cuando `/api/wineries/me` responda 404).
-   - Comprobar que se presenta la pantalla 404 amable ofreciendo registrar su bodega.
-3. **Verificación de Calidad de Código**:
+1. **Edición y Previsualización de Perfil de Bodega (`/bodega/perfil`)**:
+   - Ingresar a `/bodega/perfil` desde el sidebar o el botón de acceso rápido.
+   - Modificar el nombre, año de fundación o semblanza histórica y observar cómo la tarjeta de vista previa a la derecha actualiza en tiempo real monograma, textos y metadatos.
+   - Seleccionar una nueva provincia y ciudad/terruño en el selector en cascada.
+   - Guardar los cambios $\rightarrow$ Comprobar alerta de confirmación y actualización reactiva en el layout (sidebar y header).
+   - Probar el botón *"Descartar cambios"* para restaurar el estado original.
+2. **Verificación de Calidad de Código**:
    ```bash
    cd src/frontend
    npm run build  # Compilación estricta TypeScript (0 errores)
