@@ -4,21 +4,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const frontendDir = path.dirname(__filename);
-const repoRoot = path.resolve(frontendDir, '../..');
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  root: repoRoot,
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(frontendDir, 'src'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: [path.resolve(repoRoot, 'tests/frontend/setup.ts')],
-    include: ['tests/frontend/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: ['./tests/setup.ts'],
+    include: ['./tests/**/*.{test,spec}.{ts,tsx}'],
   },
 });
