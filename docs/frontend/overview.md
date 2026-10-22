@@ -69,16 +69,19 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
   - **Previsualización Editorial Interactiva ("Así te ven los usuarios")**: Columna lateral persistente que refleja en tiempo real cómo se visualiza la vidriera pública (`/bodegas/:id`) con `WineryLogo` oficial (o monograma de respaldo si no hay logo), badges de certificación, terruño resuelto y metadatos.
   - **Sincronización Global**: Tras guardar exitosamente, dispara `reload()` en `useWinery()` para actualizar inmediatamente el sidebar, layout y dashboard sin recargar la aplicación.
 - **Gestión de Etiquetas y Cosechas (`WineryWinesPage.tsx`)**:
-  - **Catálogo Oficial**: Grilla y listado de etiquetas producidas por la bodega, con buscador en tiempo real, filtro por tipo enológico (`Red`, `White`, `Rose`, `Sparkling`, `Orange`) y chips de categoría.
+  - **Catálogo Oficial y Estado de Moderación**: Grilla y listado de etiquetas producidas por la bodega, con buscador en tiempo real, filtro por tipo enológico (`Red`, `White`, `Rose`, `Sparkling`, `Orange`) y chips de categoría.
+  - **Carga Habilitada para Bodegas en Revisión (`Pending`)**: Una bodega pendiente puede cargar sus etiquetas y cosechas inmediatamente; se exhibe un cartel editorial informativo (*"Tu bodega está en revisión. Podés cargar tus vinos: serán visibles para los usuarios cuando te aprueben."*) y las etiquetas muestran el badge distintivo *"Borrador, solo lo ves vos"*. En bodegas rechazadas (`Rejected`), la carga queda bloqueada con aviso de observaciones.
   - **Atajos y Modales por Query String**: Soporta apertura automática del alta de etiqueta vía `?action=new` o `?nuevo=1`.
   - **Alta de Nueva Etiqueta (`WineCreateModal.tsx`)**:
     - Formulario modal con añada inaugural requerida (`POST /api/wines`).
-    - Selector dinámico de cortes varietales alimentado por `/api/grapes` con validación estricta de suma $\le 100\%$.
-    - Validación reactiva: graduación alcohólica opcional (0 a 100 con un decimal), año entre 1900 y actual+1.
+    - Foto opcional de la primera añada mediante `ImageUploadField` (`folder="vintages"`).
+    - Selector dinámico de cortes varietales alimentado por `/api/grapes`: porcentaje inicial vacío (no 100%), máximo 20 cepas, exclusión reactiva de uvas ya seleccionadas en otras filas del corte, validación individual entre 0,01% y 100%, suma total $\le 100\%$ con advertencia visual si se excede, y aviso editorial elegante si el catálogo no cuenta con cepas cargadas.
+    - Validación reactiva: graduación alcohólica opcional (5.0 a 25.0), temperatura de servicio (0 a 30 °C), año entre 1900 y actual+1.
   - **Gestión de Cosechas (`WineVintagesModal.tsx`)**:
     - Consulta reactiva de cosechas con `/api/wines/{wineId}/vintages`.
+    - Exhibición de miniatura de botella si la cosecha posee `imageUrl`.
     - Badges de estado (`Approved`, `Pending`, `Rejected`) con detalle de observaciones de moderación si aplica.
-    - Formulario integrado para registrar nuevas añadas (`createWineVintage()`).
+    - Formulario integrado para registrar nuevas añadas (`createWineVintage()`), incluyendo carga de foto de cosecha (`ImageUploadField`) y el mismo selector refinado de corte varietal (sin uvas duplicadas, máx 20, porcentaje inicial vacío).
 - **Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx`)**:
   - **Detección de Candidatos (`GET /api/wines/claim-candidates/{wineryId}`)**: Lista botellas cargadas por la comunidad de usuarios que coinciden con el nombre de la bodega.
   - **Aviso Editorial para Bodegas en Moderación**: Si la bodega se encuentra en estado `Pending`, la interfaz presenta un banner explicativo y bloquea el botón de reclamo hasta su certificación.

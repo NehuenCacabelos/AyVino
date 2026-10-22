@@ -155,4 +155,97 @@ describe('WineCreateModal', () => {
       expect(onWineCreatedMock).toHaveBeenCalledWith(mockCreatedWine);
     });
   });
+
+  it('initializes grape percentage as empty and disallows selecting duplicated grapes', async () => {
+    render(
+      <WineCreateModal
+        isOpen={true}
+        onClose={vi.fn()}
+        wineryId={10}
+        locationId={5}
+        onWineCreated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    // Check first grape row: Malbec with empty percentage
+    const pctInput = screen.getByPlaceholderText('%') as HTMLInputElement;
+    expect(pctInput.value).toBe('');
+
+    // Add second grape row
+    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
+    fireEvent.click(addGrapeBtn);
+
+    const selects = screen.getAllByRole('combobox');
+    // selects[0] is WineType, selects[1] is first grape, selects[2] is second grape
+    const secondGrapeSelect = selects[2] as HTMLSelectElement;
+
+    // Second grape select must NOT contain Malbec (id: 1) since it is selected in row 1
+    const options = Array.from(secondGrapeSelect.options).map((opt) => opt.textContent);
+    expect(options.some((o) => o?.includes('Malbec'))).toBe(false);
+    expect(options.some((o) => o?.includes('Cabernet Franc'))).toBe(true);
+  });
+
+  it('renders editorial message when grapes catalog is empty', async () => {
+    vi.mocked(grapeApi.getGrapes).mockResolvedValue([]);
+
+    render(
+      <WineCreateModal
+        isOpen={true}
+        onClose={vi.fn()}
+        wineryId={10}
+        locationId={5}
+        onWineCreated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    expect(
+      screen.getByText('Todavía no hay uvas cargadas en el catálogo oficial.')
+    ).toBeInTheDocument();
+  });
+
+  it('validates blend percentages when sum exceeds 100%', async () => {
+    render(
+      <WineCreateModal
+        isOpen={true}
+        onClose={vi.fn()}
+        wineryId={10}
+        locationId={5}
+        onWineCreated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i);
+    fireEvent.change(nameInput, { target: { value: 'Gran Malbec Reserva' } });
+
+    // Set first grape percentage to 70
+    const pctInput = screen.getByPlaceholderText('%');
+    fireEvent.change(pctInput, { target: { value: '70' } });
+
+    // Add second grape
+    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
+    fireEvent.click(addGrapeBtn);
+
+    // Set second grape percentage to 40 (sum = 110%)
+    const pctInputs = screen.getAllByPlaceholderText('%');
+    fireEvent.change(pctInputs[1], { target: { value: '40' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Publicar Etiqueta/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      await screen.findByText('La suma del corte (110%) no puede superar el 100%.')
+    ).toBeInTheDocument();
+  });
 });

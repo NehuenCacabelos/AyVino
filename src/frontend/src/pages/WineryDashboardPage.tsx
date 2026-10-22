@@ -143,8 +143,8 @@ export default function WineryDashboardPage() {
           setTotalReviews(reviewsSum);
           setFollowersCount(resolvedFollowers);
         }
-      } catch (err) {
-        console.error('Error al cargar datos del panel de bodega:', err);
+      } catch {
+        // Fallo silencioso de carga de métricas de panel
       } finally {
         if (isMounted) {
           setIsLoadingData(false);

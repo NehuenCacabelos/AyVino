@@ -139,4 +139,58 @@ describe('WineryWinesPage', () => {
     const nextButton = screen.getByRole('button', { name: /Página siguiente/i });
     expect(nextButton).toBeDisabled();
   });
+
+  it('renders pending banner, enables new label button, and displays draft badges when winery is pending', async () => {
+    vi.mocked(wineryModule.useWinery).mockReturnValue({
+      ...mockUseWinery,
+      winery: { ...mockWinery, status: 'Pending' },
+      isPending: true,
+      isApproved: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <WineryWinesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+    });
+
+    // Check banner
+    expect(screen.getByText('Tu bodega está en revisión')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Podés cargar tus vinos: serán visibles para los usuarios cuando te aprueben/i)
+    ).toBeInTheDocument();
+
+    // Check new label button is present
+    expect(screen.getByRole('button', { name: /Nueva etiqueta/i })).toBeInTheDocument();
+
+    // Check draft badge
+    const draftBadges = screen.getAllByText('Borrador, solo lo ves vos');
+    expect(draftBadges.length).toBeGreaterThan(0);
+  });
+
+  it('renders rejected banner and hides new label button when winery is rejected', async () => {
+    vi.mocked(wineryModule.useWinery).mockReturnValue({
+      ...mockUseWinery,
+      winery: { ...mockWinery, status: 'Rejected' },
+      isRejected: true,
+      isApproved: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <WineryWinesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Bodega con observaciones pendientes')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nueva etiqueta/i })).not.toBeInTheDocument();
+  });
 });

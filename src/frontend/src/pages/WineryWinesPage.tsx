@@ -7,6 +7,8 @@ import {
   Star,
   Layers,
   Sparkles,
+  Clock,
+  AlertTriangle,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -80,6 +82,9 @@ export default function WineryWinesPage() {
     null,
   );
 
+  const isRejected = winery?.status === 'Rejected';
+  const isPending = winery?.status === 'Pending';
+
   // Cargar vinos al montar o cambiar de bodega o página
   useEffect(() => {
     let isMounted = true;
@@ -96,8 +101,8 @@ export default function WineryWinesPage() {
         });
         if (!isMounted) return;
         setWines(data);
-      } catch (err) {
-        console.error('Error al cargar vinos de la bodega:', err);
+      } catch {
+        // Fallo silencioso de carga de etiquetas
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -111,14 +116,16 @@ export default function WineryWinesPage() {
   // Si la URL contiene ?action=new o ?nuevo=1 tras navegación, abrir modal
   useEffect(() => {
     if (searchParams.get('action') === 'new' || searchParams.get('nuevo') === '1') {
-      Promise.resolve().then(() => {
-        setIsCreateModalOpen(true);
-      });
+      if (!isRejected) {
+        Promise.resolve().then(() => {
+          setIsCreateModalOpen(true);
+        });
+      }
       searchParams.delete('action');
       searchParams.delete('nuevo');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, isRejected]);
 
   const handleWineCreated = (newWine: WineResponseDto) => {
     setWines((prev) => [newWine, ...prev]);
@@ -158,15 +165,50 @@ export default function WineryWinesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md self-start md:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nueva etiqueta</span>
-        </button>
+        {!isRejected && (
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md self-start md:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nueva etiqueta</span>
+          </button>
+        )}
       </div>
+
+      {/* Cartel Informativo: Bodega en Revisión */}
+      {isPending && (
+        <div
+          role="status"
+          className="flex items-start gap-3.5 p-4 rounded-2xl bg-amber-950/20 border border-amber-800/40 text-amber-200 text-xs font-sans shadow-lg animate-in fade-in"
+        >
+          <Clock className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-medium text-amber-100">Tu bodega está en revisión</p>
+            <p className="text-amber-200/80 leading-relaxed">
+              Podés cargar tus vinos: serán visibles para los usuarios cuando te aprueben.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Cartel Informativo: Bodega Rechazada */}
+      {isRejected && (
+        <div
+          role="alert"
+          className="flex items-start gap-3.5 p-4 rounded-2xl bg-rose-950/30 border border-rose-800/40 text-rose-200 text-xs font-sans shadow-lg animate-in fade-in"
+        >
+          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-medium text-rose-100">Bodega con observaciones pendientes</p>
+            <p className="text-rose-200/80 leading-relaxed">
+              No podés cargar nuevas etiquetas mientras tu bodega se encuentre con observaciones
+              pendientes de corrección.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Barra de Filtros y Buscador */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
@@ -242,16 +284,18 @@ export default function WineryWinesPage() {
                   sommeliers y amantes del vino puedan valorarla en la plataforma.
                 </p>
               </div>
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Cargar primera etiqueta</span>
-                </button>
-              </div>
+              {!isRejected && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Cargar primera etiqueta</span>
+                  </button>
+                </div>
+              )}
             </div>
           )
         ) : (
@@ -319,10 +363,17 @@ export default function WineryWinesPage() {
 
                   {/* Acciones y Añadas */}
                   <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300/70" />
-                      <span>Oficial</span>
-                    </div>
+                    {isPending ? (
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-800/40">
+                        <Clock className="w-3 h-3 text-amber-300" />
+                        <span>Borrador, solo lo ves vos</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300/70" />
+                        <span>Oficial</span>
+                      </div>
+                    )}
 
                     <button
                       type="button"

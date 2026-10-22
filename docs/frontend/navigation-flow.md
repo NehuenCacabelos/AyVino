@@ -168,15 +168,18 @@ flowchart TD
   - Buscador reactivo por nombre de etiqueta.
   - Filtros por categoría enológica (`Todos`, `Red`, `White`, `Rose`, `Sparkling`, `Orange`) con conteo dinámico.
   - Apertura contextual directa de modal vía query string (`?action=new` o `?nuevo=1`).
+  - **Soporte para Bodegas en Revisión (`Pending`)**: Una bodega pendiente puede cargar sus etiquetas sin impedimentos, visualizando un cartel editorial (*"Tu bodega está en revisión. Podés cargar tus vinos: serán visibles para los usuarios cuando te aprueben."*) y un badge distintivo *"Borrador, solo lo ves vos"* en sus etiquetas.
   - Tarjetas con visualización de estado de cosechas (`Aprobada`, `En revisión`, `Rechazada`).
 - **Modal de Alta de Etiqueta (`WineCreateModal.tsx`)**:
   - Creación unificada de etiqueta y cosecha inaugural (`POST /api/wines`).
-  - Compositor de cortes varietales dinámico con uvas consultadas en `/api/grapes`.
-  - Validación de porcentaje acumulado $\le 100\%$ y validación de año y graduación alcohólica opcional.
+  - Incorporación de foto opcional de añada con `ImageUploadField` (`folder="vintages"`).
+  - Compositor de cortes varietales dinámico con uvas consultadas en `/api/grapes`: porcentaje inicial vacío, máximo 20 cepas, exclusión de uvas duplicadas en los selectores, validación entre 0,01% y 100% por uva y suma total $\le 100\%$ con aviso visual si se excede.
+  - Validación de año y graduación alcohólica opcional.
 - **Modal de Gestión de Cosechas (`WineVintagesModal.tsx`)**:
   - Consulta y listado reactivo de cosechas por vino (`GET /api/wines/{wineId}/vintages`).
+  - Exhibición de miniatura de botella si la cosecha cuenta con imagen registrada.
   - Badges de estado de moderación editorial.
-  - Formulario para incorporar nuevas cosechas con año y graduación alcohólica opcional.
+  - Formulario para incorporar nuevas cosechas con foto de botella (`ImageUploadField`), año, graduación alcohólica opcional y corte varietal sin cepas repetidas.
 
 ### 2.8 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx`)
 - **Detección Automática de Candidatos**:

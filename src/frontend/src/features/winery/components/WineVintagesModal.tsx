@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { getWineVintages, createWineVintage } from '../api/wineApi';
 import { getGrapes } from '../api/grapeApi';
+import ImageUploadField from './ImageUploadField';
 import type {
   WineResponseDto,
   WineVintageResponseDto,
@@ -54,6 +55,7 @@ export default function WineVintagesModal({
   const [newAlcohol, setNewAlcohol] = useState('14.0');
   const [newServingTemp, setNewServingTemp] = useState('16');
   const [newAgingAdvice, setNewAgingAdvice] = useState('');
+  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [blend, setBlend] = useState<BlendRow[]>([]);
 
   // Estados de feedback
@@ -84,11 +86,13 @@ export default function WineVintagesModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               grapesData.find((g) => g.name.toLowerCase().includes('malbec')) ?? grapesData[0];
-            return [{ grapeId: defaultGrape.id, percentage: 100 }];
+            return [{ grapeId: defaultGrape.id, percentage: '' }];
           });
         }
-      } catch (err) {
-        console.error('Error al cargar cosechas:', err);
+      } catch {
+        if (isMounted) {
+          setServerError('No pudimos cargar el historial de cosechas.');
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -106,8 +110,12 @@ export default function WineVintagesModal({
   };
 
   const handleAddGrape = () => {
-    if (grapesCatalog.length === 0) return;
-    setBlend([...blend, { grapeId: grapesCatalog[0].id, percentage: '' }]);
+    if (grapesCatalog.length === 0 || blend.length >= 20) return;
+    const remainingGrapes = grapesCatalog.filter(
+      (g) => !blend.some((b) => b.grapeId === g.id),
+    );
+    if (remainingGrapes.length === 0) return;
+    setBlend([...blend, { grapeId: remainingGrapes[0].id, percentage: '' }]);
   };
 
   const handleRemoveGrape = (index: number) => {
@@ -122,14 +130,26 @@ export default function WineVintagesModal({
 
   const handlePercentageChange = (index: number, val: string) => {
     const updated = [...blend];
-    const num = val === '' ? '' : Math.max(0, Math.min(100, Number(val)));
-    updated[index].percentage = num;
+    if (val === '') {
+      updated[index].percentage = '';
+    } else {
+      const num = Number(val);
+      if (!isNaN(num)) {
+        updated[index].percentage = Math.max(0, Math.min(100, num));
+      }
+    }
     setBlend(updated);
+    if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
   const totalPercentage = blend.reduce((acc, row) => {
     return acc + (typeof row.percentage === 'number' ? row.percentage : 0);
   }, 0);
+
+  const isAddGrapeDisabled =
+    blend.length >= 20 ||
+    grapesCatalog.length === 0 ||
+    blend.length >= grapesCatalog.length;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -150,7 +170,13 @@ export default function WineVintagesModal({
       }
       const hasEmpty = blend.some((b) => b.grapeId === '');
       if (hasEmpty) {
-        newErrors.blend = 'Seleccioná la cepa en todas las filas.';
+        newErrors.blend = 'Elegí la cepa en todas las filas del corte.';
+      }
+      const hasInvalidPercentage = blend.some(
+        (b) => typeof b.percentage === 'number' && (b.percentage < 0.01 || b.percentage > 100),
+      );
+      if (hasInvalidPercentage) {
+        newErrors.blend = 'Cada porcentaje debe ser mayor a 0% y menor o igual a 100%.';
       }
     }
 
@@ -180,6 +206,7 @@ export default function WineVintagesModal({
         alcoholContent: newAlcohol ? Number(newAlcohol) : null,
         servingTemperature: newServingTemp ? Number(newServingTemp) : null,
         agingAdvice: newAgingAdvice.trim() || null,
+        imageUrl: newImageUrl?.trim() ? newImageUrl.trim() : null,
         grapes: validGrapes.length > 0 ? validGrapes : null,
       };
 
@@ -187,6 +214,7 @@ export default function WineVintagesModal({
       setVintages((prev) => [...prev, created]);
       setSuccessMessage(`Añada ${created.year ?? 'nueva'} registrada con éxito.`);
       setShowAddForm(false);
+      setNewImageUrl(null);
       onVintageAdded?.();
     } catch (err: unknown) {
       let detail: string | undefined;
@@ -278,7 +306,10 @@ export default function WineVintagesModal({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewImageUrl(null);
+                  }}
                   className="text-xs text-neutral-400 hover:text-white"
                 >
                   Cancelar
@@ -338,55 +369,96 @@ export default function WineVintagesModal({
                 />
               </div>
 
+              {/* Foto de la Cosecha / Añada (Opcional) */}
+              <div className="pt-1">
+                <ImageUploadField
+                  value={newImageUrl}
+                  onChange={(url) => setNewImageUrl(url || null)}
+                  folder="vintages"
+                  label="Foto de la botella o cosecha (opcional)"
+                  helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 2 MB)."
+                  aspectRatio="bottle"
+                />
+              </div>
+
               {/* Blend */}
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-mono text-neutral-400">
                     Corte de Varietales ({totalPercentage}%)
+                    {totalPercentage > 100 && (
+                      <span className="text-rose-400 ml-1.5 font-mono text-[10px]">
+                        (Supera el 100%)
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"
                     onClick={handleAddGrape}
-                    className="text-[11px] text-rose-300 hover:text-rose-200"
+                    disabled={isAddGrapeDisabled}
+                    className="text-[11px] text-rose-300 hover:text-rose-200 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     + Cepa
                   </button>
                 </div>
                 {errors.blend && <p className="text-[10px] text-rose-400">{errors.blend}</p>}
 
-                {blend.map((row, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <select
-                      value={row.grapeId}
-                      onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
-                      className="h-9 flex-1 rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
-                    >
-                      {grapesCatalog.map((g) => (
-                        <option key={g.id} value={g.id} className="bg-[#141416]">
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
+                {grapesCatalog.length === 0 ? (
+                  <p className="text-xs text-neutral-400 font-sans italic py-1">
+                    Todavía no hay uvas cargadas en el catálogo oficial.
+                  </p>
+                ) : (
+                  blend.map((row, idx) => {
+                    const availableGrapes = grapesCatalog.filter(
+                      (g) =>
+                        g.id === row.grapeId ||
+                        !blend.some((b, i) => i !== idx && b.grapeId === g.id),
+                    );
 
-                    <input
-                      type="number"
-                      value={row.percentage}
-                      onChange={(e) => handlePercentageChange(idx, e.target.value)}
-                      placeholder="%"
-                      className="h-9 w-20 rounded-xl px-2 text-xs font-mono bg-zinc-900 text-zinc-100 border border-zinc-800 text-right"
-                    />
+                    return (
+                      <div key={idx} className="flex items-center gap-2">
+                        <select
+                          value={row.grapeId}
+                          onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
+                          className="h-9 flex-1 rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                        >
+                          {availableGrapes.map((g) => (
+                            <option key={g.id} value={g.id} className="bg-[#141416]">
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
 
-                    {blend.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveGrape(idx)}
-                        className="text-neutral-500 hover:text-rose-400 p-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        <div className="relative w-24">
+                          <input
+                            type="number"
+                            min="0.01"
+                            max="100"
+                            step="0.01"
+                            value={row.percentage}
+                            onChange={(e) => handlePercentageChange(idx, e.target.value)}
+                            placeholder="%"
+                            className="h-9 w-full rounded-xl pl-2 pr-6 text-xs font-mono bg-zinc-900 text-zinc-100 border border-zinc-800 text-right"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 font-mono">
+                            %
+                          </span>
+                        </div>
+
+                        {blend.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGrape(idx)}
+                            className="text-neutral-500 hover:text-rose-400 p-1"
+                            aria-label={`Quitar uva ${idx + 1}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               <div className="pt-2 flex justify-end">
@@ -424,63 +496,77 @@ export default function WineVintagesModal({
                   key={v.id}
                   className="p-4 rounded-2xl bg-[#121214] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition-colors"
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-serif text-2xl font-semibold text-neutral-100">
-                        {v.year ?? 'S/A'}
-                      </span>
-
-                      {/* Badge de Aprobación */}
-                      {v.approvalStatus === 'Approved' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Aprobada</span>
-                        </span>
-                      )}
-                      {v.approvalStatus === 'Pending' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/40">
-                          <Clock className="w-3 h-3" />
-                          <span>En Revisión</span>
-                        </span>
-                      )}
-                      {v.approvalStatus === 'Rejected' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-950/40 text-rose-300 border border-rose-800/40">
-                          <AlertTriangle className="w-3 h-3" />
-                          <span>Rechazada</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Ficha Rápida: Graduación, Temperatura, Guarda */}
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400 font-sans">
-                      {v.alcoholContent && (
-                        <span>
-                          <strong className="text-neutral-200">{v.alcoholContent}%</strong> alc.
-                        </span>
-                      )}
-                      {v.servingTemperature && (
-                        <span>
-                          Servicio: <strong className="text-neutral-200">{v.servingTemperature} °C</strong>
-                        </span>
-                      )}
-                      {v.agingAdvice && (
-                        <span className="text-neutral-500 truncate max-w-xs">{v.agingAdvice}</span>
-                      )}
-                    </div>
-
-                    {/* Desglose de Varietales */}
-                    {v.grapes && v.grapes.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {v.grapes.map((g, gIdx) => (
-                          <span
-                            key={gIdx}
-                            className="inline-block text-[10px] font-mono bg-stone-900 border border-white/5 px-2 py-0.5 rounded text-neutral-300"
-                          >
-                            {getGrapeName(g.grapeId)} {g.percentage ? `(${g.percentage}%)` : ''}
-                          </span>
-                        ))}
+                  <div className="flex items-start sm:items-center gap-4">
+                    {/* Miniatura de Cosecha */}
+                    {v.imageUrl && (
+                      <div className="w-14 h-20 rounded-xl overflow-hidden bg-stone-900 border border-white/10 shrink-0">
+                        <img
+                          src={v.imageUrl}
+                          alt={`Cosecha ${v.year ?? ''}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
                       </div>
                     )}
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-serif text-2xl font-semibold text-neutral-100">
+                          {v.year ?? 'S/A'}
+                        </span>
+
+                        {/* Badge de Aprobación */}
+                        {v.approvalStatus === 'Approved' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Aprobada</span>
+                          </span>
+                        )}
+                        {v.approvalStatus === 'Pending' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/40">
+                            <Clock className="w-3 h-3" />
+                            <span>En Revisión</span>
+                          </span>
+                        )}
+                        {v.approvalStatus === 'Rejected' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-950/40 text-rose-300 border border-rose-800/40">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Rechazada</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Ficha Rápida: Graduación, Temperatura, Guarda */}
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400 font-sans">
+                        {v.alcoholContent && (
+                          <span>
+                            <strong className="text-neutral-200">{v.alcoholContent}%</strong> alc.
+                          </span>
+                        )}
+                        {v.servingTemperature && (
+                          <span>
+                            Servicio: <strong className="text-neutral-200">{v.servingTemperature} °C</strong>
+                          </span>
+                        )}
+                        {v.agingAdvice && (
+                          <span className="text-neutral-500 truncate max-w-xs">{v.agingAdvice}</span>
+                        )}
+                      </div>
+
+                      {/* Desglose de Varietales */}
+                      {v.grapes && v.grapes.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {v.grapes.map((g, gIdx) => (
+                            <span
+                              key={gIdx}
+                              className="inline-block text-[10px] font-mono bg-stone-900 border border-white/5 px-2 py-0.5 rounded text-neutral-300"
+                            >
+                              {getGrapeName(g.grapeId)} {g.percentage ? `(${g.percentage}%)` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Calificación */}

@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import { X, Plus, Trash2, Wine, AlertCircle, Save } from 'lucide-react';
 import { getGrapes } from '../api/grapeApi';
 import { createWine } from '../api/wineApi';
+import ImageUploadField from './ImageUploadField';
 import type {
   GrapeResponseDto,
   WineResponseDto,
@@ -33,7 +34,7 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 
 /**
  * Modal de alta de nueva etiqueta oficial para la bodega.
- * Incluye metadatos de la etiqueta y configuración de la añada inaugural con blend varietal.
+ * Incluye metadatos de la etiqueta y configuración de la añada inaugural con blend varietal e imagen.
  */
 export default function WineCreateModal({
   isOpen,
@@ -54,8 +55,9 @@ export default function WineCreateModal({
   const [alcoholContent, setAlcoholContent] = useState<string>('14.0');
   const [servingTemperature, setServingTemperature] = useState<string>('16');
   const [agingAdvice, setAgingAdvice] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // Blend Varietal
+  // Blend Varietal (inicia con porcentaje vacío, nunca 100%)
   const [blend, setBlend] = useState<BlendRow[]>([]);
 
   // Feedback y Errores
@@ -77,12 +79,12 @@ export default function WineCreateModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               data.find((g) => g.name.toLowerCase().includes('malbec')) ?? data[0];
-            return [{ grapeId: defaultGrape.id, percentage: 100 }];
+            return [{ grapeId: defaultGrape.id, percentage: '' }];
           });
         }
       })
       .catch(() => {
-        // Ignorar
+        // Fallo silencioso de carga de uvas
       });
 
     return () => {
@@ -93,12 +95,12 @@ export default function WineCreateModal({
   if (!isOpen) return null;
 
   const handleAddGrape = () => {
-    if (grapesCatalog.length === 0) return;
+    if (grapesCatalog.length === 0 || blend.length >= 20) return;
     const remainingGrapes = grapesCatalog.filter(
       (g) => !blend.some((b) => b.grapeId === g.id),
     );
-    const nextGrape = remainingGrapes.length > 0 ? remainingGrapes[0].id : grapesCatalog[0].id;
-    setBlend([...blend, { grapeId: nextGrape, percentage: '' }]);
+    if (remainingGrapes.length === 0) return;
+    setBlend([...blend, { grapeId: remainingGrapes[0].id, percentage: '' }]);
   };
 
   const handleRemoveGrape = (index: number) => {
@@ -113,14 +115,26 @@ export default function WineCreateModal({
 
   const handlePercentageChange = (index: number, val: string) => {
     const updated = [...blend];
-    const num = val === '' ? '' : Math.max(0, Math.min(100, Number(val)));
-    updated[index].percentage = num;
+    if (val === '') {
+      updated[index].percentage = '';
+    } else {
+      const num = Number(val);
+      if (!isNaN(num)) {
+        updated[index].percentage = Math.max(0, Math.min(100, num));
+      }
+    }
     setBlend(updated);
+    if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
   const totalPercentage = blend.reduce((acc, row) => {
     return acc + (typeof row.percentage === 'number' ? row.percentage : 0);
   }, 0);
+
+  const isAddGrapeDisabled =
+    blend.length >= 20 ||
+    grapesCatalog.length === 0 ||
+    blend.length >= grapesCatalog.length;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -159,7 +173,13 @@ export default function WineCreateModal({
       }
       const hasEmptyGrape = blend.some((b) => b.grapeId === '');
       if (hasEmptyGrape) {
-        newErrors.blend = 'Seleccioná la cepa para todas las filas del corte.';
+        newErrors.blend = 'Elegí la cepa para todas las filas del corte.';
+      }
+      const hasInvalidPercentage = blend.some(
+        (b) => typeof b.percentage === 'number' && (b.percentage < 0.01 || b.percentage > 100),
+      );
+      if (hasInvalidPercentage) {
+        newErrors.blend = 'Cada porcentaje debe ser mayor a 0% y menor o igual a 100%.';
       }
     }
 
@@ -194,6 +214,7 @@ export default function WineCreateModal({
           alcoholContent: alcoholContent ? Number(alcoholContent) : null,
           servingTemperature: servingTemperature ? Number(servingTemperature) : null,
           agingAdvice: agingAdvice.trim() || null,
+          imageUrl: imageUrl?.trim() ? imageUrl.trim() : null,
           grapes: validGrapes.length > 0 ? validGrapes : null,
         },
       };
@@ -383,6 +404,18 @@ export default function WineCreateModal({
                 className="h-12 w-full rounded-xl px-4 text-sm bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors"
               />
             </div>
+
+            {/* Foto de la botella o añada (Opcional) */}
+            <div className="pt-2">
+              <ImageUploadField
+                value={imageUrl}
+                onChange={(url) => setImageUrl(url || null)}
+                folder="vintages"
+                label="Foto de la botella o etiqueta (opcional)"
+                helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 2 MB)."
+                aspectRatio="bottle"
+              />
+            </div>
           </div>
 
           {/* Sección 3: Blend / Corte Varietal */}
@@ -396,71 +429,95 @@ export default function WineCreateModal({
                   Total asignado:{' '}
                   <strong
                     className={
-                      totalPercentage === 100
-                        ? 'text-emerald-400 font-mono'
-                        : 'text-amber-300 font-mono'
+                      totalPercentage > 100
+                        ? 'text-rose-400 font-mono'
+                        : totalPercentage === 100
+                          ? 'text-emerald-400 font-mono'
+                          : 'text-amber-300 font-mono'
                     }
                   >
                     {totalPercentage}%
                   </strong>{' '}
                   / 100%
+                  {totalPercentage > 100 && (
+                    <span className="text-rose-400 ml-2 font-mono text-[11px]">
+                      (Supera el 100%)
+                    </span>
+                  )}
                 </span>
               </div>
 
               <button
                 type="button"
                 onClick={handleAddGrape}
-                className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 bg-rose-950/20 border border-rose-900/40 px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                disabled={isAddGrapeDisabled}
+                className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 bg-rose-950/20 border border-rose-900/40 px-3 py-1.5 rounded-lg cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Añadir uva</span>
+                <span>Agregar uva</span>
               </button>
             </div>
 
             {errors.blend && <p className="text-[11px] text-rose-400">{errors.blend}</p>}
 
-            <div className="space-y-2.5">
-              {blend.map((row, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <select
-                    value={row.grapeId}
-                    onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
-                    className="h-11 flex-1 rounded-xl px-3 text-sm bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors"
-                  >
-                    {grapesCatalog.map((g) => (
-                      <option key={g.id} value={g.id} className="bg-[#141416] text-zinc-100">
-                        {g.name} ({g.colorType === 'Red' ? 'Tinta' : 'Blanca'})
-                      </option>
-                    ))}
-                  </select>
+            {grapesCatalog.length === 0 ? (
+              <p className="text-xs text-neutral-400 font-sans italic py-2">
+                Todavía no hay uvas cargadas en el catálogo oficial.
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {blend.map((row, idx) => {
+                  const availableGrapes = grapesCatalog.filter(
+                    (g) =>
+                      g.id === row.grapeId ||
+                      !blend.some((b, i) => i !== idx && b.grapeId === g.id),
+                  );
 
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={row.percentage}
-                      onChange={(e) => handlePercentageChange(idx, e.target.value)}
-                      placeholder="%"
-                      className="h-11 w-full rounded-xl pl-3 pr-7 text-sm font-mono bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors text-right"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-mono">
-                      %
-                    </span>
-                  </div>
+                  return (
+                    <div key={idx} className="flex items-center gap-3">
+                      <select
+                        value={row.grapeId}
+                        onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
+                        className="h-11 flex-1 rounded-xl px-3 text-sm bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors"
+                      >
+                        {availableGrapes.map((g) => (
+                          <option key={g.id} value={g.id} className="bg-[#141416] text-zinc-100">
+                            {g.name} ({g.colorType === 'Red' ? 'Tinta' : 'Blanca'})
+                          </option>
+                        ))}
+                      </select>
 
-                  {blend.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveGrape(idx)}
-                      className="w-10 h-10 rounded-xl bg-stone-900/60 border border-white/5 text-neutral-500 hover:text-rose-400 flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+                      <div className="relative w-28">
+                        <input
+                          type="number"
+                          min="0.01"
+                          max="100"
+                          step="0.01"
+                          value={row.percentage}
+                          onChange={(e) => handlePercentageChange(idx, e.target.value)}
+                          placeholder="%"
+                          className="h-11 w-full rounded-xl pl-3 pr-7 text-sm font-mono bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors text-right"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-mono">
+                          %
+                        </span>
+                      </div>
+
+                      {blend.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGrape(idx)}
+                          className="w-10 h-10 rounded-xl bg-stone-900/60 border border-white/5 text-neutral-500 hover:text-rose-400 flex items-center justify-center cursor-pointer transition-colors"
+                          aria-label={`Quitar uva ${idx + 1}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Footer del Modal */}

@@ -37,7 +37,7 @@ describe('WineVintagesModal', () => {
       alcoholContent: 14.5,
       servingTemperature: 16,
       agingAdvice: 'Guarda 5 años',
-      imageUrl: null,
+      imageUrl: 'https://images.ayvino.com/vintages/malbec-2021.jpg',
       approvalStatus: 'Approved',
       uploadedByUserId: 1,
       registerDate: '2026-01-01',
@@ -100,6 +100,10 @@ describe('WineVintagesModal', () => {
 
     expect(screen.getByText('Aprobada')).toBeInTheDocument();
     expect(screen.getByText('En Revisión')).toBeInTheDocument();
+
+    const vintageImage = screen.getByAltText('Cosecha 2021');
+    expect(vintageImage).toBeInTheDocument();
+    expect(vintageImage.getAttribute('src')).toBe('https://images.ayvino.com/vintages/malbec-2021.jpg');
   });
 
   it('opens add vintage form and allows submitting a new vintage', async () => {

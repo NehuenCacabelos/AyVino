@@ -71,8 +71,10 @@ export default function WineryClaimPage() {
         const data = await getClaimCandidates(winery.id);
         if (!isMounted) return;
         setCandidates(data);
-      } catch (err: unknown) {
-        console.error('Error al cargar candidatos de reclamo:', err);
+      } catch {
+        if (isMounted) {
+          setErrorMessage('No pudimos cargar las botellas comunitarias disponibles para reclamo.');
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
