@@ -415,6 +415,9 @@ public class WineryServiceTests
         public Task<Location?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult<Location?>(null);
 
+        public Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default) =>
+            Task.FromResult<Location?>(null);
+
         public Task<int> CreateAsync(Location location, CancellationToken ct = default) =>
             Task.FromResult(1);
 

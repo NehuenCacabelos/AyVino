@@ -318,6 +318,7 @@ public class WineOptimizationTests
     private sealed class FakeLocationRepo : ILocationRepository
     {
         public Task<Location?> GetByIdAsync(int id, CancellationToken ct = default) => Task.FromResult<Location?>(null);
+        public Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default) => Task.FromResult<Location?>(null);
         public Task<int> CreateAsync(Location location, CancellationToken ct = default) => Task.FromResult(1);
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) => Task.FromResult(true);
         public Task<IEnumerable<Location>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Location>>([]);

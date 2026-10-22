@@ -55,7 +55,7 @@ public class CityServiceTests
     [Theory]
     [InlineData(1, 0)]
     [InlineData(1, -5)]
-    [InlineData(1, 101)]
+    [InlineData(1, 251)]
     public async Task GetAllAsync_InvalidPageSize_ThrowsValidationException(int pageNumber, int pageSize)
     {
         // Act & Assert

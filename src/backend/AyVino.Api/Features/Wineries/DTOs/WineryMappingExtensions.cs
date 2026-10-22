@@ -5,26 +5,18 @@ namespace AyVino.Api.Features.Wineries.DTOs;
 
 public static class WineryMappingExtensions
 {
-    public static Winery ToEntity(this CreateWineryRequestDto dto, int? userId) => new()
+    public static Winery ToEntity(this CreateWineryRequestDto dto, int locationId, decimal? latitude, decimal? longitude, int? userId) => new()
     {
         Name = dto.Name,
         Description = dto.Description,
-        LocationId = dto.LocationId,
+        LocationId = locationId,
+        Latitude = latitude,
+        Longitude = longitude,
         FoundationYear = dto.FoundationYear,
         Website = dto.Website,
         UserId = userId,
         Status = WineryStatus.Pending,
         RegisterDate = DateTime.UtcNow
-    };
-
-    public static Winery ToEntity(this UpdateWineryRequestDto dto, int id) => new()
-    {
-        Id = id,
-        Name = dto.Name,
-        Description = dto.Description,
-        LocationId = dto.LocationId,
-        FoundationYear = dto.FoundationYear,
-        Website = dto.Website
     };
 
     public static WineryResponseDto ToResponseDto(this Winery winery) => new(
@@ -36,15 +28,14 @@ public static class WineryMappingExtensions
         winery.Website,
         winery.UserId,
         winery.Status.ToString(),
-        winery.RegisterDate);
+        winery.RegisterDate,
+        winery.Latitude,
+        winery.Longitude,
+        winery.LogoUrl,
+        winery.StateName != null && winery.RegionName != null
+            ? new WineryLocationSummaryDto(winery.StateName, winery.RegionName)
+            : null);
 
     public static IEnumerable<WineryResponseDto> ToResponseDtoList(this IEnumerable<Winery> wineries) =>
         wineries.Select(w => w.ToResponseDto());
-
-    public static CreateWineryRequestDto ToCreateWineryRequestDto(this RegisterWineryRequestDto dto) => new(
-        dto.WineryName,
-        dto.LocationId,
-        dto.Description,
-        dto.FoundationYear,
-        dto.Website);
 }

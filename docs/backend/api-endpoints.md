@@ -61,6 +61,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `Bio`, `Photo` | `[StringLength(1000)]`, `[StringLength(100)]` | "La biografía no puede superar los 1000 caracteres." / "La foto no puede superar los 100 caracteres." |
 | | `ChangeUserStatusRequestDto` | `IsActive` | Tipo `bool` primitivo (sin anotaciones requeridas). | - |
 | **Wineries** | `CreateWineryRequestDto` / `UpdateWineryRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la bodega es obligatorio." / "El nombre de la bodega no puede superar los 100 caracteres." |
+| | | `Latitude` / `Longitude` | Coordenadas decimales opcionales | Mutuamente excluyente con `LocationId`. Se resuelven con Georef. |
 | | | `LocationId` | `[Range(1, int.MaxValue)]` | "El id de la ubicación debe ser mayor a 0." |
 | | | `Description` | `[StringLength(1000)]` | "La descripción no puede superar los 1000 caracteres." |
 | | | `FoundationYear` | `[Range(1000, 2100)]` | "El año de fundación debe estar entre 1000 y 2100." |
@@ -201,7 +202,7 @@ Gestión de municipios y ciudades vitivinícolas con patrón `GetOrCreate`.
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/cities` | Autenticado | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
-| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber = 1`, `pageSize = 10`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
+| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). Soporta `pageSize` de hasta 250. | Query params: `pageNumber = 1`, `pageSize = 10` (máx 250), `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
 | `GET` | `/api/cities/{id}` | Público | Detalle de una ciudad por su ID. | - | `200 OK` (`CityResponseDto`) |
 | `PATCH`| `/api/cities/{id}/status` | Admin (`RequireAdmin`) | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
 
@@ -216,6 +217,7 @@ Modelado de regiones vitivinícolas y valles (ej: Valle de Uco, Cafayate, San Pa
 | `POST` | `/api/locations` | Autenticado | Da de alta una nueva ubicación vinculada a una `CityId` existente. | `CreateLocationRequestDto` | `201 Created` (`LocationResponseDto`) |
 | `GET` | `/api/locations/{id}` | Público | Obtiene la ubicación con los nombres resueltos de su ciudad y provincia. | - | `200 OK` (`LocationResponseDto`) |
 | `GET` | `/api/locations` | Público | Listado paginado de ubicaciones con nombres geográficos resueltos. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<LocationResponseDto>`) |
+| `GET` | `/api/locations/resolve` | Público (`AuthLimit`: 15 req/min) | Resuelve coordenadas geográficas (lat, lon) argentinas mediante la API oficial Georef vinculando provincia y departamento. | Query params: `lat`, `lon` | `200 OK` (`ResolvedLocationResponseDto`) |
 
 ---
 

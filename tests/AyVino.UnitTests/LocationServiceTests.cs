@@ -133,6 +133,12 @@ public class LocationServiceTests
             return Task.FromResult(Locations.FirstOrDefault(l => l.Id == id));
         }
 
+        public Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default)
+        {
+            if (ExistingLocation?.CityId == cityId) return Task.FromResult<Location?>(ExistingLocation);
+            return Task.FromResult(Locations.FirstOrDefault(l => l.CityId == cityId));
+        }
+
         public Task<int> CreateAsync(Location location, CancellationToken ct = default)
         {
             CapturedCreatedLocation = location;
@@ -156,6 +162,9 @@ public class LocationServiceTests
             Task.FromResult<City?>(null);
 
         public Task<City?> GetByNameAndStateAsync(string name, int stateId, CancellationToken ct = default) =>
+            Task.FromResult<City?>(null);
+
+        public Task<City?> GetByGeorefIdAsync(string georefId, CancellationToken ct = default) =>
             Task.FromResult<City?>(null);
 
         public Task<IEnumerable<City>> GetAllAsync(int pageNumber, int pageSize, int? stateId, int? status, CancellationToken ct = default) =>

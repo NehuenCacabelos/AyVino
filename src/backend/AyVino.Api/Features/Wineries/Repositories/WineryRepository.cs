@@ -7,12 +7,21 @@ namespace AyVino.Api.Features.Wineries.Repositories;
 
 public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryRepository
 {
+    private const string SelectColumns = """
+        w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
+        w.user_id, w.status, w.register_date, w.latitude, w.longitude,
+        s.name AS StateName, c.name AS RegionName
+        FROM wineries w
+        LEFT JOIN locations l ON l.id = w.location_id
+        LEFT JOIN cities c ON c.id = l.city_id
+        LEFT JOIN states s ON s.id = c.state_id
+        """;
+
     public async Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
-            FROM wineries
-            WHERE id = @Id;
+        var sql = $"""
+            SELECT {SelectColumns}
+            WHERE w.id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Winery>(
@@ -21,10 +30,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
-            FROM wineries
-            WHERE user_id = @UserId;
+        var sql = $"""
+            SELECT {SelectColumns}
+            WHERE w.user_id = @UserId;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Winery>(
@@ -33,12 +41,11 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
-            FROM wineries
-            WHERE (@Status IS NULL OR status = @Status)
-              AND (@LocationId IS NULL OR location_id = @LocationId)
-            ORDER BY id
+        var sql = $"""
+            SELECT {SelectColumns}
+            WHERE (@Status IS NULL OR w.status = @Status)
+              AND (@LocationId IS NULL OR w.location_id = @LocationId)
+            ORDER BY w.id
             OFFSET @Offset LIMIT @PageSize;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -50,8 +57,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date)
-            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate)
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude)
+            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude)
             RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -66,7 +73,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.Website,
                 winery.UserId,
                 Status = (int)winery.Status,
-                winery.RegisterDate
+                winery.RegisterDate,
+                winery.Latitude,
+                winery.Longitude
             }, cancellationToken: ct));
 
         return winery with { Id = id };
@@ -80,7 +89,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 description = @Description,
                 location_id = @LocationId,
                 foundation_year = @FoundationYear,
-                website = @Website
+                website = @Website,
+                latitude = @Latitude,
+                longitude = @Longitude
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -92,7 +103,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.Description,
                 winery.LocationId,
                 winery.FoundationYear,
-                winery.Website
+                winery.Website,
+                winery.Latitude,
+                winery.Longitude
             }, cancellationToken: ct));
         return rowsAffected > 0;
     }

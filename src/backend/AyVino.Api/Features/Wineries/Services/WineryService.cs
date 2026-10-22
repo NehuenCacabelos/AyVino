@@ -2,11 +2,13 @@ using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Locations.Repositories;
+using AyVino.Api.Features.Locations.Services;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
 using AyVino.Api.Features.Users.Services;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Enums;
+using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Wineries.Rules;
 
@@ -15,13 +17,26 @@ namespace AyVino.Api.Features.Wineries.Services;
 public class WineryService(
     IWineryRepository wineryRepository,
     ILocationRepository locationRepository,
+    ICityRepository cityRepository,
+    IGeorefClient georefClient,
     IUserService userService,
     IJwtTokenGenerator jwtTokenGenerator) : IWineryService
 {
+    // Constructor de compatibilidad para tests existentes
+    public WineryService(
+        IWineryRepository wineryRepository,
+        ILocationRepository locationRepository,
+        IUserService userService,
+        IJwtTokenGenerator jwtTokenGenerator)
+        : this(wineryRepository, locationRepository, null!, null!, userService, jwtTokenGenerator)
+    {
+    }
+
     public async Task<WineryResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
         if (id <= 0) throw new NotFoundException($"Winery with ID {id} not found.");
-        var winery = await wineryRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Winery with ID {id} not found.");
+        var winery = await wineryRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Winery with ID {id} not found.");
         return winery.ToResponseDto();
     }
 
@@ -52,15 +67,18 @@ public class WineryService(
 
     public async Task<WineryResponseDto> CreateAsync(CreateWineryRequestDto dto, CancellationToken ct = default)
     {
-        await ValidateRequestAsync(dto.Name, dto.LocationId, ct);
-        var winery = dto.ToEntity(userId: null);
+        ValidateName(dto.Name);
+        var (locationId, latitude, longitude) = await ResolveLocationChoiceAsync(dto.LocationId, dto.Latitude, dto.Longitude, isRequired: true, ct);
+
+        var winery = dto.ToEntity(locationId, latitude, longitude, userId: null);
         var created = await wineryRepository.CreateAsync(winery, ct);
-        return created.ToResponseDto();
+        var saved = await wineryRepository.GetByIdAsync(created.Id, ct) ?? created;
+        return saved.ToResponseDto();
     }
 
     public async Task<WineryResponseDto> UpdateAsync(int id, UpdateWineryRequestDto dto, Actor actor, CancellationToken ct = default)
     {
-        await ValidateRequestAsync(dto.Name, dto.LocationId, ct);
+        ValidateName(dto.Name);
 
         var existing = await wineryRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Winery with ID {id} not found.");
@@ -70,11 +88,40 @@ public class WineryService(
                 ? "Solo un administrador puede editar una bodega sin dueño."
                 : "No tenés permiso para editar esta bodega.");
 
-        var winery = dto.ToEntity(id);
+        int targetLocationId;
+        decimal? targetLatitude;
+        decimal? targetLongitude;
+
+        if (dto.LocationId.HasValue || dto.Latitude.HasValue || dto.Longitude.HasValue)
+        {
+            var resolved = await ResolveLocationChoiceAsync(dto.LocationId, dto.Latitude, dto.Longitude, isRequired: false, ct);
+            targetLocationId = resolved.LocationId;
+            targetLatitude = resolved.Latitude;
+            targetLongitude = resolved.Longitude;
+        }
+        else
+        {
+            targetLocationId = existing.LocationId;
+            targetLatitude = existing.Latitude;
+            targetLongitude = existing.Longitude;
+        }
+
+        var winery = existing with
+        {
+            Name = dto.Name,
+            Description = dto.Description,
+            LocationId = targetLocationId,
+            Latitude = targetLatitude,
+            Longitude = targetLongitude,
+            FoundationYear = dto.FoundationYear,
+            Website = dto.Website
+        };
+
         var updated = await wineryRepository.UpdateAsync(winery, ct);
         if (!updated) throw new NotFoundException($"Winery with ID {id} not found.");
 
-        var savedWinery = await wineryRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Winery with ID {id} not found.");
+        var savedWinery = await wineryRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Winery with ID {id} not found.");
         return savedWinery.ToResponseDto();
     }
 
@@ -89,7 +136,8 @@ public class WineryService(
         var updated = await wineryRepository.UpdateStatusAsync(id, (int)parsedStatus, ct);
         if (!updated) throw new NotFoundException($"Winery with ID {id} not found.");
 
-        var winery = await wineryRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Winery with ID {id} not found.");
+        var winery = await wineryRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Winery with ID {id} not found.");
         return winery.ToResponseDto();
     }
 
@@ -101,8 +149,8 @@ public class WineryService(
 
     public async Task<RegisterWineryResponseDto> RegisterWineryAsync(RegisterWineryRequestDto dto, CancellationToken ct = default)
     {
-        var wineryDto = dto.ToCreateWineryRequestDto();
-        await ValidateRequestAsync(wineryDto.Name, wineryDto.LocationId, ct);
+        ValidateName(dto.WineryName);
+        var (locationId, latitude, longitude) = await ResolveLocationChoiceAsync(dto.LocationId, dto.Latitude, dto.Longitude, isRequired: true, ct);
 
         var createdUser = await userService.RegisterAsync(
             new CreateUserRequestDto(dto.Username, dto.Email, dto.Password, Role: "Winery"), ct);
@@ -110,8 +158,23 @@ public class WineryService(
         WineryResponseDto createdWinery;
         try
         {
-            var winery = await wineryRepository.CreateAsync(wineryDto.ToEntity(createdUser.Id), ct);
-            createdWinery = winery.ToResponseDto();
+            var wineryEntity = new Winery
+            {
+                Name = dto.WineryName,
+                Description = dto.Description,
+                LocationId = locationId,
+                Latitude = latitude,
+                Longitude = longitude,
+                FoundationYear = dto.FoundationYear,
+                Website = dto.Website,
+                UserId = createdUser.Id,
+                Status = WineryStatus.Pending,
+                RegisterDate = DateTime.UtcNow
+            };
+
+            var created = await wineryRepository.CreateAsync(wineryEntity, ct);
+            var saved = await wineryRepository.GetByIdAsync(created.Id, ct) ?? created;
+            createdWinery = saved.ToResponseDto();
         }
         catch
         {
@@ -120,8 +183,6 @@ public class WineryService(
             throw;
         }
 
-        // Rebuild the domain User from the DTO (fields map 1:1) to generate the token,
-        // without needing an extra IUserRepository dependency here.
         var userForToken = new User
         {
             Id = createdUser.Id,
@@ -139,15 +200,68 @@ public class WineryService(
         return new RegisterWineryResponseDto(createdWinery, token, "Bearer", expiresAt);
     }
 
-    private async Task ValidateRequestAsync(string name, int locationId, CancellationToken ct)
+    private static void ValidateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ValidationException("The winery name is required.");
         if (name.Length > 100)
             throw new ValidationException("The winery name cannot exceed 100 characters.");
+    }
 
-        var locationExists = await locationRepository.ExistsByIdAsync(locationId, ct);
-        if (!locationExists)
-            throw new ValidationException($"Location with ID {locationId} does not exist.");
+    private async Task<(int LocationId, decimal? Latitude, decimal? Longitude)> ResolveLocationChoiceAsync(
+        int? locationId, decimal? latitude, decimal? longitude, bool isRequired, CancellationToken ct)
+    {
+        var hasCoords = latitude.HasValue || longitude.HasValue;
+        var hasLocationId = locationId.HasValue;
+
+        if (hasCoords && hasLocationId)
+        {
+            throw new ValidationException("Debe proporcionar coordenadas geográficas (latitud y longitud) o un id de ubicación, pero no ambos.");
+        }
+
+        if (hasCoords)
+        {
+            if (!latitude.HasValue || !longitude.HasValue)
+            {
+                throw new ValidationException("Debe proporcionar tanto latitud como longitud.");
+            }
+
+            if (georefClient == null || cityRepository == null || locationRepository == null)
+            {
+                throw new InvalidOperationException("Servicio de geolocalización no configurado.");
+            }
+
+            var georef = await georefClient.ResolveLocationAsync(latitude.Value, longitude.Value, ct);
+            var city = await cityRepository.GetByGeorefIdAsync(georef.DepartmentId, ct)
+                ?? throw new NotFoundException($"No se encontró la región interna para el departamento con código Georef {georef.DepartmentId}.");
+
+            var location = await locationRepository.GetByCityIdAsync(city.Id, ct)
+                ?? throw new NotFoundException($"No se encontró el registro de ubicación asociado al departamento {city.Name}.");
+
+            return (location.Id, latitude.Value, longitude.Value);
+        }
+
+        if (hasLocationId)
+        {
+            if (locationId!.Value <= 0)
+            {
+                throw new ValidationException("El id de la ubicación debe ser mayor a 0.");
+            }
+
+            var locationExists = await locationRepository.ExistsByIdAsync(locationId.Value, ct);
+            if (!locationExists)
+            {
+                throw new ValidationException($"Location with ID {locationId.Value} does not exist.");
+            }
+
+            return (locationId.Value, null, null);
+        }
+
+        if (isRequired)
+        {
+            throw new ValidationException("La ubicación es obligatoria. Debe proporcionar coordenadas (latitud y longitud) o un id de ubicación.");
+        }
+
+        return (0, null, null);
     }
 }

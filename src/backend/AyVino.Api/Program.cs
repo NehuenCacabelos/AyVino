@@ -180,6 +180,13 @@ builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
+// Georef Client (HttpClient tipado con BaseAddress)
+builder.Services.AddHttpClient<IGeorefClient, GeorefClient>(client =>
+{
+    client.BaseAddress = new Uri("https://apis.datos.gob.ar/georef/api/v2.0/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+
 // Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

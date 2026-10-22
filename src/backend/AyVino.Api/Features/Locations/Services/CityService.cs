@@ -20,8 +20,8 @@ public class CityService(ICityRepository cityRepository, IStateRepository stateR
         if (pageNumber <= 0)
             throw new ValidationException("pageNumber debe ser mayor a 0.");
 
-        if (pageSize <= 0 || pageSize > 100)
-            throw new ValidationException("pageSize debe estar entre 1 y 100.");
+        if (pageSize <= 0 || pageSize > 250)
+            throw new ValidationException("pageSize debe estar entre 1 y 250.");
 
         int? statusValue = null;
         if (!string.IsNullOrWhiteSpace(status))
