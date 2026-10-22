@@ -24,16 +24,6 @@ public class WineryService(
     IJwtTokenGenerator jwtTokenGenerator,
     IImageStorage? imageStorage = null) : IWineryService
 {
-    // Constructor de compatibilidad para tests existentes
-    public WineryService(
-        IWineryRepository wineryRepository,
-        ILocationRepository locationRepository,
-        IUserService userService,
-        IJwtTokenGenerator jwtTokenGenerator)
-        : this(wineryRepository, locationRepository, null!, null!, userService, jwtTokenGenerator, null)
-    {
-    }
-
     public async Task<WineryResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
         if (id <= 0) throw new NotFoundException($"Winery with ID {id} not found.");
@@ -245,11 +235,6 @@ public class WineryService(
             if (!latitude.HasValue || !longitude.HasValue)
             {
                 throw new ValidationException("Debe proporcionar tanto latitud como longitud.");
-            }
-
-            if (georefClient == null || cityRepository == null || locationRepository == null)
-            {
-                throw new InvalidOperationException("Servicio de geolocalización no configurado.");
             }
 
             var georef = await georefClient.ResolveLocationAsync(latitude.Value, longitude.Value, ct);

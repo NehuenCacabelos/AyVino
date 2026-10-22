@@ -1,3 +1,6 @@
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -13,6 +16,16 @@ namespace AyVino.UnitTests.Authorization;
 
 public class WineryServiceAuthorizationTests
 {
+    private static WineryService CreateService(IWineryRepository wineryRepo, ILocationRepository locationRepo) =>
+        new(
+            wineryRepo,
+            locationRepo,
+            Substitute.For<ICityRepository>(),
+            Substitute.For<IGeorefClient>(),
+            Substitute.For<IUserService>(),
+            Substitute.For<IJwtTokenGenerator>());
+
+
     private static Winery CreateWinery(int id, int? userId, WineryStatus status = WineryStatus.Approved) =>
         new()
         {
@@ -39,7 +52,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(10, AppRoles.User);
 
         // Act
@@ -61,7 +74,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(20, AppRoles.User);
 
         // Act & Assert
@@ -83,7 +96,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(10, AppRoles.User);
 
         // Act & Assert
@@ -106,7 +119,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(99, AppRoles.Admin);
 
         // Act
@@ -129,7 +142,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(99, AppRoles.Admin);
 
         // Act
@@ -150,7 +163,7 @@ public class WineryServiceAuthorizationTests
         var locationRepo = Substitute.For<ILocationRepository>();
         locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, locationRepo, null!, null!);
+        var service = CreateService(wineryRepo, locationRepo);
         var actor = new Actor(10, AppRoles.User);
 
         // Act & Assert

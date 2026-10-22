@@ -1,3 +1,5 @@
+using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Common.Security.Jwt;
 using System.Text;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
@@ -207,7 +209,7 @@ public class ImageStorageTests
         wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
         wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, unconfiguredStorage);
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), unconfiguredStorage);
 
         var dtoWithUrl = new UpdateWineryRequestDto(Name: "Catena", LogoUrl: "https://somewhere.com/logo.png");
         var actor = new Actor(10, AppRoles.Winery);
@@ -253,7 +255,7 @@ public class ImageStorageTests
         var storage = Substitute.For<IImageStorage>();
         storage.IsUrlFromStorage(Arg.Any<string>()).Returns(false);
 
-        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, storage);
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), storage);
 
         var dto = new UpdateWineryRequestDto(
             Name: "Catena Zapata",
@@ -295,7 +297,7 @@ public class ImageStorageTests
         wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
         wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, Substitute.For<IImageStorage>());
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), Substitute.For<IImageStorage>());
 
         var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: null);
         var actor = new Actor(10, AppRoles.Winery);
@@ -315,7 +317,7 @@ public class ImageStorageTests
         wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
         wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
 
-        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, Substitute.For<IImageStorage>());
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), Substitute.For<IImageStorage>());
 
         var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: emptyOrWhitespace);
         var actor = new Actor(10, AppRoles.Winery);
@@ -336,7 +338,7 @@ public class ImageStorageTests
         var storage = Substitute.For<IImageStorage>();
         storage.IsUrlFromStorage("https://storage/new-logo.png").Returns(true);
 
-        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, storage);
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), storage);
 
         var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: "  https://storage/new-logo.png  ");
         var actor = new Actor(10, AppRoles.Winery);

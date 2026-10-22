@@ -9,10 +9,6 @@ public class LocationService(
     ICityRepository cityRepository,
     IGeorefClient georefClient) : ILocationService
 {
-    public LocationService(ILocationRepository locationRepository, ICityRepository cityRepository)
-        : this(locationRepository, cityRepository, null!)
-    {
-    }
     public async Task<LocationResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var location = await locationRepository.GetByIdAsync(id, ct)

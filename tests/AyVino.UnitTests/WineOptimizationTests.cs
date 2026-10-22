@@ -1,3 +1,7 @@
+using NSubstitute;
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -140,7 +144,7 @@ public class WineOptimizationTests
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepo();
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), null!, null!);
+        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>());
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
@@ -164,7 +168,7 @@ public class WineOptimizationTests
                 RegisterDate = DateTime.UtcNow
             }
         };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), null!, null!);
+        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>());
 
         // Act
         var result = await service.ChangeStatusAsync(5, new ChangeWineryStatusRequestDto("Approved"));

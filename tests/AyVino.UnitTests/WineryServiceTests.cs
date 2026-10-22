@@ -1,3 +1,6 @@
+using NSubstitute;
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -17,13 +20,31 @@ namespace AyVino.UnitTests;
 
 public class WineryServiceTests
 {
+    private static WineryService CreateService(
+        IWineryRepository wineryRepo,
+        ILocationRepository? locationRepo = null,
+        IUserService? userService = null,
+        IJwtTokenGenerator? jwtGenerator = null,
+        ICityRepository? cityRepo = null,
+        IGeorefClient? georefClient = null,
+        IImageStorage? imageStorage = null) =>
+        new(
+            wineryRepo,
+            locationRepo ?? Substitute.For<ILocationRepository>(),
+            cityRepo ?? Substitute.For<ICityRepository>(),
+            georefClient ?? Substitute.For<IGeorefClient>(),
+            userService ?? Substitute.For<IUserService>(),
+            jwtGenerator ?? Substitute.For<IJwtTokenGenerator>(),
+            imageStorage);
+
+
     [Fact]
     public async Task CreateAsync_ValidRequest_MapsToEntityAndReturnsResponseDto()
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository();
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, null!, null!);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo);
 
         var dto = new CreateWineryRequestDto("Bodega Bianchi", 1, "Familia Bianchi", 1928, "https://bianchi.com");
 
@@ -50,7 +71,7 @@ public class WineryServiceTests
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository();
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, null!, null!);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo);
 
         var dto = new CreateWineryRequestDto(name, 1, "Desc", 1928, null);
 
@@ -65,7 +86,7 @@ public class WineryServiceTests
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository();
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = null };
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, null!, null!);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo);
 
         var dto = new CreateWineryRequestDto("Bodega Test", 999, "Desc", 2000, null);
 
@@ -90,7 +111,7 @@ public class WineryServiceTests
             }
         };
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, null!, null!);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo);
 
         var dto = new UpdateWineryRequestDto("Updated Name", 1, "Updated Desc", 1950, "https://updated.com");
 
@@ -111,7 +132,7 @@ public class WineryServiceTests
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository { ExistingWinery = null };
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, null!, null!);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo);
 
         var dto = new UpdateWineryRequestDto("Any Name", 1, null, null, null);
 
@@ -134,7 +155,7 @@ public class WineryServiceTests
                 RegisterDate = DateTime.UtcNow
             }
         };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepository(), null!, null!);
+        var service = CreateService(fakeWineryRepo, new FakeLocationRepository());
 
         // Act
         var result = await service.GetByIdAsync(10);
@@ -150,7 +171,7 @@ public class WineryServiceTests
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository { ExistingWinery = null };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepository(), null!, null!);
+        var service = CreateService(fakeWineryRepo, new FakeLocationRepository());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(999));
@@ -172,7 +193,7 @@ public class WineryServiceTests
                 RegisterDate = DateTime.UtcNow
             }
         };
-        var service = new WineryService(fakeWineryRepo, null!, null!, null!);
+        var service = CreateService(fakeWineryRepo);
 
         // Act
         var result = await service.GetByUserIdAsync(77);
@@ -189,7 +210,7 @@ public class WineryServiceTests
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository();
-        var service = new WineryService(fakeWineryRepo, null!, null!, null!);
+        var service = CreateService(fakeWineryRepo);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByUserIdAsync(99));
@@ -203,7 +224,7 @@ public class WineryServiceTests
         {
             ExistingWinery = new Winery { Id = 5, Name = "To Delete" }
         };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepository(), null!, null!);
+        var service = CreateService(fakeWineryRepo, new FakeLocationRepository());
 
         // Act
         await service.DeleteAsync(5);
@@ -217,7 +238,7 @@ public class WineryServiceTests
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepository { ExistingWinery = null };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepository(), null!, null!);
+        var service = CreateService(fakeWineryRepo, new FakeLocationRepository());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteAsync(999));
@@ -231,7 +252,7 @@ public class WineryServiceTests
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
         var fakeUserService = new FakeUserService();
         var fakeJwtGenerator = new FakeJwtTokenGenerator();
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
 
         var dto = new RegisterWineryRequestDto(
             Username: "catena_admin",
@@ -279,7 +300,7 @@ public class WineryServiceTests
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
         var fakeUserService = new FakeUserService();
         var fakeJwtGenerator = new FakeJwtTokenGenerator();
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
 
         var dto = new RegisterWineryRequestDto(
             Username: "faulty_admin",
@@ -304,7 +325,7 @@ public class WineryServiceTests
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
         var fakeUserService = new FakeUserService();
         var fakeJwtGenerator = new FakeJwtTokenGenerator();
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
 
         var dto = new RegisterWineryRequestDto(
             Username: "admin_user",
@@ -328,7 +349,7 @@ public class WineryServiceTests
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
         var fakeUserService = new FakeUserService();
         var fakeJwtGenerator = new FakeJwtTokenGenerator();
-        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+        var service = CreateService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
 
         var dto = new RegisterWineryRequestDto(
             Username: "admin_user",

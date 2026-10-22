@@ -1,3 +1,4 @@
+using NSubstitute;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Locations.DTOs;
 using AyVino.Api.Features.Locations.Models;
@@ -23,7 +24,7 @@ public class LocationServiceTests
                 StateName = "Mendoza"
             }
         };
-        var service = new LocationService(fakeLocationRepo, new FakeCityRepository());
+        var service = new LocationService(fakeLocationRepo, new FakeCityRepository(), Substitute.For<IGeorefClient>());
 
         // Act
         var result = await service.GetByIdAsync(1);
@@ -42,7 +43,7 @@ public class LocationServiceTests
     {
         // Arrange
         var fakeLocationRepo = new FakeLocationRepository { ExistingLocation = null };
-        var service = new LocationService(fakeLocationRepo, new FakeCityRepository());
+        var service = new LocationService(fakeLocationRepo, new FakeCityRepository(), Substitute.For<IGeorefClient>());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(999));
@@ -54,7 +55,7 @@ public class LocationServiceTests
         // Arrange
         var fakeLocationRepo = new FakeLocationRepository();
         var fakeCityRepo = new FakeCityRepository { ExistingCityId = 10 };
-        var service = new LocationService(fakeLocationRepo, fakeCityRepo);
+        var service = new LocationService(fakeLocationRepo, fakeCityRepo, Substitute.For<IGeorefClient>());
 
         var dto = new CreateLocationRequestDto(CityId: 10);
 
@@ -74,7 +75,7 @@ public class LocationServiceTests
         // Arrange
         var fakeLocationRepo = new FakeLocationRepository();
         var fakeCityRepo = new FakeCityRepository { ExistingCityId = null };
-        var service = new LocationService(fakeLocationRepo, fakeCityRepo);
+        var service = new LocationService(fakeLocationRepo, fakeCityRepo, Substitute.For<IGeorefClient>());
 
         var dto = new CreateLocationRequestDto(CityId: 999);
 
@@ -94,7 +95,7 @@ public class LocationServiceTests
                 new Location { Id = 2, CityId = 11, CityName = "Cafayate", StateId = 2, StateName = "Salta" }
             ]
         };
-        var service = new LocationService(fakeLocationRepo, new FakeCityRepository());
+        var service = new LocationService(fakeLocationRepo, new FakeCityRepository(), Substitute.For<IGeorefClient>());
 
         // Act
         var result = (await service.GetAllAsync(1, 10)).ToList();
@@ -113,7 +114,7 @@ public class LocationServiceTests
     public async Task GetAllAsync_InvalidPagination_ThrowsValidationException(int pageNumber, int pageSize)
     {
         // Arrange
-        var service = new LocationService(new FakeLocationRepository(), new FakeCityRepository());
+        var service = new LocationService(new FakeLocationRepository(), new FakeCityRepository(), Substitute.For<IGeorefClient>());
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => service.GetAllAsync(pageNumber, pageSize));
