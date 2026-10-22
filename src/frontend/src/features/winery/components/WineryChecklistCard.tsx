@@ -32,11 +32,11 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
       actionTo: '#',
     },
     {
-      id: 'location',
-      label: 'Terruño y ubicación geográfica confirmada',
-      description: 'Asigná la provincia y ciudad/valle donde nacen tus viñedos.',
-      completed: Boolean(winery.locationId),
-      actionText: 'Revisar',
+      id: 'logo',
+      label: 'Logo oficial del establecimiento',
+      description: 'Subí el logo o escudo de tu bodega para personalizar tu vidriera.',
+      completed: Boolean(winery.logoUrl && winery.logoUrl.trim().length > 0),
+      actionText: 'Subir logo',
       actionTo: '/bodega/perfil',
     },
     {

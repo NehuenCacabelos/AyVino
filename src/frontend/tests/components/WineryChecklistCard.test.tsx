@@ -17,10 +17,15 @@ describe('WineryChecklistCard', () => {
     userId: 5,
   };
 
-  it('calculates 40% when account and location are present and others are pending', () => {
+  it('calculates 40% when account and logo are present and others are pending', () => {
+    const wineryWithLogo: WineryResponseDto = {
+      ...baseWinery,
+      logoUrl: 'https://example.com/logo.png',
+    };
+
     render(
       <MemoryRouter>
-        <WineryChecklistCard winery={baseWinery} winesCount={0} />
+        <WineryChecklistCard winery={wineryWithLogo} winesCount={0} />
       </MemoryRouter>
     );
 
@@ -31,9 +36,10 @@ describe('WineryChecklistCard', () => {
     expect(screen.getByText('Cargar vino')).toBeInTheDocument();
   });
 
-  it('calculates 100% when description, website, foundation year, and wines are present', () => {
+  it('calculates 100% when logo, description, website, foundation year, and wines are present', () => {
     const completeWinery: WineryResponseDto = {
       ...baseWinery,
+      logoUrl: 'https://example.com/logo.png',
       foundationYear: 1950,
       description: 'Una semblanza enológica completa y detallada de más de diez caracteres.',
       website: 'https://bodegatest.com',

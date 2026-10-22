@@ -261,3 +261,4 @@ describe('RegionPicker Component', () => {
     expect(screen.getByText(/Mayor Drummond/i)).toBeInTheDocument();
   });
 });
+

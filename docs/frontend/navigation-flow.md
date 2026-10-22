@@ -156,8 +156,9 @@ flowchart TD
   - Empty state sobrio integrado con botón para cargar la primera etiqueta si el catálogo está vacío.
 
 ### 2.6 Perfil Institucional de Bodega (`WineryProfilePage.tsx`)
-- **Edición en Tiempo Real (`PUT /api/wineries/{id}`)**:
-  - Formulario Clean Dark con validación local réplica de backend: nombre requerido, terruño en cascada mediante [`LocationCascadeSelect.tsx`](../../src/frontend/src/features/winery/components/LocationCascadeSelect.tsx), año de fundación numérico, validación de URL para sitio web oficial y semblanza histórica con contador de hasta 2000 caracteres.
+- **Edición en Tiempo Real (`PUT /api/wineries/{id}`) con Logo y Región**:
+  - Formulario Clean Dark: nombre oficial, selector de logo oficial con `ImageUploadField.tsx` (subida a `POST /api/images` con `folder=wineries`, botón para quitar logo enviando `logoUrl: ""`), selector de terruño con `RegionPicker.tsx` (con pin actual si hay coordenadas), año de fundación, sitio web y semblanza histórica de hasta 1000 caracteres.
+  - La ubicación en el `PUT` solo se envía si fue alterada por el usuario.
   - Botón primario *"Guardar cambios"* con indicador de carga y botón secundario *"Descartar cambios"* para volver a los valores persistidos.
 - **Vista Previa Editorial en Vivo (Split View)**:
   - Panel lateral permanente que refleja de manera instantánea el monograma con iniciales enológicas, nombre en tipografía Serif noble, badges de verificación, terruño geográfico y párrafos de la semblanza histórica tal como los miembros de la comunidad los visualizarán en la vidriera pública (`/bodegas/:id`).

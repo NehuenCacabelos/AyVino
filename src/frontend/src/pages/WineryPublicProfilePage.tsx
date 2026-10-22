@@ -22,6 +22,7 @@ import {
   unfollowWinery,
   getWines,
   getLocationById,
+  WineryLogo,
   type WineryResponseDto,
   type WineResponseDto,
   type LocationResponseDto,
@@ -29,15 +30,6 @@ import {
 import { WineCard, WineDetailModal } from '../features/wines';
 import { mapApiWineToCuratedWine } from '../features/wines/utils/wineMapper';
 import type { CuratedWine, WineApiDto } from '../types/wine';
-
-function getWineryInitials(name?: string): string {
-  if (!name) return 'BO';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
 
 /**
  * WineryPublicProfilePage Component (/bodegas/:id)
@@ -203,10 +195,11 @@ export default function WineryPublicProfilePage() {
     );
   }
 
-  const initials = getWineryInitials(winery.name);
-  const locationLabel = locationData
-    ? `${locationData.cityName}, ${locationData.stateName}`
-    : 'Argentina';
+  const locationLabel = winery.location
+    ? `${winery.location.regionName}, ${winery.location.stateName}`
+    : locationData
+      ? `${locationData.cityName}, ${locationData.stateName}`
+      : 'Argentina';
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between">
@@ -234,14 +227,14 @@ export default function WineryPublicProfilePage() {
           />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-8">
-            {/* Identidad */}
+            {/* Identidad con Logo Oficial */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-stone-900 border border-white/10 flex items-center justify-center font-serif text-3xl sm:text-4xl font-semibold text-rose-200 shadow-xl shrink-0"
-                aria-hidden="true"
-              >
-                {initials}
-              </div>
+              <WineryLogo
+                src={winery.logoUrl}
+                name={winery.name}
+                size="xl"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl shrink-0"
+              />
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2.5">

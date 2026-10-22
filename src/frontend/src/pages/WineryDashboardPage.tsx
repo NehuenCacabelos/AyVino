@@ -20,6 +20,7 @@ import {
   WineryQuickActions,
   WineryChecklistCard,
   WineryRecentWines,
+  WineryLogo,
   type WineResponseDto,
 } from '../features/winery';
 
@@ -175,30 +176,41 @@ export default function WineryDashboardPage() {
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-neutral-100 tracking-tight">
-              {winery?.name || 'Mi Bodega'}
-            </h1>
+          <div className="flex items-center gap-4">
+            <WineryLogo
+              src={winery?.logoUrl}
+              name={winery?.name}
+              size="lg"
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl shrink-0"
+            />
 
-            {/* Badge de Estado */}
-            {isApproved && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Bodega Oficial</span>
-              </span>
-            )}
-            {isPending && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-amber-950/40 text-amber-300 border border-amber-800/40">
-                <Clock className="w-3.5 h-3.5" />
-                <span>En Verificación</span>
-              </span>
-            )}
-            {isRejected && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-rose-950/40 text-rose-300 border border-rose-800/40">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Observaciones Pendientes</span>
-              </span>
-            )}
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-neutral-100 tracking-tight">
+                  {winery?.name || 'Mi Bodega'}
+                </h1>
+
+                {/* Badge de Estado */}
+                {isApproved && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Bodega Oficial</span>
+                  </span>
+                )}
+                {isPending && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-amber-950/40 text-amber-300 border border-amber-800/40">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>En Verificación</span>
+                  </span>
+                )}
+                {isRejected && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-rose-950/40 text-rose-300 border border-rose-800/40">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Observaciones Pendientes</span>
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Subtítulo: Terruño y Metadatos */}

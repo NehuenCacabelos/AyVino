@@ -17,43 +17,37 @@ import {
 import {
   useWinery,
   updateWinery,
-  getLocationById,
-  LocationCascadeSelect,
+  RegionPicker,
+  WineryLogo,
+  ImageUploadField,
   type UpdateWineryRequestDto,
-  type LocationResponseDto,
+  type RegionPickerValue,
 } from '../features/winery';
 
 /**
- * Obtiene las iniciales de la bodega para su monograma en la vista previa.
- */
-function getWineryInitials(name?: string): string {
-  if (!name) return 'BO';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-/**
  * WineryProfilePage Component (/bodega/perfil)
- * Permite al productor editar la identidad y metadatos de su bodega en tiempo real
- * con previsualización editorial interactiva de la vidriera pública.
+ * Permite al productor editar la identidad, metadatos, terruño y logo oficial de su bodega
+ * con previsualización editorial interactiva de la vidriera pública en tiempo real.
  */
 export default function WineryProfilePage() {
   const { winery, reload } = useWinery();
 
   // Estados del formulario inicializados de forma perezosa
   const [name, setName] = useState<string>(() => winery?.name ?? '');
-  const [locationId, setLocationId] = useState<number | null>(() => winery?.locationId ?? null);
   const [foundationYear, setFoundationYear] = useState<string>(
     () => winery?.foundationYear?.toString() ?? '',
   );
   const [website, setWebsite] = useState<string>(() => winery?.website ?? '');
   const [description, setDescription] = useState<string>(() => winery?.description ?? '');
 
-  // Estado auxiliar para la previsualización editorial
-  const [resolvedLocationName, setResolvedLocationName] = useState<string | null>(null);
+  // Estado de Ubicación Territorial con RegionPicker
+  const [selectedRegion, setSelectedRegion] = useState<RegionPickerValue | null>(null);
+  const [isLocationDirty, setIsLocationDirty] = useState(false);
+
+  // Estado del Logo Oficial con ImageUploadField
+  const [logoUrl, setLogoUrl] = useState<string>(() => winery?.logoUrl ?? '');
+  const [isLogoDirty, setIsLogoDirty] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Estados de validación y feedback
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,35 +63,18 @@ export default function WineryProfilePage() {
     Promise.resolve().then(() => {
       if (!isMounted) return;
       setName(winery.name ?? '');
-      setLocationId(winery.locationId ?? null);
+      setLogoUrl(winery.logoUrl ?? '');
       setFoundationYear(winery.foundationYear ? winery.foundationYear.toString() : '');
       setWebsite(winery.website ?? '');
       setDescription(winery.description ?? '');
+      setIsLocationDirty(false);
+      setIsLogoDirty(false);
     });
 
     return () => {
       isMounted = false;
     };
   }, [winery]);
-
-  // Resolver nombre de ubicación para la vista previa
-  useEffect(() => {
-    let isMounted = true;
-    if (!winery?.locationId) return;
-
-    getLocationById(winery.locationId)
-      .then((loc) => {
-        if (!isMounted) return;
-        setResolvedLocationName(`${loc.cityName}, ${loc.stateName}`);
-      })
-      .catch(() => {
-        // Ignorar
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [winery?.locationId]);
 
   // Limpiar mensajes tras interacción
   const clearError = (field: string) => {
@@ -113,23 +90,16 @@ export default function WineryProfilePage() {
   const handleReset = () => {
     if (!winery) return;
     setName(winery.name ?? '');
-    setLocationId(winery.locationId ?? null);
+    setLogoUrl(winery.logoUrl ?? '');
     setFoundationYear(winery.foundationYear ? winery.foundationYear.toString() : '');
     setWebsite(winery.website ?? '');
     setDescription(winery.description ?? '');
+    setSelectedRegion(null);
+    setIsLocationDirty(false);
+    setIsLogoDirty(false);
     setErrors({});
     setErrorMessage(null);
     setSuccessMessage(null);
-
-    if (winery.locationId) {
-      getLocationById(winery.locationId)
-        .then((loc) => {
-          setResolvedLocationName(`${loc.cityName}, ${loc.stateName}`);
-        })
-        .catch(() => {
-          // Ignorar
-        });
-    }
   };
 
   const validateForm = (): boolean => {
@@ -137,32 +107,34 @@ export default function WineryProfilePage() {
 
     if (!name.trim()) {
       newErrors.name = 'El nombre de la bodega es obligatorio.';
-    } else if (name.trim().length > 150) {
-      newErrors.name = 'El nombre no puede superar los 150 caracteres.';
-    }
-
-    if (!locationId) {
-      newErrors.locationId = 'Debés seleccionar la provincia y ciudad/terruño de la bodega.';
+    } else if (name.trim().length > 100) {
+      newErrors.name = 'El nombre de la bodega no puede superar los 100 caracteres.';
     }
 
     if (foundationYear.trim()) {
       const year = Number(foundationYear);
-      const currentYear = new Date().getFullYear();
-      if (isNaN(year) || !Number.isInteger(year) || year < 1500 || year > currentYear) {
-        newErrors.foundationYear = `El año de fundación debe ser un número entre 1500 y ${currentYear}.`;
+      if (isNaN(year) || !Number.isInteger(year) || year < 1000 || year > 2100) {
+        newErrors.foundationYear = 'El año de fundación debe ser un número entre 1000 y 2100.';
       }
     }
 
     if (website.trim()) {
-      const urlPattern =
-        /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/i;
-      if (!urlPattern.test(website.trim())) {
+      try {
+        const url = new URL(
+          /^https?:\/\//i.test(website.trim()) ? website.trim() : `https://${website.trim()}`,
+        );
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          newErrors.website = 'El sitio web debe comenzar con http:// o https://';
+        } else if (website.trim().length > 200) {
+          newErrors.website = 'El sitio web no puede superar los 200 caracteres.';
+        }
+      } catch {
         newErrors.website = 'Ingresá una dirección web válida (ej: https://bodegaejemplo.com.ar).';
       }
     }
 
-    if (description.length > 2000) {
-      newErrors.description = 'La semblanza histórica no puede exceder los 2000 caracteres.';
+    if (description.length > 1000) {
+      newErrors.description = 'La semblanza histórica no puede exceder los 1000 caracteres.';
     }
 
     setErrors(newErrors);
@@ -175,6 +147,7 @@ export default function WineryProfilePage() {
     setErrorMessage(null);
 
     if (!winery) return;
+    if (isUploadingLogo) return;
     if (!validateForm()) return;
 
     setIsSaving(true);
@@ -188,15 +161,39 @@ export default function WineryProfilePage() {
 
       const payload: UpdateWineryRequestDto = {
         name: name.trim(),
-        locationId: locationId!,
         foundationYear: foundationYear.trim() ? Number(foundationYear) : null,
         website: normalizedWebsite || null,
         description: description.trim() || null,
       };
 
+      // Contrato del logo: null = no cambiar; cadena vacía "" = quitar el logo
+      if (isLogoDirty) {
+        payload.logoUrl = logoUrl;
+      }
+
+      // Enviar ubicación en el PUT SOLO si el dueño la modificó
+      if (isLocationDirty && selectedRegion) {
+        const isMapMode =
+          selectedRegion.mode === 'map' &&
+          selectedRegion.latitude != null &&
+          selectedRegion.longitude != null;
+
+        if (isMapMode) {
+          payload.latitude = selectedRegion.latitude;
+          payload.longitude = selectedRegion.longitude;
+          payload.locationId = null;
+        } else if (selectedRegion.locationId) {
+          payload.locationId = selectedRegion.locationId;
+          payload.latitude = null;
+          payload.longitude = null;
+        }
+      }
+
       await updateWinery(winery.id, payload);
       await reload();
 
+      setIsLocationDirty(false);
+      setIsLogoDirty(false);
       setSuccessMessage('Los datos de tu bodega se actualizaron correctamente.');
     } catch (err: unknown) {
       let detail: string | undefined;
@@ -212,10 +209,26 @@ export default function WineryProfilePage() {
     }
   };
 
-  const initials = getWineryInitials(name || winery?.name);
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
   const isRejected = winery?.status === 'Rejected';
+
+  // Resumen del terruño para la vista previa
+  const previewLocationText = selectedRegion
+    ? `${selectedRegion.regionName}, ${selectedRegion.stateName}`
+    : winery?.location
+      ? `${winery.location.regionName}, ${winery.location.stateName}`
+      : 'Terruño aún no seleccionado';
+
+  // Coordenadas iniciales para el mapa si la bodega ya cuenta con ellas
+  const initialCoords =
+    winery?.latitude && winery?.longitude
+      ? { latitude: Number(winery.latitude), longitude: Number(winery.longitude) }
+      : null;
+
+  const initialLocText = winery?.location
+    ? `${winery.location.regionName}, ${winery.location.stateName}`
+    : null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -229,7 +242,8 @@ export default function WineryProfilePage() {
             Perfil de la Bodega
           </h1>
           <p className="text-xs text-neutral-400 mt-1 font-sans leading-relaxed">
-            Actualizá la semblanza histórica, terruño y canales de contacto oficiales de tu viñedo.
+            Actualizá la semblanza histórica, terruño, logo y canales de contacto oficiales de tu
+            viñedo.
           </p>
         </div>
 
@@ -299,31 +313,42 @@ export default function WineryProfilePage() {
               {errors.name && <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.name}</p>}
             </div>
 
-            {/* 2. Ubicación / Terruño en Cascada */}
-            <div>
-              <label
-                htmlFor="winery-state"
-                className="block text-[11px] font-mono uppercase tracking-widest text-neutral-300 font-medium mb-2"
-              >
-                Terruño y Región Geográfica <span className="text-rose-400">*</span>
-              </label>
-              <LocationCascadeSelect
-                value={locationId}
-                onChange={(newId: number | null, resolvedLoc?: LocationResponseDto | null) => {
-                  setLocationId(newId);
-                  clearError('locationId');
-                  if (resolvedLoc) {
-                    setResolvedLocationName(`${resolvedLoc.cityName}, ${resolvedLoc.stateName}`);
-                  } else {
-                    setResolvedLocationName(null);
-                  }
+            {/* 2. Logo Oficial de la Bodega */}
+            <div className="pt-2 border-t border-white/5">
+              <ImageUploadField
+                value={logoUrl}
+                onChange={(newUrl) => {
+                  setLogoUrl(newUrl);
+                  setIsLogoDirty(true);
                 }}
-                error={errors.locationId}
+                folder="wineries"
+                label="Logo Oficial de la Bodega"
+                helperText="Subí el escudo o imagen oficial de tu viñedo (JPG, PNG o WEBP, máx 2 MB)."
+                disabled={isSaving}
+                onUploadingChange={setIsUploadingLogo}
+                aspectRatio="square"
               />
             </div>
 
-            {/* 3. Año de Fundación y Sitio Web */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 3. Terruño y Región Geográfica con RegionPicker */}
+            <div className="pt-2 border-t border-white/5">
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-neutral-300 font-medium mb-2">
+                Terruño y Región Geográfica
+              </label>
+              <RegionPicker
+                value={selectedRegion}
+                onChange={(val) => {
+                  setSelectedRegion(val);
+                  setIsLocationDirty(true);
+                }}
+                initialCoordinates={initialCoords}
+                initialLocationText={initialLocText}
+                disabled={isSaving}
+              />
+            </div>
+
+            {/* 4. Año de Fundación y Sitio Web */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
               <div>
                 <label
                   htmlFor="foundation-year"
@@ -334,8 +359,8 @@ export default function WineryProfilePage() {
                 <input
                   id="foundation-year"
                   type="number"
-                  min="1500"
-                  max={new Date().getFullYear()}
+                  min="1000"
+                  max="2100"
                   value={foundationYear}
                   onChange={(e) => {
                     setFoundationYear(e.target.value);
@@ -383,8 +408,8 @@ export default function WineryProfilePage() {
               </div>
             </div>
 
-            {/* 4. Semblanza y Filosofía Enológica */}
-            <div>
+            {/* 5. Semblanza y Filosofía Enológica */}
+            <div className="pt-2 border-t border-white/5">
               <div className="flex items-center justify-between mb-2">
                 <label
                   htmlFor="description"
@@ -394,10 +419,10 @@ export default function WineryProfilePage() {
                 </label>
                 <span
                   className={`text-[10px] font-mono ${
-                    description.length > 2000 ? 'text-rose-400' : 'text-neutral-500'
+                    description.length > 1000 ? 'text-rose-400' : 'text-neutral-500'
                   }`}
                 >
-                  {description.length} / 2000
+                  {description.length} / 1000
                 </span>
               </div>
               <textarea
@@ -426,7 +451,7 @@ export default function WineryProfilePage() {
               <button
                 type="button"
                 onClick={handleReset}
-                disabled={isSaving}
+                disabled={isSaving || isUploadingLogo}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-5 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -435,7 +460,7 @@ export default function WineryProfilePage() {
 
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || isUploadingLogo}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-7 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
@@ -455,7 +480,7 @@ export default function WineryProfilePage() {
         <div className="lg:col-span-5 lg:sticky lg:top-8 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-medium">
-              Vista Previa
+              Así te ven los usuarios
             </span>
             <span className="text-[10px] font-mono text-amber-200/70 bg-amber-950/30 border border-amber-900/40 px-2 py-0.5 rounded">
               En Vivo
@@ -463,14 +488,14 @@ export default function WineryProfilePage() {
           </div>
 
           <div className="rounded-2xl bg-[#141416] border border-white/10 p-6 sm:p-7 shadow-2xl relative overflow-hidden space-y-6">
-            {/* Cabecera de la Ficha */}
+            {/* Cabecera de la Ficha con WineryLogo */}
             <div className="flex items-start gap-4">
-              <div
-                className="w-16 h-16 rounded-2xl bg-stone-900 border border-white/10 flex items-center justify-center font-serif text-2xl font-semibold text-rose-200 shadow-md shrink-0"
-                aria-hidden="true"
-              >
-                {initials}
-              </div>
+              <WineryLogo
+                src={logoUrl || winery?.logoUrl}
+                name={name.trim() || winery?.name}
+                size="lg"
+                className="w-16 h-16 rounded-2xl shrink-0"
+              />
 
               <div className="min-w-0 flex-1">
                 <h2 className="font-serif text-2xl font-semibold text-neutral-100 tracking-tight break-words">
@@ -480,19 +505,19 @@ export default function WineryProfilePage() {
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {isApproved && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                      <ShieldCheck className="w-3 h-3" />
+                      <ShieldCheck className="w-3.5 h-3.5" />
                       <span>Oficial</span>
                     </span>
                   )}
                   {isPending && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/40">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3.5 h-3.5" />
                       <span>En Revisión</span>
                     </span>
                   )}
                   {isRejected && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-rose-950/40 text-rose-300 border border-rose-800/40">
-                      <AlertTriangle className="w-3 h-3" />
+                      <AlertTriangle className="w-3.5 h-3.5" />
                       <span>Observaciones</span>
                     </span>
                   )}
@@ -504,7 +529,7 @@ export default function WineryProfilePage() {
             <div className="space-y-2.5 pt-2 border-t border-white/5 text-xs text-neutral-300 font-sans">
               <div className="flex items-center gap-2.5">
                 <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{resolvedLocationName || 'Terruño aún no seleccionado'}</span>
+                <span>{previewLocationText}</span>
               </div>
 
               {foundationYear.trim() && (
@@ -555,4 +580,3 @@ export default function WineryProfilePage() {
     </div>
   );
 }
-

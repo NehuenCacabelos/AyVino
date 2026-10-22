@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -20,18 +20,7 @@ import { WineryProvider } from '../context/WineryContext';
 import WineryStatusBanner from './WineryStatusBanner';
 import WineryLoadingState from './WineryLoadingState';
 import WineryErrorState from './WineryErrorState';
-
-/**
- * Obtiene las iniciales de la bodega para su monograma circular.
- */
-function getWineryInitials(name?: string): string {
-  if (!name) return 'BO';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
+import WineryLogo from './WineryLogo';
 
 /**
  * Layout principal del Panel de Bodega (/bodega/*).
@@ -45,8 +34,6 @@ export default function WineryLayout() {
   const { winery, isLoading, error, isNotFound, reload } = wineryData;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const initials = useMemo(() => getWineryInitials(winery?.name), [winery?.name]);
 
   const handleLogout = async () => {
     await logout();
@@ -252,9 +239,12 @@ export default function WineryLayout() {
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-white/10 bg-[#0f0f11] px-5 py-4 space-y-3 z-50">
             <div className="flex items-center gap-3 p-3 bg-stone-900/70 rounded-xl border border-white/5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-stone-900 font-serif text-sm font-semibold text-neutral-200">
-                {initials}
-              </div>
+              <WineryLogo
+                src={winery?.logoUrl}
+                name={winery?.name}
+                size="sm"
+                className="w-10 h-10 rounded-xl shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-neutral-100 truncate">
                   {winery?.name || 'Mi Bodega'}
@@ -335,12 +325,12 @@ export default function WineryLayout() {
               
               {/* Bloque Identidad de Bodega */}
               <div className="p-3.5 rounded-2xl bg-stone-950/60 border border-white/5 flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-stone-900 font-serif text-sm font-semibold text-neutral-200 shadow-sm"
-                  aria-hidden="true"
-                >
-                  {initials}
-                </div>
+                <WineryLogo
+                  src={winery?.logoUrl}
+                  name={winery?.name}
+                  size="md"
+                  className="w-11 h-11 rounded-xl shrink-0"
+                />
 
                 <div className="min-w-0 flex-1">
                   <h2 className="font-serif text-sm font-semibold text-neutral-100 truncate">
