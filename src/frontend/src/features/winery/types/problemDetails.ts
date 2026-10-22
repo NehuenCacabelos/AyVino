@@ -47,3 +47,4 @@ export function getErrorMessage(error: unknown, fallback = 'Ocurrió un error in
   }
   return fallback;
 }
+

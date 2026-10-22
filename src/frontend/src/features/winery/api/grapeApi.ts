@@ -26,3 +26,4 @@ export async function getGrapeById(id: number): Promise<GrapeResponseDto> {
   const response = await apiClient.get<GrapeResponseDto>(`/grapes/${id}`);
   return response.data;
 }
+

@@ -15,3 +15,4 @@ export interface GrapeResponseDto {
   typicalAcidity: string | null;
   description: string | null;
 }
+

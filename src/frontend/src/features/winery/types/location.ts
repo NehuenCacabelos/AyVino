@@ -46,3 +46,4 @@ export interface CreateCityRequestDto {
 export interface CreateLocationRequestDto {
   cityId: number;
 }
+

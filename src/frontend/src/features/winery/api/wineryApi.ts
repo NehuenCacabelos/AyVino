@@ -98,3 +98,4 @@ export async function followWinery(id: number): Promise<void> {
 export async function unfollowWinery(id: number): Promise<void> {
   await apiClient.delete<void>(`/wineries/${id}/follow`);
 }
+

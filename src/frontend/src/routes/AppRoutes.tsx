@@ -11,6 +11,12 @@ const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const CavaPage = lazy(() => import('../pages/CavaPage'));
 const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
+
+// Vistas institucionales y públicas de Bodega
+const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
+const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
+
+// Layout y vistas del panel de Bodega
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 
@@ -32,8 +38,8 @@ function RouteFallbackLoader() {
 
 /**
  * Configuración Central de Rutas de la Aplicación (AyVino).
- * Integra rutas públicas (Landing, Login, Register, Terms), protegidas generales
- * (Dashboard, Catálogo) y protegidas por rol de bodega/administrador.
+ * Integra rutas públicas (Landing, Login, Register, Terms, Para Bodegas, Registro Bodega),
+ * protegidas generales (Dashboard, Catálogo, Cava, Maridaje) y protegidas por rol de bodega/administrador (/bodega/*).
  * Cada vista se carga de forma diferida con React.lazy para optimizar el bundle inicial.
  */
 export default function AppRoutes() {
@@ -51,6 +57,10 @@ export default function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/terms" element={<TermsPage />} />
+
+        {/* Rutas Públicas Institucionales de Bodega */}
+        <Route path="/para-bodegas" element={<ForWineriesPage />} />
+        <Route path="/bodega/registro" element={<WineryRegisterPage />} />
 
         {/* Ruta Protegida: Dashboard Principal Post-Login */}
         <Route

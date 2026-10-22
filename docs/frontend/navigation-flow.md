@@ -9,8 +9,10 @@ Este documento detalla la arquitectura de información, las vistas de la aplicac
 ```mermaid
 flowchart TD
     subgraph PublicRoutes["Rutas Públicas"]
-        Landing["/ -> Landing.tsx (Hero + Muestra Curada)"]
-        Login["/login -> LoginPage.tsx (Acceso con Estilo Editorial)"]
+        Landing["/ -> Landing.tsx (Hero + Muestra Curada + Franja Bodegas)"]
+        ForWineries["/para-bodegas -> ForWineriesPage.tsx (Propuesta de Valor)"]
+        WineryRegister["/bodega/registro -> WineryRegisterPage.tsx (Alta Unificada)"]
+        Login["/login -> LoginPage.tsx (Acceso Editorial con Redirección Contextual)"]
         Register["/register -> RegisterPage.tsx (Alta de Usuario Libre)"]
         Terms["/terms -> TermsPage.tsx (Términos y Condiciones)"]
         DetailModal["WineDetailModal (Ficha Técnica a 2 Columnas)"]
@@ -37,13 +39,17 @@ flowchart TD
 
     Landing -->|"Click en tarjeta de vino"| DetailModal
     Landing -->|"Click en 'Comunidad' (Navbar / Footer)"| CommunityModal
+    Landing -->|"Click en 'Para bodegas' (Navbar / Banner)"| ForWineries
+    ForWineries -->|"Click en 'Registrar mi bodega'"| WineryRegister
     Landing -->|"Navegación /login"| Login
     Landing -->|"Navegación /register"| Register
     Login -->|"Enlace a términos"| Terms
     Register -->|"Enlace a términos"| Terms
+    WineryRegister -->|"Enlace a términos"| Terms
     Login -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
     Register -->|"Registro exitoso"| AuthContext
-    AuthContext -->|"Redirección post-login"| TargetRoute["Ruta original (from) o /dashboard o /bodega/dashboard"]
+    WineryRegister -->|"Registro + Login automático"| AuthContext
+    AuthContext -->|"Redirección post-login"| TargetRoute["Ruta original (from), /bodega/dashboard o /dashboard"]
 
     Landing -->|"Navegación /dashboard"| Guard
     Landing -->|"Navegación /cava"| Guard
@@ -80,6 +86,8 @@ flowchart TD
 - **Grilla de Vinos Curados**:
   - Renderizado de tarjetas de vino ([`WineCard.tsx`](../../src/frontend/src/features/wines/components/WineCard.tsx)) en contenedores `#141416` con bordes estructurales `border-neutral-800` en diseño a dos columnas.
   - **Minimalismo y escaneo visual rápido**: contiene únicamente silueta/foto de botella, varietal y añada (`font-mono`), nombre y bodega, calificación con cantidad de notas y botón sobrio *"Ver ficha"*. Totalmente libre de precios y descripciones redundantes.
+- **Franja Institucional para Bodegas**:
+  - Franja horizontal previa al pie de página con llamado editorial ("¿Sos productor vitivinícola?") y botón hacia `/para-bodegas`.
 - **Modal de Ficha Técnica** ([`WineDetailModal.tsx`](../../src/frontend/src/features/wines/components/WineDetailModal.tsx)):
   - Estructura a dos columnas: columna izquierda con escaparate de botella (foto o [`WineBottleSilhouette.tsx`](../../src/frontend/src/features/wines/components/WineBottleSilhouette.tsx)) y columna derecha con ficha técnica exhaustiva.
   - Desglose sensorial y técnico: puntaje, añada, crianza, notas de cata y aromas (copywriting cercano), descriptores, maridaje y origen/altura. Sin precios.
@@ -87,11 +95,23 @@ flowchart TD
   - Modal sobrio de *"Próximamente"* activado desde el Navbar y el pie de página.
   - Titular en Serif noble, gráfico minimalista SVG en trazo fino (copas y mesa de cata) y texto explicativo sobre catas compartidas y clubes enológicos locales.
 
-### 2.2 Pantalla de Inicio de Sesión (`LoginPage.tsx`) y Registro (`RegisterPage.tsx`)
+### 2.2 Portal Institucional para Bodegas (`ForWineriesPage.tsx` y `WineryRegisterPage.tsx`)
+- **Página Para Bodegas (`/para-bodegas`)**:
+  - Presentación editorial con propuesta de valor única para establecimientos vitivinícolas argentinos.
+  - Tres ejes clave: Ficha técnica oficial con sellos de garantía, reclamo de vinos existentes preservando reseñas de la comunidad, y perfil público con seguidores.
+  - Flujo de incorporación en 3 pasos: Registro ágil, verificación por sommeliers de AyVino, y publicación / reclamo de cosechas.
+- **Formulario de Registro Unificado (`/bodega/registro`)**:
+  - Estética split-card en dos columnas con panel fotográfico vertical.
+  - Registro conjunto del usuario administrador (nombre, email, contraseña con revelador visual y validación de 8 caracteres) y de la bodega (nombre, terruño, año de fundación, web y semblanza histórica).
+  - Selector de terruño en cascada ([`LocationCascadeSelect.tsx`](../../src/frontend/src/features/winery/components/LocationCascadeSelect.tsx)) que sincroniza en tiempo real provincias argentinas y sus ciudades asociadas.
+  - Proceso transaccional completo: `registerWinery()` $\rightarrow$ login automático $\rightarrow$ redirección a `/bodega/dashboard`.
+
+### 2.3 Pantalla de Inicio de Sesión (`LoginPage.tsx`) y Registro (`RegisterPage.tsx`)
 - Vistas dedicadas (`/login` y `/register`) con layout split-card sobrio, equilibrado y sin scroll.
 - Validación reactiva sin tooltips nativos del navegador (`noValidate`), manejo de errores en estado de React (`errors: Record<string, string>`), y conexión con `loginApi` y `registerApi`.
+- **Redirección Contextual Inteligente en Login**: Si el usuario autenticado posee rol `Winery` y no existía una ruta previa en el historial (`state.from`), es derivado automáticamente a `/bodega/dashboard`.
 
-### 2.3 Panel de Bodega (`WineryLayout.tsx` y `/bodega/*`)
+### 2.4 Panel de Bodega (`WineryLayout.tsx` y `/bodega/*`)
 - **Contenedor Principal (`WineryLayout.tsx`)**:
   - Enrutamiento anidado bajo `/bodega/*` exclusivo para roles `Winery` y `Admin`.
   - Header superior de gestión: Branding `AyVino.`, nombre y monograma circular de la bodega, enlace directo hacia *"Ver perfil público"* y menú de sesión.
@@ -107,7 +127,9 @@ flowchart TD
 
 | Ruta | Componente | Acceso Permitido | Comportamiento si no cumple |
 | :--- | :--- | :--- | :--- |
-| `/` | `Landing.tsx` | Público (todos) | N/A |
+| `/` | `Landing.tsx` | Público (todos) | Redirige al dashboard según rol si ya está autenticado |
+| `/para-bodegas` | `ForWineriesPage.tsx` | Público (todos) | N/A |
+| `/bodega/registro` | `WineryRegisterPage.tsx` | Público | Si ya está autenticado como `Winery`/`Admin`, redirige a `/bodega/dashboard` |
 | `/login` | `LoginPage.tsx` | Público (redirige a `state.from`, `/bodega/dashboard` o `/dashboard`) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |

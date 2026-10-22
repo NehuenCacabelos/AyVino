@@ -11,9 +11,10 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
  * Inputs directos sin labels externas (solo placeholder amplio interior).
  * Botón primario y campos con curvas uniformes (rounded-xl h-12).
  * Columna derecha: Foto vertical con degradado hacia la columna izquierda.
+ * Redirige a /bodega/dashboard si el usuario autenticado tiene rol Winery.
  */
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,7 +27,7 @@ export default function LoginPage() {
 
   // Validación segura de la ruta de redirección desde el state de navegación
   const locationState = location.state as Record<string, unknown> | null;
-  const redirectPath =
+  const customRedirectPath =
     locationState &&
     typeof locationState === 'object' &&
     'from' in locationState &&
@@ -35,14 +36,15 @@ export default function LoginPage() {
     'pathname' in (locationState.from as Record<string, unknown>) &&
     typeof (locationState.from as Record<string, unknown>).pathname === 'string'
       ? ((locationState.from as Record<string, unknown>).pathname as string)
-      : '/dashboard';
+      : null;
 
-  // Redirigir a la ruta original o al Dashboard si ya tiene sesión activa
+  // Redirigir a la ruta original o al Dashboard correspondiente si ya tiene sesión activa
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(redirectPath, { replace: true });
+      const defaultPath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+      navigate(customRedirectPath ?? defaultPath, { replace: true });
     }
-  }, [isAuthenticated, navigate, redirectPath]);
+  }, [isAuthenticated, user?.role, customRedirectPath, navigate]);
 
   const clearError = (field: string) => {
     if (errors[field]) {
@@ -76,7 +78,21 @@ export default function LoginPage() {
 
     try {
       await login({ email: email.trim(), password });
-      navigate(redirectPath, { replace: true });
+
+      // Determinar destino según rol persistido si no hay redirección previa explícita
+      let defaultPath = '/dashboard';
+      const storedUserRaw = localStorage.getItem('user');
+      if (storedUserRaw) {
+        try {
+          const parsed = JSON.parse(storedUserRaw) as { role?: string };
+          if (parsed.role === 'Winery') {
+            defaultPath = '/bodega/dashboard';
+          }
+        } catch {
+          // fallback a /dashboard
+        }
+      }
+      navigate(customRedirectPath ?? defaultPath, { replace: true });
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
@@ -134,7 +150,7 @@ export default function LoginPage() {
                 Bienvenido de nuevo
               </h1>
               <p className="text-sm text-zinc-400 mt-2 font-sans font-light">
-                Ingresá a tu cava personal y gestioná tus etiquetas.
+                Ingresá a tu cava personal o panel de bodega y gestioná tus etiquetas.
               </p>
             </div>
 
@@ -240,14 +256,23 @@ export default function LoginPage() {
           </div>
 
           {/* Footer Inferior Fijo */}
-          <div className="text-center text-xs text-zinc-400">
+          <div className="text-center text-xs text-zinc-400 space-y-1.5">
             <p>
               ¿Todavía no tenés tu perfil?{' '}
               <Link
                 to="/register"
                 className="text-zinc-200 hover:text-white font-medium underline transition-colors"
               >
-                Crear cuenta acá
+                Creá tu cuenta acá
+              </Link>
+            </p>
+            <p className="text-[11px] text-zinc-500">
+              ¿Sos productor vitivinícola?{' '}
+              <Link
+                to="/bodega/registro"
+                className="text-rose-300/80 hover:text-rose-200 underline transition-colors"
+              >
+                Registrá tu bodega acá
               </Link>
             </p>
           </div>

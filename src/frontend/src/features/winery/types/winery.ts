@@ -62,3 +62,4 @@ export interface WineryFollowerDto {
   username: string;
   followedAt: string;
 }
+

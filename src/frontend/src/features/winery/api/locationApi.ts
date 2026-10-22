@@ -68,3 +68,4 @@ export async function getLocationById(id: number): Promise<LocationResponseDto> 
   const response = await apiClient.get<LocationResponseDto>(`/locations/${id}`);
   return response.data;
 }
+

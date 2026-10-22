@@ -120,3 +120,4 @@ export interface UpdateWineVintageRequestDto {
 export interface ClaimWinesRequestDto {
   wineIds: number[];
 }
+
