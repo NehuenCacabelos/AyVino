@@ -218,7 +218,7 @@ Modelado de regiones vitivinícolas y valles (ej: Valle de Uco, Cafayate, San Pa
 | `POST` | `/api/locations` | Autenticado | Da de alta una nueva ubicación vinculada a una `CityId` existente. | `CreateLocationRequestDto` | `201 Created` (`LocationResponseDto`) |
 | `GET` | `/api/locations/{id}` | Público | Obtiene la ubicación con los nombres resueltos de su ciudad y provincia. | - | `200 OK` (`LocationResponseDto`) |
 | `GET` | `/api/locations` | Público | Listado paginado de ubicaciones con nombres geográficos resueltos. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<LocationResponseDto>`) |
-| `GET` | `/api/locations/resolve` | Público (`AuthLimit`: 15 req/min) | Resuelve coordenadas geográficas (lat, lon) argentinas mediante la API oficial Georef vinculando provincia y departamento. | Query params: `lat`, `lon` | `200 OK` (`ResolvedLocationResponseDto`) |
+| `GET` | `/api/locations/resolve` | Público (`MapResolveLimit`: 60 req/min) | Resuelve coordenadas geográficas (lat, lon) argentinas mediante la API oficial Georef vinculando provincia y departamento. | Query params: `lat`, `lon` | `200 OK` (`ResolvedLocationResponseDto`) |
 
 ---
 

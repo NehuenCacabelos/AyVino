@@ -15,7 +15,7 @@ public static class LocationEndpoints
         group.MapGet("/resolve", async (decimal lat, decimal lon, ILocationService locationService, CancellationToken ct) =>
             Results.Ok(await locationService.ResolveCoordinatesAsync(lat, lon, ct)))
             .AllowAnonymous()
-            .RequireRateLimiting("AuthLimit")
+            .RequireRateLimiting("MapResolveLimit")
             .WithName("ResolveLocationByCoordinates")
             .WithSummary("Resolves geographic coordinates (lat/lon) into official Argentine Province, Department and Location.");
 
