@@ -177,6 +177,50 @@ public class ImageStorageTests
     }
 
     [Fact]
+    public void SupabaseImageStorage_NotConfigured_IsUrlFromStorage_ReturnsFalseForAnyUrl()
+    {
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["Supabase:Url"] = null,
+            ["Supabase:ServiceRoleKey"] = null,
+            ["Supabase:Bucket"] = null
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var storage = new SupabaseImageStorage(new HttpClient(), config, NullLogger<SupabaseImageStorage>.Instance);
+
+        Assert.False(storage.IsConfigured);
+        Assert.False(storage.IsUrlFromStorage("https://project.supabase.co/storage/v1/object/public/bucket/wineries/abc.jpg"));
+        Assert.False(storage.IsUrlFromStorage("https://external.com/photo.png"));
+        Assert.False(storage.IsUrlFromStorage(""));
+        Assert.False(storage.IsUrlFromStorage(null!));
+    }
+
+    [Fact]
+    public async Task WineryService_UpdateAsync_WhenStorageNotConfigured_RejectsNonEmptyLogoUrl_AllowsEmpty()
+    {
+        var inMemoryConfig = new Dictionary<string, string?>();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var unconfiguredStorage = new SupabaseImageStorage(new HttpClient(), config, NullLogger<SupabaseImageStorage>.Instance);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, unconfiguredStorage);
+
+        var dtoWithUrl = new UpdateWineryRequestDto(Name: "Catena", LogoUrl: "https://somewhere.com/logo.png");
+        var actor = new Actor(10, AppRoles.Winery);
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(1, dtoWithUrl, actor));
+        Assert.Contains("almacenamiento oficial", ex.Message);
+
+        var dtoEmpty = new UpdateWineryRequestDto(Name: "Catena", LogoUrl: "");
+        var result = await service.UpdateAsync(1, dtoEmpty, actor);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
     public void SupabaseImageStorage_IsUrlFromStorage_ValidatesBucketPrefix()
     {
         var inMemoryConfig = new Dictionary<string, string?>

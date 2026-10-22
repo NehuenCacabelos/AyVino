@@ -66,7 +66,7 @@ public class SupabaseImageStorage : IImageStorage
 
         if (!IsConfigured)
         {
-            return true;
+            return false;
         }
 
         var expectedBase = $"{_supabaseUrl}/storage/v1/object/public/{_bucket}/";
