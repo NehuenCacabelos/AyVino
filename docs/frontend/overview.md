@@ -13,6 +13,7 @@ El frontend de AyVino es una Single Page Application (SPA) desarrollada en **Rea
 | **Vite** | 8.x | Servidor de desarrollo con Hot Module Replacement (HMR) instantáneo y compilador optimizado. |
 | **Tailwind CSS** | v4 (`@tailwindcss/vite`) | Motor de utilidades moderno de última generación integrado directamente con Vite. |
 | **Lucide React** | ^1.46 | Iconografía vectorial consistente y liviana para acciones de usuario y navegación. |
+| **Leaflet & React-Leaflet** | ^1.9 / ^5.0 | Mapas interactivos para geolocalización de bodegas y resolución territorial con Georef. |
 | **React Router DOM** | v7.x | Enrutamiento declarativo del lado del cliente con soporte de rutas anidadas. |
 | **Axios** | ^1.20 | Cliente HTTP para comunicación tipada con la API RESTful. |
 
@@ -40,12 +41,15 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
   - Hero editorial a pantalla completa con fondo carbón `#0a0a0c`, iluminación enológica difusa e invitaciones directas a registrarse.
   - Grilla de 3 beneficios diferenciales: Certificación Institucional (Ficha Técnica Oficial con sello), Adopción Inteligente (Reclamo de Vinos Comunitarios conservando reseñas) y Comunidad Enológica (Perfil Público y Seguidores).
   - Guía de proceso en 3 pasos numerados (`01` Registro, `02` Verificación editorial, `03` Publicación y gestión).
-- **Registro Unificado de Bodega (`WineryRegisterPage.tsx`)**:
-  - Formulario de alta en un único paso con estética split-card editorial y fotografía vertical de viñedos mendocinos.
-  - Agrupación semántica en dos secciones: Datos del Responsable (nombre, email y contraseña con medidor de longitud) y Datos de la Bodega (nombre, ubicación, año de fundación opcional, sitio web y descripción).
-  - **Selector de Ubicación en Cascada (`LocationCascadeSelect.tsx`)**: Consulta `/api/states` y `/api/locations` de forma reactiva, permitiendo al productor seleccionar su provincia y filtrar inmediatamente sus ciudades/terruños disponibles para asignar el `locationId` requerido por la API.
-  - **Flujo de Alta Transaccional y Login Automático**: Invoca `registerWinery()` (`POST /api/wineries/register`), inmediatamente realiza login con las credenciales ingresadas vía `useAuth.login()` para sincronizar tokens y perfil en `AuthContext`, y redirige fluidamente hacia `/bodega/dashboard`.
-  - Enlaces de consentimiento explícito a los Términos y Condiciones del servicio antes del envío.
+- **Registro Unificado de Bodega en Dos Pasos (`WineryRegisterPage.tsx`)**:
+  - Formulario de alta institucional con stepper de 2 pasos y estética split-card editorial con fotografía vertical de viñedos mendocinos.
+  - **Paso 1 (Cuenta y Responsable)**: Nombre del responsable (con ayuda: "Quién administra la cuenta"), correo institucional de contacto, contraseña (mínimo 8 a 128 caracteres con toggle de visibilidad) y nombre oficial de la bodega. Año de fundación, sitio web y descripción fueron excluidos del registro (se completan en el perfil).
+  - **Paso 2 (Ubicación Territorial con `RegionPicker.tsx`)**:
+    - **Mapa interactivo Leaflet**: Teselas de OpenStreetMap, centrado en Argentina, botón de geolocalización ("Usar mi ubicación") y resolución oficial de departamento mediante Georef (`GET /api/locations/resolve`).
+    - **Respaldo manual en cascada**: Enlace "Prefiero elegirla de una lista" para selección Provincia -> Región con carga de 250 elementos y buscador por texto en vivo.
+    - **Confirmación editorial**: Muestra "Tu bodega está en: {regionName}, {stateName}" tras resolver.
+    - Botón "Volver al paso 1" que conserva intactos los datos cargados.
+  - **Flujo Transaccional y Envío Excluyente**: Envía `(latitude, longitude)` si fue resuelto por mapa, o `locationId` si fue elegido por lista (nunca ambos). Tras el 201, efectúa login inmediato (`POST /api/auth/login`) y redirige hacia `/bodega/dashboard`. Ante error 409 de correo duplicado, regresa automáticamente al Paso 1 con el error en el campo.
 
 ### 2.4 Panel de Bodega y Estructura Editorial (`features/winery`)
 - **Layout de Panel (`WineryLayout.tsx`)**: Arquitectura de doble panel con cabecera superior y barra lateral izquierda (`aside`) en escritorio (`w-64`, fondo `#121214`, borde `border-r border-white/5`), monograma circular con iniciales de la bodega (`getWineryInitials`), badge de estado institucional (`Oficial`, `En revisión` o `Rechazada`), y enlaces directos a Dashboard, Perfil, Mis Vinos y Reclamo de etiquetas.
@@ -258,10 +262,10 @@ npm run dev
 6. **Suite de Pruebas Unitarias, de Integración y E2E**:
    ```bash
    cd src/frontend
-   npm test       # Ejecución de batería Vitest + React Testing Library (27 tests en 12 suites)
+   npm test       # Batería Vitest + React Testing Library (39 tests en 14 suites en src/frontend/tests/)
    npm run build  # Compilación estricta TypeScript tsc -b && vite build (0 errores)
    npm run lint   # Validación de reglas ESLint (0 errores, 0 advertencias)
-   node ../../tests/frontend/e2e/e2e-live-test.mjs  # Prueba de integración viva E2E contra API real (tests/frontend/e2e)
+   node tests/e2e/e2e-live-test.mjs  # Prueba de integración viva E2E contra API real (src/frontend/tests/e2e)
    ```
 
 7. **Verificación de Calidad de Código**:

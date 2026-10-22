@@ -33,6 +33,31 @@ export interface LocationResponseDto {
 }
 
 /**
+ * Ubicación geográfica oficial resuelta mediante coordenadas con Georef (C# ResolvedLocationResponseDto).
+ */
+export interface ResolvedLocationResponseDto {
+  locationId: number;
+  stateId: number;
+  stateName: string;
+  regionId: number;
+  regionName: string;
+  municipalityName?: string | null;
+}
+
+/**
+ * Valor estructurado emitido por el selector de región (mapa o lista manual).
+ */
+export interface RegionPickerValue {
+  mode: 'map' | 'manual';
+  latitude?: number | null;
+  longitude?: number | null;
+  locationId?: number | null;
+  regionName: string;
+  stateName: string;
+  municipalityName?: string | null;
+}
+
+/**
  * DTO para crear una ciudad (C# CreateCityRequestDto).
  */
 export interface CreateCityRequestDto {

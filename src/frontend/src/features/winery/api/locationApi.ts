@@ -1,5 +1,5 @@
 import apiClient from '../../../services/apiClient';
-import type { StateResponseDto, CityResponseDto, LocationResponseDto } from '../types';
+import type { StateResponseDto, CityResponseDto, LocationResponseDto, ResolvedLocationResponseDto } from '../types';
 
 /**
  * Obtiene todas las provincias vitivinícolas argentinas registradas.
@@ -66,6 +66,19 @@ export async function getLocations(params?: {
  */
 export async function getLocationById(id: number): Promise<LocationResponseDto> {
   const response = await apiClient.get<LocationResponseDto>(`/locations/${id}`);
+  return response.data;
+}
+
+/**
+ * Resuelve coordenadas geográficas contra el servicio oficial de Georef (/api/locations/resolve).
+ */
+export async function resolveLocation(
+  latitude: number,
+  longitude: number,
+): Promise<ResolvedLocationResponseDto> {
+  const response = await apiClient.get<ResolvedLocationResponseDto>('/locations/resolve', {
+    params: { lat: latitude, lon: longitude },
+  });
   return response.data;
 }
 

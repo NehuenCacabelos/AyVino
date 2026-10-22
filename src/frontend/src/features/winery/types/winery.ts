@@ -4,6 +4,14 @@
 export type WineryStatus = 'Pending' | 'Approved' | 'Rejected';
 
 /**
+ * Resumen geográfico oficial anidado en el perfil de bodega.
+ */
+export interface WineryLocationSummaryDto {
+  stateName: string;
+  regionName: string;
+}
+
+/**
  * Contrato de respuesta de una bodega (C# WineryResponseDto).
  */
 export interface WineryResponseDto {
@@ -16,17 +24,24 @@ export interface WineryResponseDto {
   userId: number | null;
   status: WineryStatus | string;
   registerDate: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  logoUrl?: string | null;
+  location?: WineryLocationSummaryDto | null;
 }
 
 /**
  * Contrato de solicitud de registro unificado de bodega + usuario dueño (C# RegisterWineryRequestDto).
+ * Permite ubicación por coordenadas oficiales (lat/lon) o por locationId manual (excluyentes).
  */
 export interface RegisterWineryRequestDto {
   username: string;
   email: string;
   password: string;
   wineryName: string;
-  locationId: number;
+  locationId?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string | null;
   foundationYear?: number | null;
   website?: string | null;
@@ -48,7 +63,10 @@ export interface RegisterWineryResponseDto {
  */
 export interface UpdateWineryRequestDto {
   name: string;
-  locationId: number;
+  locationId?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  logoUrl?: string | null;
   description?: string | null;
   foundationYear?: number | null;
   website?: string | null;
