@@ -1,0 +1,5583 @@
+{
+  "info": {
+    "_postman_id": "a1c2e3f4-5678-90ab-cdef-1234567890ab",
+    "name": "AyVino API",
+    "description": "Colecci\u00F3n exhaustiva de pruebas y endpoints para el backend de AyVino (.NET 10 Minimal APIs). Incluye casos felices de todas las features y casos de error representativos (400, 401, 403, 404, 409).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Setup",
+      "description": "### Instrucciones de Setup Inicial y Roles en Base de Datos Local\n\nPara ejecutar pruebas completas con permisos diferenciados (User, Winery Owner, Admin):\n\n1. **Promover un usuario a Administrador (Admin):**\n   Registr\u00E1 un usuario com\u00FAn mediante \u0060POST /api/users\u0060 (ej. con email \u0060admin.ayvino@example.com\u0060 y contrase\u00F1a \u0060Password123!\u0060). Luego, ejecut\u00E1 en PostgreSQL:\n   \u0060\u0060\u0060sql\n   UPDATE users SET role = \u0027Admin\u0027 WHERE email = \u0027admin.ayvino@example.com\u0027;\n   \u0060\u0060\u0060\n\n2. **Aprobar una Bodega (Approved):**\n   Las bodegas registradas por la comunidad o nuevos usuarios inician en estado \u0060Pending\u0060. Para dejarlas en \u0060Approved\u0060 (\u0060status = 2\u0060):\n   \u0060\u0060\u0060sql\n   UPDATE wineries SET status = 2 WHERE id = 1; -- 2 = Approved\n   \u0060\u0060\u0060\n   O bien, utiliz\u00E1 el endpoint \u0060PATCH /api/wineries/{id}/status\u0060 con el token de Administrador.\n\n3. **Flujo recomendado:**\n   - Ejecut\u00E1 \u0060Login - Usuario Com\u00FAn\u0060, \u0060Login - Owner Bodega\u0060 y \u0060Login - Admin\u0060 en la carpeta Auth para poblar autom\u00E1ticamente los tokens en el Environment.",
+      "item": []
+    },
+    {
+      "name": "01 - Casos felices",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Login - Sommelier / Usuario Com\u00FAn",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ],
+                  "query": []
+                },
+                "description": "Inicia sesi\u00F3n como aficionado/sommelier com\u00FAn y guarda userToken",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022email\u0022: \u0022{{userEmail}}\u0022,\n  \u0022password\u0022: \u0022{{userPassword}}\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027userToken\u0027, json.accessToken); }",
+                      "    if (json \u0026\u0026 json.user \u0026\u0026 json.user.id) { pm.environment.set(\u0027myUserId\u0027, json.user.id); }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login - Due\u00F1o Bodega (Winery)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ],
+                  "query": []
+                },
+                "description": "Inicia sesi\u00F3n como due\u00F1o de bodega y guarda ownerToken y wineryToken",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022email\u0022: \u0022{{ownerEmail}}\u0022,\n  \u0022password\u0022: \u0022{{ownerPassword}}\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    if (json \u0026\u0026 json.accessToken) {",
+                      "        pm.environment.set(\u0027ownerToken\u0027, json.accessToken);",
+                      "        pm.environment.set(\u0027wineryToken\u0027, json.accessToken);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login - Administrador",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ],
+                  "query": []
+                },
+                "description": "Inicia sesi\u00F3n como Administrador y guarda adminToken",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022email\u0022: \u0022{{adminEmail}}\u0022,\n  \u0022password\u0022: \u0022{{adminPassword}}\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "if (pm.response.code === 200) {",
+                      "    var json = pm.response.json();",
+                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027adminToken\u0027, json.accessToken); }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/refresh",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "refresh"
+                  ],
+                  "query": []
+                },
+                "description": "Renueva access token mediante refresh token",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022refreshToken\u0022: \u0022refresh_token_ejemplo_para_rotacion\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200, 401 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 429]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/change-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "change-password"
+                  ],
+                  "query": []
+                },
+                "description": "Cambia contrase\u00F1a del usuario conectado",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022currentPassword\u0022: \u0022{{userPassword}}\u0022,\n  \u0022newPassword\u0022: \u0022{{userPassword}}\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 400\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 400]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Revoke Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/revoke",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "revoke"
+                  ],
+                  "query": []
+                },
+                "description": "Revoca sesi\u00F3n activa",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022refreshToken\u0022: \u0022token_a_revocar_ejemplo\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Register User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ],
+                  "query": []
+                },
+                "description": "Registra un nuevo usuario com\u00FAn",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022username\u0022: \u0022aficionado_{{$timestamp}}\u0022,\n  \u0022email\u0022: \u0022aficionado_{{$timestamp}}@example.com\u0022,\n  \u0022password\u0022: \u0022Password123!\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "if (pm.response.code === 201) {",
+                      "    var json = pm.response.json();",
+                      "    if (json \u0026\u0026 json.id) { pm.environment.set(\u0027testUserId\u0027, json.id); }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Current User Profile (Me)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "query": []
+                },
+                "description": "Obtiene perfil del usuario autenticado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Current User Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "query": []
+                },
+                "description": "Actualiza perfil propio",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022username\u0022: \u0022sommelier_comunitario\u0022,\n  \u0022bio\u0022: \u0022Apasionado del Malbec y la enolog\u00EDa argentina.\u0022,\n  \u0022photo\u0022: \u0022https://example.com/avatar.jpg\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: List All Users (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Lista paginada de usuarios"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Get User by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Obtiene usuario por ID"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Update User Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}",
+                    "profile"
+                  ],
+                  "query": []
+                },
+                "description": "Actualiza perfil de cualquier usuario",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022username\u0022: \u0022usuario_edit_{{$timestamp}}\u0022,\n  \u0022bio\u0022: \u0022Perfil actualizado por administraci\u00F3n\u0022,\n  \u0022photo\u0022: \u0022https://example.com/admin_photo.jpg\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Change User Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Activa o desactiva cuenta",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022isActive\u0022: true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete User",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina usuario por ID"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Wineries",
+          "item": [
+            {
+              "name": "Register Winery \u0026 User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "register"
+                  ],
+                  "query": []
+                },
+                "description": "Onboarding unificado de bodega con JWT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022username\u0022: \u0022bianchi_adm_{{$timestamp}}\u0022,\n  \u0022email\u0022: \u0022owner_{{$timestamp}}@bodegabianchi.com\u0022,\n  \u0022password\u0022: \u0022Password123!\u0022,\n  \u0022wineryName\u0022: \u0022Bodegas Bianchi {{$timestamp}}\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Bodega hist\u00F3rica de San Rafael y Valle de Uco.\u0022,\n  \u0022foundationYear\u0022: 1928,\n  \u0022website\u0022: \u0022https://www.bodegasbianchi.com.ar\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "if (pm.response.code === 201) {",
+                      "    var json = pm.response.json();",
+                      "    if (json \u0026\u0026 json.winery \u0026\u0026 json.winery.id) { pm.environment.set(\u0027wineryId\u0027, json.winery.id); }",
+                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027ownerToken\u0027, json.accessToken); }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Wineries (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Listado p\u00FAblico de bodegas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle p\u00FAblico de bodega"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Community Winery",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries"
+                  ],
+                  "query": []
+                },
+                "description": "Crea bodega comunitaria en estado Pending",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Bodega Comunitaria 012456\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Cargada por la comunidad sin titular asignado\u0022,\n  \u0022foundationYear\u0022: 1990,\n  \u0022website\u0022: \u0022https://comunitaria.example.com\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Winery",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Edici\u00F3n por due\u00F1o o administrador",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Bodegas Bianchi Actualizada\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Descripci\u00F3n renovada por el propietario.\u0022,\n  \u0022foundationYear\u0022: 1928,\n  \u0022website\u0022: \u0022https://www.bodegasbianchi.com.ar\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Change Winery Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Modera estado de la bodega a Approved",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete Winery",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina bodega por ID"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Locations",
+          "item": [
+            {
+              "name": "List States",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/states",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "states"
+                  ],
+                  "query": []
+                },
+                "description": "Lista de provincias argentinas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get State by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/states/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "states",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de provincia"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create City",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cities",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cities"
+                  ],
+                  "query": []
+                },
+                "description": "Crea o recupera ciudad",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022San Carlos 24\u0022,\n  \u0022stateId\u0022: 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027cityId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Cities (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cities?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cities"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Lista paginada de ciudades con defaults"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get City by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cities/{{cityId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cities",
+                    "{{cityId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de ciudad"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Approve City Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cities/{{cityId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cities",
+                    "{{cityId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Aprueba ciudad",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Location",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/locations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "locations"
+                  ],
+                  "query": []
+                },
+                "description": "Crea ubicaci\u00F3n",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022cityId\u0022: 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Locations (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/locations?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "locations"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Lista paginada de ubicaciones"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Location by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/locations/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "locations",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de ubicaci\u00F3n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get State by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/states/12",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "states",
+                    "12"
+                  ],
+                  "query": []
+                },
+                "description": "Obtiene provincia por ID (Mendoza)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Location by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/locations/{{locationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "locations",
+                    "{{locationId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de ubicaci\u00F3n vitivin\u00EDcola"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Grapes",
+          "item": [
+            {
+              "name": "List Grapes (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Cat\u00E1logo de cepas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Grape by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de cepa"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Create Grape",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes"
+                  ],
+                  "query": []
+                },
+                "description": "Alta de uva por admin",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Criolla Grande 217\u0022,\n  \u0022colorType\u0022: \u0022Red\u0022,\n  \u0022typicalBody\u0022: \u0022Light\u0022,\n  \u0022typicalTannins\u0022: \u0022Soft\u0022,\n  \u0022typicalAcidity\u0022: \u0022Medium\u0022,\n  \u0022description\u0022: \u0022Cepa aut\u00F3ctona patrimonial argentina.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027grapeId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Update Grape",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes/{{grapeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes",
+                    "{{grapeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Edici\u00F3n de cepa por admin",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Criolla Grande Selecci\u00F3n\u0022,\n  \u0022colorType\u0022: \u0022Red\u0022,\n  \u0022typicalBody\u0022: \u0022MediumLight\u0022,\n  \u0022typicalTannins\u0022: \u0022Soft\u0022,\n  \u0022typicalAcidity\u0022: \u0022MediumHigh\u0022,\n  \u0022description\u0022: \u0022Descripci\u00F3n actualizada.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Grape by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes/{{grapeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes",
+                    "{{grapeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de una uva"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete Grape",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/grapes/{{grapeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "grapes",
+                    "{{grapeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina una uva del cat\u00E1logo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Wines",
+          "item": [
+            {
+              "name": "Create Wine (Community)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": []
+                },
+                "description": "Alta de vino comunitario (SourceType=1)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Vino Comunitario 766\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryNameText\u0022: \u0022Bodegas Bianchi\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Vino cargado por aficionado sin cuenta oficial\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2021,\n    \u0022alcoholContent\u0022: 14.2,\n    \u0022servingTemperature\u0022: 16,\n    \u0022agingAdvice\u0022: \u0022Consumir dentro de los 4 a\u00F1os.\u0022,\n    \u0022imageUrl\u0022: \u0022https://example.com/botella.jpg\u0022,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027wineId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Wine (Official)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": []
+                },
+                "description": "Alta de vino oficial por due\u00F1o de bodega aprobada",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Enzo Bianchi Gran Corte 218\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryId\u0022: 1,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022\u00CDcono de la bodega Bianchi\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022alcoholContent\u0022: 14.5,\n    \u0022servingTemperature\u0022: 18,\n    \u0022agingAdvice\u0022: \u0022Guarda potencial 15 a\u00F1os.\u0022,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 70\n      },\n      {\n        \u0022grapeId\u0022: 2,\n        \u0022percentage\u0022: 30\n      }\n    ]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 403]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Wines (Paginated \u0026 Filtered)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Listado general de vinos"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Wine by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Ficha t\u00E9cnica del vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Search Wines (Trigram Fuzzy)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/search?pageNumber=1\u0026pageSize=10\u0026name=vino",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    },
+                    {
+                      "key": "name",
+                      "value": "vino"
+                    }
+                  ]
+                },
+                "description": "B\u00FAsqueda difusa por trigramas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Wine",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Edici\u00F3n de vino",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Vino Comunitario Editado\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryNameText\u0022: \u0022Bodegas Bianchi\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Descripci\u00F3n editada\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Claim Candidates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/claim-candidates/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "claim-candidates",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Lista vinos comunitarios candidatos para reclamo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Claim Wines",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/claim/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "claim",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Reclama botellas comunitarias promovi\u00E9ndolas a Official",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022wineIds\u0022: [\n    1\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 400 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Claim Candidates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/claim-candidates/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "claim-candidates",
+                    "{{wineryId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Vinos comunitarios candidatos a reclamo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Claim Wines for Winery",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{ownerToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/claim/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "claim",
+                    "{{wineryId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Reclama vinos comunitarios para bodega",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022wineIds\u0022: [{{wineId}}]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete Wine",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina un vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vintages",
+          "item": [
+            {
+              "name": "List Vintages for Wine",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages"
+                  ],
+                  "query": []
+                },
+                "description": "Lista a\u00F1adas de una etiqueta"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "if (Array.isArray(json) \u0026\u0026 json.length \u003E 0) { pm.environment.set(\u0027vintageId\u0027, json[0].id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Vintage by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de una cosecha puntual"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Vintage",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages"
+                  ],
+                  "query": []
+                },
+                "description": "Nueva cosecha para la etiqueta",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022year\u0022: 2022,\n  \u0022alcoholContent\u0022: 13.8,\n  \u0022servingTemperature\u0022: 15,\n  \u0022agingAdvice\u0022: \u0022Listo para beber.\u0022,\n  \u0022grapes\u0022: [\n    {\n      \u0022grapeId\u0022: 1,\n      \u0022percentage\u0022: 100\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Vintage",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Edici\u00F3n de cosecha",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022year\u0022: 2021,\n  \u0022alcoholContent\u0022: 14,\n  \u0022servingTemperature\u0022: 16,\n  \u0022agingAdvice\u0022: \u0022Excelente potencial\u0022,\n  \u0022grapes\u0022: [\n    {\n      \u0022grapeId\u0022: 1,\n      \u0022percentage\u0022: 100\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Moderate Vintage Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Aprobaci\u00F3n de la cosecha",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete Vintage",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina cosecha de un vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Pairings",
+          "item": [
+            {
+              "name": "List Pairings (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/pairings?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pairings"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Cat\u00E1logo de maridajes"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Create Pairing",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/pairings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pairings"
+                  ],
+                  "query": []
+                },
+                "description": "Alta de maridaje",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Ojo de bife con papas r\u00FAsticas 012456\u0022,\n  \u0022category\u0022: \u0022Meat\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027pairingId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Pairing by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/pairings/{{pairingId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pairings",
+                    "{{pairingId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de maridaje"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Pairings for Wine",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/pairings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "pairings"
+                  ],
+                  "query": []
+                },
+                "description": "Maridajes recomendados de un vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Associate Pairing with Wine",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/pairings/{{pairingId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "pairings",
+                    "{{pairingId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Vincula maridaje a vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Disassociate Pairing from Wine",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/pairings/{{pairingId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "pairings",
+                    "{{pairingId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Desvincula maridaje"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Update Pairing",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/pairings/{{pairingId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pairings",
+                    "{{pairingId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Actualiza maridaje",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Asado Criollo\u0022,\n  \u0022category\u0022: \u0022Meat\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Delete Pairing",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/pairings/{{pairingId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pairings",
+                    "{{pairingId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina maridaje"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Reviews",
+          "item": [
+            {
+              "name": "Create Review for Vintage",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/reviews",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reviews"
+                  ],
+                  "query": []
+                },
+                "description": "Publica rese\u00F1a sobre una cosecha puntual",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022rating\u0022: 5,\n  \u0022comment\u0022: \u0022Un vino excepcional con taninos redondos y gran persistencia arom\u00E1tica.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027reviewId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Own Review",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/reviews/{{reviewId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reviews",
+                    "{{reviewId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Edita rese\u00F1a propia",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022rating\u0022: 4,\n  \u0022comment\u0022: \u0022Comentario actualizado tras una segunda degustaci\u00F3n.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Reviews by Vintage",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/1/reviews?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "1",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Rese\u00F1as de la cosecha"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Reviews by Wine Feed",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/reviews?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Feed agregado de rese\u00F1as de la etiqueta"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Vintage Reviews",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/{{vintageId}}/reviews?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "{{vintageId}}",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Listado de rese\u00F1as de una cosecha"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Wine Reviews Feed",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/reviews?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Feed de rese\u00F1as de una etiqueta"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Review",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/reviews/{{reviewId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reviews",
+                    "{{reviewId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina rese\u00F1a propia"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Follows",
+          "item": [
+            {
+              "name": "Follow User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{targetUserId}}/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{targetUserId}}",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Sigue a otro usuario aficionado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get User Followers",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{targetUserId}}/followers?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{targetUserId}}",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Seguidores de un usuario"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Following Users",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/following?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "following"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Usuarios a los que sigo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unfollow User",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{targetUserId}}/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{targetUserId}}",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Deja de seguir a un usuario"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Follow Approved Winery",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/1/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "1",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Sigue a bodega aprobada"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 409 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Followers",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/1/followers?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "1",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Seguidores de una bodega"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Following Wineries",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/following-wineries?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "following-wineries"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Bodegas a las que sigo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unfollow Winery",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/1/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "1",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Deja de seguir a bodega"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Follow Winery",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Sigue a una bodega aprobada"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Followers",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/followers?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Lista de seguidores de la bodega"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unfollow Winery",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Deja de seguir a una bodega"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "UserWines",
+          "item": [
+            {
+              "name": "Mark Wine as Wanted",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/wanted",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "wanted"
+                  ],
+                  "query": []
+                },
+                "description": "Agrega vino a lista de deseados"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Marks for Wine",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/my-marks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "my-marks"
+                  ],
+                  "query": []
+                },
+                "description": "Consulta marcas activas del vino"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(json.isWanted).to.eql(true);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unmark Wine as Wanted",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/wanted",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "wanted"
+                  ],
+                  "query": []
+                },
+                "description": "Quita de lista de deseados"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mark Wine as Tried",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/tried",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "tried"
+                  ],
+                  "query": []
+                },
+                "description": "Marca vino como probado (permanente)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mark Wine as Favorite",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "favorite"
+                  ],
+                  "query": []
+                },
+                "description": "Marca vino como favorito"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unmark Wine as Favorite",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/1/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "1",
+                    "favorite"
+                  ],
+                  "query": []
+                },
+                "description": "Quita de favoritos"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My User Wines List",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user-wines/me?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user-wines",
+                    "me"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Lista paginada de todos mis vinos marcados"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mark Wine as Wanted",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/wanted",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "wanted"
+                  ],
+                  "query": []
+                },
+                "description": "Marca vino como deseado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unmark Wine as Wanted",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/wanted",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "wanted"
+                  ],
+                  "query": []
+                },
+                "description": "Desmarca vino como deseado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mark Wine as Tried",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/tried",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "tried"
+                  ],
+                  "query": []
+                },
+                "description": "Marca vino como probado (inmutable)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Mark Wine as Favorite",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "favorite"
+                  ],
+                  "query": []
+                },
+                "description": "Marca vino como favorito"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Unmark Wine as Favorite",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "favorite"
+                  ],
+                  "query": []
+                },
+                "description": "Desmarca vino de favoritos"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Marks for Wine",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/my-marks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "my-marks"
+                  ],
+                  "query": []
+                },
+                "description": "Consulta estado de marcas personales"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Cellars",
+          "item": [
+            {
+              "name": "Create Cellar",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars"
+                  ],
+                  "query": []
+                },
+                "description": "Crea cava virtual personal",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Cava Hogar 623\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "if (json.id) { pm.environment.set(\u0027cellarId\u0027, json.id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Cellars",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/me?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "me"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Listado de cavas del usuario"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Cellar by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de una cava propia"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Rename Cellar",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Renombra cava propia",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Cava Principal Renombrada\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Add Item to Cellar",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items"
+                  ],
+                  "query": []
+                },
+                "description": "Guarda botellas de una a\u00F1ada en la cava",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022quantity\u0022: 4,\n  \u0022purchaseDate\u0022: \u00222024-03-15\u0022,\n  \u0022notes\u0022: \u0022Compradas directamente en la bodega.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Cellar Items",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items?pageNumber=1\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Inventario paginado de la cava"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Cellar Item Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de cosecha en la cava"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Cellar Item",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Reemplaza cantidad y notas",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022quantity\u0022: 6,\n  \u0022notes\u0022: \u0022Se sumaron dos botellas adicionales.\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Cellar Care Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/care-summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "care-summary"
+                  ],
+                  "query": []
+                },
+                "description": "Resumen enol\u00F3gico de todas las botellas guardadas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Remove Item from Cellar",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "Vac\u00EDa stock de la a\u00F1ada"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Cellar",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Borra la cava (solo si est\u00E1 vac\u00EDa)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Cellar Item Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Detalle de cosecha en cava"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Cellar Item",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Actualiza cantidad y notas de botella en cava",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022quantity\u0022: 5,\n  \u0022purchaseDate\u0022: \u00222026-05-20\u0022,\n  \u0022notes\u0022: \u0022Notas actualizadas\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Cellar Item",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/{{vintageId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "{{vintageId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Elimina cosecha de la cava"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "WineCare",
+          "item": [
+            {
+              "name": "Get Care Recommendations for Vintage",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}/care-recommendations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}",
+                    "care-recommendations"
+                  ],
+                  "query": []
+                },
+                "description": "Recomendaciones de guarda y servicio"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Casos de error",
+      "item": [
+        {
+          "name": "401 - Unauthorized",
+          "item": [
+            {
+              "name": "401 - Get Current Profile without Token",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "query": []
+                },
+                "description": "Falla por falta de token JWT"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 401\u0027, function () { pm.response.to.have.status(401); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "401 - Create Cellar without Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars"
+                  ],
+                  "query": []
+                },
+                "description": "Falla por endpoint protegido",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Cava Intento\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 401\u0027, function () { pm.response.to.have.status(401); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "401 - Login with Invalid Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ],
+                  "query": []
+                },
+                "description": "Credenciales inv\u00E1lidas",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022email\u0022: \u0022{{userEmail}}\u0022,\n  \u0022password\u0022: \u0022PasswordIncorrecta999!\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 401 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([401, 429]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "403 - Forbidden",
+          "item": [
+            {
+              "name": "403 - Common User attempts Admin Action (Moderate City)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cities/1/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cities",
+                    "1",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Falta de rol Admin",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "403 - Common User attempts to Publish Official Wine for other Winery",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": []
+                },
+                "description": "Solo el due\u00F1o o admin publica vinos oficiales",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Vino Fraude\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryId\u0022: 1,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "403 - User attempts to Edit another Winery",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "1"
+                  ],
+                  "query": []
+                },
+                "description": "No es due\u00F1o de la bodega",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Bodega Hackeada\u0022,\n  \u0022locationId\u0022: 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "400 - Validation \u0026 Bad Request",
+          "item": [
+            {
+              "name": "400 - Create Wine with Empty Name",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": []
+                },
+                "description": "Validaci\u00F3n de nombre obligatorio",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - Blend Grapes Percentage Exceeding 100",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines"
+                  ],
+                  "query": []
+                },
+                "description": "Suma de uvas excede 100%",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Corte Excedido\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 80\n      },\n      {\n        \u0022grapeId\u0022: 2,\n        \u0022percentage\u0022: 40\n      }\n    ]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - Invalid Pagination (pageNumber \u003C= 0)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users?pageNumber=0\u0026pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "0"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Paginaci\u00F3n inv\u00E1lida"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - Auto-follow Prohibited",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{myUserId}}/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{myUserId}}",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Usuario no puede seguirse a s\u00ED mismo"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - Cellar Item Invalid Quantity (0)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items"
+                  ],
+                  "query": []
+                },
+                "description": "Cantidad debe ser al menos 1",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022quantity\u0022: 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "404 - Not Found",
+          "item": [
+            {
+              "name": "404 - Non-existent Wine",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "999999"
+                  ],
+                  "query": []
+                },
+                "description": "Vino no encontrado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "404 - Private Cellar of Another User",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "999999"
+                  ],
+                  "query": []
+                },
+                "description": "Aislamiento privado de cavas (404 estricto)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "404 - Follow Non-existent User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999999/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999999",
+                    "follow"
+                  ],
+                  "query": []
+                },
+                "description": "Usuario objetivo no encontrado"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "409 - Conflict",
+          "item": [
+            {
+              "name": "409 - Duplicate Cellar Name for Same User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars"
+                  ],
+                  "query": []
+                },
+                "description": "Nombre duplicado de cava",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Cava Duplicada Conflicto\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "409 - Duplicate Cellar Name Attempt",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars"
+                  ],
+                  "query": []
+                },
+                "description": "Reintento de crear cava con mismo nombre genera 409 Conflict",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \u0022name\u0022: \u0022Cava Duplicada Conflicto\u0022\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\u0027Status code is 409\u0027, function () { pm.response.to.have.status(409); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

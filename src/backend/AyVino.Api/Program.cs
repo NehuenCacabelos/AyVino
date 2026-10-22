@@ -1,41 +1,310 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using AyVino.Api.Common.Data;
+using AyVino.Api.Common.Extensions;
+using AyVino.Api.Common.Middleware;
+using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Security.Hashing;
+using AyVino.Api.Common.Security.Jwt;
+using AyVino.Api.Features.Auth.Endpoints;
+using AyVino.Api.Features.Auth.Services;
+using AyVino.Api.Features.Auth.Repositories;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using AyVino.Api.Features.Users.Endpoints;
+using AyVino.Api.Features.Users.Repositories;
+using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Features.Wineries.Endpoints;
+using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Wineries.Services;
+using AyVino.Api.Features.Locations.Endpoints;
+using AyVino.Api.Features.Locations.Repositories;
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Grapes.Endpoints;
+using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Grapes.Services;
+using AyVino.Api.Features.Wines.Endpoints;
+using AyVino.Api.Features.Wines.Repositories;
+using AyVino.Api.Features.Wines.Services;
+using AyVino.Api.Features.Pairings.Endpoints;
+using AyVino.Api.Features.Pairings.Repositories;
+using AyVino.Api.Features.Pairings.Services;
+using AyVino.Api.Features.Reviews.Endpoints;
+using AyVino.Api.Features.Reviews.Repositories;
+using AyVino.Api.Features.Reviews.Services;
+using AyVino.Api.Features.Follows.Endpoints;
+using AyVino.Api.Features.Follows.Repositories;
+using AyVino.Api.Features.Follows.Services;
+using AyVino.Api.Features.UserWines.Endpoints;
+using AyVino.Api.Features.UserWines.Repositories;
+using AyVino.Api.Features.UserWines.Services;
+using AyVino.Api.Features.Cellars.Endpoints;
+using AyVino.Api.Features.Cellars.Repositories;
+using AyVino.Api.Features.Cellars.Services;
+using AyVino.Api.Features.WineCare.Endpoints;
+using AyVino.Api.Features.WineCare.Repositories;
+using AyVino.Api.Features.WineCare.Services;
+using FluentMigrator.Runner;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
+
+// 1. Configuraciones iniciales de serialización / mapeo
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+DapperConfiguration.Configure();
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.ConfigureJsonOptions();
+
+// CORS configuration
+const string frontendCorsPolicy = "FrontendPolicy";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173", "http://localhost:3000"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(frontendCorsPolicy, policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Rate Limiting configuration
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("AuthLimit", context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ipAddress,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 15,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+});
+
+// Validación nativa de Minimal APIs (Data Annotations en DTOs) — .NET 10
+builder.Services.AddValidation();
+
+// Exception Handling & RFC 7807 ProblemDetails
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.TryAdd(
+            "traceId", System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
+
+        // Respuestas de validación nativa: mismo idioma y misma forma de "detail"
+        // que usa el GlobalExceptionHandler (el frontend lee detail || title).
+        if (context.ProblemDetails is HttpValidationProblemDetails validation)
+        {
+            validation.Title = "Error de validación";
+            validation.Detail = string.Join(" ", validation.Errors.SelectMany(e => e.Value));
+        }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status401Unauthorized)
+        {
+            context.ProblemDetails.Title ??= "No autorizado";
+            context.ProblemDetails.Detail ??= "No está autenticado para acceder a este recurso.";
+        }
+        else if (context.HttpContext.Response.StatusCode == StatusCodes.Status403Forbidden)
+        {
+            context.ProblemDetails.Title ??= "Acceso prohibido";
+            context.ProblemDetails.Detail ??= "No posee permisos suficientes para acceder a este recurso.";
+        }
+    };
+});
+
+// Authentication & JWT Bearer
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
+if (string.IsNullOrWhiteSpace(jwtSecretKey) || jwtSecretKey.Length < 32)
+{
+    throw new InvalidOperationException("Configuración JWT 'SecretKey' no encontrada o inválida (debe contener al menos 32 caracteres / 256 bits). Configure el secreto mediante 'dotnet user-secrets set \"Jwt:SecretKey\" \"<valor>\"' en desarrollo o mediante la variable de entorno 'Jwt__SecretKey' en producción.");
+}
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Configuración JWT 'Issuer' no encontrada.");
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Configuración JWT 'Audience' no encontrada.");
+
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization(options => {
+    // Policy para usuarios Administradores
+    options.AddPolicy(AppPolicies.RequireAdmin, policy => 
+        policy.RequireRole(AppRoles.Admin));
+    // Policy para usuarios Comunes
+    options.AddPolicy(AppPolicies.RequireUser, policy => 
+        policy.RequireRole(AppRoles.User));
+    // Policy para usuarios Bodegas
+    options.AddPolicy(AppPolicies.RequireWinery, policy => 
+        policy.RequireRole(AppRoles.Winery));
+});
+
+
+// Infrastructure & Security Services (Singletons)
+builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
+builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// Features: Repositories & Services (Scoped)
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHostedService<TokenCleanupBackgroundService>();
+builder.Services.AddScoped<IWineryRepository, WineryRepository>();
+builder.Services.AddScoped<IWineryService, WineryService>();
+builder.Services.AddScoped<IStateRepository, StateRepository>();
+builder.Services.AddScoped<IStateService, StateService>();
+builder.Services.AddScoped<ICityRepository, CityRepository>();
+builder.Services.AddScoped<ICityService, CityService>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IGrapeRepository, GrapeRepository>();
+builder.Services.AddScoped<IGrapeService, GrapeService>();
+builder.Services.AddScoped<IWineRepository, WineRepository>();
+builder.Services.AddScoped<IWineService, WineService>();
+builder.Services.AddScoped<IPairingRepository, PairingRepository>();
+builder.Services.AddScoped<IPairingService, PairingService>();
+builder.Services.AddScoped<IWineVintageRepository, WineVintageRepository>();
+builder.Services.AddScoped<IWineVintageService, WineVintageService>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IFollowRepository, FollowRepository>();
+builder.Services.AddScoped<IFollowService, FollowService>();
+builder.Services.AddScoped<IUserWineRepository, UserWineRepository>();
+builder.Services.AddScoped<IUserWineService, UserWineService>();
+builder.Services.AddScoped<ICellarRepository, CellarRepository>();
+builder.Services.AddScoped<ICellarService, CellarService>();
+builder.Services.AddScoped<ICellarItemRepository, CellarItemRepository>();
+builder.Services.AddScoped<ICellarItemService, CellarItemService>();
+builder.Services.AddScoped<ICellarCareService, CellarCareService>();
+builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
+builder.Services.AddScoped<IWineCareService, WineCareService>();
+
+// FluentMigrator configuration
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Configuración de cadena de conexión 'DefaultConnection' no encontrada o vacía. Configure el secreto mediante 'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<valor>\"' en desarrollo o mediante la variable de entorno 'ConnectionStrings__DefaultConnection' en producción.");
+}
+
+builder.Services.AddFluentMigratorCore()
+    .ConfigureRunner(rb => rb
+        .AddPostgres()
+        .WithGlobalConnectionString(connectionString)
+        .ScanIn(typeof(Program).Assembly).For.Migrations())
+    .AddLogging(lb => lb.AddFluentMigratorConsole());
+
+builder.Services.AddHttpLogging(options =>
+{
+    // Registra solo el método, la ruta y el código de respuesta HTTP
+    options.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestMethod 
+                          | Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestPath 
+                          | Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.ResponseStatusCode;
+});
+
+
+
 var app = builder.Build();
+
+// Run migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+    try {
+        runner.MigrateUp();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical(ex, "Error crítico durante la ejecución de las migraciones de base de datos.");
+        throw;
+    }
+}
+
+// Global Exception Handler & Status Code Pages Middleware
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
+
 }
+
+
+
+app.UseHttpLogging(); // Debe ir al inicio del pipeline, antes de UseAuthentication y UseAuthorization
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// CORS Middleware (debe ejecutarse antes de Authentication y Authorization)
+app.UseCors(frontendCorsPolicy);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// Rate Limiter Middleware
+app.UseRateLimiter();
+
+// Authentication & Authorization Middlewares
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Feature Endpoints
+app.MapAuthEndpoints();
+app.MapUserEndpoints();
+app.MapWineryEndpoints();
+app.MapStateEndpoints();
+app.MapCityEndpoints();
+app.MapLocationEndpoints();
+app.MapGrapeEndpoints();
+app.MapWineEndpoints();
+app.MapPairingEndpoints();
+app.MapWineVintageEndpoints();
+app.MapReviewEndpoints();
+app.MapFollowEndpoints();
+app.MapUserWineEndpoints();
+app.MapCellarEndpoints();
+app.MapCellarItemEndpoints();
+app.MapCellarCareEndpoints();
+app.MapWineCareEndpoints();
+
+
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
