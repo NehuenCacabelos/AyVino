@@ -14,13 +14,17 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path Aliasing */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "types": ["@testing-library/jest-dom/vitest"]
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]
 }
-

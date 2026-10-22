@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineryChecklistCard from '../WineryChecklistCard';
-import type { WineryResponseDto } from '../../types';
+import WineryChecklistCard from '@/features/winery/components/WineryChecklistCard';
+import type { WineryResponseDto } from '@/features/winery/components/../types';
 
 describe('WineryChecklistCard', () => {
   const baseWinery: WineryResponseDto = {

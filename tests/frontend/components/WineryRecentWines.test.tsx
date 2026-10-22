@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineryRecentWines from '../WineryRecentWines';
-import type { WineResponseDto } from '../../types';
+import WineryRecentWines from '@/features/winery/components/WineryRecentWines';
+import type { WineResponseDto } from '@/features/winery/components/../types';
 
 describe('WineryRecentWines', () => {
   it('renders loading skeleton when isLoading is true', () => {

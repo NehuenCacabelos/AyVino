@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineryClaimPage from '../WineryClaimPage';
-import * as wineryModule from '../../features/winery';
-import type { WineResponseDto, UseMyWineryReturn } from '../../features/winery';
+import WineryClaimPage from '@/pages/WineryClaimPage';
+import * as wineryModule from '@/pages/../features/winery';
+import type { WineResponseDto, UseMyWineryReturn } from '@/pages/../features/winery';
 
-vi.mock('../../features/winery', async (importOriginal) => {
+vi.mock('@/features/winery', async (importOriginal) => {
   const actual = await importOriginal<typeof wineryModule>();
   return {
     ...actual,

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import LocationCascadeSelect from '../LocationCascadeSelect';
-import * as locationApi from '../../api/locationApi';
-import type { StateResponseDto, LocationResponseDto } from '../../types';
+import LocationCascadeSelect from '@/features/winery/components/LocationCascadeSelect';
+import * as locationApi from '@/features/winery/components/../api/locationApi';
+import type { StateResponseDto, LocationResponseDto } from '@/features/winery/components/../types';
 
-vi.mock('../../api/locationApi', () => ({
+vi.mock('@/features/winery/api/locationApi', () => ({
   getStates: vi.fn(),
   getLocations: vi.fn(),
 }));

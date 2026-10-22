@@ -261,7 +261,7 @@ npm run dev
    npm test       # Ejecución de batería Vitest + React Testing Library (27 tests en 12 suites)
    npm run build  # Compilación estricta TypeScript tsc -b && vite build (0 errores)
    npm run lint   # Validación de reglas ESLint (0 errores, 0 advertencias)
-   node scripts/e2e-live-test.mjs  # Prueba de integración viva E2E contra API real (29 aserciones)
+   node ../../tests/frontend/e2e/e2e-live-test.mjs  # Prueba de integración viva E2E contra API real (tests/frontend/e2e)
    ```
 
 7. **Verificación de Calidad de Código**:

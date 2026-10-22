@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import WineVintagesModal from '../WineVintagesModal';
-import * as wineApi from '../../api/wineApi';
-import * as grapeApi from '../../api/grapeApi';
-import type { WineResponseDto, WineVintageResponseDto, GrapeResponseDto } from '../../types';
+import WineVintagesModal from '@/features/winery/components/WineVintagesModal';
+import * as wineApi from '@/features/winery/components/../api/wineApi';
+import * as grapeApi from '@/features/winery/components/../api/grapeApi';
+import type { WineResponseDto, WineVintageResponseDto, GrapeResponseDto } from '@/features/winery/components/../types';
 
-vi.mock('../../api/wineApi', () => ({
+vi.mock('@/features/winery/api/wineApi', () => ({
   getWineVintages: vi.fn(),
   createWineVintage: vi.fn(),
 }));
 
-vi.mock('../../api/grapeApi', () => ({
+vi.mock('@/features/winery/api/grapeApi', () => ({
   getGrapes: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineryQuickActions from '../WineryQuickActions';
+import WineryQuickActions from '@/features/winery/components/WineryQuickActions';
 
 describe('WineryQuickActions', () => {
   it('renders all standard quick actions and explores catalog when winery is not approved', () => {

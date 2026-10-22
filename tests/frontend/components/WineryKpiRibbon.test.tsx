@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import WineryKpiRibbon from '../WineryKpiRibbon';
+import WineryKpiRibbon from '@/features/winery/components/WineryKpiRibbon';
 
 describe('WineryKpiRibbon', () => {
   it('renders loading skeletons when isLoading is true', () => {

@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import WineryPublicProfilePage from '../WineryPublicProfilePage';
-import * as wineryModule from '../../features/winery';
-import * as authModule from '../../features/auth';
+import WineryPublicProfilePage from '@/pages/WineryPublicProfilePage';
+import * as wineryModule from '@/pages/../features/winery';
+import * as authModule from '@/pages/../features/auth';
 import type {
   WineryResponseDto,
   LocationResponseDto,
   WineResponseDto,
   WineryFollowerDto,
-} from '../../features/winery/types';
+} from '@/pages/../features/winery/types';
 
-vi.mock('../../features/auth', () => ({
+vi.mock('@/features/auth', () => ({
   useAuth: vi.fn(),
 }));
 
-vi.mock('../../features/winery', async (importOriginal) => {
+vi.mock('@/features/winery', async (importOriginal) => {
   const actual = await importOriginal<typeof wineryModule>();
   return {
     ...actual,
