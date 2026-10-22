@@ -230,6 +230,15 @@ builder.Services.AddFluentMigratorCore()
         .ScanIn(typeof(Program).Assembly).For.Migrations())
     .AddLogging(lb => lb.AddFluentMigratorConsole());
 
+builder.Services.AddHttpLogging(options =>
+{
+    // Registra solo el método, la ruta y el código de respuesta HTTP
+    options.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestMethod 
+                          | Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestPath 
+                          | Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.ResponseStatusCode;
+});
+
+
 
 var app = builder.Build();
 
@@ -259,6 +268,10 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 
 }
+
+
+
+app.UseHttpLogging(); // Debe ir al inicio del pipeline, antes de UseAuthentication y UseAuthorization
 
 app.UseHttpsRedirection();
 
