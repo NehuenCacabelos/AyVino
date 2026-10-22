@@ -276,6 +276,9 @@ public class WineOptimizationTests
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWinery?.Id == id ? ExistingWinery : null);
 
+        public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
+            Task.FromResult(ExistingWinery?.UserId == userId ? ExistingWinery : null);
+
         public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Winery>>([]);
 

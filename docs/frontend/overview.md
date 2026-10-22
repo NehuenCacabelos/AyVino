@@ -255,7 +255,16 @@ npm run dev
    - Verificar el monograma circular, terruño geográfico resuelto, semblanza histórica y catálogo de etiquetas oficiales con `WineCard`.
    - Presionar *"Seguir bodega"* $\rightarrow$ Comprobar la alternancia a *"Siguiendo"* y el incremento reactivo en el contador de seguidores.
    - Presionar *"Ver ficha"* en cualquier etiqueta para inspeccionar la ficha técnica completa en `WineDetailModal`.
-6. **Verificación de Calidad de Código**:
+6. **Suite de Pruebas Unitarias, de Integración y E2E**:
+   ```bash
+   cd src/frontend
+   npm test       # Ejecución de batería Vitest + React Testing Library (27 tests en 12 suites)
+   npm run build  # Compilación estricta TypeScript tsc -b && vite build (0 errores)
+   npm run lint   # Validación de reglas ESLint (0 errores, 0 advertencias)
+   node scripts/e2e-live-test.mjs  # Prueba de integración viva E2E contra API real (29 aserciones)
+   ```
+
+7. **Verificación de Calidad de Código**:
    ```bash
    cd src/frontend
    npm run build  # Compilación estricta TypeScript (0 errores)

@@ -25,6 +25,14 @@ public class WineryService(
         return winery.ToResponseDto();
     }
 
+    public async Task<WineryResponseDto> GetByUserIdAsync(int userId, CancellationToken ct = default)
+    {
+        if (userId <= 0) throw new NotFoundException($"Winery for user {userId} not found.");
+        var winery = await wineryRepository.GetByUserIdAsync(userId, ct)
+            ?? throw new NotFoundException($"Winery for user {userId} not found.");
+        return winery.ToResponseDto();
+    }
+
     public async Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");

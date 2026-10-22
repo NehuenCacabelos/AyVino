@@ -318,6 +318,9 @@ public class WineServiceTests
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult<Winery?>(null);
 
+        public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
+            Task.FromResult<Winery?>(null);
+
         public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Winery>>([]);
 

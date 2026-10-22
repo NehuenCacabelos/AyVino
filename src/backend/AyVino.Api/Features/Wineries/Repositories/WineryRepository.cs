@@ -19,6 +19,18 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    public async Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT id, name, description, location_id, foundation_year, website, user_id, status, register_date
+            FROM wineries
+            WHERE user_id = @UserId;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Winery>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
+
     public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
     {
         const string sql = """

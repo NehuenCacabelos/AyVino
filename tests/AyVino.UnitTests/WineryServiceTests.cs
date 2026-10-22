@@ -1,8 +1,12 @@
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Locations.Models;
 using AyVino.Api.Features.Locations.Repositories;
+using AyVino.Api.Features.Users.DTOs;
+using AyVino.Api.Features.Users.Models;
+using AyVino.Api.Features.Users.Services;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Models;
@@ -153,6 +157,45 @@ public class WineryServiceTests
     }
 
     [Fact]
+    public async Task GetByUserIdAsync_ExistingWineryForUser_ReturnsResponseDto()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository
+        {
+            ExistingWinery = new Winery
+            {
+                Id = 15,
+                Name = "Bodega Los Andes",
+                LocationId = 1,
+                UserId = 77,
+                Status = WineryStatus.Approved,
+                RegisterDate = DateTime.UtcNow
+            }
+        };
+        var service = new WineryService(fakeWineryRepo, null!, null!, null!);
+
+        // Act
+        var result = await service.GetByUserIdAsync(77);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(15, result.Id);
+        Assert.Equal("Bodega Los Andes", result.Name);
+        Assert.Equal(WineryStatus.Approved.ToString(), result.Status);
+    }
+
+    [Fact]
+    public async Task GetByUserIdAsync_NoWineryForUser_ThrowsNotFoundException()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository();
+        var service = new WineryService(fakeWineryRepo, null!, null!, null!);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetByUserIdAsync(99));
+    }
+
+    [Fact]
     public async Task DeleteAsync_WineryExists_DeletesSuccessfully()
     {
         // Arrange
@@ -180,6 +223,127 @@ public class WineryServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteAsync(999));
     }
 
+    [Fact]
+    public async Task RegisterWineryAsync_ValidRequest_RegistersUserAndWineryAndReturnsToken()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository();
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeUserService = new FakeUserService();
+        var fakeJwtGenerator = new FakeJwtTokenGenerator();
+        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+
+        var dto = new RegisterWineryRequestDto(
+            Username: "catena_admin",
+            Email: "admin@catenazapata.com",
+            Password: "Password123!",
+            WineryName: "Catena Zapata",
+            LocationId: 1,
+            Description: "Bodega histórica en Mendoza",
+            FoundationYear: 1902,
+            Website: "https://catenazapata.com"
+        );
+
+        // Act
+        var result = await service.RegisterWineryAsync(dto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Bearer", result.TokenType);
+        Assert.Equal("fake-jwt-token-xyz", result.AccessToken);
+        Assert.NotNull(result.Winery);
+        Assert.Equal("Catena Zapata", result.Winery.Name);
+        Assert.Equal(WineryStatus.Pending.ToString(), result.Winery.Status);
+
+        // User service asserted
+        Assert.NotNull(fakeUserService.CapturedRegisterDto);
+        Assert.Equal("catena_admin", fakeUserService.CapturedRegisterDto.Username);
+        Assert.Equal("Winery", fakeUserService.CapturedRegisterDto.Role);
+
+        // Winery repo asserted
+        Assert.NotNull(fakeWineryRepo.CapturedCreatedWinery);
+        Assert.Equal("Catena Zapata", fakeWineryRepo.CapturedCreatedWinery.Name);
+        Assert.Equal(100, fakeWineryRepo.CapturedCreatedWinery.UserId);
+        Assert.Equal(WineryStatus.Pending, fakeWineryRepo.CapturedCreatedWinery.Status);
+
+        // JWT asserted
+        Assert.NotNull(fakeJwtGenerator.CapturedUser);
+        Assert.Equal(100, fakeJwtGenerator.CapturedUser.Id);
+    }
+
+    [Fact]
+    public async Task RegisterWineryAsync_WineryInsertFails_CompensatesByDeletingCreatedUser()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository { ShouldFailCreate = true };
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeUserService = new FakeUserService();
+        var fakeJwtGenerator = new FakeJwtTokenGenerator();
+        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+
+        var dto = new RegisterWineryRequestDto(
+            Username: "faulty_admin",
+            Email: "admin@faulty.com",
+            Password: "Password123!",
+            WineryName: "Faulty Winery",
+            LocationId: 1
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RegisterWineryAsync(dto));
+
+        // Compensation verification
+        Assert.Equal(100, fakeUserService.CapturedDeletedUserId);
+    }
+
+    [Fact]
+    public async Task RegisterWineryAsync_InvalidWineryName_ThrowsValidationException()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository();
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeUserService = new FakeUserService();
+        var fakeJwtGenerator = new FakeJwtTokenGenerator();
+        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+
+        var dto = new RegisterWineryRequestDto(
+            Username: "admin_user",
+            Email: "admin@user.com",
+            Password: "Password123!",
+            WineryName: "",
+            LocationId: 1
+        );
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RegisterWineryAsync(dto));
+        Assert.Contains("winery name is required", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(fakeUserService.CapturedRegisterDto);
+    }
+
+    [Fact]
+    public async Task RegisterWineryAsync_NonExistentLocation_ThrowsValidationException()
+    {
+        // Arrange
+        var fakeWineryRepo = new FakeWineryRepository();
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeUserService = new FakeUserService();
+        var fakeJwtGenerator = new FakeJwtTokenGenerator();
+        var service = new WineryService(fakeWineryRepo, fakeLocationRepo, fakeUserService, fakeJwtGenerator);
+
+        var dto = new RegisterWineryRequestDto(
+            Username: "admin_user",
+            Email: "admin@user.com",
+            Password: "Password123!",
+            WineryName: "Bodega Valida",
+            LocationId: 999
+        );
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RegisterWineryAsync(dto));
+        Assert.Contains("Location with ID 999 does not exist", ex.Message);
+        Assert.Null(fakeUserService.CapturedRegisterDto);
+    }
+
     #region Fakes
 
     private sealed class FakeWineryRepository : IWineryRepository
@@ -187,15 +351,22 @@ public class WineryServiceTests
         public Winery? ExistingWinery { get; set; }
         public Winery? CapturedCreatedWinery { get; private set; }
         public Winery? CapturedUpdatedWinery { get; private set; }
+        public bool ShouldFailCreate { get; set; }
 
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWinery?.Id == id ? ExistingWinery : null);
+
+        public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
+            Task.FromResult(ExistingWinery?.UserId == userId ? ExistingWinery : null);
 
         public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Winery>>(ExistingWinery is not null ? [ExistingWinery] : []);
 
         public Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
         {
+            if (ShouldFailCreate)
+                throw new InvalidOperationException("Simulated database failure on winery insert");
+
             CapturedCreatedWinery = winery;
             var created = winery with { Id = 42 };
             ExistingWinery = created;
@@ -254,6 +425,40 @@ public class WineryServiceTests
             Task.FromResult<IEnumerable<Location>>([]);
     }
 
+    private sealed class FakeUserService : IUserService
+    {
+        public CreateUserRequestDto? CapturedRegisterDto { get; private set; }
+        public int? CapturedDeletedUserId { get; private set; }
+        public UserResponseDto RegisteredUser { get; set; } = new(100, "winery_admin", "admin@bodega.com", "Winery", DateTime.UtcNow, true, null, null);
+
+        public Task<UserResponseDto> RegisterAsync(CreateUserRequestDto dto, CancellationToken ct = default)
+        {
+            CapturedRegisterDto = dto;
+            return Task.FromResult(RegisteredUser with { Username = dto.Username, Email = dto.Email, Role = dto.Role ?? "Winery" });
+        }
+
+        public Task DeleteAsync(int id, CancellationToken ct = default)
+        {
+            CapturedDeletedUserId = id;
+            return Task.CompletedTask;
+        }
+
+        public Task<UserResponseDto> GetByIdAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<UserResponseDto> GetByEmailAsync(string email, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IEnumerable<UserResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task ChangeStatusAsync(int id, bool isActive, CancellationToken ct = default) => throw new NotImplementedException();
+    }
+
+    private sealed class FakeJwtTokenGenerator : IJwtTokenGenerator
+    {
+        public User? CapturedUser { get; private set; }
+        public (string Token, DateTime ExpiresAt) GenerateToken(User user)
+        {
+            CapturedUser = user;
+            return ("fake-jwt-token-xyz", DateTime.UtcNow.AddHours(2));
+        }
+    }
+
     #endregion
 }
-

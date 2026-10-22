@@ -16,6 +16,15 @@ public static class WineryEndpoints
             .WithName("GetAllWineries")
             .WithSummary("Lists wineries, paginated, with optional status and location filters.");
 
+        group.MapGet("/me", async (ClaimsPrincipal user, IWineryService service, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            return Results.Ok(await service.GetByUserIdAsync(actor.UserId, ct));
+        })
+            .RequireAuthorization()
+            .WithName("GetMyWinery")
+            .WithSummary("Gets the winery associated with the authenticated user.");
+
         group.MapGet("/{id:int}", async (int id, IWineryService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(id, ct)))
             .WithName("GetWineryById")
