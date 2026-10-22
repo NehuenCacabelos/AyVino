@@ -32,6 +32,10 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
 | `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
 | `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
+| `20261022001` | `AddGeorefIdToStatesAndCities.cs` | `states`, `cities` | Códigos Georef oficiales para las 24 provincias argentinas e índice único para `georef_id` en departamentos. |
+| `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
+| `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
+| `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
 
 ---
 

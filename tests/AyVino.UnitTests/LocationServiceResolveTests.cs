@@ -90,3 +90,4 @@ public class LocationServiceResolveTests
         Assert.Contains("No se encontró el registro de ubicación", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
+

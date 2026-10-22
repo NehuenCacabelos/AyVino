@@ -119,10 +119,37 @@ public class WineServiceAuthorizationTests
     }
 
     [Fact]
-    public async Task CreateAsync_Owner_WithPendingWinery_ThrowsForbiddenException()
+    public async Task CreateAsync_Owner_WithPendingWinery_Succeeds()
     {
         // Arrange
         var winery = CreateWinery(10, userId: 10, status: WineryStatus.Pending);
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(args => ((Wine)args[0]) with { Id = 100 });
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.ExistsByIdAsync(10, Arg.Any<CancellationToken>()).Returns(true);
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var locationRepo = Substitute.For<ILocationRepository>();
+        locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineService(wineRepo, wineryRepo, locationRepo, Substitute.For<IGrapeRepository>());
+        var actor = new Actor(10, AppRoles.Winery);
+
+        // Act
+        var result = await service.CreateAsync(CreateWineDto(wineryId: 10), actor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(SourceType.Official.ToString(), result.SourceType);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Owner_WithRejectedWinery_ThrowsForbiddenException()
+    {
+        // Arrange
+        var winery = CreateWinery(10, userId: 10, status: WineryStatus.Rejected);
         var wineRepo = Substitute.For<IWineRepository>();
         var wineryRepo = Substitute.For<IWineryRepository>();
         wineryRepo.ExistsByIdAsync(10, Arg.Any<CancellationToken>()).Returns(true);
@@ -138,7 +165,7 @@ public class WineServiceAuthorizationTests
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.CreateAsync(CreateWineDto(wineryId: 10), actor));
 
-        Assert.Equal("La bodega debe estar aprobada para publicar vinos oficiales.", ex.Message);
+        Assert.Equal("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.", ex.Message);
     }
 
     [Fact]

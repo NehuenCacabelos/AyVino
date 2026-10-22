@@ -12,12 +12,26 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         source_type, duplicate_of_wine_id, rating_sum, review_count
         """;
 
-    public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
+    public Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        GetByIdAsync(id, null, false, ct);
+
+    public async Task<Wine?> GetByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var sql = $"SELECT {SelectColumns} FROM wines WHERE id = @Id;";
+        const string sql = """
+            SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
+                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE w.id = @Id
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+              );
+            """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Wine>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, CurrentUserId = currentUserId, IsAdmin = isAdmin }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
@@ -34,25 +48,43 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new { Ids = idList.ToArray() }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default)
+    public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, null, false, ct);
+
+    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        // El filtro de año/uva ahora mira DENTRO de las cosechas de cada etiqueta (EXISTS),
-        // porque la etiqueta en sí ya no tiene year ni grapes propios.
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                    w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
             FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
             WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+              )
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+              )
               AND (@GrapeId IS NULL OR EXISTS (
                     SELECT 1 FROM wine_vintages wv
                     JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
-                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId))
+                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId
+                      AND (@IsAdmin = TRUE
+                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                           OR wv.approval_status = 2)))
               AND (
                     (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
                         SELECT 1 FROM wine_vintages wv2
                         WHERE wv2.wine_id = w.id
                           AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
                           AND (@YearTo IS NULL OR wv2.year <= @YearTo)
+                          AND (@IsAdmin = TRUE
+                               OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
+                               OR wv2.approval_status = 2)
                     )
                   )
             ORDER BY w.id
@@ -67,6 +99,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 GrapeId = grapeId,
                 YearFrom = yearFrom,
                 YearTo = yearTo,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin,
                 Offset = offset,
                 PageSize = pageSize
             }, cancellationToken: ct));
@@ -121,12 +155,15 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         foreach (var grape in grapes)
         {
             await connection.ExecuteAsync(
-                new CommandDefinition(insertGrapeSql, new { WineVintageId = vintageId, grape.GrapeId, grape.Percentage },
-                    transaction: transaction, cancellationToken: ct));
+                new CommandDefinition(insertGrapeSql, new
+                {
+                    WineVintageId = vintageId,
+                    grape.GrapeId,
+                    grape.Percentage
+                }, transaction: transaction, cancellationToken: ct));
         }
 
         await transaction.CommitAsync(ct);
-
         return wine with { Id = wineId };
     }
 
@@ -161,27 +198,30 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        // wine_vintages tiene ON DELETE CASCADE hacia wines, eliminando en cascada cosechas y uvas asociadas.
         const string sql = "DELETE FROM wines WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var rows = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        var rows = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         return rows > 0;
     }
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "SELECT EXISTS(SELECT 1 FROM wines WHERE id = @Id);";
+        const string sql = "SELECT 1 FROM wines WHERE id = @Id LIMIT 1;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default)
     {
-        var sql = $"""
-            SELECT {SelectColumns}
+        const string sql = """
+            SELECT id, winery_id, winery_name_text, name, description, wine_type,
+                   location_id, source_type, duplicate_of_wine_id, rating_sum, review_count
             FROM wines
             WHERE winery_id IS NULL
-              AND winery_name_text ILIKE @Pattern;
+              AND winery_name_text ILIKE @Pattern
+            ORDER BY id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Wine>(
@@ -207,21 +247,30 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-        // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
+    // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
     // 0.25 tolera errores de tipeo normales (letras de más/de menos, mayúsculas) sin devolver basura.
     private const double SimilarityThreshold = 0.25;
-    public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default)
+    public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) =>
+        SearchAsync(name, winery, year, wineType, pageNumber, pageSize, null, false, ct);
+
+    public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        // Cada criterio de texto matchea por substring (ILIKE, rápido y exacto) O por similitud
-        // de trigramas (tolera errores de tipeo que ILIKE no perdona). LEFT JOIN a wineries porque
-        // la bodega "real" solo existe si winery_id está seteado; si es un vino comunitario sin
-        // bodega, el nombre está en winery_name_text.
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                 w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
             FROM wines w
             LEFT JOIN wineries wy ON wy.id = w.winery_id
-            WHERE (@Name IS NULL
+            WHERE (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+            )
+            AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+            )
+            AND (@Name IS NULL
                 OR w.name ILIKE @NamePattern
                 OR similarity(w.name, @Name) > @Threshold)
             AND (@Winery IS NULL
@@ -231,7 +280,11 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 OR similarity(COALESCE(wy.name, ''), @Winery) > @Threshold)
             AND (@WineType IS NULL OR w.wine_type = @WineType)
             AND (@Year IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year))
+                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
+                    AND (@IsAdmin = TRUE
+                         OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                         OR wv.approval_status = 2)
+                ))
             ORDER BY
             GREATEST(
                 CASE WHEN @Name IS NULL THEN 0 ELSE similarity(w.name, @Name) END,
@@ -254,6 +307,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 Threshold = SimilarityThreshold,
                 WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
                 Year = year,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin,
                 Offset = (pageNumber - 1) * pageSize,
                 PageSize = pageSize
             }, cancellationToken: ct));

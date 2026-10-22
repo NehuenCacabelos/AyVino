@@ -120,3 +120,4 @@ public class GeorefClientTests
         Assert.Equal(2, handler.CallCount); // Verified retry
     }
 }
+

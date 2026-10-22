@@ -12,20 +12,53 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         approval_status, uploaded_by_user_id, register_date, rating_sum, review_count
         """;
 
-    public async Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default)
+    public Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        GetByIdAsync(id, null, false, ct);
+
+    public async Task<WineVintage?> GetByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var sql = $"SELECT {SelectColumns} FROM wine_vintages WHERE id = @Id;";
+        const string sql = """
+            SELECT wv.id, wv.wine_id, wv.year, wv.alcohol_content, wv.serving_temperature,
+                   wv.aging_advice, wv.image_url, wv.approval_status, wv.uploaded_by_user_id,
+                   wv.register_date, wv.rating_sum, wv.review_count
+            FROM wine_vintages wv
+            JOIN wines w ON w.id = wv.wine_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE wv.id = @Id
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                OR (wv.approval_status = 2 AND (w.winery_id IS NULL OR wy.status = 2))
+              );
+            """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<WineVintage>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, CurrentUserId = currentUserId, IsAdmin = isAdmin }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default)
+    public Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default) =>
+        GetAllByWineIdAsync(wineId, null, false, ct);
+
+    public async Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var sql = $"SELECT {SelectColumns} FROM wine_vintages WHERE wine_id = @WineId ORDER BY year DESC NULLS LAST;";
+        const string sql = """
+            SELECT wv.id, wv.wine_id, wv.year, wv.alcohol_content, wv.serving_temperature,
+                   wv.aging_advice, wv.image_url, wv.approval_status, wv.uploaded_by_user_id,
+                   wv.register_date, wv.rating_sum, wv.review_count
+            FROM wine_vintages wv
+            JOIN wines w ON w.id = wv.wine_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE wv.wine_id = @WineId
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                OR (wv.approval_status = 2 AND (w.winery_id IS NULL OR wy.status = 2))
+              )
+            ORDER BY wv.year DESC NULLS LAST;
+            """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<WineVintage>(
-            new CommandDefinition(sql, new { WineId = wineId }, cancellationToken: ct));
+            new CommandDefinition(sql, new { WineId = wineId, CurrentUserId = currentUserId, IsAdmin = isAdmin }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<WineGrape>> GetGrapesByVintageIdAsync(int vintageId, CancellationToken ct = default)

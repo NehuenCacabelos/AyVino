@@ -11,3 +11,4 @@ public interface IGeorefClient
 {
     Task<GeorefLocationResult> ResolveLocationAsync(decimal latitude, decimal longitude, CancellationToken ct = default);
 }
+

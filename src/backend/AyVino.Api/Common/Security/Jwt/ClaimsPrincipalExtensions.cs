@@ -32,5 +32,24 @@ public static class ClaimsPrincipalExtensions
         var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
         return new Actor(principal.GetUserId(), role);
     }
-}
 
+    public static Actor? GetActorOrNull(this ClaimsPrincipal? principal)
+    {
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        var userIdClaim = principal.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? principal.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? principal.FindFirstValue("sub");
+
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return null;
+        }
+
+        var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
+        return new Actor(userId, role);
+    }
+}

@@ -18,3 +18,4 @@ public class M20261022003_AddCoordinatesToWineries : Migration
         Delete.Column("latitude").FromTable("wineries");
     }
 }
+

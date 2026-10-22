@@ -181,7 +181,7 @@ public class WineryAccessRulesTests
     }
 
     [Fact]
-    public void CanPublish_OwnerActor_PendingWinery_ReturnsFalse()
+    public void CanPublish_OwnerActor_PendingWinery_ReturnsTrue()
     {
         // Arrange
         var winery = CreateWinery(userId: 10, status: WineryStatus.Pending);
@@ -191,7 +191,7 @@ public class WineryAccessRulesTests
         var result = WineryAccessRules.CanPublish(winery, actor);
 
         // Assert
-        Assert.False(result);
+        Assert.True(result);
     }
 
     [Fact]
@@ -221,5 +221,77 @@ public class WineryAccessRulesTests
         // Assert
         Assert.False(result);
     }
-}
 
+    [Theory]
+    [InlineData(WineryStatus.Approved)]
+    [InlineData(WineryStatus.Pending)]
+    [InlineData(WineryStatus.Rejected)]
+    public void CanClaim_AdminActor_AnyWineryStatus_ReturnsTrue(WineryStatus status)
+    {
+        // Arrange
+        var winery = CreateWinery(userId: 10, status: status);
+        var actor = new Actor(99, AppRoles.Admin);
+
+        // Act
+        var result = WineryAccessRules.CanClaim(winery, actor);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void CanClaim_OwnerActor_ApprovedWinery_ReturnsTrue()
+    {
+        // Arrange
+        var winery = CreateWinery(userId: 10, status: WineryStatus.Approved);
+        var actor = new Actor(10, AppRoles.User);
+
+        // Act
+        var result = WineryAccessRules.CanClaim(winery, actor);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void CanClaim_OwnerActor_PendingWinery_ReturnsFalse()
+    {
+        // Arrange
+        var winery = CreateWinery(userId: 10, status: WineryStatus.Pending);
+        var actor = new Actor(10, AppRoles.User);
+
+        // Act
+        var result = WineryAccessRules.CanClaim(winery, actor);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanClaim_OwnerActor_RejectedWinery_ReturnsFalse()
+    {
+        // Arrange
+        var winery = CreateWinery(userId: 10, status: WineryStatus.Rejected);
+        var actor = new Actor(10, AppRoles.User);
+
+        // Act
+        var result = WineryAccessRules.CanClaim(winery, actor);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanClaim_NonOwnerActor_ApprovedWinery_ReturnsFalse()
+    {
+        // Arrange
+        var winery = CreateWinery(userId: 10, status: WineryStatus.Approved);
+        var actor = new Actor(20, AppRoles.User);
+
+        // Act
+        var result = WineryAccessRules.CanClaim(winery, actor);
+
+        // Assert
+        Assert.False(result);
+    }
+}

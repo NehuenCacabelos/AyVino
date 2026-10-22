@@ -89,3 +89,4 @@ public class M20261022002_SeedDepartmentsAndLocations : Migration
         throw new FileNotFoundException($"No se encontró el recurso embebido ni el archivo de departamentos: {resourceName}");
     }
 }
+

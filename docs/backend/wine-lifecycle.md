@@ -1,6 +1,6 @@
-# Ciclo de Vida del Vino, Cortes y Reclamo Oficial - AyVino.Api
+# Ciclo de Vida del Vino, Cortes, Reglas de Bodega y Reclamo Oficial - AyVino.Api
 
-Este documento describe las reglas de negocio del dominio vitivinícola en AyVino: procedencia de botellas, estados de moderación, formulación de cortes de uva (blends) y el protocolo de adopción o reclamo de vinos por bodegas oficiales.
+Este documento describe las reglas de negocio del dominio vitivinícola en AyVino: procedencia de botellas, estados de moderación, formulación de cortes de uva (blends), permisos para bodegas pendientes y el protocolo de adopción o reclamo de vinos por bodegas oficiales.
 
 ---
 
@@ -15,7 +15,39 @@ Cada vino en el catálogo posee un origen explícito que define su grado de cert
 
 ---
 
-## 2. Estados de Moderación (`WineApprovalStatus`)
+## 2. Reglas de Catálogo y Bodega Pendiente (`WineryAccessRules`)
+
+A partir de la ronda 2, se flexibiliza el proceso de onboarding para que las bodegas recién registradas puedan cargar sus productos de inmediato:
+
+1. **Creación de Vinos y Añadas Propios (`CanPublish`)**:
+   - Una bodega en estado `Pending` **PUEDE** crear sus etiquetas de vino oficiales y sus correspondientes añadas (inician como borradores con estado `Pending`).
+   - Una bodega en estado `Approved` puede crear y publicar normalmente.
+   - Una bodega en estado `Rejected` permanece **estrictamente bloqueada** para crear o publicar vinos.
+
+2. **Reclamo de Vinos Comunitarios (`CanClaim`)**:
+   - Reclamar vinos (`GET /api/wines/claim-candidates/{wineryId}` y `POST /api/wines/claim/{wineryId}`) sigue exigiendo **estrictamente** que la bodega esté `Approved`. Las bodegas `Pending` o `Rejected` no pueden certificar vinos de la comunidad.
+
+---
+
+## 3. Reglas de Visibilidad y Autenticación Opcional
+
+Los endpoints públicos (`GET /api/wines`, `GET /api/wines/{id}`, `GET /api/wines/search`, `GET /api/wines/{wineId}/vintages`) implementan **autenticación opcional**:
+- Si la petición incluye un token JWT válido en el header `Authorization: Bearer <token>`, el backend identifica al solicitante (`Actor`).
+- Si la petición no incluye token o es anónima, se procesa sin arrojar `401 Unauthorized`.
+
+### Matriz de Visibilidad:
+
+| Contexto / Recurso | Público / Anónimo / Tercero | Dueño de la Bodega | Administrador (`Admin`) |
+| :--- | :--- | :--- | :--- |
+| **Vinos de bodega `Approved`** | Visibles si tienen al menos 1 cosecha `Approved` | Visibles todos | Visibles todos |
+| **Vinos de bodega `Pending`** | **Ocultos** (retornan 404 en detalle y no figuran en listados/búsquedas) | **Visibles en su panel y fichas** (`GET /api/wines?wineryId=`) | Visibles todos |
+| **Vinos de bodega `Rejected`** | **Ocultos** | **Ocultos** | Visibles |
+| **Añadas `Approved`** | Visibles | Visibles | Visibles |
+| **Añadas `Pending` / `Rejected`** | **Ocultas** | **Visibles para el dueño/uploader** | Visibles todas |
+
+---
+
+## 4. Estados de Moderación (`WineApprovalStatus`)
 
 Todo vino nuevo ingresa con estado inicial `Pending` para garantizar la calidad del catálogo:
 
@@ -34,7 +66,7 @@ stateDiagram-v2
 
 ---
 
-## 3. Cortes de Uva y Composición Varietal (Blends)
+## 5. Cortes de Uva y Catálogo Oficial de Varietales (Blends)
 
 AyVino modela la enología real permitiendo tanto varietales puros (100% de una cepa) como cortes multivarietales (blends).
 
@@ -46,9 +78,14 @@ AyVino modela la enología real permitiendo tanto varietales puros (100% de una 
 3. **Persistencia Transaccional**:
    Al crear o actualizar un vino (`WineRepository.CreateAsync` / `UpdateAsync`), la inserción en la tabla `wine_grapes` se efectúa dentro de la misma transacción física, garantizando atomicidad.
 
+### Catálogo de 35 Uvas Tradicionales Argentinas (Migración `SeedGrapes` `20261022004`):
+- **Tintas (`ColorType.Red = 1`)**: Malbec, Cabernet Sauvignon, Cabernet Franc, Merlot, Syrah, Bonarda, Pinot Noir, Tannat, Petit Verdot, Tempranillo, Sangiovese, Garnacha, Barbera, Pinot Meunier, Marselan, Touriga Nacional, Ancellotta.
+- **Blancas (`ColorType.White = 2`)**: Pinot Gris, Chardonnay, Sauvignon Blanc, Torrontés Riojano, Torrontés Sanjuanino, Torrontés Mendocino, Semillón, Chenin Blanc, Viognier, Pedro Giménez, Moscatel de Alejandría, Riesling, Gewürztraminer, Verdejo, Albariño.
+- **Rosadas (`ColorType.Rose = 3`)**: Criolla Grande, Cereza, Moscatel Rosado.
+
 ---
 
-## 4. El Proceso de Reclamo Oficial (Wine Claim Flow)
+## 6. El Proceso de Reclamo Oficial (Wine Claim Flow)
 
 Para resolver el problema del contenido generado por usuarios antes de que una bodega se sume a la plataforma, se implementa el flujo de reclamo ([RF-1.5](../requirements/spec.md)):
 
@@ -63,25 +100,9 @@ graph TD
     G --> H["El vino pasa a ser parte del catálogo oficial de la bodega sin perder reseñas históricas"]
 ```
 
-### Endpoints Intervinientes:
-- **`GET /api/wines/claim-candidates/{wineryId}`**:
-  Busca vinos con `winery_id IS NULL` y cuyo `winery_name_text` coincida fonética o textualmente (`ILIKE`) con el nombre de la bodega registrada.
-- **`POST /api/wines/claim/{wineryId}`**:
-  Recibe un `ClaimWinesRequestDto` con la lista de `WineIds`. Actualiza la columna `winery_id` y conmuta `source_type = SourceType.Official`.
-
 ---
 
-## 5. Fundamentos para Deduplicación y Merge (Pieza C)
-
-La migración `20260830003_AddWineClaimFields` incorporó la columna autoverificable `duplicate_of_wine_id` con foreign key recursiva a la misma tabla `wines`.
-
-Esto sienta las bases para consolidar vinos idénticos cargados por múltiples usuarios:
-- Un vino duplicado puede apuntar a su vino canónico (`duplicate_of_wine_id = original_wine_id`).
-- Las calificaciones y reseñas se reasignan al vino maestro mediante cascada lógica, preservando el feedback de la comunidad sin saturar el catálogo.
-
----
-
-## 6. Catálogo de Enumeradores del Sistema
+## 7. Catálogo de Enumeradores del Sistema
 
 Valores numéricos e identificadores sincronizados con el código backend:
 
@@ -97,21 +118,3 @@ Valores numéricos e identificadores sincronizados con el código backend:
 - **`TypicalBody`**: `Light = 10`, `MediumLight = 20`, `Medium = 30`, `MediumFull = 40`, `Full = 50`
 - **`TypicalTannins`**: `Soft = 10`, `MediumSoft = 20`, `Medium = 30`, `MediumAstringent = 40`, `Astringent = 50`
 - **`TypicalAcidity`**: `Low = 10`, `MediumLow = 20`, `Medium = 30`, `MediumHigh = 40`, `High = 50`
-
-### C. Maridajes (Pairings)
-- **`PairingCategory`**:
-  - `Meat = 1` (Carnes rojas / blancas)
-  - `Fish = 2` (Pescados)
-  - `Seafood = 3` (Mariscos)
-  - `Cheese = 4` (Quesos)
-  - `Dessert = 5` (Postres)
-  - `Pasta = 6` (Pastas)
-  - `Vegetarian = 7` (Vegetales / vegetariano)
-  - `Appetizer = 8` (Picadas / aperitivos)
-  - `Other = 9` (Otros)
-
-### D. Cuidado y Guarda (WineCare)
-- **`DrinkingStatus`**: `TooYoung = 10`, `InWindow = 20`, `DrinkSoon = 30`, `PastPeak = 40`
-- **`AdviceSource`**: `Declared = 1`, `Inferred = 2`
-
-

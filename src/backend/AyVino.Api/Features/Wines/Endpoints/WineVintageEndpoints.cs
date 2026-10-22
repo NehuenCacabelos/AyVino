@@ -11,20 +11,19 @@ public static class WineVintageEndpoints
     {
         var group = app.MapGroup("/api/wines/{wineId:int}/vintages").WithTags("Wine Vintages");
 
-        group.MapGet("/", async (int wineId, IWineVintageService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllByWineIdAsync(wineId, ct)))
+        group.MapGet("/", async (int wineId, ClaimsPrincipal? user, IWineVintageService service, CancellationToken ct) =>
+            Results.Ok(await service.GetAllByWineIdAsync(wineId, user.GetActorOrNull(), ct)))
             .WithName("GetWineVintages")
             .WithSummary("Lists all vintages of a wine label with their own rating (the 'other vintages' list, like Vivino).");
 
-        group.MapGet("/{vintageId:int}", async (int wineId, int vintageId, IWineVintageService service, CancellationToken ct) =>
-            Results.Ok(await service.GetByIdAsync(wineId, vintageId, ct)))
+        group.MapGet("/{vintageId:int}", async (int wineId, int vintageId, ClaimsPrincipal? user, IWineVintageService service, CancellationToken ct) =>
+            Results.Ok(await service.GetByIdAsync(wineId, vintageId, user.GetActorOrNull(), ct)))
             .WithName("GetWineVintageById")
             .WithSummary("Gets a single vintage with its grape blend and rating.");
 
         group.MapPost("/", async (int wineId, CreateWineVintageRequestDto request, ClaimsPrincipal user, IWineVintageService service, CancellationToken ct) =>
         {
-            var userId = user.GetUserId();
-            var created = await service.CreateAsync(wineId, request, userId, ct);
+            var created = await service.CreateAsync(wineId, request, user.GetActor(), ct);
             return Results.Created($"/api/wines/{wineId}/vintages/{created.Id}", created);
         })
             .RequireAuthorization()

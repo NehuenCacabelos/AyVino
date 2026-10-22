@@ -7,3 +7,4 @@ public record ResolvedLocationResponseDto(
     int RegionId,
     string RegionName,
     string? MunicipalityName);
+

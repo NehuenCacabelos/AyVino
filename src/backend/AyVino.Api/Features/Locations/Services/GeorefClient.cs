@@ -102,3 +102,4 @@ public class GeorefClient(HttpClient httpClient, ILogger<GeorefClient> logger) :
         [property: JsonPropertyName("id")] string? Id,
         [property: JsonPropertyName("nombre")] string? Nombre);
 }
+

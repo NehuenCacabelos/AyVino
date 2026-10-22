@@ -11,13 +11,13 @@ public static class WineEndpoints
     {
         var group = app.MapGroup("/api/wines").WithTags("Wines");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, ct)))
+        group.MapGet("/", async (int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, user.GetActorOrNull(), ct)))
             .WithName("GetAllWines")
             .WithSummary("Lists wine labels, paginated. Year/grape filters match against any of the label's vintages.");
 
-        group.MapGet("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.GetByIdAsync(id, ct)))
+        group.MapGet("/{id:int}", async (int id, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetByIdAsync(id, user.GetActorOrNull(), ct)))
             .WithName("GetWineById")
             .WithSummary("Gets a wine label with its overall rating. See /vintages for the per-year breakdown.");
 
@@ -57,12 +57,10 @@ public static class WineEndpoints
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
 
-        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, ct)))
+        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, user.GetActorOrNull(), ct)))
             .WithName("SearchWines")
             .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
-
-        
 
         return app;
     }

@@ -70,3 +70,4 @@ public class M20261022001_AddGeorefIdToStatesAndCities : Migration
         Delete.Column("georef_id").FromTable("states");
     }
 }
+
