@@ -12,4 +12,4 @@ public record UpdateWineryRequestDto(
                StringLength(200, ErrorMessage = "El sitio web no puede superar los 200 caracteres.")] string? Website = null,
     decimal? Latitude = null,
     decimal? Longitude = null,
-    string? LogoUrl = null);
+    [property: StringLength(500, ErrorMessage = "La URL del logo no puede superar los 500 caracteres.")] string? LogoUrl = null);

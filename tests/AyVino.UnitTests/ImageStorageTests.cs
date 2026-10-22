@@ -242,5 +242,64 @@ public class ImageStorageTests
 
         Assert.Contains("almacenamiento oficial", ex.Message);
     }
+
+    [Fact]
+    public async Task WineryService_UpdateAsync_WithNullLogoUrl_PreservesExistingLogo()
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved, LogoUrl = "https://storage/logo.png" };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, Substitute.For<IImageStorage>());
+
+        var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: null);
+        var actor = new Actor(10, AppRoles.Winery);
+
+        await service.UpdateAsync(1, dto, actor);
+
+        await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.LogoUrl == "https://storage/logo.png"), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task WineryService_UpdateAsync_WithEmptyOrWhitespaceLogoUrl_RemovesLogo(string emptyOrWhitespace)
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved, LogoUrl = "https://storage/logo.png" };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, Substitute.For<IImageStorage>());
+
+        var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: emptyOrWhitespace);
+        var actor = new Actor(10, AppRoles.Winery);
+
+        await service.UpdateAsync(1, dto, actor);
+
+        await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.LogoUrl == null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WineryService_UpdateAsync_WithValidStorageLogoUrl_UpdatesLogo()
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved, LogoUrl = "https://storage/old.png" };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.IsUrlFromStorage("https://storage/new-logo.png").Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), null!, null!, storage);
+
+        var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", LogoUrl: "  https://storage/new-logo.png  ");
+        var actor = new Actor(10, AppRoles.Winery);
+
+        await service.UpdateAsync(1, dto, actor);
+
+        await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.LogoUrl == "https://storage/new-logo.png"), Arg.Any<CancellationToken>());
+    }
 }
 
