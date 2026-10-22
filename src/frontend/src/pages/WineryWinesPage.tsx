@@ -8,6 +8,8 @@ import {
   Layers,
   Sparkles,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   useWinery,
@@ -19,6 +21,8 @@ import {
 } from '../features/winery';
 
 type FilterType = 'All' | WineType;
+
+const PAGE_SIZE = 9;
 
 const FILTER_OPTIONS: { id: FilterType; label: string }[] = [
   { id: 'All', label: 'Todas las etiquetas' },
@@ -62,6 +66,7 @@ export default function WineryWinesPage() {
 
   const [wines, setWines] = useState<WineResponseDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(winery?.id));
+  const [pageNumber, setPageNumber] = useState<number>(1);
 
   // Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -75,7 +80,7 @@ export default function WineryWinesPage() {
     null,
   );
 
-  // Cargar vinos al montar o cambiar de bodega
+  // Cargar vinos al montar o cambiar de bodega o página
   useEffect(() => {
     let isMounted = true;
     if (!winery?.id) return;
@@ -84,7 +89,11 @@ export default function WineryWinesPage() {
       if (!isMounted) return;
       setIsLoading(true);
       try {
-        const data = await getWines({ wineryId: winery.id, pageSize: 100 });
+        const data = await getWines({
+          wineryId: winery.id,
+          pageNumber,
+          pageSize: PAGE_SIZE,
+        });
         if (!isMounted) return;
         setWines(data);
       } catch (err) {
@@ -97,7 +106,7 @@ export default function WineryWinesPage() {
     return () => {
       isMounted = false;
     };
-  }, [winery?.id]);
+  }, [winery?.id, pageNumber]);
 
   // Si la URL contiene ?action=new o ?nuevo=1 tras navegación, abrir modal
   useEffect(() => {
@@ -206,30 +215,45 @@ export default function WineryWinesPage() {
       ) : filteredWines.length === 0 ? (
         /* Empty States */
         wines.length === 0 ? (
-          <div className="rounded-2xl bg-[#141416] border border-white/5 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
-            <div className="w-14 h-14 rounded-2xl bg-stone-900 border border-white/10 text-rose-300 mx-auto flex items-center justify-center shadow-sm">
-              <Wine className="w-7 h-7" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="font-serif text-xl font-semibold text-neutral-100">
-                Tu catálogo aún está vacío
-              </h3>
-              <p className="text-xs text-neutral-400 font-sans leading-relaxed">
-                Comenzá publicando tu primera etiqueta con su corte de uvas inaugural para que
-                sommeliers y amantes del vino puedan valorarla en la plataforma.
+          pageNumber > 1 ? (
+            <div className="rounded-2xl bg-[#141416] border border-white/5 p-10 text-center space-y-3">
+              <p className="text-sm font-sans text-neutral-400">
+                No hay más etiquetas en esta página.
               </p>
-            </div>
-            <div className="pt-2">
               <button
                 type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                onClick={() => setPageNumber(1)}
+                className="text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 underline cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>Cargar primera etiqueta</span>
+                Volver a la primera página
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-2xl bg-[#141416] border border-white/5 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-stone-900 border border-white/10 text-rose-300 mx-auto flex items-center justify-center shadow-sm">
+                <Wine className="w-7 h-7" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-serif text-xl font-semibold text-neutral-100">
+                  Tu catálogo aún está vacío
+                </h3>
+                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+                  Comenzá publicando tu primera etiqueta con su corte de uvas inaugural para que
+                  sommeliers y amantes del vino puedan valorarla en la plataforma.
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Cargar primera etiqueta</span>
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           <div className="rounded-2xl bg-[#141416] border border-white/5 p-10 text-center space-y-3">
             <p className="text-sm font-sans text-neutral-400">
@@ -249,68 +273,102 @@ export default function WineryWinesPage() {
         )
       ) : (
         /* Listado de Vinos */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredWines.map((wine) => {
-            const badge = getWineTypeBadge(
-              typeof wine.wineType === 'string' ? wine.wineType : undefined,
-            );
-            return (
-              <div
-                key={wine.id}
-                className="rounded-2xl bg-[#141416] border border-white/5 p-6 flex flex-col justify-between hover:border-white/10 transition-all shadow-lg group"
-              >
-                <div className="space-y-3">
-                  {/* Top Bar: Categoría + Calificación */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${badge.className}`}
-                    >
-                      {badge.label}
-                    </span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredWines.map((wine) => {
+              const badge = getWineTypeBadge(
+                typeof wine.wineType === 'string' ? wine.wineType : undefined,
+              );
+              return (
+                <div
+                  key={wine.id}
+                  className="rounded-2xl bg-[#141416] border border-white/5 p-6 flex flex-col justify-between hover:border-white/10 transition-all shadow-lg group"
+                >
+                  <div className="space-y-3">
+                    {/* Top Bar: Categoría + Calificación */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
 
-                    <div className="flex items-center gap-1 text-xs text-amber-200 font-mono">
-                      <Star className="w-3.5 h-3.5 fill-amber-300/30 text-amber-300" />
-                      <span className="font-semibold">
-                        {wine.averageRating ? wine.averageRating.toFixed(1) : '—'}
-                      </span>
-                      <span className="text-[10px] text-neutral-500">
-                        ({wine.reviewCount})
-                      </span>
+                      <div className="flex items-center gap-1 text-xs text-amber-200 font-mono">
+                        <Star className="w-3.5 h-3.5 fill-amber-300/30 text-amber-300" />
+                        <span className="font-semibold">
+                          {wine.averageRating ? wine.averageRating.toFixed(1) : '—'}
+                        </span>
+                        <span className="text-[10px] text-neutral-500">
+                          ({wine.reviewCount})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Nombre y Descripción */}
+                    <div>
+                      <h3 className="font-serif text-xl font-semibold text-neutral-100 group-hover:text-rose-200 transition-colors line-clamp-1">
+                        {wine.name}
+                      </h3>
+                      {wine.description && (
+                        <p className="text-xs text-neutral-400 mt-1 line-clamp-2 font-sans leading-relaxed">
+                          {wine.description}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Nombre y Descripción */}
-                  <div>
-                    <h3 className="font-serif text-xl font-semibold text-neutral-100 group-hover:text-rose-200 transition-colors line-clamp-1">
-                      {wine.name}
-                    </h3>
-                    {wine.description && (
-                      <p className="text-xs text-neutral-400 mt-1 line-clamp-2 font-sans leading-relaxed">
-                        {wine.description}
-                      </p>
-                    )}
+                  {/* Acciones y Añadas */}
+                  <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300/70" />
+                      <span>Oficial</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWineForVintages(wine)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-white/10 text-xs font-mono uppercase tracking-wider text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Añadas</span>
+                    </button>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Acciones y Añadas */}
-                <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300/70" />
-                    <span>Oficial</span>
-                  </div>
+          {/* Controles de Paginación Editorial */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
+            <span className="text-xs font-mono text-neutral-400">
+              Página <span className="text-neutral-200 font-semibold">{pageNumber}</span>
+              {wines.length === PAGE_SIZE ? '' : ` (${wines.length} ${wines.length === 1 ? 'etiqueta' : 'etiquetas'})`}
+            </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setSelectedWineForVintages(wine)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-white/10 text-xs font-mono uppercase tracking-wider text-neutral-200 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Añadas</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                disabled={pageNumber <= 1 || isLoading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-900/80 hover:bg-stone-800 border border-white/10 text-xs font-mono uppercase tracking-wider text-neutral-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Anterior</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPageNumber((p) => p + 1)}
+                disabled={wines.length < PAGE_SIZE || isLoading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-900/80 hover:bg-stone-800 border border-white/10 text-xs font-mono uppercase tracking-wider text-neutral-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                aria-label="Página siguiente"
+              >
+                <span>Siguiente</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

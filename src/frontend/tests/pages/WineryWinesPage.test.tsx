@@ -84,6 +84,11 @@ describe('WineryWinesPage', () => {
     );
 
     await waitFor(() => {
+      expect(wineryModule.getWines).toHaveBeenCalledWith({
+        wineryId: 10,
+        pageNumber: 1,
+        pageSize: 9,
+      });
       expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
       expect(screen.getByText('Famiglia Bianchi Torrontés')).toBeInTheDocument();
     });
@@ -113,5 +118,25 @@ describe('WineryWinesPage', () => {
 
     expect(screen.getByText('Famiglia Bianchi Torrontés')).toBeInTheDocument();
     expect(screen.queryByText('Enzo Bianchi Gran Corte')).not.toBeInTheDocument();
+  });
+
+  it('displays pagination controls and handles page navigation', async () => {
+    render(
+      <MemoryRouter>
+        <WineryWinesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+    });
+
+    // Anterior should be disabled on first page
+    const prevButton = screen.getByRole('button', { name: /Página anterior/i });
+    expect(prevButton).toBeDisabled();
+
+    // Since mockWines has 2 items (< PAGE_SIZE 9), Siguiente is disabled
+    const nextButton = screen.getByRole('button', { name: /Página siguiente/i });
+    expect(nextButton).toBeDisabled();
   });
 });
