@@ -24,7 +24,7 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 
 ### 2.1 Paleta Cromática y Acabados (Fondo Oscuro Mate)
 - **Fondo Base Carbón Mate (`#0f0f11` / `#121214` / `#0a0a0c`)**: Evita el negro puro ofreciendo una textura sobria, descansada y elegante para la interfaz nocturna de cava.
-- **Acento Bordó Vino Sobrio (`#6e1a24` / `#831823` y `#4f131f`)**: Utilizado en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Registrar mi bodega"`, `"Descorchar"`, `"Crear cuenta"`) y sellos de formulario (`#4f131f`), sin saturación chillona.
+- **Acento Bordó Vino Sobrio (`#6e1a24` / `#831823` y `#4f131f`)**: Utilizado en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Registrar mi bodega"`, `"Nueva etiqueta"`, `"Descorchar"`, `"Crear cuenta"`) y sellos de formulario (`#4f131f`), sin saturación chillona.
 - **Acentos Dorados de Cava (`amber-200/60` a `amber-200/80`)**: Reservados para números de pasos editoriales, sellos de procedencia y microetiquetas (`font-mono tracking-[0.25em]`).
 - **Bordes de Estructura Limpia (`border-neutral-800` / `border-white/5` / `border-white/10`)**: Delimitación milimétrica de 1px para tarjetas, buscador, inputs y separadores de panel.
 
@@ -52,6 +52,12 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 - **Banner Reactivo de Moderación (`WineryStatusBanner.tsx`)**: Informa de forma transparente y sobria las restricciones de `WineryAccessRules` cuando la bodega está en estado `Pending` o `Rejected`.
 - **Manejo Centralizado de Problem Details (RFC 7807)**: Tratamiento de errores tipados mediante `getProblemDetails()` y `getErrorMessage()`, exponiendo el `detail` de las excepciones de negocio (`NotFoundException`, `ForbiddenException`, `ValidationException`).
 - **Tratamiento del 404 de Cuenta sin Bodega**: Si un usuario con rol `Winery` o `Admin` accede al panel pero no posee una bodega asociada en la base de datos, el layout intercepta el 404 y presenta una vista editorial guiada con opción para registrar su bodega oficial o volver a la cava personal.
+- **Inicio de Panel de Bodega (`WineryDashboardPage.tsx`)**:
+  - **Cabecera Editorial**: Saludo con fecha contextual rioplatense, nombre oficial de la bodega, badge de verificación institucional, terruño geográfico resuelto (`getLocationById`), año de fundación y botón primario de acción rápida (*"Nueva etiqueta"*).
+  - **Cinta de 4 KPIs (`WineryKpiRibbon.tsx`)**: Muestra de forma concisa el total de etiquetas en catálogo, desglose de cosechas activas vs en revisión, seguidores de la comunidad (protegido contra el 404 de bodegas pendientes) y calificación promedio comunitaria con estrellas y total de reseñas.
+  - **Accesos Rápidos (`WineryQuickActions.tsx`)**: Atajos de navegación rápida para publicar etiquetas, reclamar vinos de la comunidad, editar la ficha institucional de la bodega y explorar el catálogo general.
+  - **Checklist Institucional (`WineryChecklistCard.tsx`)**: Guía de completitud del perfil de bodega con cálculo porcentual dinámico (0 a 100%) y enlaces directos para completar ubicación, semblanza histórica, sitio web y primera etiqueta oficial.
+  - **Resumen de Etiquetas (`WineryRecentWines.tsx`)**: Grilla de las últimas botellas oficiales incorporadas con chip de varietal/tipo de vino, calificación agregada y enlace a gestión o estado de empty state con llamada a la acción si aún no hay vinos.
 
 ---
 
@@ -80,7 +86,7 @@ src/frontend/src/
 │   │   └── index.ts           # Barrel export del módulo wines
 │   └── winery/                # Módulo de Bodegas y Productores Oficiales
 │       ├── api/               # Capa API tipada (wineryApi, wineApi, locationApi, grapeApi)
-│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryLoadingState, LocationCascadeSelect, etc.)
+│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryKpiRibbon, WineryQuickActions, WineryChecklistCard, WineryRecentWines, LocationCascadeSelect, etc.)
 │       ├── context/           # Contexto de la bodega activa (WineryContext)
 │       ├── hooks/             # Hooks de sincronización (useMyWinery)
 │       ├── types/             # DTOs y contratos C# (winery, wine, location, grape, problemDetails)
@@ -97,7 +103,7 @@ src/frontend/src/
 │   ├── PairingPage.tsx        # Recomendaciones gastronómicas y maridaje
 │   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
 │   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
-│   ├── WineryDashboardPage.tsx# Vista de inicio del panel oficial de bodega
+│   ├── WineryDashboardPage.tsx# Vista de inicio del panel oficial de bodega (KPIs, Checklist, Quick Actions, Vinos)
 │   └── WineryRegisterPage.tsx # Formulario público de alta de bodega unificada (/bodega/registro)
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
@@ -120,9 +126,16 @@ src/frontend/src/
 1. **Prohibido el uso de `any`**: Cualquier tipo desconocido debe gestionarse con genéricos, tipos de unión discriminada o `unknown` con type guards.
 2. **Interfaces Explícitas para Componentes**: Cada componente debe definir su interfaz `Props` explícita:
    ```typescript
-   export interface WineCardProps {
-     wine: CuratedWine;
-     onSelect: (wine: CuratedWine) => void;
+   export interface WineryKpiRibbonProps {
+     winesCount: number;
+     vintagesCount: number;
+     approvedVintagesCount: number;
+     pendingVintagesCount: number;
+     followersCount: number | null;
+     averageRating: number | null;
+     totalReviews: number;
+     isWineryApproved: boolean;
+     isLoading?: boolean;
    }
    ```
 3. **Calco Estricto de DTOs del Backend**: Todos los modelos de datos en `features/winery/types/` calcan los contratos C# reales (nombres y nulabilidad exacta).
@@ -180,19 +193,17 @@ npm run dev
 
 ### 7.2 Casos de Prueba Interactivos
 
-1. **Flujo de Acceso Institucional**:
-   - Ingresar a la Landing pública `http://localhost:5173/`.
-   - Verificar la presencia del link *"Para bodegas"* en el Navbar y la franja editorial antes del footer.
-   - Hacer click en *"Para bodegas"* $\rightarrow$ Comprobar carga de `http://localhost:5173/para-bodegas`.
-2. **Registro de Bodega y Redirección Automática**:
-   - En `/para-bodegas`, click en *"Registrar mi bodega"* $\rightarrow$ Navega a `http://localhost:5173/bodega/registro`.
-   - Seleccionar Provincia en el selector de ubicación en cascada $\rightarrow$ Comprobar que se cargan las ciudades/terruños correspondientes.
-   - Completar el formulario con datos válidos y aceptar los términos.
-   - Al enviar, comprobar la llamada a `POST /api/wineries/register`, login automático y redirección a `/bodega/dashboard`.
-3. **Redirección de Login por Rol**:
-   - Ingresar con credenciales de un usuario con rol `Winery` en `/login`.
-   - Comprobar que aterriza automáticamente en `/bodega/dashboard` en lugar de `/dashboard`.
-4. **Verificación de Calidad de Código**:
+1. **Inicio del Panel de Bodega (`/bodega/dashboard`)**:
+   - Iniciar sesión con un usuario con rol `Winery` que tenga bodega asociada.
+   - Verificar la cabecera editorial con el nombre de la bodega, badge de estado, terruño y fecha actual.
+   - Comprobar la cinta de 4 KPIs (Etiquetas, Cosechas, Seguidores y Puntaje).
+   - Revisar la tarjeta de primeros pasos (Checklist institucional) y su barra porcentual de progreso.
+   - Explorar los 4 accesos rápidos directos (Publicar etiqueta, Reclamar botellas, Editar perfil, Ver vidriera / Explorar).
+   - Comprobar la grilla de etiquetas recientes o su estado vacío amable si no hay vinos cargados.
+2. **Caso de Cuenta sin Bodega Asociada**:
+   - Iniciar sesión con un usuario con rol `Winery` sin bodega en la base de datos (o cuando `/api/wineries/me` responda 404).
+   - Comprobar que se presenta la pantalla 404 amable ofreciendo registrar su bodega.
+3. **Verificación de Calidad de Código**:
    ```bash
    cd src/frontend
    npm run build  # Compilación estricta TypeScript (0 errores)

@@ -599,3 +599,4 @@ export default function WineryRegisterPage() {
     </div>
   );
 }
+

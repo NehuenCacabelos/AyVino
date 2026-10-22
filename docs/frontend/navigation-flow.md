@@ -121,6 +121,26 @@ flowchart TD
   - **Banner de Moderación (`WineryStatusBanner.tsx`)**: Feedback continuo cuando la bodega está `Pending` o `Rejected`.
   - **Manejo Amable de Cuenta sin Bodega (404)**: Presenta una vista explicativa cuando el usuario con rol de bodega no posee aún una bodega registrada en la base de datos, con enlaces directos para registrarla o regresar al catálogo.
 
+### 2.5 Inicio del Panel de Bodega (`WineryDashboardPage.tsx`)
+- **Saludo Editorial y Cabecera de Bodega**:
+  - Encabezado con fecha contextual rioplatense, nombre oficial de la bodega, badge de verificación institucional (`Oficial`, `En Verificación` o `Observaciones Pendientes`), terruño geográfico resuelto y año de fundación.
+  - Acciones directas: Botón primario *"Nueva etiqueta"* y enlace externo hacia la vidriera pública si la bodega está aprobada.
+- **Cinta de 4 KPIs (`WineryKpiRibbon.tsx`)**:
+  - Cantidad de etiquetas oficiales registradas en el catálogo.
+  - Cosechas registradas con desglose de activas vs en revisión.
+  - Seguidores de la bodega (con resguardo contra el error 404 para bodegas no aprobadas).
+  - Calificación global promedio con estrellas y total de reseñas comunitarias.
+- **Accesos Rápidos Directos (`WineryQuickActions.tsx`)**:
+  - Publicar etiqueta (`/bodega/vinos`).
+  - Reclamar botellas comunitarias (`/bodega/reclamar`).
+  - Editar perfil institucional (`/bodega/perfil`).
+  - Ver vidriera pública o explorar catálogo general (`/catalogo`).
+- **Checklist Institucional (`WineryChecklistCard.tsx`)**:
+  - Guía de primeros pasos con cálculo porcentual dinámico (0 a 100%) y enlaces directos para completar ubicación, semblanza histórica, sitio web y primera etiqueta oficial.
+- **Resumen de Etiquetas Recientes (`WineryRecentWines.tsx`)**:
+  - Previsualización de las últimas botellas oficiales con categoría enológica, puntuación comunitaria y enlace a gestión.
+  - Empty state sobrio integrado con botón para cargar la primera etiqueta si el catálogo está vacío.
+
 ---
 
 ## 3. Vistas Protegidas y Políticas de Acceso
