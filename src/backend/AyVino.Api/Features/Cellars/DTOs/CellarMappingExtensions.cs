@@ -30,6 +30,21 @@ public static class CellarMappingExtensions
     public static IReadOnlyList<CellarItemResponseDto> ToResponseDtoList(this IEnumerable<CellarItemListRow> rows) =>
         rows.Select(r => r.ToResponseDto()).ToList();
 
+    public static PublicCellarItemResponseDto ToPublicResponseDto(this CellarItemListRow row) => new(
+        row.WineVintageId,
+        row.WineId,
+        row.Name,
+        row.WineType.ToString(),
+        row.WineryId,
+        row.WineryNameText,
+        row.Year,
+        row.ImageUrl,
+        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : null,
+        row.ReviewCount);
+
+    public static IReadOnlyList<PublicCellarItemResponseDto> ToPublicResponseDtoList(this IEnumerable<CellarItemListRow> rows) =>
+        rows.Select(r => r.ToPublicResponseDto()).ToList();
+
     public static CellarItem ToEntity(this AddCellarItemRequestDto request, int cellarId) => new()
     {
         CellarId = cellarId,

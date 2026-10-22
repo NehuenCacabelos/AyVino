@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Features.Cellars.Services;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Services;
 using Microsoft.AspNetCore.Builder;
@@ -27,6 +28,24 @@ public static class UserEndpoints
         .WithName("RegisterUser")
         .WithSummary("Registra un nuevo usuario con sus credenciales");
 
+        publicGroup.MapGet("/{username}", async (string username, IUserService userService, CancellationToken ct) =>
+        {
+            var user = await userService.GetPublicProfileByUsernameAsync(username, ct);
+            return Results.Ok(user);
+        })
+        .AllowAnonymous()
+        .WithName("GetPublicUserProfile")
+        .WithSummary("Obtiene el perfil público de un usuario por su nombre de usuario");
+
+        publicGroup.MapGet("/{username}/cellar-items", async (string username, ICellarItemService cellarItemService, CancellationToken ct, int pageNumber = 1, int pageSize = 20) =>
+        {
+            var items = await cellarItemService.GetPublicCellarItemsAsync(username, pageNumber, pageSize, ct);
+            return Results.Ok(items);
+        })
+        .AllowAnonymous()
+        .WithName("GetPublicCellarItems")
+        .WithSummary("Obtiene los vinos públicos en cava de un usuario por su nombre de usuario");
+
         // Grupo para usuarios autenticados (requiere login)
         var authenticatedGroup = app.MapGroup("/api/users")
                                     .WithTags("Users profile")
@@ -49,6 +68,40 @@ public static class UserEndpoints
         })
         .WithName("UpdateMyProfile")
         .WithSummary("Actualiza el perfil del usuario autenticado actual");
+
+        authenticatedGroup.MapPost("/me/avatar", async (IFormFile file, ClaimsPrincipal claimsPrincipal, IUserService userService, IAvatarStorageService avatarStorageService, CancellationToken ct) =>
+        {
+            var userId = claimsPrincipal.GetUserId();
+            var currentUser = await userService.GetByIdAsync(userId, ct);
+
+            if (!string.IsNullOrWhiteSpace(currentUser.Photo))
+            {
+                await avatarStorageService.DeleteAvatarAsync(currentUser.Photo, ct);
+            }
+
+            var relativeUrl = await avatarStorageService.SaveAvatarAsync(userId, file, ct);
+            var updatedUser = await userService.UpdateAvatarAsync(userId, relativeUrl, ct);
+            return Results.Ok(updatedUser);
+        })
+        .DisableAntiforgery()
+        .WithName("UploadMyAvatar")
+        .WithSummary("Sube una foto de perfil personalizada para el usuario autenticado");
+
+        authenticatedGroup.MapDelete("/me/avatar", async (ClaimsPrincipal claimsPrincipal, IUserService userService, IAvatarStorageService avatarStorageService, CancellationToken ct) =>
+        {
+            var userId = claimsPrincipal.GetUserId();
+            var currentUser = await userService.GetByIdAsync(userId, ct);
+
+            if (!string.IsNullOrWhiteSpace(currentUser.Photo))
+            {
+                await avatarStorageService.DeleteAvatarAsync(currentUser.Photo, ct);
+            }
+
+            var updatedUser = await userService.UpdateAvatarAsync(userId, null, ct);
+            return Results.Ok(updatedUser);
+        })
+        .WithName("DeleteMyAvatar")
+        .WithSummary("Elimina la foto de perfil personalizada del usuario autenticado");
 
         // Grupo administrativo (requiere rol Admin)
         var adminGroup = app.MapGroup("/api/users")

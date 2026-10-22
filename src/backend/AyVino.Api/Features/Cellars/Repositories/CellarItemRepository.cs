@@ -65,6 +65,37 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
             }, cancellationToken: ct));
     }
 
+    public async Task<IEnumerable<CellarItemListRow>> GetAllByUsernameAsync(string username, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT DISTINCT ON (ci.wine_vintage_id)
+                   ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
+                   w.name AS Name, w.wine_type AS WineType,
+                   w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
+                   wv.year AS Year, wv.image_url AS ImageUrl,
+                   wv.rating_sum AS RatingSum, wv.review_count AS ReviewCount,
+                   ci.quantity AS Quantity, ci.purchase_date AS PurchaseDate, ci.notes AS Notes,
+                   COALESCE(ci.updated_at, ci.created_at) AS LastChangeAt
+            FROM cellar_items ci
+            JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id
+            JOIN wines w ON w.id = wv.wine_id
+            JOIN cellars c ON c.id = ci.cellar_id
+            JOIN users u ON u.id = c.user_id
+            WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true
+            ORDER BY ci.wine_vintage_id, ci.created_at DESC
+            LIMIT @PageSize OFFSET @Offset;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<CellarItemListRow>(
+            new CommandDefinition(sql, new
+            {
+                Username = username,
+                Offset = (pageNumber - 1) * pageSize,
+                PageSize = pageSize
+            }, cancellationToken: ct));
+    }
+
     public async Task CreateAsync(CellarItem item, CancellationToken ct = default)
     {
         const string sql = """

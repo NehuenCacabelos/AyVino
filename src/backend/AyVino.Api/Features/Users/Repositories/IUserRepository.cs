@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
 
 namespace AyVino.Api.Features.Users.Repositories;
@@ -7,6 +8,7 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
+    Task<PublicUserProfileDto?> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default);
     Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
     Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default);
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);

@@ -127,6 +127,14 @@ export default function Navbar() {
             {isAuthenticated && (
               <>
                 <Link
+                  to={user?.username ? `/perfil/${user.username}` : '/perfil'}
+                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <UserIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span>Perfil</span>
+                </Link>
+
+                <Link
                   to="/dashboard"
                   className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap"
                 >
@@ -252,6 +260,15 @@ export default function Navbar() {
 
             {isAuthenticated && (
               <>
+                <Link
+                  to={user?.username ? `/perfil/${user.username}` : '/perfil'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-xs font-mono uppercase tracking-wider text-neutral-200 hover:text-white py-1 flex items-center gap-2"
+                >
+                  <UserIcon className="w-4 h-4 text-neutral-400" />
+                  Perfil
+                </Link>
+
                 <Link
                   to="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}

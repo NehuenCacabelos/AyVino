@@ -86,6 +86,23 @@ export interface RevokeTokenRequestDto {
 }
 
 /**
+ * Contrato de solicitud para actualizar el perfil del usuario autenticado (C# UpdateUserProfileRequestDto).
+ */
+export interface UpdateUserProfileRequestDto {
+  username: string;
+  bio?: string | null;
+  photo?: string | null;
+}
+
+/**
+ * Contrato de solicitud para cambio de contraseña (C# ChangePasswordRequestDto).
+ */
+export interface ChangePasswordRequestDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/**
  * Payload decodificado del JWT emitido por JwtTokenGenerator.
  * @deprecated Reservado para integración futura con decodificación de JWT en el cliente.
  */

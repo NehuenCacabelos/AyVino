@@ -12,6 +12,8 @@ const CavaPage = lazy(() => import('../pages/CavaPage'));
 const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
+const AccountPage = lazy(() => import('../pages/AccountPage'));
+const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -91,6 +93,31 @@ export default function AppRoutes() {
             <ProtectedRoute>
               <CatalogPage />
             </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta Protegida: Gestión de Cuenta y Perfil */}
+        <Route
+          path="/cuenta"
+          element={
+            <ProtectedRoute>
+              <AccountPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta Pública: Perfil de Usuario por Username */}
+        <Route path="/perfil/:username" element={<ProfilePage />} />
+
+        {/* Redirección /perfil: hacia perfil propio si está logueado, o /login si no */}
+        <Route
+          path="/perfil"
+          element={
+            isAuthenticated && user?.username ? (
+              <Navigate to={`/perfil/${user.username}`} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
 

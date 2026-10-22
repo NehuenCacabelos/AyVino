@@ -184,6 +184,7 @@ builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHostedService<TokenCleanupBackgroundService>();
 builder.Services.AddScoped<IWineryRepository, WineryRepository>();
@@ -274,6 +275,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpLogging(); // Debe ir al inicio del pipeline, antes de UseAuthentication y UseAuthorization
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 // CORS Middleware (debe ejecutarse antes de Authentication y Authorization)
 app.UseCors(frontendCorsPolicy);

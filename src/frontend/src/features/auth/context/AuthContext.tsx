@@ -19,6 +19,7 @@ export interface AuthContextType {
   register: (data: RegisterRequestDto) => Promise<void>;
   loginDemo: (customUser?: Partial<UserProfileDto>) => void;
   logout: () => Promise<void>;
+  updateUserContext: (updatedUser: UserProfileDto) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -149,6 +150,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const updateUserContext = useCallback((updatedUser: UserProfileDto): void => {
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -159,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         register,
         loginDemo,
         logout,
+        updateUserContext,
       }}
     >
       {children}

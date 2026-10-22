@@ -156,8 +156,12 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/users` | Público | Registra un nuevo aficionado en la comunidad con rol inmutable `User`. | `RegisterUserRequestDto` | `201 Created` (`UserResponseDto`) |
+| `GET` | `/api/users/{username}` | Público | Obtiene el perfil público de un usuario por su nombre (avatar, bio, estadísticas) sin exponer datos privados. | - | `200 OK` (`PublicUserProfileDto`) |
+| `GET` | `/api/users/{username}/cellar-items` | Público | Lista los vinos en cava de un usuario para visualización pública en modo solo lectura. | Query params: `pageNumber = 1`, `pageSize = 20` | `200 OK` (`IReadOnlyList<PublicCellarItemResponseDto>`) |
 | `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
+| `POST` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`UserResponseDto`) |
+| `DELETE` | `/api/users/me/avatar` | Autenticado | Elimina la foto de perfil física y restaura el avatar por defecto. | - | `200 OK` (`UserResponseDto`) |
 | `GET` | `/api/users` | Admin (`RequireAdmin`) | Lista paginada de todos los usuarios registrados en el sistema. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UserResponseDto>`) |
 | `GET` | `/api/users/{id}` | Admin (`RequireAdmin`) | Obtiene los detalles de cualquier usuario por ID. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/{id}/profile`| Admin (`RequireAdmin`) | Modifica el perfil de un usuario específico. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |

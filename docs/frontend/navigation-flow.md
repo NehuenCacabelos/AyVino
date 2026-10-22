@@ -27,6 +27,7 @@ flowchart TD
         Cava["/cava -> CavaPage.tsx (Mi Cava & Inventario Personal)"]
         Pairing["/maridaje -> PairingPage.tsx (Curaduría & Maridaje)"]
         Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
+        Account["/cuenta -> AccountPage.tsx (Mi Cuenta & Seguridad)"]
         WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx (Exclusivo Bodega/Admin)"]
     end
 
@@ -44,6 +45,7 @@ flowchart TD
     Landing -->|"Navegación /cava"| Guard
     Landing -->|"Navegación /maridaje"| Guard
     Landing -->|"Navegación /catalogo"| Guard
+    Landing -->|"Navegación /cuenta"| Guard
     Landing -->|"Navegación /bodega/dashboard"| Guard
 
     Guard -->|"!isAuthenticated (con state.from)"| Login
@@ -51,6 +53,7 @@ flowchart TD
     Guard -->|"Navegación /cava (Autenticado)"| Cava
     Guard -->|"Navegación /maridaje (Autenticado)"| Pairing
     Guard -->|"Navegación /catalogo (Autenticado)"| Catalog
+    Guard -->|"Navegación /cuenta (Autenticado)"| Account
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryDash
     Guard -->|"Rol no autorizado"| Dashboard
 
@@ -174,6 +177,37 @@ flowchart TD
     - Píldora con nombre de usuario y badge de rol (`User`, `Winery`, `Admin`).
     - Botón de cierre de sesión (*"Salir"*) con llamada a `logout()` y redirección inmediata a `/` (`navigate('/', { replace: true })`).
 
+### 2.8 Página de Mi Cuenta y Seguridad (`AccountPage.tsx`)
+- Vista post-login dedicada accesible en `/cuenta` (vinculada desde el menú desplegable del Avatar de usuario en `DashboardNavbar` y el menú móvil):
+  - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
+  - Navegación interna por pestañas:
+    - **Pestaña 1 (Perfil General)**:
+      * Avatar con soporte dual: generación de avatar dinámico sobrio e ilustrado mediante DiceBear (`notionists`) a partir del nombre de usuario cuando no hay foto, o visualización de foto física.
+      * Controles para carga de nueva foto de perfil (multipart/form-data, formatos JPG/PNG/WEBP hasta 5MB) y botón para eliminar foto física volviendo al avatar dinámico.
+      * Edición de nombre de usuario (`username`) y biografía (`bio` con límite de hasta 1000 caracteres y contador reactivo en vivo).
+      * Correo electrónico en modo solo lectura por motivos de seguridad con indicador de candado.
+      * Actualización inmediata del contexto global (`AuthContext`) y persistencia local sin recarga.
+    - **Pestaña 2 (Seguridad y Contraseña)**:
+      * Formulario de cambio de contraseña con campos para contraseña actual, nueva contraseña (mínimo 8 caracteres) y confirmación.
+      * Toggles de visibilidad con íconos de ojo/ojo cerrado para cada campo.
+      * Notificación de éxito y reseteo de campos manteniendo la sesión activa.
+
+### 2.9 Página de Perfil de Usuario (`ProfilePage.tsx`)
+- Vista accesible en `/perfil/:username` (pública y canónica) y `/perfil` (redirección contextual al usuario activo o `/login`).
+- **Navegación**: Botón independiente "Perfil" en la barra central de navegación (`DashboardNavbar` y `Navbar`) accesible al iniciar sesión.
+- **Comportamiento Dual según Propietario (`isOwner`)**:
+  - **Vista Propia (`isOwner = true`)**:
+    - Cabecera con avatar dinámico o personalizado, biografía, métricas (vinos en cava, seguidores, siguiendo).
+    - Botón de engranaje (`Settings`) en la esquina de la cabecera que redirige directamente a la gestión de cuenta (`/cuenta`).
+    - Columna lateral (sidebar) con pestañas:
+      * *Mi Cava*: visualización de botellas con cantidades y accesos directos al catálogo y cava completa (`/cava`).
+      * *Historial*: lista de vinos probados y notas de cata.
+      * *Deseados / Favoritos*: etiquetas guardadas para futuras adquisiciones.
+  - **Vista Visitante (`isOwner = false`)**:
+    - Tarjeta de presentación sobria y centrada con foto, biografía y estadísticas públicas.
+    - Botón interactivo de seguimiento (*"Seguir"* / *"Siguiendo"* con verificación reactiva si el visitante ha iniciado sesión).
+    - Sin columna lateral: debajo de la tarjeta se despliega la grilla de botellas de la cava pública en modo solo lectura (sin notas privadas ni cantidades).
+
 ---
 
 ## 3. Vistas Protegidas y Políticas de Acceso
@@ -184,9 +218,12 @@ flowchart TD
 | `/login` | `LoginPage.tsx` | Público (redirige a `state.from` o `/dashboard` si ya está autenticado) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
+| `/perfil/:username` | `ProfilePage.tsx` | Público (todos) | Si no existe el usuario: mensaje 404 sobrio |
+| `/perfil` | Alias Redirección | Todos | Redirige a `/perfil/:myUsername` si está logueado, o `/login` si no |
 | `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/cava` | `CavaPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/maridaje` | `PairingPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
+| `/cuenta` | `AccountPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
