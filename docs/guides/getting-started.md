@@ -23,10 +23,10 @@ El archivo `compose.yml` en la raíz utiliza variables de entorno para inicializ
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=ayvino_db
-POSTGRES_PORT=5433
+POSTGRES_PORT=5432
 ```
 
-> **¿Por qué puerto 5433?** Se utiliza el puerto `5433` por defecto en lugar de `5432` para evitar colisiones con instancias nativas de PostgreSQL que el desarrollador pudiera tener activas en su máquina local.
+> **Puerto 5432 por defecto**: El contenedor mapea y expone la base de datos en el puerto estándar `5432`. Si ya contás con una instancia nativa de PostgreSQL corriendo localmente que ocupe ese puerto, podés configurar `POSTGRES_PORT=5433` como alternativa tanto en tu `.env` como en la cadena de conexión (`Port=5433`) para evitar colisiones.
 
 ### 2.2 Almacenamiento de Imágenes (Supabase Storage)
 Para habilitar la carga de imágenes en `/api/images` (logos de bodegas y fotos de botellas/cosechas), se requiere configurar las credenciales de Supabase Storage.
@@ -132,7 +132,7 @@ Ambos comandos deben culminar con código de salida `0` sin advertencias.
 ## 5. Resolución de Problemas Frecuentes (Troubleshooting)
 
 - **Error de conexión a PostgreSQL (`Npgsql.NpgsqlException`)**:
-  Verifica que el contenedor de Docker esté corriendo con `docker compose ps` y que el puerto en `ConnectionStrings:DefaultConnection` de `appsettings.json` coincida con `POSTGRES_PORT` (por defecto `5433`).
+  Verifica que el contenedor de Docker esté corriendo con `docker compose ps` y que el puerto en `ConnectionStrings:DefaultConnection` (definido en User Secrets o variables de entorno) coincida con `POSTGRES_PORT` (por defecto `5432`, o `5433` si optaste por la alternativa).
 - **Error `401 Unauthorized` al invocar endpoints de administración**:
   Asegúrate de incluir la cabecera `Authorization: Bearer <token>` con un token emitido para un usuario cuyo claim `role` sea `Admin`.
 - **Fallo al compilar el frontend (`tsc not found`)**:
