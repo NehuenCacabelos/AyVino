@@ -514,7 +514,6 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-14">
               {filteredCatena.length > 0 && (
                 <WineryBlock
-                  id={1}
                   name="Bodega Catena Zapata"
                   region="Mendoza, Argentina"
                   initials="CZ"
@@ -529,7 +528,6 @@ export default function DashboardPage() {
 
               {filteredZuccardi.length > 0 && (
                 <WineryBlock
-                  id={2}
                   name="Bodega Zuccardi"
                   region="Valle de Uco, Mendoza"
                   initials="Z"
@@ -544,7 +542,6 @@ export default function DashboardPage() {
 
               {filteredElEnemigo.length > 0 && (
                 <WineryBlock
-                  id={3}
                   name="Bodega El Enemigo"
                   region="Gualtallary, Mendoza"
                   initials="EE"
@@ -559,7 +556,6 @@ export default function DashboardPage() {
 
               {filteredColome.length > 0 && (
                 <WineryBlock
-                  id={4}
                   name="Bodega Colomé"
                   region="Molinos, Salta"
                   initials="C"

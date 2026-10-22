@@ -79,13 +79,9 @@ export default function WineryBlock({
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
           </Link>
         ) : (
-          <a
-            href="#catalogo"
-            className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
-          >
-            <span>Ver catálogo completo ({total})</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
-          </a>
+          <span className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-500 font-mono">
+            <span>{total} {total === 1 ? 'etiqueta' : 'etiquetas'}</span>
+          </span>
         )}
       </header>
 

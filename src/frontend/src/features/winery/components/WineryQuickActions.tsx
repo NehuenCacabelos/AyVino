@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus, Sparkles, Building2, Compass, ArrowUpRight } from 'lucide-react';
+import { Plus, Sparkles, Building2, ArrowUpRight } from 'lucide-react';
 
 export interface WineryQuickActionsProps {
   wineryId?: number;
@@ -8,9 +8,11 @@ export interface WineryQuickActionsProps {
 
 /**
  * WineryQuickActions Component
- * Grilla de 4 accesos rápidos directos a las tareas operativas clave de la bodega.
+ * Grilla de accesos directos a las tareas operativas clave de la bodega.
  */
 export default function WineryQuickActions({ wineryId, isApproved }: WineryQuickActionsProps) {
+  const canViewPublicProfile = Boolean(isApproved && wineryId);
+
   const actions = [
     {
       title: 'Publicar etiqueta',
@@ -19,6 +21,7 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
       icon: Plus,
       badge: 'Catálogo',
       color: 'rose',
+      disabled: false,
     },
     {
       title: 'Reclamar vinos comunitarios',
@@ -27,6 +30,7 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
       icon: Sparkles,
       badge: 'Comunidad',
       color: 'amber',
+      disabled: false,
     },
     {
       title: 'Editar perfil de bodega',
@@ -35,16 +39,18 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
       icon: Building2,
       badge: 'Institucional',
       color: 'stone',
+      disabled: false,
     },
     {
-      title: isApproved && wineryId ? 'Ver perfil público' : 'Explorar catálogo general',
-      description: isApproved && wineryId
+      title: canViewPublicProfile ? 'Ver perfil público' : 'Perfil público (en revisión)',
+      description: canViewPublicProfile
         ? 'Consultá cómo los miembros y sommeliers visualizan la vidriera de tu bodega.'
-        : 'Revisá las tendencias del mercado, etiquetas populares y valoraciones de la comunidad.',
-      to: isApproved && wineryId ? `/bodegas/${wineryId}` : '/catalogo',
-      icon: isApproved && wineryId ? ArrowUpRight : Compass,
-      badge: isApproved && wineryId ? 'Vista Externa' : 'Tendencias',
+        : 'Tu vidriera oficial estará visible para toda la comunidad cuando tu bodega sea aprobada.',
+      to: canViewPublicProfile ? `/bodegas/${wineryId}` : undefined,
+      icon: ArrowUpRight,
+      badge: canViewPublicProfile ? 'Vista Externa' : 'En Espera',
       color: 'stone',
+      disabled: !canViewPublicProfile,
     },
   ];
 
@@ -62,6 +68,39 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {actions.map((act) => {
           const Icon = act.icon;
+
+          if (act.disabled || !act.to) {
+            return (
+              <div
+                key={act.title}
+                className="p-5 rounded-2xl bg-[#141416]/50 border border-white/5 flex flex-col justify-between shadow-lg opacity-60 cursor-default"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center border shadow-sm bg-stone-900 border-white/10 text-neutral-400">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">
+                      {act.badge}
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-base font-semibold text-neutral-300">
+                    {act.title}
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1.5 font-sans leading-relaxed">
+                    {act.description}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono uppercase tracking-wider text-neutral-500">
+                  <span>Disponible al aprobar</span>
+                  <span>—</span>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <Link
               key={act.title}

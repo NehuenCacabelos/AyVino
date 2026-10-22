@@ -117,7 +117,7 @@ flowchart TD
 - **Formulario de Registro Unificado (`/bodega/registro`)**:
   - Estética split-card en dos columnas con panel fotográfico vertical.
   - Registro conjunto del usuario administrador (nombre, email, contraseña con revelador visual y validación de 8 caracteres) y de la bodega (nombre, terruño, año de fundación, web y semblanza histórica).
-  - Selector de terruño en cascada ([`LocationCascadeSelect.tsx`](../../src/frontend/src/features/winery/components/LocationCascadeSelect.tsx)) que sincroniza en tiempo real provincias argentinas y sus ciudades asociadas.
+  - Selector de terruño interactivo ([`RegionPicker.tsx`](../../src/frontend/src/features/winery/components/RegionPicker.tsx)) con mapa Leaflet OpenStreetMap y resolución oficial de departamentos Georef o selección manual en cascada.
   - Proceso transaccional completo: `registerWinery()` $\rightarrow$ login automático $\rightarrow$ redirección a `/bodega/dashboard`.
 
 ### 2.3 Pantalla de Inicio de Sesión (`LoginPage.tsx`) y Registro (`RegisterPage.tsx`)

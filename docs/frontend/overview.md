@@ -59,7 +59,7 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 - **Inicio de Panel de Bodega (`WineryDashboardPage.tsx`)**:
   - **Cabecera Editorial**: Saludo con fecha contextual rioplatense, nombre oficial de la bodega, badge de verificación institucional, terruño geográfico resuelto (`getLocationById`), año de fundación y botón primario de acción rápida (*"Nueva etiqueta"*).
   - **Cinta de 4 KPIs (`WineryKpiRibbon.tsx`)**: Muestra de forma concisa el total de etiquetas en catálogo, desglose de cosechas activas vs en revisión, seguidores de la comunidad (protegido contra el 404 de bodegas pendientes) y calificación promedio comunitaria con estrellas y total de reseñas.
-  - **Accesos Rápidos (`WineryQuickActions.tsx`)**: Atajos de navegación rápida para publicar etiquetas, reclamar vinos de la comunidad, editar la ficha institucional de la bodega y explorar el catálogo general.
+  - **Accesos Rápidos (`WineryQuickActions.tsx`)**: Atajos de navegación rápida para publicar etiquetas, reclamar vinos de la comunidad, editar la ficha institucional de la bodega y acceder a la vidriera pública oficial cuando se encuentre aprobada.
   - **Checklist Institucional (`WineryChecklistCard.tsx`)**: Guía de completitud del perfil de bodega con cálculo porcentual dinámico (0 a 100%) y enlaces directos para completar logo oficial, semblanza histórica, sitio web y primera etiqueta oficial (la región ya no es un ítem porque siempre existe desde el registro).
   - **Resumen de Etiquetas (`WineryRecentWines.tsx`)**: Grilla de las últimas botellas oficiales incorporadas con chip de varietal/tipo de vino, calificación agregada y enlace a gestión o estado de empty state con llamada a la acción si aún no hay vinos.
 - **Perfil de Bodega con Gestión de Logo y Región (`WineryProfilePage.tsx`)**:
@@ -120,7 +120,7 @@ src/frontend/src/
 │   │   └── index.ts           # Barrel export del módulo wines
 │   └── winery/                # Módulo de Bodegas y Productores Oficiales
 │       ├── api/               # Capa API tipada (wineryApi, wineApi, locationApi, grapeApi)
-│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryKpiRibbon, WineryQuickActions, WineryChecklistCard, WineryRecentWines, LocationCascadeSelect, WineCreateModal, WineVintagesModal, etc.)
+│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryKpiRibbon, WineryQuickActions, WineryChecklistCard, WineryRecentWines, RegionPicker, WineCreateModal, WineVintagesModal, etc.)
 │       ├── context/           # Contexto de la bodega activa (WineryContext)
 │       ├── hooks/             # Hooks de sincronización (useMyWinery)
 │       ├── types/             # DTOs y contratos C# (winery, wine, location, grape, problemDetails)

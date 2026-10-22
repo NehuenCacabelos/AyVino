@@ -131,8 +131,8 @@ export default function WineryPublicProfilePage() {
         setIsFollowing(true);
         setFollowersCount((prev) => prev + 1);
       }
-    } catch (err) {
-      console.error('Error al seguir/dejar de seguir a la bodega:', err);
+    } catch {
+      // Fallo silencioso de acción de seguimiento
     } finally {
       setIsFollowingAction(false);
     }

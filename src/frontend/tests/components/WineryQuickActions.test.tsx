@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import WineryQuickActions from '@/features/winery/components/WineryQuickActions';
 
 describe('WineryQuickActions', () => {
-  it('renders all standard quick actions and explores catalog when winery is not approved', () => {
+  it('renders operational quick actions and shows public profile as pending when winery is not approved', () => {
     render(
       <MemoryRouter>
         <WineryQuickActions wineryId={5} isApproved={false} />
@@ -15,13 +15,17 @@ describe('WineryQuickActions', () => {
     expect(screen.getByText('Publicar etiqueta')).toBeInTheDocument();
     expect(screen.getByText('Reclamar vinos comunitarios')).toBeInTheDocument();
     expect(screen.getByText('Editar perfil de bodega')).toBeInTheDocument();
-    expect(screen.getByText('Explorar catálogo general')).toBeInTheDocument();
+    expect(screen.getByText('Perfil público (en revisión)')).toBeInTheDocument();
+    expect(screen.getByText('Disponible al aprobar')).toBeInTheDocument();
+
+    // Must NOT contain explore catalog general button nor links to /catalogo
+    expect(screen.queryByText('Explorar catálogo general')).not.toBeInTheDocument();
 
     const links = screen.getAllByRole('link');
     expect(links.some((l) => l.getAttribute('href') === '/bodega/vinos')).toBe(true);
     expect(links.some((l) => l.getAttribute('href') === '/bodega/reclamar')).toBe(true);
     expect(links.some((l) => l.getAttribute('href') === '/bodega/perfil')).toBe(true);
-    expect(links.some((l) => l.getAttribute('href') === '/catalogo')).toBe(true);
+    expect(links.some((l) => l.getAttribute('href') === '/catalogo')).toBe(false);
   });
 
   it('renders "Ver perfil público" pointing to /bodegas/:id when approved', () => {
