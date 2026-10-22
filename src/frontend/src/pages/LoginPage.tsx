@@ -78,21 +78,6 @@ export default function LoginPage() {
 
     try {
       await login({ email: email.trim(), password });
-
-      // Determinar destino según rol persistido si no hay redirección previa explícita
-      let defaultPath = '/dashboard';
-      const storedUserRaw = localStorage.getItem('user');
-      if (storedUserRaw) {
-        try {
-          const parsed = JSON.parse(storedUserRaw) as { role?: string };
-          if (parsed.role === 'Winery') {
-            defaultPath = '/bodega/dashboard';
-          }
-        } catch {
-          // fallback a /dashboard
-        }
-      }
-      navigate(customRedirectPath ?? defaultPath, { replace: true });
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
