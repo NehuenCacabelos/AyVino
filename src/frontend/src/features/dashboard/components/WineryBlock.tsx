@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ArrowRight, Heart, Plus, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import BottleVector from './BottleVector';
 import type { DashboardWine } from '../../../types/wine';
 
 export interface WineryBlockProps {
+  id?: number | string;
   name: string;
   region: string;
   initials: string;
@@ -19,6 +21,7 @@ export interface WineryBlockProps {
  * border-neutral-800 y tipografía editorial Fraunces.
  */
 export default function WineryBlock({
+  id,
   name,
   region,
   initials,
@@ -35,6 +38,8 @@ export default function WineryBlock({
     setFavorites((prev) => ({ ...prev, [wineName]: nextState }));
     onToggleFavorite?.(wine, nextState);
   };
+
+  const targetUrl = id ? `/bodegas/${id}` : '#catalogo';
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-6">
@@ -54,18 +59,34 @@ export default function WineryBlock({
               {region}
             </p>
             <h3 id={headingId} className="font-serif text-2xl sm:text-3xl font-semibold text-neutral-100 tracking-tight">
-              {name}
+              {id ? (
+                <Link to={targetUrl} className="hover:text-amber-200 transition-colors">
+                  {name}
+                </Link>
+              ) : (
+                name
+              )}
             </h3>
           </div>
         </div>
 
-        <a
-          href="#catalogo"
-          className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
-        >
-          <span>Ver catálogo completo ({total})</span>
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
-        </a>
+        {id ? (
+          <Link
+            to={targetUrl}
+            className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
+          >
+            <span>Ver catálogo completo ({total})</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
+          </Link>
+        ) : (
+          <a
+            href="#catalogo"
+            className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
+          >
+            <span>Ver catálogo completo ({total})</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
+          </a>
+        )}
       </header>
 
       {/* Grilla de Vinos */}
