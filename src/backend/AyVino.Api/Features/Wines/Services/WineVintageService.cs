@@ -9,6 +9,7 @@ using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Wines.Services;
@@ -17,7 +18,8 @@ public class WineVintageService(
     IWineVintageRepository vintageRepository,
     IWineRepository wineRepository,
     IGrapeRepository grapeRepository,
-    IWineryRepository wineryRepository) : IWineVintageService
+    IWineryRepository wineryRepository,
+    IImageStorage? imageStorage = null) : IWineVintageService
 {
     public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, Actor? actor = null, CancellationToken ct = default)
     {
@@ -117,6 +119,12 @@ public class WineVintageService(
                 throw new ForbiddenException("La bodega debe estar aprobada o pendiente para crear cosechas.");
         }
 
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            if (imageStorage != null && !imageStorage.IsUrlFromStorage(dto.ImageUrl))
+                throw new ValidationException("La URL de la imagen debe pertenecer al almacenamiento oficial del sistema.");
+        }
+
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
@@ -149,6 +157,12 @@ public class WineVintageService(
                         ? "No podés editar una cosecha que ya fue moderada."
                         : "No tenés permiso para editar esta cosecha.");
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            if (imageStorage != null && !imageStorage.IsUrlFromStorage(dto.ImageUrl))
+                throw new ValidationException("La URL de la imagen debe pertenecer al almacenamiento oficial del sistema.");
         }
 
         await ValidateGrapesAsync(dto.Grapes, ct);

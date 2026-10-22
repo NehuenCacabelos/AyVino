@@ -187,3 +187,4 @@ public class WineVisibilityTests
         Assert.Equal(3, result.Count);
     }
 }
+

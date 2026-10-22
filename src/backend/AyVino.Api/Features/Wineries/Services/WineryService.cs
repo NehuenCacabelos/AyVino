@@ -10,6 +10,7 @@ using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wineries.Repositories;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wineries.Rules;
 
 namespace AyVino.Api.Features.Wineries.Services;
@@ -20,7 +21,8 @@ public class WineryService(
     ICityRepository cityRepository,
     IGeorefClient georefClient,
     IUserService userService,
-    IJwtTokenGenerator jwtTokenGenerator) : IWineryService
+    IJwtTokenGenerator jwtTokenGenerator,
+    IImageStorage? imageStorage = null) : IWineryService
 {
     // Constructor de compatibilidad para tests existentes
     public WineryService(
@@ -28,7 +30,7 @@ public class WineryService(
         ILocationRepository locationRepository,
         IUserService userService,
         IJwtTokenGenerator jwtTokenGenerator)
-        : this(wineryRepository, locationRepository, null!, null!, userService, jwtTokenGenerator)
+        : this(wineryRepository, locationRepository, null!, null!, userService, jwtTokenGenerator, null)
     {
     }
 
@@ -106,6 +108,12 @@ public class WineryService(
             targetLongitude = existing.Longitude;
         }
 
+        if (!string.IsNullOrWhiteSpace(dto.LogoUrl))
+        {
+            if (imageStorage != null && !imageStorage.IsUrlFromStorage(dto.LogoUrl))
+                throw new ValidationException("La URL del logo debe pertenecer al almacenamiento oficial del sistema.");
+        }
+
         var winery = existing with
         {
             Name = dto.Name,
@@ -114,7 +122,8 @@ public class WineryService(
             Latitude = targetLatitude,
             Longitude = targetLongitude,
             FoundationYear = dto.FoundationYear,
-            Website = dto.Website
+            Website = dto.Website,
+            LogoUrl = dto.LogoUrl ?? existing.LogoUrl
         };
 
         var updated = await wineryRepository.UpdateAsync(winery, ct);

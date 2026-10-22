@@ -36,6 +36,7 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
 | `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
 | `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
+| `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
 
 ---
 
@@ -116,6 +117,9 @@ erDiagram
         string website_url
         string email
         string phone
+        string logo_url "nullable"
+        decimal latitude "nullable"
+        decimal longitude "nullable"
         int status "Pending/Approved/Rejected"
     }
 

@@ -1,5 +1,4 @@
 using AyVino.Api.Common.Data;
-using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Models;
 using Dapper;
 
@@ -9,7 +8,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 {
     private const string SelectColumns = """
         w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
-        w.user_id, w.status, w.register_date, w.latitude, w.longitude,
+        w.user_id, w.status, w.register_date, w.latitude, w.longitude, w.logo_url,
         s.name AS StateName, c.name AS RegionName
         FROM wineries w
         LEFT JOIN locations l ON l.id = w.location_id
@@ -57,8 +56,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude)
-            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude)
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_url)
+            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoUrl)
             RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -75,7 +74,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 Status = (int)winery.Status,
                 winery.RegisterDate,
                 winery.Latitude,
-                winery.Longitude
+                winery.Longitude,
+                winery.LogoUrl
             }, cancellationToken: ct));
 
         return winery with { Id = id };
@@ -91,7 +91,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 foundation_year = @FoundationYear,
                 website = @Website,
                 latitude = @Latitude,
-                longitude = @Longitude
+                longitude = @Longitude,
+                logo_url = @LogoUrl
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -105,8 +106,18 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.FoundationYear,
                 winery.Website,
                 winery.Latitude,
-                winery.Longitude
+                winery.Longitude,
+                winery.LogoUrl
             }, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = "DELETE FROM wineries WHERE id = @Id;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         return rowsAffected > 0;
     }
 
@@ -123,18 +134,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
         return rowsAffected > 0;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
-    {
-        const string sql = "DELETE FROM wineries WHERE id = @Id;";
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
-        return rowsAffected > 0;
-    }
-
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "SELECT EXISTS(SELECT 1 FROM wineries WHERE id = @Id);";
+        const string sql = "SELECT 1 FROM wineries WHERE id = @Id LIMIT 1;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));

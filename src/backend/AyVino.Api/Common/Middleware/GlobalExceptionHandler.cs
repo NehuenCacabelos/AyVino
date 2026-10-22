@@ -67,9 +67,10 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         StatusCodes.Status403Forbidden => "Acceso prohibido",
         StatusCodes.Status404NotFound => "Recurso no encontrado",
         StatusCodes.Status409Conflict => "Conflicto de recursos",
+        StatusCodes.Status413PayloadTooLarge => "Carga demasiado grande",
+        StatusCodes.Status415UnsupportedMediaType => "Tipo de medio no soportado",
         StatusCodes.Status422UnprocessableEntity => "Entidad no procesable",
         StatusCodes.Status503ServiceUnavailable => "Servicio no disponible",
         _ => "Error en la solicitud"
     };
 }
-

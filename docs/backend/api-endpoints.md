@@ -66,6 +66,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `Description` | `[StringLength(1000)]` | "La descripción no puede superar los 1000 caracteres." |
 | | | `FoundationYear` | `[Range(1000, 2100)]` | "El año de fundación debe estar entre 1000 y 2100." |
 | | | `Website` | `[Url]`, `[StringLength(200)]` | "El sitio web debe ser una URL válida." / "El sitio web no puede superar los 200 caracteres." |
+| | | `LogoUrl` | `[Url]`, `[StringLength(500)]` | "La URL del logo no puede superar los 500 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. |
 | | `RegisterWineryRequestDto` | Campos de usuario (`Username`, `Email`, `Password`) + campos de bodega (`WineryName`, `LocationId`, etc.). | | |
 | | `ChangeWineryStatusRequestDto` | `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
 | **Locations**| `CreateCityRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la ciudad es obligatorio." / "El nombre de la ciudad no puede superar los 100 caracteres." |
@@ -90,7 +91,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `AlcoholContent` | `[Range(0.0, 99.99)]` | "El contenido de alcohol debe estar entre 0 y 99.99." |
 | | | `ServingTemperature`| `[Range(0, 30)]` | "La temperatura de servicio debe estar entre 0 y 30 °C." |
 | | | `AgingAdvice` | `[StringLength(500)]` | "El consejo de guarda no puede superar los 500 caracteres." |
-| | | `ImageUrl` | `[Url]`, `[StringLength(300)]` | "La imagen debe ser una URL válida." / "La URL de la imagen no puede superar los 300 caracteres." |
+| | | `ImageUrl` | `[Url]`, `[StringLength(300)]` | "La imagen debe ser una URL válida." / "La URL de la imagen no puede superar los 300 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. |
 | | | `Grapes` | `[MaxLength(20)]` (valida items recursivos) | "Una cosecha no puede tener más de 20 uvas." |
 | | `WineGrapeRequestDto` | `GrapeId` | `[Range(1, int.MaxValue)]` | "El id de la uva debe ser mayor a 0." |
 | | | `Percentage` | `[Range(0.01, 100.0)]` | "El porcentaje debe estar entre 0.01 y 100." |
@@ -349,4 +350,22 @@ Cálculo de temperatura óptima de servicio, tiempo y conveniencia de decantaci�
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wines/{wineId}/vintages/{vintageId}/care-recommendations` | Público | Retorna consejos enológicos basados en datos declarados por la bodega o heurísticas del motor. | - | `200 OK` (`WineCareResponseDto`) |
+
+---
+
+## 15. Almacenamiento de Imágenes (`/api/images`)
+
+Subida y validación estricta de imágenes para logotipos de bodegas y fotografías de botellas/cosechas en Supabase Storage.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/images` | Autenticado | Sube una imagen a Supabase Storage (`multipart/form-data`) validando folder, tamaño (máx 2 MB) y magic bytes (JPEG, PNG, WebP). | Form: `file` (`IFormFile`), `folder` (`wineries` \| `vintages`) | `201 Created` (`ImageUploadResponseDto`: `{ "url": "..." }`) |
+
+### Reglas y Restricciones de `/api/images`
+- **Carpetas admitidas (`folder`)**: Únicamente `wineries` o `vintages`. Cualquier otro valor es rechazado con `400 Bad Request`.
+- **Límite de tamaño**: 2 MB (2,097,152 bytes). Archivos mayores devuelven `413 Payload Too Large`.
+- **Formatos y Magic Bytes**: Se validan los primeros bytes reales del stream (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF....WEBP`). Archivos con magic bytes inválidos o extensiones no soportadas devuelven `415 Unsupported Media Type`.
+- **Nombres de archivo**: Se asigna un GUID único para evitar colisiones y sobreescrituras accidentales.
+- **Disponibilidad de Supabase**: Si la API no tiene configuradas las credenciales del bucket (`Supabase:Url`, `Supabase:ServiceRoleKey` o `Supabase:Bucket`), el endpoint responde de manera segura con `503 Service Unavailable`.
+
 

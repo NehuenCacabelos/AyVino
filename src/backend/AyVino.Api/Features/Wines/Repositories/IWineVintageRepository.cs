@@ -20,3 +20,4 @@ public interface IWineVintageRepository
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
 }
+

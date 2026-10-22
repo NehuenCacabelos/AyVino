@@ -28,6 +28,26 @@ POSTGRES_PORT=5433
 
 > **¿Por qué puerto 5433?** Se utiliza el puerto `5433` por defecto en lugar de `5432` para evitar colisiones con instancias nativas de PostgreSQL que el desarrollador pudiera tener activas en su máquina local.
 
+### 2.2 Almacenamiento de Imágenes (Supabase Storage)
+Para habilitar la carga de imágenes en `/api/images` (logos de bodegas y fotos de botellas/cosechas), se requiere configurar las credenciales de Supabase Storage.
+
+**Importante:** Por seguridad, las credenciales nunca deben comitearse a `appsettings.json`. En desarrollo local se utilizan **.NET User Secrets**:
+
+```bash
+cd src/backend/AyVino.Api
+dotnet user-secrets set "Supabase:Url" "https://<tu-proyecto>.supabase.co"
+dotnet user-secrets set "Supabase:ServiceRoleKey" "<tu-service-role-key>"
+dotnet user-secrets set "Supabase:Bucket" "ayvino-images"
+```
+
+En entornos de producción, staging o CI/CD, pueden proveerse como variables de entorno estándar:
+- `Supabase__Url`
+- `Supabase__ServiceRoleKey`
+- `Supabase__Bucket`
+
+> **Degradación Elegante:** Si estas claves no están configuradas en el entorno local, la aplicación inicia y opera con normalidad para todas sus funcionalidades; únicamente el endpoint `POST /api/images` responderá con código `503 Service Unavailable` explicando que el servicio de almacenamiento no se encuentra configurado.
+
+
 ---
 
 ## 3. Puesta en Marcha Paso a Paso
