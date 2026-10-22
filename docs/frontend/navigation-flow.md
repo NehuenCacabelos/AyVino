@@ -12,6 +12,7 @@ flowchart TD
         Landing["/ -> Landing.tsx (Hero + Muestra Curada + Franja Bodegas)"]
         ForWineries["/para-bodegas -> ForWineriesPage.tsx (Propuesta de Valor)"]
         WineryRegister["/bodega/registro -> WineryRegisterPage.tsx (Alta Unificada)"]
+        WineryPublicProfile["/bodegas/:id -> WineryPublicProfilePage.tsx (Vidriera Pública)"]
         Login["/login -> LoginPage.tsx (Acceso Editorial con Redirección Contextual)"]
         Register["/register -> RegisterPage.tsx (Alta de Usuario Libre)"]
         Terms["/terms -> TermsPage.tsx (Términos y Condiciones)"]
@@ -34,8 +35,17 @@ flowchart TD
             WineryLayoutComponent["WineryLayout.tsx (Header + Sidebar + Contexto)"]
             WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx"]
             WineryProfile["/bodega/perfil -> WineryProfilePage.tsx"]
+            WineryWines["/bodega/vinos -> WineryWinesPage.tsx"]
+            WineryClaim["/bodega/reclamar -> WineryClaimPage.tsx"]
+            WineCreateModalComponent["WineCreateModal (Alta + Corte Varietal)"]
+            WineVintagesModalComponent["WineVintagesModal (Gestión de Cosechas)"]
+
             WineryLayoutComponent --> WineryDash
             WineryLayoutComponent --> WineryProfile
+            WineryLayoutComponent --> WineryWines
+            WineryLayoutComponent --> WineryClaim
+            WineryWines --> WineCreateModalComponent
+            WineryWines --> WineVintagesModalComponent
         end
     end
 
@@ -45,6 +55,8 @@ flowchart TD
     ForWineries -->|"Click en 'Registrar mi bodega'"| WineryRegister
     Landing -->|"Navegación /login"| Login
     Landing -->|"Navegación /register"| Register
+    Landing -->|"Enlace /bodegas/:id"| WineryPublicProfile
+    WineryPublicProfile -->|"Click en tarjeta de vino"| DetailModal
     Login -->|"Enlace a términos"| Terms
     Register -->|"Enlace a términos"| Terms
     WineryRegister -->|"Enlace a términos"| Terms
@@ -150,6 +162,42 @@ flowchart TD
 - **Vista Previa Editorial en Vivo (Split View)**:
   - Panel lateral permanente que refleja de manera instantánea el monograma con iniciales enológicas, nombre en tipografía Serif noble, badges de verificación, terruño geográfico y párrafos de la semblanza histórica tal como los miembros de la comunidad los visualizarán en la vidriera pública (`/bodegas/:id`).
 
+### 2.7 Catálogo y Gestión de Etiquetas Oficiales (`WineryWinesPage.tsx`)
+- **Explorador y Filtros de Etiquetas**:
+  - Buscador reactivo por nombre de etiqueta.
+  - Filtros por categoría enológica (`Todos`, `Red`, `White`, `Rose`, `Sparkling`, `Orange`) con conteo dinámico.
+  - Apertura contextual directa de modal vía query string (`?action=new` o `?nuevo=1`).
+  - Tarjetas con visualización de estado de cosechas (`Aprobada`, `En revisión`, `Rechazada`).
+- **Modal de Alta de Etiqueta (`WineCreateModal.tsx`)**:
+  - Creación unificada de etiqueta y cosecha inaugural (`POST /api/wines`).
+  - Compositor de cortes varietales dinámico con uvas consultadas en `/api/grapes`.
+  - Validación de porcentaje acumulado $\le 100\%$ y validación de año y graduación alcohólica opcional.
+- **Modal de Gestión de Cosechas (`WineVintagesModal.tsx`)**:
+  - Consulta y listado reactivo de cosechas por vino (`GET /api/wines/{wineId}/vintages`).
+  - Badges de estado de moderación editorial.
+  - Formulario para incorporar nuevas cosechas con año y graduación alcohólica opcional.
+
+### 2.8 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx`)
+- **Detección Automática de Candidatos**:
+  - Consulta de botellas comunitarias mediante `GET /api/wines/claim-candidates/{wineryId}`.
+  - Aviso editorial protector si la bodega se encuentra en estado `Pending`, inhabilitando el botón de reclamo hasta que sea certificada.
+- **Selección Masiva y Preservación de Reseñas**:
+  - Checkboxes interactivos por etiqueta y control maestro *"Seleccionar todos"*.
+  - Garantía de preservación de reseñas, notas de cata y calificaciones de los usuarios.
+  - Ejecución del reclamo institucional atómico mediante `POST /api/wines/claim`.
+
+### 2.9 Vidriera Pública de Bodega (`WineryPublicProfilePage.tsx` en `/bodegas/:id`)
+- **Acceso Público Universal**:
+  - Vidriera accesible tanto para visitantes anónimos como para usuarios registrados.
+- **Cabecera Editorial y Perfil de Terruño**:
+  - Monograma circular con iniciales de la bodega (`getWineryInitials`).
+  - Ubicación geográfica y terruño resuelto (`getLocationById`).
+  - Año de fundación, enlace al sitio web oficial y semblanza histórica completa.
+- **Interacción Social y Catálogo de Botellas**:
+  - Botón de *"Seguir bodega"* / *"Siguiendo"* con contador reactivo de seguidores y manejo automático de estado (`followWinery` / `unfollowWinery`).
+  - Grilla de etiquetas oficiales representadas con [`WineCard.tsx`](../../src/frontend/src/features/wines/components/WineCard.tsx).
+  - Apertura directa de la ficha técnica completa en [`WineDetailModal.tsx`](../../src/frontend/src/features/wines/components/WineDetailModal.tsx).
+
 ---
 
 ## 3. Vistas Protegidas y Políticas de Acceso
@@ -159,6 +207,7 @@ flowchart TD
 | `/` | `Landing.tsx` | Público (todos) | Redirige al dashboard según rol si ya está autenticado |
 | `/para-bodegas` | `ForWineriesPage.tsx` | Público (todos) | N/A |
 | `/bodega/registro` | `WineryRegisterPage.tsx` | Público | Si ya está autenticado como `Winery`/`Admin`, redirige a `/bodega/dashboard` |
+| `/bodegas/:id` | `WineryPublicProfilePage.tsx` | Público (todos) | N/A |
 | `/login` | `LoginPage.tsx` | Público (redirige a `state.from`, `/bodega/dashboard` o `/dashboard`) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
@@ -170,4 +219,6 @@ flowchart TD
 | `/bodega` | `WineryLayout.tsx` | Exclusivo `Winery` o `Admin` | Redirige internamente a `/bodega/dashboard` |
 | `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
 | `/bodega/perfil` | `WineryProfilePage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
+| `/bodega/vinos` | `WineryWinesPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
+| `/bodega/reclamar` | `WineryClaimPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
 | `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |

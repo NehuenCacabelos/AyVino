@@ -15,11 +15,14 @@ const CatalogPage = lazy(() => import('../pages/CatalogPage'));
 // Vistas institucionales y públicas de Bodega
 const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
 const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
+const WineryPublicProfilePage = lazy(() => import('../pages/WineryPublicProfilePage'));
 
 // Layout y vistas del panel de Bodega
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryProfilePage = lazy(() => import('../pages/WineryProfilePage'));
+const WineryWinesPage = lazy(() => import('../pages/WineryWinesPage'));
+const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -39,7 +42,7 @@ function RouteFallbackLoader() {
 
 /**
  * Configuración Central de Rutas de la Aplicación (AyVino).
- * Integra rutas públicas (Landing, Login, Register, Terms, Para Bodegas, Registro Bodega),
+ * Integra rutas públicas (Landing, Login, Register, Terms, Para Bodegas, Registro Bodega, Perfil Público de Bodega),
  * protegidas generales (Dashboard, Catálogo, Cava, Maridaje) y protegidas por rol de bodega/administrador (/bodega/*).
  * Cada vista se carga de forma diferida con React.lazy para optimizar el bundle inicial.
  */
@@ -62,6 +65,7 @@ export default function AppRoutes() {
         {/* Rutas Públicas Institucionales de Bodega */}
         <Route path="/para-bodegas" element={<ForWineriesPage />} />
         <Route path="/bodega/registro" element={<WineryRegisterPage />} />
+        <Route path="/bodegas/:id" element={<WineryPublicProfilePage />} />
 
         {/* Ruta Protegida: Dashboard Principal Post-Login */}
         <Route
@@ -118,6 +122,8 @@ export default function AppRoutes() {
           <Route index element={<Navigate to="/bodega/dashboard" replace />} />
           <Route path="dashboard" element={<WineryDashboardPage />} />
           <Route path="perfil" element={<WineryProfilePage />} />
+          <Route path="vinos" element={<WineryWinesPage />} />
+          <Route path="reclamar" element={<WineryClaimPage />} />
         </Route>
 
         {/* Fallback 404: Redirigir a inicio */}

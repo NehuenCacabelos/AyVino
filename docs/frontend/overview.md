@@ -62,6 +62,27 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
   - **Edición en Tiempo Real (`PUT /api/wineries/{id}`)**: Formulario Clean Dark que actualiza nombre, terruño (`LocationCascadeSelect`), año de fundación, sitio web y semblanza histórica (hasta 2000 caracteres con contador de longitud).
   - **Previsualización Editorial Interactiva (Split View)**: Columna lateral persistente que refleja en tiempo real cómo se visualiza la vidriera pública (`/bodegas/:id`) con monograma circular grande, metadatos y párrafos enológicos.
   - **Sincronización Global**: Tras guardar exitosamente, dispara `reload()` en `useWinery()` para actualizar inmediatamente el sidebar, layout y dashboard sin recargar la aplicación.
+- **Gestión de Etiquetas y Cosechas (`WineryWinesPage.tsx`)**:
+  - **Catálogo Oficial**: Grilla y listado de etiquetas producidas por la bodega, con buscador en tiempo real, filtro por tipo enológico (`Red`, `White`, `Rose`, `Sparkling`, `Orange`) y chips de categoría.
+  - **Atajos y Modales por Query String**: Soporta apertura automática del alta de etiqueta vía `?action=new` o `?nuevo=1`.
+  - **Alta de Nueva Etiqueta (`WineCreateModal.tsx`)**:
+    - Formulario modal con añada inaugural requerida (`POST /api/wines`).
+    - Selector dinámico de cortes varietales alimentado por `/api/grapes` con validación estricta de suma $\le 100\%$.
+    - Validación reactiva: graduación alcohólica opcional (0 a 100 con un decimal), año entre 1900 y actual+1.
+  - **Gestión de Cosechas (`WineVintagesModal.tsx`)**:
+    - Consulta reactiva de cosechas con `/api/wines/{wineId}/vintages`.
+    - Badges de estado (`Approved`, `Pending`, `Rejected`) con detalle de observaciones de moderación si aplica.
+    - Formulario integrado para registrar nuevas añadas (`createWineVintage()`).
+- **Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx`)**:
+  - **Detección de Candidatos (`GET /api/wines/claim-candidates/{wineryId}`)**: Lista botellas cargadas por la comunidad de usuarios que coinciden con el nombre de la bodega.
+  - **Aviso Editorial para Bodegas en Moderación**: Si la bodega se encuentra en estado `Pending`, la interfaz presenta un banner explicativo y bloquea el botón de reclamo hasta su certificación.
+  - **Selección Individual y Masiva**: Casillas de verificación interactivas con control maestro *"Seleccionar todos"*.
+  - **Preservación de Reseñas y Reclamo Atómico**: Explica con claridad que las notas de cata y calificaciones históricas se conservan intactas, y procesa el traspaso institucional mediante `POST /api/wines/claim`.
+- **Vidriera Pública de Bodega (`WineryPublicProfilePage.tsx` en `/bodegas/:id`)**:
+  - **Acceso Libre y Universal**: Accesible tanto para visitantes anónimos como para sommeliers autenticados.
+  - **Cabecera Editorial**: Monograma circular con iniciales (`getWineryInitials`), procedencia geográfica y terruño resuelto (`getLocationById`), año de fundación, enlace a sitio web oficial y semblanza histórica.
+  - **Seguimiento Comunitario Interactivo**: Botón de *"Seguir bodega"* / *"Siguiendo"* conectado con `followWinery` y `unfollowWinery`, con actualización reactiva del contador y feedback contextual.
+  - **Catálogo Oficial Disponible**: Despliega las etiquetas activas mediante [`WineCard.tsx`](../../src/frontend/src/features/wines/components/WineCard.tsx), permitiendo abrir la ficha técnica integral en [`WineDetailModal.tsx`](../../src/frontend/src/features/wines/components/WineDetailModal.tsx).
 
 ---
 
@@ -90,7 +111,7 @@ src/frontend/src/
 │   │   └── index.ts           # Barrel export del módulo wines
 │   └── winery/                # Módulo de Bodegas y Productores Oficiales
 │       ├── api/               # Capa API tipada (wineryApi, wineApi, locationApi, grapeApi)
-│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryKpiRibbon, WineryQuickActions, WineryChecklistCard, WineryRecentWines, LocationCascadeSelect, etc.)
+│       ├── components/        # Componentes del panel (WineryLayout, WineryStatusBanner, WineryKpiRibbon, WineryQuickActions, WineryChecklistCard, WineryRecentWines, LocationCascadeSelect, WineCreateModal, WineVintagesModal, etc.)
 │       ├── context/           # Contexto de la bodega activa (WineryContext)
 │       ├── hooks/             # Hooks de sincronización (useMyWinery)
 │       ├── types/             # DTOs y contratos C# (winery, wine, location, grape, problemDetails)
@@ -107,9 +128,12 @@ src/frontend/src/
 │   ├── PairingPage.tsx        # Recomendaciones gastronómicas y maridaje
 │   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
 │   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
+│   ├── WineryClaimPage.tsx    # Reclamo de vinos comunitarios con preservación de reseñas (/bodega/reclamar)
 │   ├── WineryDashboardPage.tsx# Vista de inicio del panel oficial de bodega (KPIs, Checklist, Quick Actions, Vinos)
-│   ├── WineryProfilePage.tsx  # Edición de perfil de bodega con previsualización editorial en tiempo real
-│   └── WineryRegisterPage.tsx # Formulario público de alta de bodega unificada (/bodega/registro)
+│   ├── WineryProfilePage.tsx  # Edición de perfil de bodega con previsualización editorial en tiempo real (/bodega/perfil)
+│   ├── WineryPublicProfilePage.tsx # Vidriera pública accesible con o sin sesión y catálogo (/bodegas/:id)
+│   ├── WineryRegisterPage.tsx # Formulario público de alta de bodega unificada (/bodega/registro)
+│   └── WineryWinesPage.tsx    # Catálogo y gestión de etiquetas oficiales y cosechas (/bodega/vinos)
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
 ├── services/                  # Infraestructura y clientes compartidos
@@ -151,16 +175,21 @@ src/frontend/src/
 
 El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque declarativo centralizado en [`src/frontend/src/routes/AppRoutes.tsx`](../../src/frontend/src/routes/AppRoutes.tsx):
 
-- **Rutas Públicas Institucionales**:
+- **Rutas Públicas Institucionales y Vidriera**:
   - `/para-bodegas`: Página de presentación y beneficios para bodegas.
   - `/bodega/registro`: Formulario de alta para nuevos establecimientos.
+  - `/bodegas/:id`: Vidriera pública de la bodega, con semblanza histórica, botón interactivo para seguir/dejar de seguir y grilla de etiquetas oficiales con apertura de ficha enológica.
   - `/login`: Formulario de inicio de sesión que redirige con criterio contextual (a la ruta solicitada en `state.from`, a `/bodega/dashboard` para usuarios con rol `Winery`, o a `/dashboard` para usuarios estándar).
 - **Guardia de Rutas (`ProtectedRoute.tsx`)**:
   - Valida el estado de autenticación (`isAuthenticated`) y los roles permitidos (`allowedRoles?: UserRole[]`).
   - Si la sesión se encuentra cargando (`isLoading = true`), presenta un indicador de espera accesible.
   - Si no está autenticado, redirige hacia `/login` preservando la ubicación previa en el estado de navegación (`<Navigate to="/login" state={{ from: location }} replace />`).
   - Si el usuario está autenticado pero su rol no coincide con `allowedRoles`, redirige a `/dashboard` (`<Navigate to="/dashboard" replace />`).
-  - Las rutas de bodega se encuentran anidadas bajo `/bodega/*` envueltas por `<WineryLayout />` con protección `allowedRoles={['Winery', 'Admin']}` (`/bodega/dashboard`, `/bodega/perfil`).
+  - Las rutas de bodega se encuentran anidadas bajo `/bodega/*` envueltas por `<WineryLayout />` con protección `allowedRoles={['Winery', 'Admin']}`:
+    - `/bodega/dashboard`: Resumen ejecutivo, 4 KPIs, checklist de perfil y etiquetas recientes.
+    - `/bodega/perfil`: Edición de ficha técnica con split-view editorial interactivo.
+    - `/bodega/vinos`: Catálogo y administración de etiquetas, cosechas y cortes varietales.
+    - `/bodega/reclamar`: Detección y adopción de botellas comunitarias.
 
 ---
 
@@ -204,7 +233,29 @@ npm run dev
    - Seleccionar una nueva provincia y ciudad/terruño en el selector en cascada.
    - Guardar los cambios $\rightarrow$ Comprobar alerta de confirmación y actualización reactiva en el layout (sidebar y header).
    - Probar el botón *"Descartar cambios"* para restaurar el estado original.
-2. **Verificación de Calidad de Código**:
+2. **Catálogo de Etiquetas Oficiales y Alta con Corte Varietal (`/bodega/vinos`)**:
+   - Navegar a `/bodega/vinos` o acceder mediante `/bodega/vinos?action=new`.
+   - Utilizar el buscador interactivo para filtrar etiquetas en tiempo real y alternar entre los chips de tipo (Tintos, Blancos, Rosados, Espumosos, Naranjas).
+   - Abrir el modal *"Nueva etiqueta"* (`WineCreateModal`): ingresar nombre, tipo, descripción enológica, año inaugural y seleccionar uvas desde `/api/grapes` especificando porcentajes.
+   - Probar la validación de suma de porcentaje $\le 100\%$ y la graduación alcohólica.
+   - Crear la etiqueta y verificar su incorporación inmediata en la grilla y el incremento en los KPIs.
+3. **Gestión de Cosechas / Añadas (`WineVintagesModal`)**:
+   - En una tarjeta de vino de `/bodega/vinos`, presionar *"Añadas"*.
+   - Comprobar el listado de cosechas registradas con sus badges de estado (`Approved`, `Pending`, `Rejected`).
+   - Agregar una nueva añada (ej. cosecha del año actual con graduación alcohólica opcional).
+   - Confirmar y verificar la actualización inmediata de la lista de cosechas.
+4. **Reclamo de Botellas Comunitarias (`/bodega/reclamar`)**:
+   - Acceder a `/bodega/reclamar`.
+   - Si la bodega está en revisión (`Pending`), comprobar el banner explicativo que resguarda la integridad de las etiquetas.
+   - Si la bodega está aprobada, visualizar las botellas comunitarias sugeridas por coincidencia de nombre.
+   - Seleccionar botellas individuales o marcar *"Seleccionar todos"*.
+   - Ejecutar el reclamo institucional y comprobar la notificación de éxito preservando las notas de cata y calificaciones de los usuarios.
+5. **Vidriera Pública de Bodega y Seguimiento (`/bodegas/:id`)**:
+   - Visitar `/bodegas/:id` tanto en sesión iniciada como en pestaña incógnita (pública).
+   - Verificar el monograma circular, terruño geográfico resuelto, semblanza histórica y catálogo de etiquetas oficiales con `WineCard`.
+   - Presionar *"Seguir bodega"* $\rightarrow$ Comprobar la alternancia a *"Siguiendo"* y el incremento reactivo en el contador de seguidores.
+   - Presionar *"Ver ficha"* en cualquier etiqueta para inspeccionar la ficha técnica completa en `WineDetailModal`.
+6. **Verificación de Calidad de Código**:
    ```bash
    cd src/frontend
    npm run build  # Compilación estricta TypeScript (0 errores)
