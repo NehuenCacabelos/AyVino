@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const CavaPage = lazy(() => import('../pages/CavaPage'));
 const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
+const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 
 /**
@@ -94,15 +95,18 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Ruta Protegida Exclusiva para Bodegas y Administradores */}
+        {/* Rutas Protegidas Exclusivas para Bodegas y Administradores */}
         <Route
-          path="/bodega/dashboard"
+          path="/bodega"
           element={
             <ProtectedRoute allowedRoles={['Winery', 'Admin']}>
-              <WineryDashboardPage />
+              <WineryLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/bodega/dashboard" replace />} />
+          <Route path="dashboard" element={<WineryDashboardPage />} />
+        </Route>
 
         {/* Fallback 404: Redirigir a inicio */}
         <Route path="*" element={<Navigate to="/" replace />} />

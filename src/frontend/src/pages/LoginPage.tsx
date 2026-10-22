@@ -80,7 +80,11 @@ export default function LoginPage() {
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
-        detail = err.response?.data?.detail ?? err.response?.data?.title;
+        if (!err.response) {
+          detail = 'No se pudo conectar con el servidor backend. Verificá que la API esté iniciada en http://localhost:5230.';
+        } else {
+          detail = err.response?.data?.detail ?? err.response?.data?.title;
+        }
       }
       setErrorMessage(
         detail ??

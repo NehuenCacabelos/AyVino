@@ -57,13 +57,13 @@ dotnet run
 Al iniciar:
 1. `Program.cs` se conectará a PostgreSQL y ejecutará automáticamente el runner de **FluentMigrator**.
 2. Todas las 11 migraciones pendientes se aplicarán de forma transaccional, creando las tablas e insertando los datos iniciales de provincias (`SeedStates`).
-3. El servidor HTTP escuchará por defecto en `http://localhost:5000` (y HTTPS en `https://localhost:5001`).
+3. El servidor HTTP escuchará por defecto en `http://localhost:5230` (y HTTPS en `https://localhost:7128`).
 
 ### Paso 3: Acceder a la Documentación Interactiva de la API
 
 Con el backend en ejecución, abre tu navegador:
-- **Scalar API Reference**: [http://localhost:5000/scalar/v1](http://localhost:5000/scalar/v1)
-- **Especificación OpenAPI (JSON)**: [http://localhost:5000/openapi/v1.json](http://localhost:5000/openapi/v1.json)
+- **Scalar API Reference**: [http://localhost:5230/scalar/v1](http://localhost:5230/scalar/v1)
+- **Especificación OpenAPI (JSON)**: [http://localhost:5230/openapi/v1.json](http://localhost:5230/openapi/v1.json)
 
 > **Nota**: AyVino utiliza Scalar y la especificación nativa de ASP.NET Core (`Microsoft.AspNetCore.OpenApi`). La ruta clásica `/swagger` no está en uso.
 
