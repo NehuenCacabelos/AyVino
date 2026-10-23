@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Settings,
   Wine,
@@ -32,6 +32,7 @@ import {
 } from '../features/users';
 import { cn } from '../lib/utils';
 import WineBottleSilhouette from '../features/wines/components/WineBottleSilhouette';
+import { getBannerThemeByUsername, getBannerThemeById } from '../constants/bannerThemes';
 
 type OwnerTab = 'cava' | 'historial' | 'deseados';
 
@@ -57,11 +58,23 @@ export default function ProfilePage() {
   const [ownerFavWines, setOwnerFavWines] = useState<UserWineListItemDto[]>([]);
   const [ownerDataLoading, setOwnerDataLoading] = useState(false);
 
+  const location = useLocation();
+
   const isOwner = Boolean(
     currentUser &&
     username &&
     currentUser.username?.toLowerCase() === username.toLowerCase()
   );
+
+  const activeTheme = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const themeParam = searchParams.get('theme');
+    const overrideTheme = getBannerThemeById(themeParam);
+    if (overrideTheme) {
+      return overrideTheme;
+    }
+    return getBannerThemeByUsername(profile?.username ?? username);
+  }, [location.search, profile?.username, username]);
 
   // Cargar información de perfil
   useEffect(() => {
@@ -258,19 +271,31 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* BANNER COMPACTO CON GRADIENTE BORGOÑA */}
-            <div className="relative w-full h-36 sm:h-40 bg-gradient-to-b from-[#3a0d18] via-[#1c070c] to-[#0b0b0e] border-b border-rose-950/30 overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-rose-900/25 via-transparent to-transparent pointer-events-none" />
+            {/* BANNER DINÁMICO CON GRADIENTE VITIVINÍCOLA DETERMINISTA */}
+            <div
+              className={cn(
+                'relative w-full h-28 sm:h-32 md:h-36 overflow-hidden transition-colors duration-300',
+                activeTheme.classes
+              )}
+            >
+              <div
+                className={cn(
+                  'absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] via-transparent to-transparent pointer-events-none',
+                  activeTheme.radialOverlayClass
+                )}
+              />
+              {/* Fade-out degradado inferior para fundir con el fondo de la app */}
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
             </div>
 
             {/* CABECERA EXPANSIVA DE PERFIL CON AVATAR CIRCULAR SUPERPUESTO */}
             <header className="w-full bg-[#0b0b0e] border-b border-white/10 pb-8">
               <div className="max-w-7xl mx-auto px-6">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="relative z-10 -mt-12 sm:-mt-14 flex flex-col md:flex-row md:items-start justify-between gap-6">
                   {/* Bloque Izquierdo: Avatar Circular superpuesto + Nombre Serif + Bio */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
-                    {/* Avatar Circular con aro aislante que pisa el banner */}
-                    <div className="relative z-10 -mt-12 sm:-mt-14 w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0">
+                  <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
+                    {/* Avatar Circular con aro aislante */}
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0">
                       <img
                         src={getAvatarUrl({ photo: profile.photo, username: profile.username })}
                         alt={profile.username}
@@ -284,12 +309,12 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Identidad y Metadatos */}
-                    <div className="space-y-2 max-w-2xl">
+                    <div className="max-w-2xl pt-1 sm:pt-2">
                       <h1 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-white">
                         {profile.username}
                       </h1>
 
-                      <p className="text-xs sm:text-sm font-sans font-medium text-zinc-300">
+                      <p className="text-xs text-zinc-500 font-normal font-sans mt-1">
                         Miembro desde{' '}
                         {new Date(profile.registerDate).toLocaleDateString('es-AR', {
                           month: 'long',
@@ -297,18 +322,21 @@ export default function ProfilePage() {
                         })}
                       </p>
 
-                      <p className="text-sm sm:text-base text-zinc-200 leading-relaxed font-sans">
-                        {profile.bio && profile.bio.trim().length > 0 ? (
-                          profile.bio
-                        ) : (
-                          <span className="italic text-zinc-400 text-sm">Sin biografía disponible aún.</span>
-                        )}
-                      </p>
+                      {/* Biografía en su propio bloque tipográfico con margen superior explícito */}
+                      <div className="mt-3.5 max-w-xl">
+                        <p className="text-sm text-zinc-300 leading-relaxed font-sans">
+                          {profile.bio && profile.bio.trim().length > 0 ? (
+                            profile.bio
+                          ) : (
+                            <span className="italic text-zinc-500 text-xs sm:text-sm">Sin biografía disponible aún.</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   {/* Bloque Derecho: Acciones Contextuales y Métricas Consolidadas con espaciado respirable */}
-                  <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end justify-end gap-3.5 pt-4 sm:pt-6 md:pt-8">
+                  <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end justify-end gap-3.5 pt-1 sm:pt-2">
                     {/* Botón Acción (Configuración para dueño / Seguir para visitante) */}
                     {isOwner ? (
                       <Link
