@@ -62,7 +62,7 @@ builder.Services.ConfigureJsonOptions();
 // CORS configuration
 const string frontendCorsPolicy = "FrontendPolicy";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:5173", "http://localhost:3000"];
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:3000", "http://127.0.0.1:3000"];
 
 builder.Services.AddCors(options =>
 {
@@ -302,7 +302,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpLogging(); // Debe ir al inicio del pipeline, antes de UseAuthentication y UseAuthorization
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // CORS Middleware (debe ejecutarse antes de Authentication y Authorization)
 app.UseCors(frontendCorsPolicy);
