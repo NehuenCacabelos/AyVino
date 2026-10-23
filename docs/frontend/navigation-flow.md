@@ -180,17 +180,17 @@ flowchart TD
 ### 2.8 Página de Mi Cuenta y Seguridad (`AccountPage.tsx`)
 - Vista post-login dedicada accesible en `/cuenta` (vinculada desde el menú desplegable del Avatar de usuario y desde la Top Bar Contextual Slim de `/perfil`):
   - **Navegación Inmersiva**: Barra superior contextual minimalista (`ProfileTopBar.tsx`) con branding `AyVino.` y botón de escape directo `← Volver a Mi Perfil` (redirige a `/perfil/:username`), suprimiendo el Navbar global para maximizar el área útil.
-  - **Sidebar Estructurado y Depurado**:
-    * Panel lateral con fondo sutil `bg-[#121015]/80` y borde sutil `border-r border-white/5` (eliminando la línea divisoria vertical infinita).
-    * Avatar circular unificado (`rounded-full ring-2 ring-white/10 w-20 h-20 mx-auto object-cover`) con controles integrados de carga y eliminación de foto.
-    * Navegación exclusiva de "CONFIGURACIÓN": "Mi Perfil" y "Seguridad y Contraseña" (depurado al 100% el bloque redundante de "Colección").
+  - **Sidebar con Jerarquía Sommelier**:
+    * Avatar circular destacado (`w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg mx-auto object-cover`).
+    * Nombre de usuario en tipografía Serif destacada (`font-serif text-xl sm:text-2xl text-white font-medium mt-3 tracking-tight text-center`) y correo en `text-xs sm:text-sm text-zinc-400`.
+    * Botón *"Cargar foto"* compacto y sobrio (`bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 text-xs text-zinc-300`).
+    * Navegación exclusiva de "CONFIGURACIÓN": "Mi Perfil" y "Seguridad y Contraseña" con píldora activa en borgoña profundo (`bg-[#6e1a24] text-white`).
     * Pie del sidebar con botón directo de "Cerrar sesión".
-  - **Card Contenida y Unificación Cromática**:
-    * Formulario contenido dentro de una card estructurada (`bg-[#17151a] border border-white/10 rounded-2xl p-6 sm:p-8 max-w-2xl shadow-xl`), con cabecera en tipografía Serif (`font-serif text-2xl text-white`) y bajada en `text-zinc-400 text-sm`.
-    * Botones de acción unificados en borgoña de marca (`bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium rounded-lg shadow-sm`).
-    * Navegación interna por pestañas:
-      - **Pestaña 1 (Información del Perfil)**: Edición de `username` y `bio` (con límite de 1000 caracteres y contador) y correo en solo lectura.
-      - **Pestaña 2 (Seguridad y Acceso)**: Cambio de contraseña con validación de longitud, confirmación y toggles de visibilidad.
+  - **Layout Abierto y Balanceado (Sin Doble Caja Aislada)**:
+    * Eliminación del marco rectangular rígido para una integración fluida sobre el lienzo `#0b0b0e`.
+    * Contenedor de ancho controlado (`max-w-3xl w-full py-6 px-4 sm:px-8`) con cabecera en `font-serif text-3xl text-white`, bajada descriptiva en `text-zinc-400 text-sm mt-1` y divisor `border-b border-white/5 pb-4 mb-6`.
+    * Disposición de inputs en grilla balanceada (`grid grid-cols-1 sm:grid-cols-2 gap-4`), con la Biografía ocupando el ancho completo (`sm:col-span-2`).
+    * Botones de acción alineados a la derecha y unificados en borgoña de marca (`bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium px-6 py-2.5 rounded-lg shadow-sm`).
 
 ### 2.9 Página de Perfil de Usuario (`ProfilePage.tsx`)
 - Vista accesible en `/perfil/:username` (pública y canónica) y `/perfil` (redirección contextual al usuario activo o `/login`).

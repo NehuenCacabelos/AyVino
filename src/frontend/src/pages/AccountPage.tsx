@@ -268,10 +268,10 @@ export default function AccountPage() {
         {/* ========================================================= */}
         <aside className="w-full md:w-72 lg:w-80 shrink-0 border-b md:border-b-0 md:border-r border-white/5 p-6 sm:p-8 flex flex-col justify-between bg-[#121015]/80 overflow-y-auto">
           <div className="space-y-6">
-            {/* Tarjeta de Usuario Fija en Sidebar con Avatar Circular */}
+            {/* Bloque de Usuario Jerarquizado */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group mx-auto">
-                <div className="h-20 w-20 rounded-full ring-2 ring-white/10 overflow-hidden bg-stone-950 shadow-md flex items-center justify-center">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg overflow-hidden bg-stone-950 flex items-center justify-center">
                   <img
                     src={getAvatarUrl(user)}
                     alt={user?.username || 'Avatar'}
@@ -284,21 +284,21 @@ export default function AccountPage() {
 
                 {(isUploadingAvatar || isDeletingAvatar) && (
                   <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 text-rose-400 animate-spin" />
+                    <Loader2 className="h-6 w-6 text-rose-400 animate-spin" />
                   </div>
                 )}
               </div>
 
-              {/* Nombre y correo en Sidebar */}
-              <h2 className="mt-3 text-sm font-semibold text-zinc-100 truncate max-w-full">
+              {/* Nombre y correo jerarquizados */}
+              <h2 className="font-serif text-xl sm:text-2xl text-white font-medium mt-3 tracking-tight text-center truncate max-w-full">
                 {user?.username || 'Usuario'}
               </h2>
-              <p className="text-[11px] text-zinc-400 truncate max-w-full">
+              <p className="text-xs sm:text-sm text-zinc-400 text-center truncate max-w-[200px] mx-auto mt-0.5">
                 {user?.email}
               </p>
 
-              {/* Controles de Foto directamente en el Sidebar */}
-              <div className="w-full flex flex-col gap-1.5 mt-3">
+              {/* Controles de Foto compactos y sobrios */}
+              <div className="flex flex-col items-center gap-1.5 mt-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -312,7 +312,7 @@ export default function AccountPage() {
                   type="button"
                   disabled={isUploadingAvatar || isDeletingAvatar}
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[#17151a] hover:bg-[#201d24] text-zinc-200 hover:text-white text-xs font-medium transition-colors cursor-pointer border border-white/10 disabled:opacity-50 shadow-xs"
+                  className="inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Upload className="h-3 w-3 text-zinc-400" />
                   <span>{user?.photo ? 'Cambiar foto' : 'Cargar foto'}</span>
@@ -323,7 +323,7 @@ export default function AccountPage() {
                     type="button"
                     disabled={isUploadingAvatar || isDeletingAvatar}
                     onClick={handleDeleteAvatar}
-                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-md bg-stone-900/60 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 text-[11px] font-medium transition-colors cursor-pointer border border-rose-500/20 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 text-[11px] text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/20 rounded-md py-1 px-2.5 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <Trash2 className="h-3 w-3" />
                     <span>Eliminar foto</span>
@@ -385,115 +385,113 @@ export default function AccountPage() {
         </aside>
 
         {/* ========================================================= */}
-        {/* PANEL PRINCIPAL: FORMULARIO EN CARD ESTRUCTURADA */}
+        {/* PANEL PRINCIPAL: LAYOUT ABIERTO Y BALANCEADO (SIN CAJA RÍGIDA) */}
         {/* ========================================================= */}
         <section className="flex-1 p-6 sm:p-10 md:p-12 flex flex-col justify-between overflow-y-auto bg-[#0b0b0e]">
-          <div className="w-full flex justify-center md:justify-start">
-            <div className="bg-[#17151a] border border-white/10 rounded-2xl p-6 sm:p-8 w-full max-w-2xl shadow-xl">
-              {/* Cabecera de la Card */}
-              <div className="border-b border-white/5 pb-4 mb-6">
-                <h1 className="font-serif text-2xl font-medium tracking-tight text-white">
-                  {activeSection === 'profile' ? 'Información del Perfil' : 'Seguridad y Acceso'}
-                </h1>
-                <p className="text-zinc-400 text-sm mt-1 font-sans">
-                  {activeSection === 'profile'
-                    ? 'Actualizá tu alias público, biografía de cata y datos de contacto.'
-                    : 'Gestioná tu contraseña para mantener protegida tu colección personal.'}
-                </p>
+          <div className="max-w-3xl w-full py-6 px-4 sm:px-8">
+            {/* Cabecera Limpia */}
+            <div className="border-b border-white/5 pb-4 mb-6">
+              <h1 className="font-serif text-3xl text-white">
+                {activeSection === 'profile' ? 'Información del Perfil' : 'Seguridad y Acceso'}
+              </h1>
+              <p className="text-zinc-400 text-sm mt-1">
+                {activeSection === 'profile'
+                  ? 'Actualizá tu alias público, biografía de cata y datos de contacto.'
+                  : 'Gestioná tu contraseña para mantener protegida tu colección personal.'}
+              </p>
+            </div>
+
+            {/* Mensajes de Estado */}
+            {profileSuccessMsg && activeSection === 'profile' && (
+              <div
+                role="status"
+                className="flex items-center gap-2.5 p-3 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs mb-5 animate-in fade-in"
+              >
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                <span>{profileSuccessMsg}</span>
               </div>
+            )}
 
-              {/* Mensajes de Estado en Card */}
-              {profileSuccessMsg && activeSection === 'profile' && (
-                <div
-                  role="status"
-                  className="flex items-center gap-2.5 p-3 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs mb-5 animate-in fade-in"
-                >
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>{profileSuccessMsg}</span>
-                </div>
-              )}
+            {profileErrorMsg && activeSection === 'profile' && (
+              <div
+                role="alert"
+                className="flex items-center gap-2.5 p-3 rounded-md bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs mb-5 animate-in fade-in"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{profileErrorMsg}</span>
+              </div>
+            )}
 
-              {profileErrorMsg && activeSection === 'profile' && (
-                <div
-                  role="alert"
-                  className="flex items-center gap-2.5 p-3 rounded-md bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs mb-5 animate-in fade-in"
-                >
-                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-                  <span>{profileErrorMsg}</span>
-                </div>
-              )}
+            {passwordSuccessMsg && activeSection === 'security' && (
+              <div
+                role="status"
+                className="flex items-center gap-2.5 p-3 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs mb-5 animate-in fade-in"
+              >
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                <span>{passwordSuccessMsg}</span>
+              </div>
+            )}
 
-              {passwordSuccessMsg && activeSection === 'security' && (
-                <div
-                  role="status"
-                  className="flex items-center gap-2.5 p-3 rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs mb-5 animate-in fade-in"
-                >
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>{passwordSuccessMsg}</span>
-                </div>
-              )}
+            {passwordErrorMsg && activeSection === 'security' && (
+              <div
+                role="alert"
+                className="flex items-center gap-2.5 p-3 rounded-md bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs mb-5 animate-in fade-in"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{passwordErrorMsg}</span>
+              </div>
+            )}
 
-              {passwordErrorMsg && activeSection === 'security' && (
-                <div
-                  role="alert"
-                  className="flex items-center gap-2.5 p-3 rounded-md bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs mb-5 animate-in fade-in"
-                >
-                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-                  <span>{passwordErrorMsg}</span>
-                </div>
-              )}
-
-              {/* --------------------------------------------------------- */}
-              {/* FORMULARIO DE PERFIL */}
-              {/* --------------------------------------------------------- */}
-              {activeSection === 'profile' && (
-                <form onSubmit={handleSaveProfile} className="space-y-5 animate-in fade-in duration-150">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {/* Nombre de usuario */}
-                    <div className="space-y-1.5">
-                      <label htmlFor="username-input" className="block text-xs font-medium text-zinc-300">
-                        Nombre de usuario
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-                        <input
-                          id="username-input"
-                          type="text"
-                          required
-                          maxLength={100}
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Tu nombre o alias"
-                          className="w-full rounded-md bg-[#0f0e13] border border-white/10 pl-9 pr-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Email (Solo Lectura) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label htmlFor="email-input" className="block text-xs font-medium text-zinc-300">
-                          Correo electrónico
-                        </label>
-                        <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
-                          <Lock className="h-2.5 w-2.5" /> No modificable
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
-                        <input
-                          id="email-input"
-                          type="email"
-                          disabled
-                          value={user?.email || ''}
-                          className="w-full rounded-md bg-[#0f0e13]/60 border border-white/5 pl-9 pr-3 py-2 text-xs text-zinc-500 cursor-not-allowed select-none"
-                        />
-                      </div>
+            {/* --------------------------------------------------------- */}
+            {/* FORMULARIO DE PERFIL */}
+            {/* --------------------------------------------------------- */}
+            {activeSection === 'profile' && (
+              <form onSubmit={handleSaveProfile} className="space-y-5 animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Nombre de usuario */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="username-input" className="block text-xs font-medium text-zinc-300">
+                      Nombre de usuario
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                      <input
+                        id="username-input"
+                        type="text"
+                        required
+                        maxLength={100}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Tu nombre o alias"
+                        className="w-full rounded-md bg-[#121015] border border-white/10 pl-9 pr-3 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors"
+                      />
                     </div>
                   </div>
 
-                  {/* Biografía */}
+                  {/* Email (Solo Lectura) */}
                   <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="email-input" className="block text-xs font-medium text-zinc-300">
+                        Correo electrónico
+                      </label>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                        <Lock className="h-2.5 w-2.5" /> No modificable
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600" />
+                      <input
+                        id="email-input"
+                        type="email"
+                        disabled
+                        value={user?.email || ''}
+                        className="w-full rounded-md bg-[#121015]/60 border border-white/5 pl-9 pr-3 py-2 text-xs sm:text-sm text-zinc-500 cursor-not-allowed select-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Biografía en ancho completo (sm:col-span-2) */}
+                  <div className="sm:col-span-2 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label htmlFor="bio-input" className="block text-xs font-medium text-zinc-300">
                         Biografía
@@ -514,37 +512,39 @@ export default function AccountPage() {
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Compartí tus preferencias vitivinícolas, bodegas de preferencia o notas sobre tus catas..."
-                      className="w-full rounded-md bg-[#0f0e13] border border-white/10 p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors resize-none leading-relaxed"
+                      className="w-full rounded-md bg-[#121015] border border-white/10 p-3 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors resize-none leading-relaxed"
                     />
                   </div>
+                </div>
 
-                  {/* Botón Guardar Cambios (Unificado en Borgoña de Marca) */}
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={isSavingProfile}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium text-xs sm:text-sm transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
-                    >
-                      {isSavingProfile ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Guardando...</span>
-                        </>
-                      ) : (
-                        <span>Guardar cambios</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
+                {/* Botón Guardar Cambios alineado a la derecha */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium text-xs sm:text-sm shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <span>Guardar cambios</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
 
-              {/* --------------------------------------------------------- */}
-              {/* FORMULARIO DE SEGURIDAD */}
-              {/* --------------------------------------------------------- */}
-              {activeSection === 'security' && (
-                <form onSubmit={handleChangePassword} className="space-y-5 animate-in fade-in duration-150">
+            {/* --------------------------------------------------------- */}
+            {/* FORMULARIO DE SEGURIDAD */}
+            {/* --------------------------------------------------------- */}
+            {activeSection === 'security' && (
+              <form onSubmit={handleChangePassword} className="space-y-5 animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Contraseña Actual */}
-                  <div className="space-y-1.5 max-w-md">
+                  <div className="sm:col-span-2 space-y-1.5 max-w-md">
                     <label
                       htmlFor="current-password-input"
                       className="block text-xs font-medium text-zinc-300"
@@ -560,7 +560,7 @@ export default function AccountPage() {
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full rounded-md bg-[#0f0e13] border border-white/10 pl-9 pr-9 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
+                        className="w-full rounded-md bg-[#121015] border border-white/10 pl-9 pr-9 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
                       />
                       <button
                         type="button"
@@ -574,95 +574,93 @@ export default function AccountPage() {
                   </div>
 
                   {/* Nueva Contraseña y Confirmación */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="new-password-input"
-                        className="block text-xs font-medium text-zinc-300"
-                      >
-                        Nueva contraseña
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-                        <input
-                          id="new-password-input"
-                          type={showNewPassword ? 'text' : 'password'}
-                          required
-                          minLength={8}
-                          maxLength={128}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full rounded-md bg-[#0f0e13] border border-white/10 pl-9 pr-9 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                          aria-label={showNewPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                        >
-                          {showNewPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="confirm-password-input"
-                        className="block text-xs font-medium text-zinc-300"
-                      >
-                        Confirmar nueva contraseña
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-                        <input
-                          id="confirm-password-input"
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          required
-                          minLength={8}
-                          maxLength={128}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full rounded-md bg-[#0f0e13] border border-white/10 pl-9 pr-9 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                          aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Botón Guardar Contraseña (Unificado en Borgoña de Marca) */}
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={isSavingPassword}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium text-xs sm:text-sm transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="new-password-input"
+                      className="block text-xs font-medium text-zinc-300"
                     >
-                      {isSavingPassword ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Actualizando...</span>
-                        </>
-                      ) : (
-                        <span>Actualizar contraseña</span>
-                      )}
-                    </button>
+                      Nueva contraseña
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                      <input
+                        id="new-password-input"
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-md bg-[#121015] border border-white/10 pl-9 pr-9 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                        aria-label={showNewPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showNewPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
-                </form>
-              )}
-            </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="confirm-password-input"
+                      className="block text-xs font-medium text-zinc-300"
+                    >
+                      Confirmar nueva contraseña
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                      <input
+                        id="confirm-password-input"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-md bg-[#121015] border border-white/10 pl-9 pr-9 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                        aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón Guardar Contraseña alineado a la derecha */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSavingPassword}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium text-xs sm:text-sm shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingPassword ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Actualizando...</span>
+                      </>
+                    ) : (
+                      <span>Actualizar contraseña</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Fecha de Creación en el pie del panel */}
           {formattedRegisterDate && (
-            <footer className="pt-6 border-t border-white/5 mt-6 flex justify-between items-center text-[11px] text-zinc-500">
+            <footer className="pt-6 border-t border-white/5 mt-6 flex justify-between items-center text-[11px] text-zinc-500 max-w-3xl px-4 sm:px-8">
               <span>AyVino • Plataforma de Cava & Sommelier</span>
               <span>Miembro desde el {formattedRegisterDate}</span>
             </footer>
