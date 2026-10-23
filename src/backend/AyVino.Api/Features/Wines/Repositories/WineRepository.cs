@@ -12,10 +12,15 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         source_type, duplicate_of_wine_id, rating_sum, review_count
         """;
 
-    public Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default) =>
-        GetByIdAsync(id, null, false, ct);
+    public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var sql = $"SELECT {SelectColumns} FROM wines WHERE id = @Id;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Wine>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
 
-    public async Task<Wine?> GetByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
+    public async Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,

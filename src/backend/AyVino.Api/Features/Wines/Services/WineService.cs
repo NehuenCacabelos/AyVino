@@ -22,21 +22,8 @@ public class WineService(
 {
     public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
-        var wine = await wineRepository.GetByIdAsync(id, ct)
+        var wine = await wineRepository.GetVisibleByIdAsync(id, actor?.UserId, actor?.IsAdmin == true, ct)
             ?? throw new NotFoundException($"Wine with ID {id} not found.");
-
-        if (wine.WineryId is int wineryId)
-        {
-            var winery = await wineryRepository.GetByIdAsync(wineryId, ct);
-            if (winery != null && winery.Status != WineryStatus.Approved)
-            {
-                var isOwnerOrAdmin = actor?.IsAdmin == true || (actor != null && WineryAccessRules.IsOwner(winery, actor));
-                if (!isOwnerOrAdmin)
-                {
-                    throw new NotFoundException($"Wine with ID {id} not found.");
-                }
-            }
-        }
 
         return wine.ToResponseDto();
     }
@@ -98,6 +85,9 @@ public class WineService(
             var winery = await wineryRepository.GetByIdAsync(existing.WineryId.Value, ct);
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("No tenés permiso para editar este vino.");
+
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para editar vinos.");
 
             if (dto.WineryId != existing.WineryId)
                 throw new ForbiddenException("Solo un administrador puede cambiar la bodega de un vino.");

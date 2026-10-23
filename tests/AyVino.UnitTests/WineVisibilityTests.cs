@@ -36,11 +36,7 @@ public class WineVisibilityTests
     public async Task GetByIdAsync_AnonymousUser_WineFromPendingWinery_ThrowsNotFoundException()
     {
         // Arrange
-        var wine = new Wine { Id = 1, WineryId = 10, Name = "Gran Reserva", WineType = WineType.Red, SourceType = SourceType.Official };
-        var winery = new Winery { Id = 10, UserId = 5, Name = "Bodega En Espera", Status = WineryStatus.Pending };
-
-        _wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
-        _wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+        _wineRepo.GetVisibleByIdAsync(1, null, false, Arg.Any<CancellationToken>()).Returns((Wine?)null);
 
         // Act & Assert (anónimo -> actor null)
         await Assert.ThrowsAsync<NotFoundException>(() => _wineService.GetByIdAsync(1, actor: null));
@@ -51,10 +47,8 @@ public class WineVisibilityTests
     {
         // Arrange
         var wine = new Wine { Id = 1, WineryId = 10, Name = "Gran Reserva", WineType = WineType.Red, SourceType = SourceType.Official };
-        var winery = new Winery { Id = 10, UserId = 5, Name = "Bodega En Espera", Status = WineryStatus.Pending };
 
-        _wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
-        _wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+        _wineRepo.GetVisibleByIdAsync(1, 5, false, Arg.Any<CancellationToken>()).Returns(wine);
 
         var ownerActor = new Actor(5, AppRoles.Winery);
 
@@ -71,10 +65,8 @@ public class WineVisibilityTests
     {
         // Arrange
         var wine = new Wine { Id = 1, WineryId = 10, Name = "Gran Reserva", WineType = WineType.Red, SourceType = SourceType.Official };
-        var winery = new Winery { Id = 10, UserId = 5, Name = "Bodega En Espera", Status = WineryStatus.Pending };
 
-        _wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
-        _wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+        _wineRepo.GetVisibleByIdAsync(1, 99, true, Arg.Any<CancellationToken>()).Returns(wine);
 
         var adminActor = new Actor(99, AppRoles.Admin);
 
@@ -120,6 +112,7 @@ public class WineVisibilityTests
 
         _vintageRepo.GetByIdAsync(50, Arg.Any<CancellationToken>()).Returns(vintage);
         _vintageRepo.GetGrapesByVintageIdAsync(50, Arg.Any<CancellationToken>()).Returns([]);
+        _wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(new Wine { Id = 1, WineryId = null });
 
         var uploaderActor = new Actor(12, AppRoles.User);
 

@@ -25,23 +25,26 @@ public class WineVintageService(
     {
         var vintage = await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
 
+        var wine = await wineRepository.GetByIdAsync(wineId, ct);
+        Winery? winery = null;
+        if (wine?.WineryId is int wid && wineryRepository != null)
+        {
+            winery = await wineryRepository.GetByIdAsync(wid, ct);
+            if (winery != null && winery.Status != WineryStatus.Approved)
+            {
+                var isOwnerOrAdmin = actor?.IsAdmin == true || (actor != null && WineryAccessRules.IsOwner(winery, actor));
+                if (!isOwnerOrAdmin)
+                    throw new NotFoundException($"Wine with ID {wineId} not found.");
+            }
+        }
+
         // Regla de visibilidad:
         // Una añada Pending/Rejected solo la ven el dueño, el uploader y los admin.
         if (vintage.ApprovalStatus != ApprovalStatus.Approved)
         {
             var isUploader = actor != null && vintage.UploadedByUserId == actor.UserId;
             var isAdmin = actor?.IsAdmin == true;
-            var isWineryOwner = false;
-
-            if (!isAdmin && !isUploader)
-            {
-                var wine = await wineRepository.GetByIdAsync(wineId, ct);
-                if (wine?.WineryId is int wid && wineryRepository != null)
-                {
-                    var winery = await wineryRepository.GetByIdAsync(wid, ct);
-                    isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
-                }
-            }
+            var isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
 
             if (!isAdmin && !isUploader && !isWineryOwner)
             {
@@ -156,6 +159,9 @@ public class WineVintageService(
                     throw new ForbiddenException(isUploader
                         ? "No podés editar una cosecha que ya fue moderada."
                         : "No tenés permiso para editar esta cosecha.");
+
+                if (!WineryAccessRules.CanPublish(winery, actor))
+                    throw new ForbiddenException("La bodega debe estar aprobada o pendiente para editar cosechas.");
             }
         }
 

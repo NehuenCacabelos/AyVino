@@ -242,6 +242,9 @@ public class WineOptimizationTests
             return Task.FromResult<Wine?>(null);
         }
 
+        public Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+            GetByIdAsync(id, ct);
+
         public Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
         {
             BatchGetByIdsCallCount++;

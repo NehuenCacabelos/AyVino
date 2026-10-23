@@ -262,6 +262,9 @@ public class WineServiceTests
         public Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWine?.Id == id ? ExistingWine : null);
 
+        public Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+            GetByIdAsync(id, ct);
+
         public Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Wine>>(ExistingWine is not null && ids.Contains(ExistingWine.Id) ? [ExistingWine] : []);
 

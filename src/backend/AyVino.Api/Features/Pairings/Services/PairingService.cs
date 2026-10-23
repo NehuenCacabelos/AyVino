@@ -89,6 +89,9 @@ public class PairingService(
             var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
+
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.");
         }
 
         if (!await pairingRepository.ExistsByIdAsync(pairingId, ct))
@@ -110,6 +113,9 @@ public class PairingService(
             var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
+
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.");
         }
 
         var removed = await pairingRepository.RemoveFromWineAsync(wineId, pairingId, ct);
