@@ -261,6 +261,17 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // Si se ingresa con el ancla #catalogo, desplazar directamente al catálogo de bodegas
+  useEffect(() => {
+    if (window.location.hash === '#catalogo') {
+      const timer = setTimeout(() => {
+        const catalogEl = document.getElementById('catalogo');
+        catalogEl?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const showNotification = (msg: string) => {
     clearTimeout(notificationTimerRef.current);
     setNotification(msg);

@@ -55,6 +55,15 @@ DapperConfiguration.Configure();
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+builder.Logging.ClearProviders(); // Elimina los duplicados por defecto
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.IncludeScopes = false;
+    options.SingleLine = true;
+    options.TimestampFormat = "HH:mm:ss ";
+});
+
 builder.Services.ConfigureJsonOptions();
 
 // CORS configuration
@@ -274,7 +283,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpLogging(); // Debe ir al inicio del pipeline, antes de UseAuthentication y UseAuthorization
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// Asegurar existencia del directorio de uploads de avatares
+var avatarDirectory = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads", "avatars");
+if (!Directory.Exists(avatarDirectory))
+{
+    Directory.CreateDirectory(avatarDirectory);
+}
+
 app.UseStaticFiles();
 
 // CORS Middleware (debe ejecutarse antes de Authentication y Authorization)

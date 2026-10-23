@@ -178,35 +178,40 @@ flowchart TD
     - Botón de cierre de sesión (*"Salir"*) con llamada a `logout()` y redirección inmediata a `/` (`navigate('/', { replace: true })`).
 
 ### 2.8 Página de Mi Cuenta y Seguridad (`AccountPage.tsx`)
-- Vista post-login dedicada accesible en `/cuenta` (vinculada desde el menú desplegable del Avatar de usuario en `DashboardNavbar` y el menú móvil):
-  - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
-  - Navegación interna por pestañas:
-    - **Pestaña 1 (Perfil General)**:
-      * Avatar con soporte dual: generación de avatar dinámico sobrio e ilustrado mediante DiceBear (`notionists`) a partir del nombre de usuario cuando no hay foto, o visualización de foto física.
-      * Controles para carga de nueva foto de perfil (multipart/form-data, formatos JPG/PNG/WEBP hasta 5MB) y botón para eliminar foto física volviendo al avatar dinámico.
-      * Edición de nombre de usuario (`username`) y biografía (`bio` con límite de hasta 1000 caracteres y contador reactivo en vivo).
-      * Correo electrónico en modo solo lectura por motivos de seguridad con indicador de candado.
-      * Actualización inmediata del contexto global (`AuthContext`) y persistencia local sin recarga.
-    - **Pestaña 2 (Seguridad y Contraseña)**:
-      * Formulario de cambio de contraseña con campos para contraseña actual, nueva contraseña (mínimo 8 caracteres) y confirmación.
-      * Toggles de visibilidad con íconos de ojo/ojo cerrado para cada campo.
-      * Notificación de éxito y reseteo de campos manteniendo la sesión activa.
+- Vista post-login dedicada accesible en `/cuenta` (vinculada desde el menú desplegable del Avatar de usuario y desde la Top Bar Contextual Slim de `/perfil`):
+  - **Navegación Inmersiva**: Barra superior contextual minimalista (`ProfileTopBar.tsx`) con branding `AyVino.` y botón de escape directo `← Volver a Mi Perfil` (redirige a `/perfil/:username`), suprimiendo el Navbar global para maximizar el área útil.
+  - **Sidebar Estructurado y Depurado**:
+    * Panel lateral con fondo sutil `bg-[#121015]/80` y borde sutil `border-r border-white/5` (eliminando la línea divisoria vertical infinita).
+    * Avatar circular unificado (`rounded-full ring-2 ring-white/10 w-20 h-20 mx-auto object-cover`) con controles integrados de carga y eliminación de foto.
+    * Navegación exclusiva de "CONFIGURACIÓN": "Mi Perfil" y "Seguridad y Contraseña" (depurado al 100% el bloque redundante de "Colección").
+    * Pie del sidebar con botón directo de "Cerrar sesión".
+  - **Card Contenida y Unificación Cromática**:
+    * Formulario contenido dentro de una card estructurada (`bg-[#17151a] border border-white/10 rounded-2xl p-6 sm:p-8 max-w-2xl shadow-xl`), con cabecera en tipografía Serif (`font-serif text-2xl text-white`) y bajada en `text-zinc-400 text-sm`.
+    * Botones de acción unificados en borgoña de marca (`bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium rounded-lg shadow-sm`).
+    * Navegación interna por pestañas:
+      - **Pestaña 1 (Información del Perfil)**: Edición de `username` y `bio` (con límite de 1000 caracteres y contador) y correo en solo lectura.
+      - **Pestaña 2 (Seguridad y Acceso)**: Cambio de contraseña con validación de longitud, confirmación y toggles de visibilidad.
 
 ### 2.9 Página de Perfil de Usuario (`ProfilePage.tsx`)
 - Vista accesible en `/perfil/:username` (pública y canónica) y `/perfil` (redirección contextual al usuario activo o `/login`).
-- **Navegación**: Botón independiente "Perfil" en la barra central de navegación (`DashboardNavbar` y `Navbar`) accesible al iniciar sesión.
-- **Comportamiento Dual según Propietario (`isOwner`)**:
-  - **Vista Propia (`isOwner = true`)**:
-    - Cabecera con avatar dinámico o personalizado, biografía, métricas (vinos en cava, seguidores, siguiendo).
-    - Botón de engranaje (`Settings`) en la esquina de la cabecera que redirige directamente a la gestión de cuenta (`/cuenta`).
-    - Columna lateral (sidebar) con pestañas:
-      * *Mi Cava*: visualización de botellas con cantidades y accesos directos al catálogo y cava completa (`/cava`).
-      * *Historial*: lista de vinos probados y notas de cata.
-      * *Deseados / Favoritos*: etiquetas guardadas para futuras adquisiciones.
-  - **Vista Visitante (`isOwner = false`)**:
-    - Tarjeta de presentación sobria y centrada con foto, biografía y estadísticas públicas.
-    - Botón interactivo de seguimiento (*"Seguir"* / *"Siguiendo"* con verificación reactiva si el visitante ha iniciado sesión).
-    - Sin columna lateral: debajo de la tarjeta se despliega la grilla de botellas de la cava pública en modo solo lectura (sin notas privadas ni cantidades).
+- **Navegación Inmersiva Contextual**: Implementa [`ProfileTopBar.tsx`](../../src/frontend/src/components/layout/ProfileTopBar.tsx) fija en el tope (`h-14` con `bg-[#0b0b0e]/90` y backdrop-blur), con vía de escape explícita `← Volver a Explorar` hacia `/dashboard`, eliminando la sobrecarga cognitiva del Navbar global.
+- **Banner Atmosférico & Identidad**:
+  - Banner superior con altura optimizada (`h-36 sm:h-40`) y gradiente vertical suave (`bg-gradient-to-b from-[#3a0d18] via-[#1c070c] to-[#0b0b0e]`).
+  - **Avatar Circular Superpuesto**: Avatar circular (`rounded-full`) con solapamiento orgánico (`-mt-12 sm:-mt-14 relative z-10`), aro protector `ring-4 ring-[#0b0b0e]`, sombra profunda `shadow-2xl` y borde sutil `white/15`.
+- **Jerarquía Tipográfica Editorial**:
+  - Nombre de usuario en tipografía Serif noble (`font-serif text-3xl sm:text-4xl font-medium tracking-tight text-white`), completamente limpio sin píldoras ni badges artificiales para máxima pureza visual, en armonía con los títulos de sección.
+  - Metadatos y biografía en tipografía Sans nítida (`text-zinc-200` y `text-zinc-300`), garantizando alto contraste sobre el fondo `#0b0b0e`.
+  - Cifras estadísticas en bloque compacto `#17151a` usando `font-mono text-xl sm:text-2xl font-bold text-white`.
+- **Navegación Segmentada**:
+  - Pestañas en cápsula flotante (`bg-[#17151a] border border-white/10 rounded-md p-1`) con píldora activa en borgoña profundo (`bg-[#6e1a24] text-white`):
+    * *Joyas de la Cava*: Mosaico curado de las botellas más destacadas/calificadas de la colección, con badge dinámico de botellas totales y enlace a `/cava`.
+    * *Historial de Catas*: Mosaico de etiquetas descorchadas y notas sensoriales.
+    * *Deseados & Favoritos*: Mosaico de vinos guardados con chips contextuales ("Favorito" / "Deseado").
+- **Empty State Condicional e Interactivo**:
+  - **Para el Dueño (`isOwner === true`)**: Grilla con slots punteados interactivos (`border-2 border-dashed border-rose-500/25 hover:border-rose-400/60 bg-[#17151a]/30`) e ícono `+` que invitan directamente a sumar la primera joya desde el catálogo (`/dashboard`).
+  - **Para Visitantes (`isOwner === false`)**: Tarjeta editorial sobria en `#17151a` indicando "Cava en curación", con botones para explorar el catálogo general o crear su propia cuenta (sin dropzones ni slots punteados).
+- **Mosaico de Botellas**:
+  - Tarjetas con esquinas suavizadas `rounded-md` sobre `#17151a` y hover borgoña sutil (`hover:border-rose-900/40 hover:-translate-y-0.5`). Escaparate oscuro para silueta o imagen, varietal y añada en `font-mono`, bodega y calificación en estrellas doradas.
 
 ---
 
