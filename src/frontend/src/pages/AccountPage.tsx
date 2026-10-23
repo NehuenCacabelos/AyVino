@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User,
@@ -31,6 +31,15 @@ type ActiveSection = 'profile' | 'security';
 
 function extractApiErrorMessage(err: unknown, defaultMsg: string): string {
   if (axios.isAxiosError(err)) {
+    if (err.response?.status === 401) {
+      return 'Tu sesión ha expirado. Por favor, iniciá sesión nuevamente.';
+    }
+    if (err.response?.status === 403) {
+      return 'No tenés permisos para realizar esta acción.';
+    }
+    if (err.response?.status === 404) {
+      return 'El recurso o usuario solicitado no fue encontrado.';
+    }
     const data = err.response?.data as { detail?: string; title?: string; errors?: Record<string, string[]> } | undefined;
     if (data?.detail) return data.detail;
     if (data?.errors) {
@@ -89,7 +98,11 @@ export default function AccountPage() {
           setUsername(live.username || '');
           setBio(live.bio || '');
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+          navigate('/login', { replace: true });
+          return;
+        }
         console.warn('No se pudo refrescar el perfil vivo desde el servidor:', err);
       }
     }
@@ -99,7 +112,7 @@ export default function AccountPage() {
     return () => {
       isMounted = false;
     };
-  }, [updateUserContext]);
+  }, [updateUserContext, navigate]);
 
   // Sincronizar datos si el usuario cambia externamente
   useEffect(() => {
@@ -125,7 +138,7 @@ export default function AccountPage() {
   }, [passwordSuccessMsg]);
 
   // Manejo de carga de foto
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -178,7 +191,7 @@ export default function AccountPage() {
   };
 
   // Guardar datos de perfil (username y bio)
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     setProfileErrorMsg(null);
     setProfileSuccessMsg(null);
@@ -194,6 +207,7 @@ export default function AccountPage() {
       const updated = await updateProfileApi({
         username: trimmedUser,
         bio: bio.trim(),
+        photo: user?.photo ?? null,
       });
 
       updateUserContext(updated);
@@ -207,7 +221,7 @@ export default function AccountPage() {
   };
 
   // Actualizar contraseña
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
     setPasswordErrorMsg(null);
     setPasswordSuccessMsg(null);
@@ -277,7 +291,8 @@ export default function AccountPage() {
                     alt={user?.username || 'Avatar'}
                     className="h-full w-full object-cover"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user?.username || 'AyVino')}&backgroundColor=1c1917,292524`;
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getAvatarUrl({ username: user?.username });
                     }}
                   />
                 </div>
@@ -388,7 +403,7 @@ export default function AccountPage() {
         {/* PANEL PRINCIPAL: LAYOUT ABIERTO Y BALANCEADO (SIN CAJA RÍGIDA) */}
         {/* ========================================================= */}
         <section className="flex-1 p-6 sm:p-10 md:p-12 flex flex-col justify-between overflow-y-auto bg-[#0b0b0e]">
-          <div className="max-w-3xl w-full py-6 px-4 sm:px-8">
+          <div className="max-w-3xl w-full">
             {/* Cabecera Limpia */}
             <div className="border-b border-white/5 pb-4 mb-6">
               <h1 className="font-serif text-3xl text-white">
@@ -660,7 +675,7 @@ export default function AccountPage() {
 
           {/* Fecha de Creación en el pie del panel */}
           {formattedRegisterDate && (
-            <footer className="pt-6 border-t border-white/5 mt-6 flex justify-between items-center text-[11px] text-zinc-500 max-w-3xl px-4 sm:px-8">
+            <footer className="pt-6 border-t border-white/5 mt-6 flex justify-between items-center text-[11px] text-zinc-500 max-w-3xl">
               <span>AyVino • Plataforma de Cava & Sommelier</span>
               <span>Miembro desde el {formattedRegisterDate}</span>
             </footer>

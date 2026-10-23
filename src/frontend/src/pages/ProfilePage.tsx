@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   Settings,
   Wine,
@@ -32,7 +33,27 @@ import {
 } from '../features/users';
 import { cn } from '../lib/utils';
 import WineBottleSilhouette from '../features/wines/components/WineBottleSilhouette';
-import { getBannerThemeByUsername, getBannerThemeById } from '../constants/bannerThemes';
+import { getBannerThemeByUsername } from '../constants/bannerThemes';
+
+function ShowcaseWineBottle({ src, alt }: { src?: string | null; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <WineBottleSilhouette className="w-8 h-20 text-neutral-500 transition-transform duration-300 group-hover:scale-105" />
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setHasError(true)}
+      className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+    />
+  );
+}
 
 type OwnerTab = 'cava' | 'historial' | 'deseados';
 
@@ -58,8 +79,6 @@ export default function ProfilePage() {
   const [ownerFavWines, setOwnerFavWines] = useState<UserWineListItemDto[]>([]);
   const [ownerDataLoading, setOwnerDataLoading] = useState(false);
 
-  const location = useLocation();
-
   const isOwner = Boolean(
     currentUser &&
     username &&
@@ -67,14 +86,8 @@ export default function ProfilePage() {
   );
 
   const activeTheme = useMemo(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const themeParam = searchParams.get('theme');
-    const overrideTheme = getBannerThemeById(themeParam);
-    if (overrideTheme) {
-      return overrideTheme;
-    }
     return getBannerThemeByUsername(profile?.username ?? username);
-  }, [location.search, profile?.username, username]);
+  }, [profile?.username, username]);
 
   // Cargar información de perfil
   useEffect(() => {
@@ -112,12 +125,16 @@ export default function ProfilePage() {
         }
       } catch (err: unknown) {
         if (!isMounted) return;
-        const msg =
-          err && typeof err === 'object' && 'response' in err
-            ? ((err as { response?: { status?: number } }).response?.status === 404
-                ? 'El usuario solicitado no existe o no se encuentra disponible.'
-                : 'Ocurrió un error al cargar el perfil.')
-            : 'No se pudo conectar con el servidor.';
+        let msg = 'No se pudo conectar con el servidor.';
+        if (axios.isAxiosError(err)) {
+          if (err.response?.status === 404) {
+            msg = 'El usuario solicitado no existe o no se encuentra disponible.';
+          } else if (err.response?.status === 401 || err.response?.status === 403) {
+            msg = 'No tenés permisos para ver este perfil.';
+          } else {
+            msg = 'Ocurrió un error al cargar el perfil.';
+          }
+        }
         setError(msg);
       } finally {
         if (isMounted) setLoading(false);
@@ -232,8 +249,10 @@ export default function ProfilePage() {
           prev ? { ...prev, followersCount: prev.followersCount + 1 } : null
         );
       }
-    } catch {
-      // Manejar error sutilmente
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+        navigate('/login');
+      }
     } finally {
       setFollowLoading(false);
     }
@@ -301,9 +320,8 @@ export default function ProfilePage() {
                         alt={profile.username}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(
-                            profile.username
-                          )}&backgroundColor=1c1917,292524`;
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = getAvatarUrl({ username: profile.username });
                         }}
                       />
                     </div>
@@ -560,15 +578,7 @@ export default function ProfilePage() {
                                 className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                               >
                                 <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                                  {item.imageUrl ? (
-                                    <img
-                                      src={item.imageUrl}
-                                      alt={item.name}
-                                      className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                                    />
-                                  ) : (
-                                    <WineBottleSilhouette className="w-8 h-20 text-neutral-500 transition-transform duration-300 group-hover:scale-105" />
-                                  )}
+                                  <ShowcaseWineBottle src={item.imageUrl} alt={item.name} />
                                 </div>
 
                                 <div className="space-y-1">
@@ -808,15 +818,7 @@ export default function ProfilePage() {
                           className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                         >
                           <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                            {wine.imageUrl ? (
-                              <img
-                                src={wine.imageUrl}
-                                alt={wine.name}
-                                className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                              />
-                            ) : (
-                              <WineBottleSilhouette className="w-8 h-20 text-neutral-500 transition-transform duration-300 group-hover:scale-105" />
-                            )}
+                            <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
                           </div>
 
                           <div className="space-y-1">

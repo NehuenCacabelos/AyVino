@@ -188,7 +188,7 @@ flowchart TD
     * Pie del sidebar con botón directo de "Cerrar sesión".
   - **Layout Abierto y Balanceado (Sin Doble Caja Aislada)**:
     * Eliminación del marco rectangular rígido para una integración fluida sobre el lienzo `#0b0b0e`.
-    * Contenedor de ancho controlado (`max-w-3xl w-full py-6 px-4 sm:px-8`) con cabecera en `font-serif text-3xl text-white`, bajada descriptiva en `text-zinc-400 text-sm mt-1` y divisor `border-b border-white/5 pb-4 mb-6`.
+    * Contenedor de ancho controlado (`max-w-3xl w-full`) con cabecera en `font-serif text-3xl text-white`, bajada descriptiva en `text-zinc-400 text-sm mt-1` y divisor `border-b border-white/5 pb-4 mb-6`.
     * Disposición de inputs en grilla balanceada (`grid grid-cols-1 sm:grid-cols-2 gap-4`), con la Biografía ocupando el ancho completo (`sm:col-span-2`).
     * Botones de acción alineados a la derecha y unificados en borgoña de marca (`bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium px-6 py-2.5 rounded-lg shadow-sm`).
 
@@ -196,7 +196,7 @@ flowchart TD
 - Vista accesible en `/perfil/:username` (pública y canónica) y `/perfil` (redirección contextual al usuario activo o `/login`).
 - **Navegación Inmersiva Contextual**: Implementa [`ProfileTopBar.tsx`](../../src/frontend/src/components/layout/ProfileTopBar.tsx) fija en el tope (`h-14` con `bg-[#0b0b0e]/90` y backdrop-blur), con vía de escape explícita `← Volver a Explorar` hacia `/dashboard`, eliminando la sobrecarga cognitiva del Navbar global.
 - **Banner Atmosférico & Identidad**:
-  - Banner superior con altura optimizada (`h-36 sm:h-40`) y gradiente vertical suave (`bg-gradient-to-b from-[#3a0d18] via-[#1c070c] to-[#0b0b0e]`).
+  - Banner superior con altura optimizada (`h-28 sm:h-32 md:h-36`) y tema cromático vitivinícola 100% determinista en frontend calculado según el hash del username (5 presets de guarda: *Gran Reserva*, *Cava Nocturna*, *Roble Tostado*, *Sauvignon Oliva*, *Cosecha Tardía*).
   - **Avatar Circular Superpuesto**: Avatar circular (`rounded-full`) con solapamiento orgánico (`-mt-12 sm:-mt-14 relative z-10`), aro protector `ring-4 ring-[#0b0b0e]`, sombra profunda `shadow-2xl` y borde sutil `white/15`.
 - **Jerarquía Tipográfica Editorial**:
   - Nombre de usuario en tipografía Serif noble (`font-serif text-3xl sm:text-4xl font-medium tracking-tight text-white`), completamente limpio sin píldoras ni badges artificiales para máxima pureza visual, en armonía con los títulos de sección.
