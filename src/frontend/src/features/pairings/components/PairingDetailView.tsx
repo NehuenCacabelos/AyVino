@@ -2,12 +2,11 @@ import { Link } from 'react-router-dom';
 import {
   Thermometer,
   Wine,
-  Sparkles,
   ArrowRight,
-  Flame,
   ChefHat,
   Bookmark,
   Layers,
+  UtensilsCrossed,
 } from 'lucide-react';
 import type {
   FoodPairingEntity,
@@ -46,36 +45,21 @@ export default function PairingDetailView({
     return (
       <div className="flex flex-col gap-8 animate-fadeIn">
         {/* Cabecera Editorial de la Comida */}
-        <div className="bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 relative overflow-hidden shadow-xl">
-          {/* Acento de luz ambiental */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#722F37]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
-
+        <div className="bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-8 relative overflow-hidden shadow-sm">
           <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#240e15] border border-rose-900/40 text-rose-300 font-mono text-[11px] uppercase tracking-wider">
-                <Flame className="w-3.5 h-3.5 text-rose-400" />
-                {food.badge}
-              </span>
-
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono text-[11px] uppercase tracking-wider">
-                <Sparkles className="w-3 h-3 text-amber-300" />
-                Principio: {food.principle}
-              </span>
-            </div>
-
-            <h3 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-100">
+            <h3 className="font-serif text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-neutral-100">
               {food.title}
             </h3>
 
             {/* Platos de Referencia */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs font-mono uppercase text-neutral-500 tracking-wider">
-                Platos representativos:
+                Platos sugeridos:
               </span>
               {food.dishes.map((dish) => (
                 <span
                   key={dish}
-                  className="px-2.5 py-1 rounded-md bg-neutral-900/80 border border-neutral-800 text-neutral-300 text-xs font-sans"
+                  className="px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs font-sans"
                 >
                   {dish}
                 </span>
@@ -84,23 +68,18 @@ export default function PairingDetailView({
           </div>
         </div>
 
-        {/* Ficha Sommelier: Análisis Organoléptico & Pautas Técnicas */}
+        {/* Ficha Sommelier: Por qué funciona & Cepas Sugeridas */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Columna Izquierda: Análisis de Afinidades (7 cols) */}
-          <div className="lg:col-span-7 bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between shadow-lg">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-950/60 border border-rose-900/40 text-rose-300">
+          {/* Columna Izquierda: Por qué funciona (7 cols) */}
+          <div className="lg:col-span-7 bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-7 flex flex-col justify-between shadow-sm">
+            <div className="flex flex-col gap-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-rose-950/40 border border-rose-900/40 text-rose-300">
                   <ChefHat className="h-4 w-4" />
                 </div>
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 block">
-                    CIENCIA DEL MARIDAJE
-                  </span>
-                  <h4 className="font-serif text-xl font-semibold text-neutral-100">
-                    Fundamentación del Sommelier
-                  </h4>
-                </div>
+                <h4 className="font-serif text-xl font-semibold text-neutral-100">
+                  Por qué funciona
+                </h4>
               </div>
 
               <p className="text-sm sm:text-[15px] leading-relaxed text-neutral-300 font-sans font-light">
@@ -108,65 +87,48 @@ export default function PairingDetailView({
               </p>
             </div>
 
-            {/* Tips de Servicio */}
-            <div className="mt-6 pt-6 border-t border-neutral-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3 bg-neutral-900/60 rounded-xl p-3.5 border border-neutral-800/60">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 shrink-0 mt-0.5">
-                  <Thermometer className="h-4 w-4 text-rose-400" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                    Temperatura Óptima
-                  </span>
-                  <span className="text-xs font-mono font-semibold text-neutral-200 mt-0.5">
-                    {food.servingTemperature}
-                  </span>
-                </div>
+            {/* Barra Compacta de Servicio: Temperatura, Cristalería y Tip */}
+            <div className="mt-6 pt-5 border-t border-neutral-800/80 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs text-neutral-300">
+              <div className="flex items-center gap-2">
+                <Thermometer className="h-4 w-4 text-rose-400 shrink-0" />
+                <span className="text-neutral-500 font-mono">Temp:</span>
+                <span className="font-mono font-medium text-neutral-200">{food.servingTemperature}</span>
               </div>
 
-              <div className="flex items-start gap-3 bg-neutral-900/60 rounded-xl p-3.5 border border-neutral-800/60">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 shrink-0 mt-0.5">
-                  <Wine className="h-4 w-4 text-amber-300" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                    Cristalería Sugerida
-                  </span>
-                  <span className="text-xs font-sans font-medium text-neutral-300 mt-0.5 line-clamp-2">
-                    {food.glassware}
-                  </span>
-                </div>
-              </div>
-            </div>
+              <span className="hidden sm:inline text-neutral-700">|</span>
 
-            <div className="mt-4 rounded-xl bg-neutral-900/40 border border-neutral-800/60 p-3.5 text-xs text-neutral-400 font-sans flex items-start gap-2.5">
-              <Bookmark className="w-4 h-4 text-rose-400/80 shrink-0 mt-0.5" />
-              <span>{food.serviceTip}</span>
+              <div className="flex items-center gap-2">
+                <Wine className="h-4 w-4 text-amber-300 shrink-0" />
+                <span className="text-neutral-500 font-mono">Copa:</span>
+                <span className="font-sans text-neutral-200">{food.glassware}</span>
+              </div>
+
+              <span className="hidden sm:inline text-neutral-700">|</span>
+
+              <div className="flex items-center gap-2">
+                <Bookmark className="h-3.5 w-3.5 text-rose-400/80 shrink-0" />
+                <span className="text-neutral-400 font-sans">{food.serviceTip}</span>
+              </div>
             </div>
           </div>
 
-          {/* Columna Derecha: Cepas Sugeridas (Navegación Cruzada a "¿Qué vas a tomar?") (5 cols) */}
-          <div className="lg:col-span-5 bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between shadow-lg">
+          {/* Columna Derecha: Cepas Sugeridas (5 cols) */}
+          <div className="lg:col-span-5 bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-7 flex flex-col justify-between shadow-sm">
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300">
                   <Layers className="h-4 w-4" />
                 </div>
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 block">
-                    ARMONÍA ENOLÓGICA
-                  </span>
-                  <h4 className="font-serif text-xl font-semibold text-neutral-100">
-                    Cepas Ideales
-                  </h4>
-                </div>
+                <h4 className="font-serif text-xl font-semibold text-neutral-100">
+                  Cepas recomendadas
+                </h4>
               </div>
 
               <p className="text-xs text-neutral-400">
-                Hacé clic en cualquier cepa para cambiar de perspectiva y consultar su ficha organoléptica detallada:
+                Hacé clic en cualquier cepa para ver su perfil enológico y notas de cata:
               </p>
 
-              {/* Botones de Cepas con salto interactivo */}
+              {/* Botones de Cepas sin badge redundante de tipo */}
               <div className="flex flex-col gap-2.5 mt-1">
                 {food.recommendedVarieties.map((varId) => {
                   const variety = getWineVariety(varId);
@@ -177,17 +139,12 @@ export default function PairingDetailView({
                       key={varId}
                       type="button"
                       onClick={() => onSelectWine(varId)}
-                      className="group flex items-center justify-between p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 hover:border-rose-900/60 hover:bg-neutral-900 text-left transition-all cursor-pointer"
+                      className="group flex items-center justify-between p-3.5 rounded-lg bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/90 text-left transition-all cursor-pointer"
                     >
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-serif text-base font-semibold text-neutral-200 group-hover:text-white transition-colors">
-                            {variety.title}
-                          </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 uppercase">
-                            {variety.wineType}
-                          </span>
-                        </div>
+                        <span className="font-serif text-base font-semibold text-neutral-200 group-hover:text-white transition-colors">
+                          {variety.title}
+                        </span>
                         <span className="text-xs text-neutral-400 line-clamp-1">
                           {variety.body} · Acidez {variety.acidity}
                         </span>
@@ -205,7 +162,7 @@ export default function PairingDetailView({
           </div>
         </div>
 
-        {/* Sección de Botellas Sugeridas del Catálogo / Cava */}
+        {/* Sección de Botellas Sugeridas del Catálogo */}
         <div className="flex flex-col gap-4 pt-2">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
             <div>
@@ -213,7 +170,7 @@ export default function PairingDetailView({
                 CURADURÍA DE CAVA
               </span>
               <h4 className="font-serif text-2xl font-semibold text-neutral-100">
-                Etiquetas Recomendadas para este Maridaje
+                Etiquetas recomendadas para este maridaje
               </h4>
             </div>
 
@@ -237,19 +194,24 @@ export default function PairingDetailView({
               ))}
             </div>
           ) : (
-            <div className="rounded-xl bg-[#141417] border border-neutral-800 p-8 text-center flex flex-col items-center justify-center gap-3">
-              <Wine className="w-8 h-8 text-neutral-600" />
-              <div className="max-w-md">
-                <p className="text-sm text-neutral-300 font-medium">
-                  Contamos con más de 40 etiquetas boutique afines a este estilo en nuestro catálogo.
-                </p>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Filtrá por tipo de vino o cepa sugerida para descubrir bodegas de autor ideales.
-                </p>
+            <div className="rounded-lg bg-[#121215] border border-neutral-800 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-14 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0 text-rose-400">
+                  <Wine className="w-6 h-6" />
+                </div>
+                <div>
+                  <h5 className="font-serif text-lg font-semibold text-neutral-100">
+                    Catálogo Boutique AyVino
+                  </h5>
+                  <p className="text-xs text-neutral-400 mt-0.5 max-w-lg leading-relaxed">
+                    Contamos con más de 40 etiquetas boutique y partidas limitadas de autor que armonizan con este estilo gastronómico.
+                  </p>
+                </div>
               </div>
+
               <Link
                 to="/catalogo"
-                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#722F37] hover:bg-[#5c1d24] text-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 rounded-md bg-[#722F37] hover:bg-[#5c1d24] text-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all shrink-0 shadow-sm"
               >
                 <span>Explorar Catálogo</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -267,34 +229,28 @@ export default function PairingDetailView({
   return (
     <div className="flex flex-col gap-8 animate-fadeIn">
       {/* Cabecera Editorial del Vino */}
-      <div className="bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 relative overflow-hidden shadow-xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#722F37]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
-
+      <div className="bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-8 relative overflow-hidden shadow-sm">
         <div className="relative z-10 flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#240e15] border border-rose-900/40 text-rose-300 font-mono text-[11px] uppercase tracking-wider">
-                <Wine className="w-3.5 h-3.5 text-rose-400" />
-                {wine.wineType}
-              </span>
-              <span className="px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300 font-mono text-[11px] uppercase tracking-wider">
-                Cuerpo: {wine.body}
-              </span>
-            </div>
-
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono text-[11px] uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-rose-300 font-mono text-xs uppercase tracking-wider">
+              {wine.wineType}
+            </span>
+            <span className="px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300 font-mono text-xs uppercase tracking-wider">
+              Cuerpo: {wine.body}
+            </span>
+            <span className="px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-400 font-mono text-xs uppercase tracking-wider">
               Acidez: {wine.acidity}
             </span>
           </div>
 
-          <h3 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-100">
+          <h3 className="font-serif text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-neutral-100">
             {wine.title}
           </h3>
 
           {/* Descriptores Aromáticos */}
-          <div className="rounded-xl bg-neutral-900/70 border border-neutral-800/80 p-4 mt-1">
+          <div className="rounded-md bg-neutral-900/70 border border-neutral-800/80 p-4 mt-1">
             <span className="text-[10px] font-mono uppercase text-neutral-500 tracking-wider block mb-1">
-              Perfil Aromático y Descriptores:
+              Perfil Aromático:
             </span>
             <p className="text-sm font-sans text-neutral-200">
               {wine.flavorProfile}
@@ -303,23 +259,18 @@ export default function PairingDetailView({
         </div>
       </div>
 
-      {/* Ficha Sommelier: Enfoque Enológico */}
+      {/* Ficha Sommelier: Por qué funciona & Platos Sugeridos */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Columna Izquierda: Criterio Sommelier (7 cols) */}
-        <div className="lg:col-span-7 bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between shadow-lg">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-950/60 border border-rose-900/40 text-rose-300">
+        {/* Columna Izquierda: Por qué funciona (7 cols) */}
+        <div className="lg:col-span-7 bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-7 flex flex-col justify-between shadow-sm">
+          <div className="flex flex-col gap-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-rose-950/40 border border-rose-900/40 text-rose-300">
                 <ChefHat className="h-4 w-4" />
               </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 block">
-                  ANÁLISIS ENOLÓGICO
-                </span>
-                <h4 className="font-serif text-xl font-semibold text-neutral-100">
-                  Comportamiento en Mesa
-                </h4>
-              </div>
+              <h4 className="font-serif text-xl font-semibold text-neutral-100">
+                Por qué funciona
+              </h4>
             </div>
 
             <p className="text-sm sm:text-[15px] leading-relaxed text-neutral-300 font-sans font-light">
@@ -334,62 +285,45 @@ export default function PairingDetailView({
             )}
           </div>
 
-          {/* Pautas de Servicio */}
-          <div className="mt-6 pt-6 border-t border-neutral-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 bg-neutral-900/60 rounded-xl p-3.5 border border-neutral-800/60">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 shrink-0 mt-0.5">
-                <Thermometer className="h-4 w-4 text-rose-400" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                  Temperatura
-                </span>
-                <span className="text-xs font-mono font-semibold text-neutral-200 mt-0.5">
-                  {wine.servingTemperature}
-                </span>
-              </div>
+          {/* Barra Compacta de Servicio: Temperatura, Cristalería y Tip */}
+          <div className="mt-6 pt-5 border-t border-neutral-800/80 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs text-neutral-300">
+            <div className="flex items-center gap-2">
+              <Thermometer className="h-4 w-4 text-rose-400 shrink-0" />
+              <span className="text-neutral-500 font-mono">Temp:</span>
+              <span className="font-mono font-medium text-neutral-200">{wine.servingTemperature}</span>
             </div>
 
-            <div className="flex items-start gap-3 bg-neutral-900/60 rounded-xl p-3.5 border border-neutral-800/60">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 shrink-0 mt-0.5">
-                <Wine className="h-4 w-4 text-amber-300" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                  Copa Recomendada
-                </span>
-                <span className="text-xs font-sans font-medium text-neutral-300 mt-0.5">
-                  {wine.glassware}
-                </span>
-              </div>
-            </div>
-          </div>
+            <span className="hidden sm:inline text-neutral-700">|</span>
 
-          <div className="mt-4 rounded-xl bg-neutral-900/40 border border-neutral-800/60 p-3.5 text-xs text-neutral-400 font-sans flex items-start gap-2.5">
-            <Bookmark className="w-4 h-4 text-rose-400/80 shrink-0 mt-0.5" />
-            <span>{wine.serviceTip}</span>
+            <div className="flex items-center gap-2">
+              <Wine className="h-4 w-4 text-amber-300 shrink-0" />
+              <span className="text-neutral-500 font-mono">Copa:</span>
+              <span className="font-sans text-neutral-200">{wine.glassware}</span>
+            </div>
+
+            <span className="hidden sm:inline text-neutral-700">|</span>
+
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-3.5 w-3.5 text-rose-400/80 shrink-0" />
+              <span className="text-neutral-400 font-sans">{wine.serviceTip}</span>
+            </div>
           </div>
         </div>
 
-        {/* Columna Derecha: Comidas Recomendadas (Navegación Cruzada a "¿Qué vas a comer?") (5 cols) */}
-        <div className="lg:col-span-5 bg-[#141417] rounded-2xl border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between shadow-lg">
+        {/* Columna Derecha: Platos Sugeridos (5 cols) */}
+        <div className="lg:col-span-5 bg-[#121215] rounded-lg border border-neutral-800 p-6 sm:p-7 flex flex-col justify-between shadow-sm">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
-                <Flame className="h-4 w-4 text-rose-400" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-900 border border-neutral-800 text-neutral-300">
+                <UtensilsCrossed className="h-4 w-4 text-neutral-300" />
               </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 block">
-                  MARIDAJE GASTRONÓMICO
-                </span>
-                <h4 className="font-serif text-xl font-semibold text-neutral-100">
-                  Platos & Cocinas Ideales
-                </h4>
-              </div>
+              <h4 className="font-serif text-xl font-semibold text-neutral-100">
+                Platos recomendados
+              </h4>
             </div>
 
             <p className="text-xs text-neutral-400">
-              Hacé clic en cualquier categoría culinaria para explorar su análisis molecular y preparaciones recomendadas:
+              Hacé clic en cualquier categoría para explorar sus platos y preparaciones ideales:
             </p>
 
             <div className="flex flex-col gap-2.5 mt-1">
@@ -402,7 +336,7 @@ export default function PairingDetailView({
                     key={foodId}
                     type="button"
                     onClick={() => onSelectFood(foodId)}
-                    className="group flex items-center justify-between p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 hover:border-rose-900/60 hover:bg-neutral-900 text-left transition-all cursor-pointer"
+                    className="group flex items-center justify-between p-3.5 rounded-lg bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/90 text-left transition-all cursor-pointer"
                   >
                     <div className="flex flex-col gap-0.5">
                       <span className="font-serif text-base font-semibold text-neutral-200 group-hover:text-white transition-colors">
@@ -457,21 +391,26 @@ export default function PairingDetailView({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl bg-[#141417] border border-neutral-800 p-8 text-center flex flex-col items-center justify-center gap-3">
-            <Wine className="w-8 h-8 text-neutral-600" />
-            <div className="max-w-md">
-              <p className="text-sm text-neutral-300 font-medium">
-                Contamos con diversas partidas limitadas de {wine.title} en nuestro catálogo público.
-              </p>
-              <p className="text-xs text-neutral-500 mt-1">
-                Descubrí bodegas boutique de diferentes regiones y altitudes argentinas.
-              </p>
+          <div className="rounded-lg bg-[#121215] border border-neutral-800 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-14 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0 text-rose-400">
+                <Wine className="w-6 h-6" />
+              </div>
+              <div>
+                <h5 className="font-serif text-lg font-semibold text-neutral-100">
+                  Etiquetas de {wine.title}
+                </h5>
+                <p className="text-xs text-neutral-400 mt-0.5 max-w-lg leading-relaxed">
+                  Contamos con diversas partidas limitadas de {wine.title} y bodegas boutique en nuestro catálogo abierto.
+                </p>
+              </div>
             </div>
+
             <Link
               to="/catalogo"
-              className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#722F37] hover:bg-[#5c1d24] text-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 rounded-md bg-[#722F37] hover:bg-[#5c1d24] text-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all shrink-0 shadow-sm"
             >
-              <span>Ver {wine.title} en Catálogo</span>
+              <span>Ver en Catálogo</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -480,4 +419,3 @@ export default function PairingDetailView({
     </div>
   );
 }
-

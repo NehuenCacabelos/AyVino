@@ -84,7 +84,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Asado de tira', 'Ojo de bife a la leña', 'Cordero patagónico', 'Entraña jugosa'],
     recommendedVarieties: ['malbec', 'cabernet-sauvignon', 'syrah', 'cabernet-franc'],
     sommelierNote:
-      'La interacción organoléptica clave es la afinidad entre los taninos polifenólicos del vino y la albúmina de la carne. La grasa intramuscular y el colágeno desnaturalizan los taninos volviéndolos sedosos en boca, mientras que la acidez natural limpia el paladar de la película lipídica, preparando el siguiente bocado.',
+      'La grasa y la potencia de las carnes a las brasas piden vinos estructurados y con buen agarre tánico. El vino limpia el paladar tras cada bocado jugoso, logrando un equilibrio redondo y prolongado.',
     serviceTip: 'Servir entre 16°C y 18°C. Se aconseja decantación previa de 30 minutos en etiquetas de gran concentración.',
     glassware: 'Copa Burdeos de cáliz amplio (favorece la oxigenación y suaviza el impacto alcohólico)',
     servingTemperature: '16°–18°C',
@@ -98,7 +98,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Tallarines al fileto', 'Tuco de cocción lenta', 'Bolognesa tradicional', 'Lasagna de ternera'],
     recommendedVarieties: ['bonarda', 'sangiovese', 'cabernet-franc', 'merlot'],
     sommelierNote:
-      'La alta presencia de ácidos orgánicos (málico y cítrico) del tomate cocido requiere un tinto con acidez viva para evitar que el vino se sienta plano o amargo. La Bonarda argentina y el Cabernet Franc ofrecen fruta roja fresca y tensión lineal que iguala la frescura ácida de la salsa sin aportar taninos astringentes.',
+      'La acidez viva del tomate y la intensidad de las cocciones largas encuentran su mejor aliado en tintos de acidez vibrante y fruta roja fresca. Vinos con taninos dóciles que abrazan la salsa sin tapar la pasta ni saturar el paladar.',
     serviceTip: 'Servir entre 15°C y 17°C para resaltar la fruta roja crujiente sin volatilizar los aromas herbales.',
     glassware: 'Copa Borgoña o copa estándar de tinto con boca semicerrada',
     servingTemperature: '15°–17°C',
@@ -112,7 +112,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Fettuccine Alfredo', 'Sorrentinos cuatro quesos', 'Gnocchi al gorgonzola', 'Carbonara clásica'],
     recommendedVarieties: ['chardonnay', 'viognier', 'pinot-noir'],
     sommelierNote:
-      'Las salsas a base de manteca, crema y quesos maduros demandan volumen en boca y untuosidad (aportada por la fermentación maloláctica y crianza en lías de un buen Chardonnay). Si se prefiere tinto, un Pinot Noir de taninos sedosos y notas terrosas contrasta sin enmascarar la sutileza láctea.',
+      'Las salsas cremosas y los quesos fundidos piden vinos con volumen en boca y buena untuosidad. Un blanco con cuerpo y paso por roble o un tinto etéreo y fresco aportan la textura justa para cortar la densidad láctea sin perder delicadeza.',
     serviceTip: 'Chardonnay a 10°–12°C para no bloquear su complejidad mantecosa. Pinot Noir fresco a 14°–15°C.',
     glassware: 'Copa Montrachet / Copa Borgoña de cáliz esférico',
     servingTemperature: '10°–12°C (Blancos) · 14°–15°C (Tintos)',
@@ -126,7 +126,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Pollo de campo al limón y romero', 'Magret de pato', 'Codorniz asada', 'Pechuga rellena con hongos'],
     recommendedVarieties: ['pinot-noir', 'chardonnay', 'merlot', 'criolla-chica'],
     sommelierNote:
-      'Las aves poseen fibras musculares tiernas y grasas ligeras que sucumben ante tintos pesados. Se busca una armonía basada en taninos aterciopelados y frescura de sotobosque. Una Criolla Chica de mínima intervención o un Pinot Noir aportan fruta roja cristalina que realza el toque herbal y el dorado de la piel.',
+      'La carne tierna de las aves y sus notas doradas al horno van de la mano con vinos fluidos y amables. Tintos sutiles o blancos con buena estructura respetan la suavidad del plato y acompañan las hierbas aromáticas a la perfección.',
     serviceTip: 'Servir a 13°–15°C. La baja temperatura resalta la frescura aromática y afina la elegancia en copa.',
     glassware: 'Copa Borgoña amplia (captura volátiles etéreos y florales)',
     servingTemperature: '13°–15°C',
@@ -140,7 +140,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Ceviche clásico al cilantro', 'Salmón rosado a la plancha', 'Gambas al ajillo', 'Pesca blanca costera'],
     recommendedVarieties: ['torrontes', 'sauvignon-blanc', 'pinot-grigio', 'rosado-seco'],
     sommelierNote:
-      'El yodo marino y los ácidos grasos omega-3 producen notas metálicas desagradables en contacto con taninos marcados. El maridaje perfecto exige blancos con acidez cortante que actúe como una gota de limón natural sobre la pieza, limpiando el paladar y elevando los matices salinos y cítricos.',
+      'Los sabores frescos y salinos del mar piden vinos blancos crocantes, cítricos y filosos, o rosados ligeros. Actúan como unas gotas de limón fresco: limpian el paladar en cada bocado y realzan la pureza de la pesca.',
     serviceTip: 'Servir frío pero no helado, entre 7°C y 10°C, preservando su expresión terpénica y aromática.',
     glassware: 'Copa Tulipa o copa de vino blanco de cáliz esbelto',
     servingTemperature: '7°–10°C',
@@ -154,7 +154,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Parmesano Reggiano', 'Gouda estacionado', 'Jamón crudo reserva', 'Salame de la colonia'],
     recommendedVarieties: ['cabernet-sauvignon', 'malbec', 'blend-tinto', 'syrah'],
     sommelierNote:
-      'Los quesos madurados y fiambres estacionados concentran alta cantidad de caseína, sal y umami. Requieren vinos con peso, taninos firmes y madurez alcohólica para equilibrar la intensa persistencia gustativa sin que el vino desaparezca en el retrogusto.',
+      'La intensidad salina y la grasa noble de los quesos estacionados y la charcutería piden vinos con buena presencia, fruta madura y taninos firmes. Una combinación clásica donde vino y comida se potencian sin opacarse.',
     serviceTip: 'Servir a 16°–18°C. Dejar airear el tinto mientras los quesos toman temperatura ambiente (18°–20°C).',
     glassware: 'Copa Burdeos clásica de boca recta',
     servingTemperature: '16°–18°C',
@@ -168,7 +168,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     dishes: ['Volcán de chocolate 70%', 'Trufas amargas con flor de sal', 'Torta húmeda de cacao y frambuesas'],
     recommendedVarieties: ['oporto-fortificado', 'espumante-dulce', 'cabernet-sauvignon'],
     sommelierNote:
-      'El cacao puro amargo contiene taninos vegetales que compiten con el vino seco, haciéndolo sentir agrio y desbalanceado. La regla áurea del sommelier dicta que el vino debe igualar o superar la concentración dulce del postre (fortificados u Oporto), o bien recurrir a la efervescencia de un espumante dulce que barra la densidad grasa del chocolate.',
+      'El cacao amargo y los postres intensos necesitan vinos que estén a su misma altura en concentración y calidez. Las etiquetas fortificadas o los espumantes dulces aportan el contrapunto ideal para redondear el final de la comida sin empalagar.',
     serviceTip: 'Fortificados a 12°–14°C; espumantes dulces muy fríos a 6°–8°C.',
     glassware: 'Copa de Oporto pequeña o Copa Tulipa de Espumante',
     servingTemperature: '6°–8°C (Espumante) · 12°–14°C (Fortificado)',
@@ -207,7 +207,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Casis, pimiento rojo asado, cedro, tabaco y pimienta negra en grano.',
     recommendedFoods: ['carnes-rojas', 'quesos-tablas', 'postres-chocolates'],
     sommelierNote:
-      'La estructura fenólica más poderosa del reino vitivinícola. Su carga tánica y acidez sostenida le otorgan capacidad de guarda y resistencia ante grasas potentes y quesos muy curados.',
+      'Un clásico imponente de gran estructura y taninos firmes. Su potencia aromática y elegancia natural lo convierten en el compañero predilecto de carnes con carácter, cocciones a las brasas y quesos de larga maduración.',
     serviceTip: 'Servir a 17°–18°C en copa de gran apertura para facilitar la evolución de aromas terciarios.',
     glassware: 'Copa Burdeos grande',
     servingTemperature: '17°–18°C',
@@ -223,7 +223,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Pimientos dulces horneados, grafito, jarilla, frambuesas y textura mineral de tiza.',
     recommendedFoods: ['pastas-rojas', 'carnes-rojas', 'quesos-tablas'],
     sommelierNote:
-      'Cepa en auge en terroirs de altura como Gualtallary. Su acidez lineal electrizante y textura granulosa maridan con salsas complejas de tomate, hierbas andinas y cortes con cocción a fuego lento.',
+      'Elegancia fresca con notas a pimientos asados y textura mineral. Su acidez vibrante y taninos precisos maridan a la perfección con salsas especiadas, platos con hierbas frescas y carnes jugosas.',
     serviceTip: 'Servir a 16°C. No sobrecalentar para conservar su carácter pirazínico elegante y fresco.',
     glassware: 'Copa Burdeos o Borgoña',
     servingTemperature: '15°–17°C',
@@ -239,7 +239,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Cerezas maduras, granada, higos frescos y una sutil nota especiada anisada.',
     recommendedFoods: ['pastas-rojas'],
     sommelierNote:
-      'La reina de la mesa italiana adaptada al este y norte mendocino. Su fruta exuberante y taninos amables abrazan pastas con salsas de tomate y carnes estofadas sin fatigar el paladar.',
+      'Fruta exuberante, cuerpo amable y frescura viva. Un tinto generoso y fácil de disfrutar que acompaña con soltura pastas caseras, pizzas al horno de leña y comidas de reunión familiar.',
     serviceTip: 'Servir a 14°–16°C; ligeramente refrescado gana en tensión y elegancia gastronómica.',
     glassware: 'Copa estándar de tinto',
     servingTemperature: '14°–16°C',
@@ -255,7 +255,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Pimienta negra recién molida, aceitunas negras, cuero noble y compota de arándanos.',
     recommendedFoods: ['carnes-rojas', 'quesos-tablas'],
     sommelierNote:
-      'Su perfil cárnico, ahumado y balsámico es el compañero natural del cordero asado, carnes silvestres y tablas con embutidos de alta curación.',
+      'De perfil especiado y notas a pimienta negra y frutos oscuros. Su textura envolvente es la aliada ideal para carnes a la parrilla, cordero patagónico y platos con toques ahumados.',
     serviceTip: 'Servir a 16°–18°C en copa con cáliz envolvente.',
     glassware: 'Copa Syrah / Burdeos',
     servingTemperature: '16°–18°C',
@@ -271,7 +271,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Frutillas silvestres, tierra mojada, hongos de pino y un fondo sutil de té negro.',
     recommendedFoods: ['aves', 'pastas-blancas'],
     sommelierNote:
-      'Elegancia pura de climas fríos como la Patagonia o zonas altas de Tupungato. Por su liviandad tánica no compite con carnes blancas ni pastas con crema, actuando como un puente aromático perfecto.',
+      'Delicadeza y frescura en estado puro. Con taninos sedosos y notas a frutos rojos silvestres, viste la mesa con elegancia sin invadir platos sutiles como aves al horno, truchas o risottos de hongos.',
     serviceTip: 'Servir entre 13°C y 15°C para salvaguardar sus aromas primarios florales y terrosos.',
     glassware: 'Copa Borgoña de balón ancho',
     servingTemperature: '13°–15°C',
@@ -287,7 +287,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Ciruelas rojas, especias dulces, notas de moca y taninos aterciopelados.',
     recommendedFoods: ['aves', 'pastas-rojas'],
     sommelierNote:
-      'Un tinto versátil de boca redonda y taninos maduros que acompaña aves de caza, risottos y pastas caseras.',
+      'Redondo, amable y con taninos aterciopelados. Un comodín gastronómico que regala fruta madura y suavidad en boca, ideal para pastas, empanadas y carnes magras braseadas.',
     serviceTip: 'Servir a 15°–17°C.',
     glassware: 'Copa estándar de tinto',
     servingTemperature: '15°–17°C',
@@ -303,7 +303,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Capas de fruta negra, especias complejas, chocolate amargo y roble integrado.',
     recommendedFoods: ['carnes-rojas', 'quesos-tablas'],
     sommelierNote:
-      'La complejidad del corte (Malbec, Cabernet y Petit Verdot) requiere preparaciones gastronómicas de alta intensidad y cocción lenta a las brasas.',
+      'La suma de lo mejor de cada cepa crea un vino complejo, profundo y con presencia. Pide platos de fondo contundentes, guisados a fuego lento y sobremesas largas.',
     serviceTip: 'Servir a 17°–18°C con decantación de 40 minutos.',
     glassware: 'Copa Burdeos',
     servingTemperature: '17°–18°C',
@@ -319,7 +319,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Guindas ácidas, hojas de té, orégano silvestre y notas térreas.',
     recommendedFoods: ['pastas-rojas'],
     sommelierNote:
-      'Cepa toscana por antonomasia. Su acidez punzante resalta la pulpa del tomate y neutraliza el aceite de oliva virgen extra.',
+      'La gran cepa italiana de acidez vivaz y taninos sabrosos. Su perfil fresco y notas de hierbas secas hacen brillar salsas de tomate maduro, pastas rellenas y platos mediterráneos.',
     serviceTip: 'Servir a 15°–16°C.',
     glassware: 'Copa estándar de tinto',
     servingTemperature: '15°–16°C',
@@ -334,7 +334,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Manzanas doradas, ananá maduro, manteca clarificada, brioche y avellanas tostadas.',
     recommendedFoods: ['pastas-blancas', 'aves'],
     sommelierNote:
-      'Cuando posee fermentación en barrica y trabajo sobre lías, el Chardonnay aporta una textura grasa que armoniza por mimetismo con salsas cremosas y carnes blancas.',
+      'Untuoso, elegante y con cuerpo. Cuando pasa por madera regala notas a manteca y avellanas tostadas que armonizan de maravilla con salsas blancas, pescados grasos y aves doradas.',
     serviceTip: 'Servir a 10°–12°C para apreciar los matices de la madera y las lías.',
     glassware: 'Copa Montrachet de cáliz amplio',
     servingTemperature: '10°–12°C',
@@ -349,7 +349,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Damasco turco, flores blancas de azahar, miel de azahar y textura sedosa en boca.',
     recommendedFoods: ['pastas-blancas'],
     sommelierNote:
-      'Blanco aromático con baja acidez y gran volumen graso en boca. Su toque floral contrasta deliciosamente con quesos suaves y salsas de cuatro quesos.',
+      'Aromático, floral y con sedosidad en boca. Su volumen envolvente y final fresco acompañan quesos de pasta blanda, salsas cremosas y platos con toques aromáticos.',
     serviceTip: 'Servir a 9°–11°C.',
     glassware: 'Copa de vino blanco',
     servingTemperature: '9°–11°C',
@@ -364,7 +364,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Jazmines frescos, cáscara de pomelo rosado, flores blancas y mineralidad salina.',
     recommendedFoods: ['pescados-mariscos'],
     sommelierNote:
-      'Nacido en los valles calchaquíes a gran altitud. En boca es seco y cortante, un contrapunto perfecto para ceviches, pescados marinados y mariscos al vapor.',
+      'Expresión floral inconfundible con un paladar seco, ágil y cítrico. Su frescura electrizante resalta pescados, ceviches andinos y empanadas salteñas cortadas a cuchillo.',
     serviceTip: 'Servir a 8°–10°C.',
     glassware: 'Copa Tulipa de blanco',
     servingTemperature: '8°–10°C',
@@ -379,7 +379,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Ruda, maracuyá ácido, espárragos frescos, lima y pedernal.',
     recommendedFoods: ['pescados-mariscos'],
     sommelierNote:
-      'Un bisturí de frescura. Su acidez cítrica atraviesa el paladar, disolviendo cualquier residuo oleoso de pescados grasos como el salmón o mariscos fritos.',
+      'Pura energía cítrica y frescura herbal. Un blanco vertical y crocante que limpia el paladar tras cada bocado de mariscos, pescados a la plancha o ensaladas de huerta.',
     serviceTip: 'Servir entre 7°C y 9°C en copa flauta o tulipa.',
     glassware: 'Copa Tulipa',
     servingTemperature: '7°–9°C',
@@ -394,7 +394,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Peras verdes, melón blanco, toques florales y final crocante.',
     recommendedFoods: ['pescados-mariscos'],
     sommelierNote:
-      'Ligero, sutil y seco. Acompaña mariscos a la plancha y pescados de roca sin alterar su sabor original.',
+      'Ligero, cristalino y refrescante. Un vino transparente y accesible que acompaña aperitivos, mariscos suaves y platos ligeros de verano.',
     serviceTip: 'Servir a 7°–9°C.',
     glassware: 'Copa de vino blanco clásica',
     servingTemperature: '7°–9°C',
@@ -409,7 +409,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Frutillas frescas, granada, cítricos suaves y toque mineral.',
     recommendedFoods: ['pescados-mariscos'],
     sommelierNote:
-      'Une la frescura de un blanco con una leve presencia tánica que sostiene frutos de mar condimentados y pescados a la plancha.',
+      'Combina la frescura vivaz de un blanco con la delicada fruta de los tintos. Versátil y gastronómico, ideal para tablas de tapeo, frutos de mar y arroces.',
     serviceTip: 'Servir a 9°–11°C.',
     glassware: 'Copa de vino blanco',
     servingTemperature: '9°–11°C',
@@ -425,7 +425,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Frutillas del bosque, té negro, hierbas silvestres y jugo puro sin astringencia.',
     recommendedFoods: ['aves'],
     sommelierNote:
-      'Vino patrimonial de parrales antiguos. Su paso etéreo y fresca acidez es la compañía soñada para aves grilladas y truchas patagónicas.',
+      'Rescate patrimonial de trago fluido, fresco y seductor. Su liviandad y aromas a frutas del bosque lo hacen perfecto para acompañar comidas relajadas, charcutería y pesca de río.',
     serviceTip: 'Servir refrescado a 13°–14°C.',
     glassware: 'Copa Borgoña o estándar',
     servingTemperature: '13°–14°C',
@@ -440,7 +440,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Flores de azahar, duraznos blancos en almíbar, burbuja cremosa y final dulce balanceado.',
     recommendedFoods: ['postres-chocolates'],
     sommelierNote:
-      'El gas carbónico y el azúcar natural equilibran la densidad lipídica del chocolate y las masas dulces.',
+      'Burbujas finas y dulzor equilibrado con fruta fresca. La opción justa para el momento del brindis, postres frutales y tortas suaves.',
     serviceTip: 'Servir muy frío entre 6°C y 8°C en copa flauta o tulipa estilizada.',
     glassware: 'Copa Tulipa de Espumante',
     servingTemperature: '6°–8°C',
@@ -455,7 +455,7 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     flavorProfile: 'Ciruelas secas, higos en almíbar, nueces, toffee y calidez alcohólica envolvente.',
     recommendedFoods: ['postres-chocolates'],
     sommelierNote:
-      'El compañero legendario del chocolate oscuro al 70%. Su dulzura licorosa y alcohol generoso abrazan los taninos vegetales del cacao.',
+      'Calidez noble, concentración licorosa y notas a frutos secos e higos. El cierre soñado junto a chocolates oscuros, trufas o una buena sobremesa.',
     serviceTip: 'Servir a 12°–14°C en copa pequeña para concentrar aromas nobles.',
     glassware: 'Copa de Oporto',
     servingTemperature: '12°–14°C',

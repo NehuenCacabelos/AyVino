@@ -159,13 +159,15 @@ flowchart TD
     - **Diálogo Modal de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata personales con guardado de descorche.
   - Pie de página editorial integrado consistente con la plataforma.
 
-### 2.6 Laboratorio Enogastronómico de Maridaje (`PairingPage.tsx`)
+### 2.6 El Arte del Maridaje (`PairingPage.tsx`)
 - Vista post-login dedicada accesible en `/maridaje` (vinculada desde el enlace *"Maridaje"* del Navbar central):
   - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
+  - **Empapelado Dinámico Editorial (`PairingWallpaper.tsx`)**: Textura de fondo SVG ultra sutil (`opacity-[0.05]`) en capa fija (`fixed inset-0 pointer-events-none -z-10`) con viñeta radial invertida que mantiene el centro de lectura despejado y revela sutilmente motivos de bistró/gastronomía en modo *"¿Qué vas a comer?"* y motivos de viñedo/bodega en modo *"¿Qué vas a tomar?"*, con transición cross-fade suave (`duration-700`).
   - **Hub Interactivo Bidireccional (`PairingInteractiveHub.tsx`)**:
-    - **Modo "¿Qué vas a comer?"**: Selección guiada entre 7 taxonomías cerradas (`carnes-rojas`, `pastas-rojas`, `pastas-blancas`, `aves`, `pescados-mariscos`, `quesos-tablas`, `postres-chocolates`). Despliega fundamentación molecular del sommelier (equilibrio de taninos vs proteínas, acidez vs grasas, etc.), pautas de servicio (cristalería recomendada, rango térmico óptimo) y cepas recomendadas con salto interactivo.
-    - **Modo "¿Qué vas a tomar?"**: Selección enológica entre 18 varietales y estilos (Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Pinot Noir, Chardonnay, Torrontés, Sauvignon Blanc, etc.) con filtros por tipo de vino, descriptores organolépticos y saltos hacia platos afines.
-    - **Vinculación con Catálogo Real (`WineCard` & `WineDetailModal`)**: Mapea etiquetas reales de la cava comunitaria y oficial (`CURATED_WINES`) asociadas al maridaje activo, con modal de ficha técnica inmersiva.
+    - **Header Editorial y Copy Cercano**: Título *"El Arte del Maridaje"* con bajada cálida y humana enfocada en disfrutar y maridar en la mesa cotidiana. Estructura visual con bordes limpios (`rounded-md` / `rounded-lg`) y estilo sobrio (`#121215`, acentos en borravino).
+    - **Modo "¿Qué vas a comer?"**: Selección guiada entre 7 categorías gastronómicas (`carnes-rojas`, `pastas-rojas`, `pastas-blancas`, `aves`, `pescados-mariscos`, `quesos-tablas`, `postres-chocolates`). Despliega la sección *"Por qué funciona"* con explicaciones sensoriales y gastronómicas, barra horizontal compacta de servicio (temperatura óptima, cristalería sugerida y consejo de mesa) y cepas sugeridas con navegación interactiva directa.
+    - **Modo "¿Qué vas a tomar?"**: Selección enológica entre 18 varietales y estilos (Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Pinot Noir, Chardonnay, Torrontés, Sauvignon Blanc, etc.) con filtros rápidos por tipo de vino, descriptores organolépticos y saltos fluidos hacia platos afines.
+    - **Vinculación con Catálogo Real (`WineCard` & `WineDetailModal`)**: Mapea etiquetas reales de la cava (`CURATED_WINES`) asociadas al maridaje activo con fotografía y ficha técnica interactiva, complementado con un bloque destacado de invitación al catálogo en selecciones sin partida de muestra asignada.
   - **Pautas de Guarda y Estiba (`PromoBlocks.tsx`)**: Mantenido en la sección complementaria inferior como guía de referencia de humedad, reposo y temperatura de cava.
   - Pie de página editorial integrado consistente con la plataforma.
 
