@@ -78,6 +78,13 @@ src/frontend/src/
 │       ├── data/              # Mock curado con assets reales vinculados (curatedWines.ts)
 │       ├── utils/             # Adaptadores de dominio y mapeadores (wineMapper.ts)
 │       └── index.ts           # Barrel export del módulo wines
+│   ├── pairings/              # Dominio de maridajes y afinidad enogastronómica
+│   │   ├── components/
+│   │   │   ├── PairingInteractiveHub.tsx # Switcher bidireccional y navegación de categorías
+│   │   │   └── PairingDetailView.tsx    # Ficha técnica sommelier, servicio y etiquetas
+│   │   └── index.ts           # Barrel export del módulo pairings
+├── data/                      # Datos estáticos curados y taxonomías cerradas
+│   └── pairingsData.ts        # Matriz enogastronómica bidireccional tipada y notas sommelier
 ├── lib/                       # Utilidades transversales
 │   └── utils.ts               # Función cn con clsx y tailwind-merge
 ├── pages/                     # Páginas y vistas principales (*Page.tsx)

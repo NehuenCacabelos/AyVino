@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import {
-  DashboardNavbar,
-  PromoBlocks,
-} from '../features/dashboard';
+import { DashboardNavbar, PromoBlocks } from '../features/dashboard';
+import { PairingInteractiveHub } from '../features/pairings';
 
 /**
  * PairingPage Component (/maridaje)
- * Página dedicada a la curaduría editorial de maridajes y pautas de guarda:
- * - Vinculada a la opción "Maridaje" del Navbar principal.
- * - Integra Bento Grid modular con pautas de estiba, temperaturas y maridajes enogastronómicos.
+ * Laboratorio Enogastronómico interactivo y bidireccional ("¿Qué vas a comer?" vs "¿Qué vas a tomar?"):
+ * - Vinculado a la opción "Maridaje" de la barra de navegación superior.
+ * - Integra selector cruzado de afinidad molecular, perfiles de cata sommelier y vinculación a botellas reales.
+ * - Mantiene en la parte inferior las pautas de estiba y conservación en bodega (PromoBlocks).
  */
 export default function PairingPage() {
   const [stockCount] = useState(24);
@@ -19,8 +18,25 @@ export default function PairingPage() {
       <DashboardNavbar stockCount={stockCount} />
 
       {/* 2. Contenido Principal de Maridaje */}
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-12 sm:gap-16 px-4 sm:px-6 lg:px-8 pb-24 pt-28 sm:pt-32">
-        <section id="maridaje" aria-label="Recomendaciones y Maridajes">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-16 sm:gap-20 px-4 sm:px-6 lg:px-8 pb-24 pt-28 sm:pt-32">
+        {/* Hub Interactivo Bidireccional */}
+        <section id="maridaje" aria-label="Laboratorio Enogastronómico Interactivo">
+          <PairingInteractiveHub />
+        </section>
+
+        {/* Separador Editorial Sutil */}
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-neutral-800 to-transparent my-2" />
+
+        {/* Pautas de Guarda, Humedad y Servicio Editorial */}
+        <section id="pautas-de-cava" aria-label="Pautas de Estiba y Guarda en Cava">
+          <div className="mb-4">
+            <span className="text-[11px] font-mono uppercase tracking-[0.25em] text-neutral-500">
+              GUÍA COMPLEMENTARIA DE GUARDA
+            </span>
+            <h3 className="font-serif text-2xl font-semibold text-neutral-200 mt-1">
+              Estiba & Maduración en Cava
+            </h3>
+          </div>
           <PromoBlocks />
         </section>
       </main>
@@ -32,6 +48,8 @@ export default function PairingPage() {
             <span className="text-base font-bold tracking-tight text-zinc-100">
               AyVino<span className="text-rose-500">.</span>
             </span>
+            <span className="text-neutral-600 font-mono text-[10px]">|</span>
+            <span className="text-neutral-400 font-mono text-[11px]">Laboratorio Enogastronómico</span>
           </div>
 
           <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-neutral-500 text-center sm:text-right">
@@ -42,4 +60,3 @@ export default function PairingPage() {
     </div>
   );
 }
-
