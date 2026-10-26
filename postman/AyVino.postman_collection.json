@@ -2,13 +2,13 @@
   "info": {
     "_postman_id": "a1c2e3f4-5678-90ab-cdef-1234567890ab",
     "name": "AyVino API",
-    "description": "Colecci\u00F3n exhaustiva de pruebas y endpoints para el backend de AyVino (.NET 10 Minimal APIs). Incluye casos felices de todas las features y casos de error representativos (400, 401, 403, 404, 409).",
+    "description": "Colección exhaustiva de pruebas y endpoints para el backend de AyVino (.NET 10 Minimal APIs). Incluye casos felices de todas las features y casos de error representativos (400, 401, 403, 404, 409).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "00 - Setup",
-      "description": "### Instrucciones de Setup Inicial y Roles en Base de Datos Local\n\nPara ejecutar pruebas completas con permisos diferenciados (User, Winery Owner, Admin):\n\n1. **Promover un usuario a Administrador (Admin):**\n   Registr\u00E1 un usuario com\u00FAn mediante \u0060POST /api/users\u0060 (ej. con email \u0060admin.ayvino@example.com\u0060 y contrase\u00F1a \u0060Password123!\u0060). Luego, ejecut\u00E1 en PostgreSQL:\n   \u0060\u0060\u0060sql\n   UPDATE users SET role = \u0027Admin\u0027 WHERE email = \u0027admin.ayvino@example.com\u0027;\n   \u0060\u0060\u0060\n\n2. **Aprobar una Bodega (Approved):**\n   Las bodegas registradas por la comunidad o nuevos usuarios inician en estado \u0060Pending\u0060. Para dejarlas en \u0060Approved\u0060 (\u0060status = 2\u0060):\n   \u0060\u0060\u0060sql\n   UPDATE wineries SET status = 2 WHERE id = 1; -- 2 = Approved\n   \u0060\u0060\u0060\n   O bien, utiliz\u00E1 el endpoint \u0060PATCH /api/wineries/{id}/status\u0060 con el token de Administrador.\n\n3. **Flujo recomendado:**\n   - Ejecut\u00E1 \u0060Login - Usuario Com\u00FAn\u0060, \u0060Login - Owner Bodega\u0060 y \u0060Login - Admin\u0060 en la carpeta Auth para poblar autom\u00E1ticamente los tokens en el Environment.",
+      "description": "### Instrucciones de Setup Inicial y Roles en Base de Datos Local\n\nPara ejecutar pruebas completas con permisos diferenciados (User, Winery Owner, Admin):\n\n1. **Promover un usuario a Administrador (Admin):**\n   Registrá un usuario común mediante `POST /api/users` (ej. con email `admin.ayvino@example.com` y contraseña `Password123!`). Luego, ejecutá en PostgreSQL:\n   ```sql\n   UPDATE users SET role = 'Admin' WHERE email = 'admin.ayvino@example.com';\n   ```\n\n2. **Aprobar una Bodega (Approved):**\n   Las bodegas registradas por la comunidad o nuevos usuarios inician en estado `Pending`. Para dejarlas en `Approved` (`status = 2`):\n   ```sql\n   UPDATE wineries SET status = 2 WHERE id = 1; -- 2 = Approved\n   ```\n   O bien, utilizá el endpoint `PATCH /api/wineries/{id}/status` con el token de Administrador.\n\n3. **Flujo recomendado:**\n   - Ejecutá `Login - Usuario Común`, `Login - Owner Bodega` y `Login - Admin` en la carpeta Auth para poblar automáticamente los tokens en el Environment.",
       "item": []
     },
     {
@@ -18,7 +18,7 @@
           "name": "Auth",
           "item": [
             {
-              "name": "Login - Sommelier / Usuario Com\u00FAn",
+              "name": "Login - Sommelier / Usuario Común",
               "request": {
                 "method": "POST",
                 "header": [
@@ -40,10 +40,10 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesi\u00F3n como aficionado/sommelier com\u00FAn y guarda userToken",
+                "description": "Inicia sesión como aficionado/sommelier común y guarda userToken",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022email\u0022: \u0022{{userEmail}}\u0022,\n  \u0022password\u0022: \u0022{{userPassword}}\u0022\n}",
+                  "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -57,11 +57,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "pm.test('Status code is 200 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027userToken\u0027, json.accessToken); }",
-                      "    if (json \u0026\u0026 json.user \u0026\u0026 json.user.id) { pm.environment.set(\u0027myUserId\u0027, json.user.id); }",
+                      "    if (json && json.accessToken) { pm.environment.set('userToken', json.accessToken); }",
+                      "    if (json && json.user && json.user.id) { pm.environment.set('myUserId', json.user.id); }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -70,7 +70,7 @@
               ]
             },
             {
-              "name": "Login - Due\u00F1o Bodega (Winery)",
+              "name": "Login - Dueño Bodega (Winery)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -92,10 +92,10 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesi\u00F3n como due\u00F1o de bodega y guarda ownerToken y wineryToken",
+                "description": "Inicia sesión como dueño de bodega y guarda ownerToken y wineryToken",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022email\u0022: \u0022{{ownerEmail}}\u0022,\n  \u0022password\u0022: \u0022{{ownerPassword}}\u0022\n}",
+                  "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{ownerPassword}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -109,12 +109,12 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "pm.test('Status code is 200 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    if (json \u0026\u0026 json.accessToken) {",
-                      "        pm.environment.set(\u0027ownerToken\u0027, json.accessToken);",
-                      "        pm.environment.set(\u0027wineryToken\u0027, json.accessToken);",
+                      "    if (json && json.accessToken) {",
+                      "        pm.environment.set('ownerToken', json.accessToken);",
+                      "        pm.environment.set('wineryToken', json.accessToken);",
                       "    }",
                       "}"
                     ],
@@ -146,10 +146,10 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesi\u00F3n como Administrador y guarda adminToken",
+                "description": "Inicia sesión como Administrador y guarda adminToken",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022email\u0022: \u0022{{adminEmail}}\u0022,\n  \u0022password\u0022: \u0022{{adminPassword}}\u0022\n}",
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -163,10 +163,10 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "pm.test('Status code is 200 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
-                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027adminToken\u0027, json.accessToken); }",
+                      "    if (json && json.accessToken) { pm.environment.set('adminToken', json.accessToken); }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -200,7 +200,7 @@
                 "description": "Renueva access token mediante refresh token",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022refreshToken\u0022: \u0022refresh_token_ejemplo_para_rotacion\u0022\n}",
+                  "raw": "{\n  \"refreshToken\": \"refresh_token_ejemplo_para_rotacion\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -214,7 +214,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200, 401 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 429]); });"
+                      "pm.test('Status code is 200, 401 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 401, 429]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -249,10 +249,10 @@
                   ],
                   "query": []
                 },
-                "description": "Cambia contrase\u00F1a del usuario conectado",
+                "description": "Cambia contraseña del usuario conectado",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022currentPassword\u0022: \u0022{{userPassword}}\u0022,\n  \u0022newPassword\u0022: \u0022{{userPassword}}\u0022\n}",
+                  "raw": "{\n  \"currentPassword\": \"{{userPassword}}\",\n  \"newPassword\": \"{{userPassword}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -266,7 +266,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 400\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 400]); });"
+                      "pm.test('Status code is 204 or 400', function () { pm.expect(pm.response.code).to.be.oneOf([204, 400]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -301,10 +301,10 @@
                   ],
                   "query": []
                 },
-                "description": "Revoca sesi\u00F3n activa",
+                "description": "Revoca sesión activa",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022refreshToken\u0022: \u0022token_a_revocar_ejemplo\u0022\n}",
+                  "raw": "{\n  \"refreshToken\": \"token_a_revocar_ejemplo\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -318,7 +318,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -352,10 +352,10 @@
                   ],
                   "query": []
                 },
-                "description": "Registra un nuevo usuario com\u00FAn",
+                "description": "Registra un nuevo usuario común",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022username\u0022: \u0022aficionado_{{$timestamp}}\u0022,\n  \u0022email\u0022: \u0022aficionado_{{$timestamp}}@example.com\u0022,\n  \u0022password\u0022: \u0022Password123!\u0022\n}",
+                  "raw": "{\n  \"username\": \"aficionado_{{$timestamp}}\",\n  \"email\": \"aficionado_{{$timestamp}}@example.com\",\n  \"password\": \"Password123!\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -369,10 +369,10 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
                       "if (pm.response.code === 201) {",
                       "    var json = pm.response.json();",
-                      "    if (json \u0026\u0026 json.id) { pm.environment.set(\u0027testUserId\u0027, json.id); }",
+                      "    if (json && json.id) { pm.environment.set('testUserId', json.id); }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -411,7 +411,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -449,7 +449,7 @@
                 "description": "Actualiza perfil propio",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022username\u0022: \u0022sommelier_comunitario\u0022,\n  \u0022bio\u0022: \u0022Apasionado del Malbec y la enolog\u00EDa argentina.\u0022,\n  \u0022photo\u0022: \u0022https://example.com/avatar.jpg\u0022\n}",
+                  "raw": "{\n  \"username\": \"sommelier_comunitario\",\n  \"bio\": \"Apasionado del Malbec y la enología argentina.\",\n  \"photo\": \"https://example.com/avatar.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -463,7 +463,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -482,7 +482,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -509,7 +509,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -547,7 +547,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -586,7 +586,7 @@
                 "description": "Actualiza perfil de cualquier usuario",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022username\u0022: \u0022usuario_edit_{{$timestamp}}\u0022,\n  \u0022bio\u0022: \u0022Perfil actualizado por administraci\u00F3n\u0022,\n  \u0022photo\u0022: \u0022https://example.com/admin_photo.jpg\u0022\n}",
+                  "raw": "{\n  \"username\": \"usuario_edit_{{$timestamp}}\",\n  \"bio\": \"Perfil actualizado por administración\",\n  \"photo\": \"https://example.com/admin_photo.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -600,7 +600,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
+                      "pm.test('Status code is 200 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -639,7 +639,7 @@
                 "description": "Activa o desactiva cuenta",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022isActive\u0022: true\n}",
+                  "raw": "{\n  \"isActive\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -653,7 +653,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -691,7 +691,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -704,7 +704,7 @@
           "name": "Wineries",
           "item": [
             {
-              "name": "Register Winery \u0026 User",
+              "name": "Register Winery & User",
               "request": {
                 "method": "POST",
                 "header": [
@@ -729,7 +729,7 @@
                 "description": "Onboarding unificado de bodega con JWT",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022username\u0022: \u0022bianchi_adm_{{$timestamp}}\u0022,\n  \u0022email\u0022: \u0022owner_{{$timestamp}}@bodegabianchi.com\u0022,\n  \u0022password\u0022: \u0022Password123!\u0022,\n  \u0022wineryName\u0022: \u0022Bodegas Bianchi {{$timestamp}}\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Bodega hist\u00F3rica de San Rafael y Valle de Uco.\u0022,\n  \u0022foundationYear\u0022: 1928,\n  \u0022website\u0022: \u0022https://www.bodegasbianchi.com.ar\u0022\n}",
+                  "raw": "{\n  \"username\": \"bianchi_adm_{{$timestamp}}\",\n  \"email\": \"owner_{{$timestamp}}@bodegabianchi.com\",\n  \"password\": \"Password123!\",\n  \"wineryName\": \"Bodegas Bianchi {{$timestamp}}\",\n  \"locationId\": 1,\n  \"description\": \"Bodega histórica de San Rafael y Valle de Uco.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -743,11 +743,11 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
                       "if (pm.response.code === 201) {",
                       "    var json = pm.response.json();",
-                      "    if (json \u0026\u0026 json.winery \u0026\u0026 json.winery.id) { pm.environment.set(\u0027wineryId\u0027, json.winery.id); }",
-                      "    if (json \u0026\u0026 json.accessToken) { pm.environment.set(\u0027ownerToken\u0027, json.accessToken); }",
+                      "    if (json && json.winery && json.winery.id) { pm.environment.set('wineryId', json.winery.id); }",
+                      "    if (json && json.accessToken) { pm.environment.set('ownerToken', json.accessToken); }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -761,7 +761,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wineries?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wineries?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -780,7 +780,7 @@
                     }
                   ]
                 },
-                "description": "Listado p\u00FAblico de bodegas"
+                "description": "Listado público de bodegas"
               },
               "response": [],
               "event": [
@@ -788,7 +788,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -812,7 +812,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle p\u00FAblico de bodega"
+                "description": "Detalle público de bodega"
               },
               "response": [],
               "event": [
@@ -820,7 +820,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -857,7 +857,7 @@
                 "description": "Crea bodega comunitaria en estado Pending",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Bodega Comunitaria 012456\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Cargada por la comunidad sin titular asignado\u0022,\n  \u0022foundationYear\u0022: 1990,\n  \u0022website\u0022: \u0022https://comunitaria.example.com\u0022\n}",
+                  "raw": "{\n  \"name\": \"Bodega Comunitaria 012456\",\n  \"locationId\": 1,\n  \"description\": \"Cargada por la comunidad sin titular asignado\",\n  \"foundationYear\": 1990,\n  \"website\": \"https://comunitaria.example.com\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -871,7 +871,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });"
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -906,10 +906,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edici\u00F3n por due\u00F1o o administrador",
+                "description": "Edición por dueño o administrador",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Bodegas Bianchi Actualizada\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Descripci\u00F3n renovada por el propietario.\u0022,\n  \u0022foundationYear\u0022: 1928,\n  \u0022website\u0022: \u0022https://www.bodegasbianchi.com.ar\u0022\n}",
+                  "raw": "{\n  \"name\": \"Bodegas Bianchi Actualizada\",\n  \"locationId\": 1,\n  \"description\": \"Descripción renovada por el propietario.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -923,7 +923,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -962,7 +962,7 @@
                 "description": "Modera estado de la bodega a Approved",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "raw": "{\n  \"status\": \"Approved\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -976,7 +976,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1014,7 +1014,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1050,7 +1050,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1082,7 +1082,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1119,7 +1119,7 @@
                 "description": "Crea o recupera ciudad",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022San Carlos 24\u0022,\n  \u0022stateId\u0022: 1\n}",
+                  "raw": "{\n  \"name\": \"San Carlos 24\",\n  \"stateId\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1133,9 +1133,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027cityId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('cityId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -1148,7 +1148,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/cities?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/cities?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1175,7 +1175,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1207,7 +1207,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1246,7 +1246,7 @@
                 "description": "Aprueba ciudad",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "raw": "{\n  \"status\": \"Approved\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1260,7 +1260,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1294,10 +1294,10 @@
                   ],
                   "query": []
                 },
-                "description": "Crea ubicaci\u00F3n",
+                "description": "Crea ubicación",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022cityId\u0022: 1\n}",
+                  "raw": "{\n  \"cityId\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1311,7 +1311,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });"
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1324,7 +1324,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/locations?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/locations?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1351,7 +1351,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1375,7 +1375,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle de ubicaci\u00F3n"
+                "description": "Detalle de ubicación"
               },
               "response": [],
               "event": [
@@ -1383,7 +1383,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1415,7 +1415,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1439,7 +1439,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle de ubicaci\u00F3n vitivin\u00EDcola"
+                "description": "Detalle de ubicación vitivinícola"
               },
               "response": [],
               "event": [
@@ -1447,7 +1447,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1465,7 +1465,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/grapes?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/grapes?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1484,7 +1484,7 @@
                     }
                   ]
                 },
-                "description": "Cat\u00E1logo de cepas"
+                "description": "Catálogo de cepas"
               },
               "response": [],
               "event": [
@@ -1492,7 +1492,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1524,7 +1524,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1561,7 +1561,7 @@
                 "description": "Alta de uva por admin",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Criolla Grande 217\u0022,\n  \u0022colorType\u0022: \u0022Red\u0022,\n  \u0022typicalBody\u0022: \u0022Light\u0022,\n  \u0022typicalTannins\u0022: \u0022Soft\u0022,\n  \u0022typicalAcidity\u0022: \u0022Medium\u0022,\n  \u0022description\u0022: \u0022Cepa aut\u00F3ctona patrimonial argentina.\u0022\n}",
+                  "raw": "{\n  \"name\": \"Criolla Grande 217\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"Light\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"Medium\",\n  \"description\": \"Cepa autóctona patrimonial argentina.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1575,9 +1575,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027grapeId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('grapeId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -1612,10 +1612,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edici\u00F3n de cepa por admin",
+                "description": "Edición de cepa por admin",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Criolla Grande Selecci\u00F3n\u0022,\n  \u0022colorType\u0022: \u0022Red\u0022,\n  \u0022typicalBody\u0022: \u0022MediumLight\u0022,\n  \u0022typicalTannins\u0022: \u0022Soft\u0022,\n  \u0022typicalAcidity\u0022: \u0022MediumHigh\u0022,\n  \u0022description\u0022: \u0022Descripci\u00F3n actualizada.\u0022\n}",
+                  "raw": "{\n  \"name\": \"Criolla Grande Selección\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"MediumLight\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"MediumHigh\",\n  \"description\": \"Descripción actualizada.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1629,7 +1629,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1661,7 +1661,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1691,7 +1691,7 @@
                   ],
                   "query": []
                 },
-                "description": "Elimina una uva del cat\u00E1logo"
+                "description": "Elimina una uva del catálogo"
               },
               "response": [],
               "event": [
@@ -1699,7 +1699,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1741,7 +1741,7 @@
                 "description": "Alta de vino comunitario (SourceType=1)",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Vino Comunitario 766\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryNameText\u0022: \u0022Bodegas Bianchi\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Vino cargado por aficionado sin cuenta oficial\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2021,\n    \u0022alcoholContent\u0022: 14.2,\n    \u0022servingTemperature\u0022: 16,\n    \u0022agingAdvice\u0022: \u0022Consumir dentro de los 4 a\u00F1os.\u0022,\n    \u0022imageUrl\u0022: \u0022https://example.com/botella.jpg\u0022,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Vino Comunitario 766\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Vino cargado por aficionado sin cuenta oficial\",\n  \"firstVintage\": {\n    \"year\": 2021,\n    \"alcoholContent\": 14.2,\n    \"servingTemperature\": 16,\n    \"agingAdvice\": \"Consumir dentro de los 4 años.\",\n    \"imageUrl\": \"https://example.com/botella.jpg\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1755,9 +1755,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027wineId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('wineId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -1791,10 +1791,10 @@
                   ],
                   "query": []
                 },
-                "description": "Alta de vino oficial por due\u00F1o de bodega aprobada",
+                "description": "Alta de vino oficial por dueño de bodega aprobada",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Enzo Bianchi Gran Corte 218\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryId\u0022: 1,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022\u00CDcono de la bodega Bianchi\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022alcoholContent\u0022: 14.5,\n    \u0022servingTemperature\u0022: 18,\n    \u0022agingAdvice\u0022: \u0022Guarda potencial 15 a\u00F1os.\u0022,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 70\n      },\n      {\n        \u0022grapeId\u0022: 2,\n        \u0022percentage\u0022: 30\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Enzo Bianchi Gran Corte 218\",\n  \"wineType\": \"Red\",\n  \"wineryId\": 1,\n  \"locationId\": 1,\n  \"description\": \"Ícono de la bodega Bianchi\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"alcoholContent\": 14.5,\n    \"servingTemperature\": 18,\n    \"agingAdvice\": \"Guarda potencial 15 años.\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 70\n      },\n      {\n        \"grapeId\": 2,\n        \"percentage\": 30\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1808,7 +1808,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 403]); });"
+                      "pm.test('Status code is 201 or 403', function () { pm.expect(pm.response.code).to.be.oneOf([201, 403]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1816,12 +1816,12 @@
               ]
             },
             {
-              "name": "List Wines (Paginated \u0026 Filtered)",
+              "name": "List Wines (Paginated & Filtered)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wines?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wines?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1848,7 +1848,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1872,7 +1872,7 @@
                   ],
                   "query": []
                 },
-                "description": "Ficha t\u00E9cnica del vino"
+                "description": "Ficha técnica del vino"
               },
               "response": [],
               "event": [
@@ -1880,7 +1880,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1893,7 +1893,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wines/search?pageNumber=1\u0026pageSize=10\u0026name=vino",
+                  "raw": "{{baseUrl}}/api/wines/search?pageNumber=1&pageSize=10&name=vino",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1917,7 +1917,7 @@
                     }
                   ]
                 },
-                "description": "B\u00FAsqueda difusa por trigramas"
+                "description": "Búsqueda difusa por trigramas"
               },
               "response": [],
               "event": [
@@ -1925,7 +1925,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1960,10 +1960,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edici\u00F3n de vino",
+                "description": "Edición de vino",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Vino Comunitario Editado\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryNameText\u0022: \u0022Bodegas Bianchi\u0022,\n  \u0022locationId\u0022: 1,\n  \u0022description\u0022: \u0022Descripci\u00F3n editada\u0022\n}",
+                  "raw": "{\n  \"name\": \"Vino Comunitario Editado\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Descripción editada\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1977,7 +1977,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2016,7 +2016,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
+                      "pm.test('Status code is 200 or 403', function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2052,10 +2052,10 @@
                   ],
                   "query": []
                 },
-                "description": "Reclama botellas comunitarias promovi\u00E9ndolas a Official",
+                "description": "Reclama botellas comunitarias promoviéndolas a Official",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022wineIds\u0022: [\n    1\n  ]\n}",
+                  "raw": "{\n  \"wineIds\": [\n    1\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2069,7 +2069,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 400 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403]); });"
+                      "pm.test('Status code is 200 or 400 or 403', function () { pm.expect(pm.response.code).to.be.oneOf([200, 400, 403]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2108,7 +2108,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2147,7 +2147,7 @@
                 "description": "Reclama vinos comunitarios para bodega",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022wineIds\u0022: [{{wineId}}]\n}",
+                  "raw": "{\n  \"wineIds\": [{{wineId}}]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2161,7 +2161,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2199,7 +2199,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2229,7 +2229,7 @@
                   ],
                   "query": []
                 },
-                "description": "Lista a\u00F1adas de una etiqueta"
+                "description": "Lista añadas de una etiqueta"
               },
               "response": [],
               "event": [
@@ -2237,9 +2237,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                       "var json = pm.response.json();",
-                      "if (Array.isArray(json) \u0026\u0026 json.length \u003E 0) { pm.environment.set(\u0027vintageId\u0027, json[0].id); }"
+                      "if (Array.isArray(json) && json.length > 0) { pm.environment.set('vintageId', json[0].id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -2273,7 +2273,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2312,7 +2312,7 @@
                 "description": "Nueva cosecha para la etiqueta",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022year\u0022: 2022,\n  \u0022alcoholContent\u0022: 13.8,\n  \u0022servingTemperature\u0022: 15,\n  \u0022agingAdvice\u0022: \u0022Listo para beber.\u0022,\n  \u0022grapes\u0022: [\n    {\n      \u0022grapeId\u0022: 1,\n      \u0022percentage\u0022: 100\n    }\n  ]\n}",
+                  "raw": "{\n  \"year\": 2022,\n  \"alcoholContent\": 13.8,\n  \"servingTemperature\": 15,\n  \"agingAdvice\": \"Listo para beber.\",\n  \"grapes\": [\n    {\n      \"grapeId\": 1,\n      \"percentage\": 100\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2326,7 +2326,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2363,10 +2363,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edici\u00F3n de cosecha",
+                "description": "Edición de cosecha",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022year\u0022: 2021,\n  \u0022alcoholContent\u0022: 14,\n  \u0022servingTemperature\u0022: 16,\n  \u0022agingAdvice\u0022: \u0022Excelente potencial\u0022,\n  \u0022grapes\u0022: [\n    {\n      \u0022grapeId\u0022: 1,\n      \u0022percentage\u0022: 100\n    }\n  ]\n}",
+                  "raw": "{\n  \"year\": 2021,\n  \"alcoholContent\": 14,\n  \"servingTemperature\": 16,\n  \"agingAdvice\": \"Excelente potencial\",\n  \"grapes\": [\n    {\n      \"grapeId\": 1,\n      \"percentage\": 100\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2380,7 +2380,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 403\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
+                      "pm.test('Status code is 200 or 403', function () { pm.expect(pm.response.code).to.be.oneOf([200, 403]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2418,10 +2418,10 @@
                   ],
                   "query": []
                 },
-                "description": "Aprobaci\u00F3n de la cosecha",
+                "description": "Aprobación de la cosecha",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "raw": "{\n  \"status\": \"Approved\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2435,7 +2435,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2475,7 +2475,57 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: List Wine Vintages for Moderation",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages?pageNumber=1&pageSize=10&status=Pending",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "Pending"
+                    }
+                  ]
+                },
+                "description": "Bandeja global de cosechas para moderación administrativa (rol Admin)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2493,7 +2543,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/pairings?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/pairings?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2512,7 +2562,7 @@
                     }
                   ]
                 },
-                "description": "Cat\u00E1logo de maridajes"
+                "description": "Catálogo de maridajes"
               },
               "response": [],
               "event": [
@@ -2520,7 +2570,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2557,7 +2607,7 @@
                 "description": "Alta de maridaje",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Ojo de bife con papas r\u00FAsticas 012456\u0022,\n  \u0022category\u0022: \u0022Meat\u0022\n}",
+                  "raw": "{\n  \"name\": \"Ojo de bife con papas rústicas 012456\",\n  \"category\": \"Meat\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2571,9 +2621,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027pairingId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('pairingId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -2605,7 +2655,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2638,7 +2688,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2678,7 +2728,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                      "pm.test('Status code is 204 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2718,7 +2768,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                      "pm.test('Status code is 204 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2756,7 +2806,7 @@
                 "description": "Actualiza maridaje",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Asado Criollo\u0022,\n  \u0022category\u0022: \u0022Meat\u0022\n}",
+                  "raw": "{\n  \"name\": \"Asado Criollo\",\n  \"category\": \"Meat\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2770,7 +2820,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2808,7 +2858,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2847,10 +2897,10 @@
                   ],
                   "query": []
                 },
-                "description": "Publica rese\u00F1a sobre una cosecha puntual",
+                "description": "Publica reseña sobre una cosecha puntual",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022rating\u0022: 5,\n  \u0022comment\u0022: \u0022Un vino excepcional con taninos redondos y gran persistencia arom\u00E1tica.\u0022\n}",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Un vino excepcional con taninos redondos y gran persistencia aromática.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2864,9 +2914,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027reviewId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('reviewId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -2901,10 +2951,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edita rese\u00F1a propia",
+                "description": "Edita reseña propia",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022rating\u0022: 4,\n  \u0022comment\u0022: \u0022Comentario actualizado tras una segunda degustaci\u00F3n.\u0022\n}",
+                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Comentario actualizado tras una segunda degustación.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2918,7 +2968,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2931,7 +2981,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wine-vintages/1/reviews?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wine-vintages/1/reviews?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2952,7 +3002,7 @@
                     }
                   ]
                 },
-                "description": "Rese\u00F1as de la cosecha"
+                "description": "Reseñas de la cosecha"
               },
               "response": [],
               "event": [
@@ -2960,7 +3010,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -2973,7 +3023,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wines/1/reviews?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wines/1/reviews?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2994,7 +3044,7 @@
                     }
                   ]
                 },
-                "description": "Feed agregado de rese\u00F1as de la etiqueta"
+                "description": "Feed agregado de reseñas de la etiqueta"
               },
               "response": [],
               "event": [
@@ -3002,7 +3052,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3015,7 +3065,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wine-vintages/{{vintageId}}/reviews?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wine-vintages/{{vintageId}}/reviews?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3036,7 +3086,7 @@
                     }
                   ]
                 },
-                "description": "Listado de rese\u00F1as de una cosecha"
+                "description": "Listado de reseñas de una cosecha"
               },
               "response": [],
               "event": [
@@ -3044,7 +3094,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3057,7 +3107,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/reviews?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/reviews?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3078,7 +3128,7 @@
                     }
                   ]
                 },
-                "description": "Feed de rese\u00F1as de una etiqueta"
+                "description": "Feed de reseñas de una etiqueta"
               },
               "response": [],
               "event": [
@@ -3086,7 +3136,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3116,7 +3166,7 @@
                   ],
                   "query": []
                 },
-                "description": "Elimina rese\u00F1a propia"
+                "description": "Elimina reseña propia"
               },
               "response": [],
               "event": [
@@ -3124,7 +3174,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3168,7 +3218,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                      "pm.test('Status code is 204 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3187,7 +3237,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/{{targetUserId}}/followers?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/users/{{targetUserId}}/followers?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3216,7 +3266,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3235,7 +3285,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/me/following?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/users/me/following?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3264,7 +3314,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3303,7 +3353,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                      "pm.test('Status code is 204 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3342,7 +3392,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 409 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409, 404]); });"
+                      "pm.test('Status code is 204 or 409 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 409, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3361,7 +3411,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wineries/1/followers?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wineries/1/followers?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3390,7 +3440,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3409,7 +3459,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/me/following-wineries?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/users/me/following-wineries?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3438,7 +3488,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3477,7 +3527,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                      "pm.test('Status code is 204 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3516,7 +3566,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3535,7 +3585,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/followers?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/followers?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3564,7 +3614,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3603,7 +3653,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3647,7 +3697,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3686,7 +3736,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });",
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                       "var json = pm.response.json();",
                       "pm.expect(json.isWanted).to.eql(true);"
                     ],
@@ -3727,7 +3777,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3766,7 +3816,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3805,7 +3855,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3844,7 +3894,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3863,7 +3913,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/user-wines/me?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/user-wines/me?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3891,7 +3941,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3930,7 +3980,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -3969,7 +4019,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4008,7 +4058,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4047,7 +4097,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4086,7 +4136,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4125,7 +4175,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4167,7 +4217,7 @@
                 "description": "Crea cava virtual personal",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Cava Hogar 623\u0022\n}",
+                  "raw": "{\n  \"name\": \"Cava Hogar 623\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4181,9 +4231,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201\u0027, function () { pm.response.to.have.status(201); });",
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                       "var json = pm.response.json();",
-                      "if (json.id) { pm.environment.set(\u0027cellarId\u0027, json.id); }"
+                      "if (json.id) { pm.environment.set('cellarId', json.id); }"
                     ],
                     "type": "text/javascript"
                   }
@@ -4202,7 +4252,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/cellars/me?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/cellars/me?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -4230,7 +4280,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4268,7 +4318,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4306,7 +4356,7 @@
                 "description": "Renombra cava propia",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Cava Principal Renombrada\u0022\n}",
+                  "raw": "{\n  \"name\": \"Cava Principal Renombrada\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4320,7 +4370,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4356,10 +4406,10 @@
                   ],
                   "query": []
                 },
-                "description": "Guarda botellas de una a\u00F1ada en la cava",
+                "description": "Guarda botellas de una añada en la cava",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022quantity\u0022: 4,\n  \u0022purchaseDate\u0022: \u00222024-03-15\u0022,\n  \u0022notes\u0022: \u0022Compradas directamente en la bodega.\u0022\n}",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"quantity\": 4,\n  \"purchaseDate\": \"2024-03-15\",\n  \"notes\": \"Compradas directamente en la bodega.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4373,7 +4423,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4392,7 +4442,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items?pageNumber=1\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -4421,7 +4471,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4461,7 +4511,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4501,7 +4551,7 @@
                 "description": "Reemplaza cantidad y notas",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022quantity\u0022: 6,\n  \u0022notes\u0022: \u0022Se sumaron dos botellas adicionales.\u0022\n}",
+                  "raw": "{\n  \"quantity\": 6,\n  \"notes\": \"Se sumaron dos botellas adicionales.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4515,7 +4565,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4546,7 +4596,7 @@
                   ],
                   "query": []
                 },
-                "description": "Resumen enol\u00F3gico de todas las botellas guardadas"
+                "description": "Resumen enológico de todas las botellas guardadas"
               },
               "response": [],
               "event": [
@@ -4554,7 +4604,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4586,7 +4636,7 @@
                   ],
                   "query": []
                 },
-                "description": "Vac\u00EDa stock de la a\u00F1ada"
+                "description": "Vacía stock de la añada"
               },
               "response": [],
               "event": [
@@ -4594,7 +4644,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 404\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
+                      "pm.test('Status code is 204 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4624,7 +4674,7 @@
                   ],
                   "query": []
                 },
-                "description": "Borra la cava (solo si est\u00E1 vac\u00EDa)"
+                "description": "Borra la cava (solo si está vacía)"
               },
               "response": [],
               "event": [
@@ -4632,7 +4682,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
+                      "pm.test('Status code is 204 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([204, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4672,7 +4722,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4712,7 +4762,7 @@
                 "description": "Actualiza cantidad y notas de botella en cava",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022quantity\u0022: 5,\n  \u0022purchaseDate\u0022: \u00222026-05-20\u0022,\n  \u0022notes\u0022: \u0022Notas actualizadas\u0022\n}",
+                  "raw": "{\n  \"quantity\": 5,\n  \"purchaseDate\": \"2026-05-20\",\n  \"notes\": \"Notas actualizadas\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4726,7 +4776,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4766,7 +4816,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 204\u0027, function () { pm.response.to.have.status(204); });"
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4806,7 +4856,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 200\u0027, function () { pm.response.to.have.status(200); });"
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4848,7 +4898,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 401\u0027, function () { pm.response.to.have.status(401); });"
+                      "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4880,7 +4930,7 @@
                 "description": "Falla por endpoint protegido",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Cava Intento\u0022\n}",
+                  "raw": "{\n  \"name\": \"Cava Intento\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4894,7 +4944,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 401\u0027, function () { pm.response.to.have.status(401); });"
+                      "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4924,10 +4974,10 @@
                   ],
                   "query": []
                 },
-                "description": "Credenciales inv\u00E1lidas",
+                "description": "Credenciales inválidas",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022email\u0022: \u0022{{userEmail}}\u0022,\n  \u0022password\u0022: \u0022PasswordIncorrecta999!\u0022\n}",
+                  "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"PasswordIncorrecta999!\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4941,7 +4991,51 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 401 or 429\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([401, 429]); });"
+                      "pm.test('Status code is 401 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([401, 429]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "401 - List Vintages for Admin without Token",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages?pageNumber=1&pageSize=10&status=Pending",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "Pending"
+                    }
+                  ]
+                },
+                "description": "Falla por falta de token JWT al consultar bandeja de administración"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -4985,7 +5079,7 @@
                 "description": "Falta de rol Admin",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022status\u0022: \u0022Approved\u0022\n}",
+                  "raw": "{\n  \"status\": \"Approved\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4999,7 +5093,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                      "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5033,10 +5127,10 @@
                   ],
                   "query": []
                 },
-                "description": "Solo el due\u00F1o o admin publica vinos oficiales",
+                "description": "Solo el dueño o admin publica vinos oficiales",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Vino Fraude\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022wineryId\u0022: 1,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Vino Fraude\",\n  \"wineType\": \"Red\",\n  \"wineryId\": 1,\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5050,7 +5144,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                      "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5085,10 +5179,10 @@
                   ],
                   "query": []
                 },
-                "description": "No es due\u00F1o de la bodega",
+                "description": "No es dueño de la bodega",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Bodega Hackeada\u0022,\n  \u0022locationId\u0022: 1\n}",
+                  "raw": "{\n  \"name\": \"Bodega Hackeada\",\n  \"locationId\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5102,7 +5196,57 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 403\u0027, function () { pm.response.to.have.status(403); });"
+                      "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "403 - Common User attempts Admin Action (List Vintages for Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages?pageNumber=1&pageSize=10&status=Pending",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "Pending"
+                    }
+                  ]
+                },
+                "description": "Falta de rol Admin al intentar acceder a la bandeja global de cosechas"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5112,7 +5256,7 @@
           ]
         },
         {
-          "name": "400 - Validation \u0026 Bad Request",
+          "name": "400 - Validation & Bad Request",
           "item": [
             {
               "name": "400 - Create Wine with Empty Name",
@@ -5141,10 +5285,10 @@
                   ],
                   "query": []
                 },
-                "description": "Validaci\u00F3n de nombre obligatorio",
+                "description": "Validación de nombre obligatorio",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 100\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"\",\n  \"wineType\": \"Red\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5158,7 +5302,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5195,7 +5339,7 @@
                 "description": "Suma de uvas excede 100%",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Corte Excedido\u0022,\n  \u0022wineType\u0022: \u0022Red\u0022,\n  \u0022firstVintage\u0022: {\n    \u0022year\u0022: 2020,\n    \u0022grapes\u0022: [\n      {\n        \u0022grapeId\u0022: 1,\n        \u0022percentage\u0022: 80\n      },\n      {\n        \u0022grapeId\u0022: 2,\n        \u0022percentage\u0022: 40\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Corte Excedido\",\n  \"wineType\": \"Red\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 80\n      },\n      {\n        \"grapeId\": 2,\n        \"percentage\": 40\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5209,7 +5353,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5217,7 +5361,7 @@
               ]
             },
             {
-              "name": "400 - Invalid Pagination (pageNumber \u003C= 0)",
+              "name": "400 - Invalid Pagination (pageNumber <= 0)",
               "request": {
                 "method": "GET",
                 "header": [
@@ -5228,7 +5372,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users?pageNumber=0\u0026pageSize=10",
+                  "raw": "{{baseUrl}}/api/users?pageNumber=0&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -5247,7 +5391,7 @@
                     }
                   ]
                 },
-                "description": "Paginaci\u00F3n inv\u00E1lida"
+                "description": "Paginación inválida"
               },
               "response": [],
               "event": [
@@ -5255,7 +5399,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5286,7 +5430,7 @@
                   ],
                   "query": []
                 },
-                "description": "Usuario no puede seguirse a s\u00ED mismo"
+                "description": "Usuario no puede seguirse a sí mismo"
               },
               "response": [],
               "event": [
@@ -5294,7 +5438,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5333,7 +5477,7 @@
                 "description": "Cantidad debe ser al menos 1",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022wineVintageId\u0022: 1,\n  \u0022quantity\u0022: 0\n}",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"quantity\": 0\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5347,7 +5491,57 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 400\u0027, function () { pm.response.to.have.status(400); });"
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - List Vintages for Admin with Invalid Status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages?pageNumber=1&pageSize=10&status=InvalidStatus",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "InvalidStatus"
+                    }
+                  ]
+                },
+                "description": "Rechazo por parámetro status inválido"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5384,7 +5578,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                      "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5422,7 +5616,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                      "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5461,7 +5655,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 404\u0027, function () { pm.response.to.have.status(404); });"
+                      "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5503,7 +5697,7 @@
                 "description": "Nombre duplicado de cava",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Cava Duplicada Conflicto\u0022\n}",
+                  "raw": "{\n  \"name\": \"Cava Duplicada Conflicto\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5517,7 +5711,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 201 or 409\u0027, function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
+                      "pm.test('Status code is 201 or 409', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5554,7 +5748,7 @@
                 "description": "Reintento de crear cava con mismo nombre genera 409 Conflict",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \u0022name\u0022: \u0022Cava Duplicada Conflicto\u0022\n}",
+                  "raw": "{\n  \"name\": \"Cava Duplicada Conflicto\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5568,7 +5762,7 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\u0027Status code is 409\u0027, function () { pm.response.to.have.status(409); });"
+                      "pm.test('Status code is 409', function () { pm.response.to.have.status(409); });"
                     ],
                     "type": "text/javascript"
                   }

@@ -64,6 +64,9 @@ stateDiagram-v2
 - **`2 = Approved`**: La cosecha/vino es visible en búsquedas públicas y listados generales.
 - **`3 = Rejected`**: La cosecha/vino no cumple con los estándares mínimos de calidad (ej. datos apócrifos o duplicados manifiestos).
 
+### Bandeja de Moderación Global de Cosechas
+Para facilitar el control editorial, los administradores disponen del endpoint `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (`RequireAdmin`), que lista de forma paginada y centralizada todas las cosechas cargadas por usuarios y bodegas a la espera de aprobación, sin requerir la navegación individual etiqueta por etiqueta.
+
 ---
 
 ## 5. Cortes de Uva y Catálogo Oficial de Varietales (Blends)

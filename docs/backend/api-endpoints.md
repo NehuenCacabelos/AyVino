@@ -260,6 +260,29 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica de la etiqueta. | - | `204 NoContent` |
+| `GET` | `/api/wine-vintages` | Admin (`RequireAdmin`) | Bandeja global de cosechas para moderación administrativa. Filtro opcional por estado (`Pending`, `Approved`, `Rejected`). | Query params: `pageNumber = 1`, `pageSize = 10`, `status?` | `200 OK` (`IEnumerable<AdminWineVintageListItemDto>`) |
+
+#### Ejemplo de Respuesta `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (200 OK)
+
+```json
+[
+  {
+    "vintageId": 101,
+    "wineId": 42,
+    "wineName": "Malbec Reserva",
+    "wineType": "Red",
+    "wineryId": 7,
+    "wineryName": "Bodega del Fin del Mundo",
+    "year": 2022,
+    "alcoholContent": 14.2,
+    "imageUrl": "https://example.com/vintage.jpg",
+    "approvalStatus": "Pending",
+    "uploadedByUserId": 3,
+    "uploadedByUsername": "sommelier_juan",
+    "registerDate": "2026-01-15T12:00:00Z"
+  }
+]
+```
 
 ---
 
