@@ -1,18 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineryProfilePage from '@/pages/WineryProfilePage';
-import * as wineryApi from '@/features/winery/api/wineryApi';
-import type { RegionPickerProps } from '@/features/winery/components/RegionPicker';
-import type { ImageUploadFieldProps } from '@/features/winery/components/ImageUploadField';
+import WineryOverviewPage from '@/pages/WineryOverviewPage';
 import type { WineryResponseDto } from '@/features/winery/types';
 
-// Mock de useWinery
-const mockReload = vi.fn();
+// Mock de Leaflet para evitar problemas de canvas en jsdom
+vi.mock('react-leaflet', () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-map-container">{children}</div>
+  ),
+  TileLayer: () => <div data-testid="mock-tile-layer" />,
+  Marker: () => <div data-testid="mock-marker" />,
+}));
+
 const mockWinery: WineryResponseDto = {
   id: 42,
   name: 'Bodega El Terruño',
-  description: 'Historia noble de un viñedo familiar centenario.',
+  description: 'Historia noble de un viñedo familiar centenario en el corazón de Mendoza.',
   locationId: 10,
   foundationYear: 1910,
   website: 'https://elterruno.com.ar',
@@ -31,171 +35,97 @@ const mockWinery: WineryResponseDto = {
 vi.mock('@/features/winery/context/WineryContext', () => ({
   useWinery: () => ({
     winery: mockWinery,
-    reload: mockReload,
+    reload: vi.fn(),
     isLoading: false,
     error: null,
     isNotFound: false,
   }),
 }));
 
-vi.mock('@/features/winery/api/wineryApi', () => ({
-  updateWinery: vi.fn(),
-  getMyWinery: vi.fn(),
-  getWineryById: vi.fn(),
-  getWineries: vi.fn(),
-  registerWinery: vi.fn(),
-  getWineryFollowers: vi.fn(),
-  followWinery: vi.fn(),
-  unfollowWinery: vi.fn(),
+vi.mock('@/features/winery/api', () => ({
+  getWines: vi.fn().mockResolvedValue([
+    {
+      id: 101,
+      name: 'Gran Terruño Malbec',
+      wineType: 'Red',
+      averageRating: 4.8,
+      reviewCount: 14,
+    },
+    {
+      id: 102,
+      name: 'Terruño Torrontés de Altura',
+      wineType: 'White',
+      averageRating: 4.5,
+      reviewCount: 8,
+    },
+  ]),
+  getWineVintages: vi.fn().mockResolvedValue([
+    { id: 1, year: 2020, averageRating: 4.8, reviewCount: 7 },
+    { id: 2, year: 2021, averageRating: 4.8, reviewCount: 7 },
+  ]),
+  getWineryFollowers: vi.fn().mockResolvedValue([{ id: 1, username: 'sommelier1' }]),
+  getLocationById: vi.fn().mockResolvedValue({
+    id: 10,
+    regionName: 'Luján de Cuyo',
+    cityName: 'Luján de Cuyo',
+    stateName: 'Mendoza',
+  }),
 }));
 
-// Mock de RegionPicker
-vi.mock('@/features/winery/components/RegionPicker', () => ({
-  default: ({ onChange, initialLocationText }: RegionPickerProps) => (
-    <div data-testid="mock-region-picker">
-      <span data-testid="initial-location-text">{initialLocationText}</span>
-      <button
-        type="button"
-        data-testid="change-to-map-coords-btn"
-        onClick={() =>
-          onChange({
-            mode: 'map',
-            latitude: -34.1111,
-            longitude: -69.2222,
-            regionName: 'Valle de Uco',
-            stateName: 'Mendoza',
-          })
-        }
-      >
-        Cambiar a Coordenadas
-      </button>
-    </div>
-  ),
-}));
-
-// Mock de ImageUploadField
-vi.mock('@/features/winery/components/ImageUploadField', () => ({
-  default: ({ value, onChange, onUploadingChange }: ImageUploadFieldProps) => (
-    <div data-testid="mock-image-upload-field">
-      <span data-testid="current-logo-value">{value}</span>
-      <button
-        type="button"
-        data-testid="upload-new-logo-btn"
-        onClick={() => {
-          onUploadingChange?.(true);
-          onChange('https://storage.com/new-logo.png');
-          onUploadingChange?.(false);
-        }}
-      >
-        Subir nuevo logo
-      </button>
-      <button
-        type="button"
-        data-testid="remove-logo-btn"
-        onClick={() => onChange('')}
-      >
-        Quitar logo
-      </button>
-    </div>
-  ),
-}));
-
-describe('WineryProfilePage Component', () => {
+describe('WineryOverviewPage (/bodega/perfil)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockReload.mockResolvedValue({});
-    vi.mocked(wineryApi.updateWinery).mockResolvedValue({
-      ...mockWinery,
+  });
+
+  const renderComponent = () =>
+    render(
+      <MemoryRouter>
+        <WineryOverviewPage />
+      </MemoryRouter>
+    );
+
+  it('renderiza la cabecera institucional con el nombre en serif, terruño y badge oficial', async () => {
+    renderComponent();
+
+    expect(screen.getByText('Bodega El Terruño')).toBeInTheDocument();
+    expect(screen.getByText('Bodega Oficial')).toBeInTheDocument();
+    expect(screen.getByText('Fundada en 1910')).toBeInTheDocument();
+    expect(screen.getByText(/Historia noble de un viñedo familiar centenario/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Luján de Cuyo, Mendoza').length).toBeGreaterThan(0);
     });
   });
 
-  it('renders winery profile with current values and preview', () => {
-    render(
-      <MemoryRouter>
-        <WineryProfilePage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByDisplayValue('Bodega El Terruño')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('1910')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('https://elterruno.com.ar')).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue('Historia noble de un viñedo familiar centenario.'),
-    ).toBeInTheDocument();
-
-    expect(screen.getByTestId('initial-location-text')).toHaveTextContent(
-      'Luján de Cuyo, Mendoza',
-    );
-    expect(screen.getByTestId('current-logo-value')).toHaveTextContent(
-      'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/logo42.png',
-    );
-  });
-
-  it('does NOT send location or logo in PUT payload if they were not touched by the user', async () => {
-    render(
-      <MemoryRouter>
-        <WineryProfilePage />
-      </MemoryRouter>,
-    );
-
-    // Solo modificar el nombre de la bodega
-    const nameInput = screen.getByLabelText('Nombre de la bodega');
-    fireEvent.change(nameInput, { target: { value: 'Bodega El Terruño Renombrada' } });
-
-    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+  it('renderiza los botones de acción hacia configuración y vidriera pública externa', async () => {
+    renderComponent();
 
     await waitFor(() => {
-      expect(wineryApi.updateWinery).toHaveBeenCalledWith(42, {
-        name: 'Bodega El Terruño Renombrada',
-        foundationYear: 1910,
-        website: 'https://elterruno.com.ar',
-        description: 'Historia noble de un viñedo familiar centenario.',
-      });
-      expect(mockReload).toHaveBeenCalled();
+      const configBtn = screen.getByRole('link', { name: /editar configuración/i });
+      expect(configBtn).toHaveAttribute('href', '/bodega/configuracion');
+
+      const viewPublicBtn = screen.getByRole('link', { name: /ver cómo lo ven los usuarios/i });
+      expect(viewPublicBtn).toHaveAttribute('href', '/bodegas/42');
     });
   });
 
-  it('sends updated coordinates when user modifies location via RegionPicker', async () => {
-    render(
-      <MemoryRouter>
-        <WineryProfilePage />
-      </MemoryRouter>,
-    );
-
-    fireEvent.click(screen.getByTestId('change-to-map-coords-btn'));
-    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
+  it('muestra la cinta de métricas con etiquetas, cosechas y seguidores', async () => {
+    renderComponent();
 
     await waitFor(() => {
-      expect(wineryApi.updateWinery).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({
-          name: 'Bodega El Terruño',
-          latitude: -34.1111,
-          longitude: -69.2222,
-          locationId: null,
-        }),
-      );
+      expect(screen.getByText('Etiquetas')).toBeInTheDocument();
+      expect(screen.getByText('Cosechas')).toBeInTheDocument();
+      expect(screen.getByText('Seguidores')).toBeInTheDocument();
     });
   });
 
-  it('sends logoUrl as empty string "" when user clicks "Quitar logo"', async () => {
-    render(
-      <MemoryRouter>
-        <WineryProfilePage />
-      </MemoryRouter>,
-    );
+  it('renderiza el mapa de terruño de solo lectura y el resumen de etiquetas', async () => {
+    renderComponent();
 
-    fireEvent.click(screen.getByTestId('remove-logo-btn'));
-    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }));
-
+    expect(screen.getByTestId('mock-map-container')).toBeInTheDocument();
     await waitFor(() => {
-      expect(wineryApi.updateWinery).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({
-          name: 'Bodega El Terruño',
-          logoUrl: '',
-        }),
-      );
+      expect(screen.getByText('Gran Terruño Malbec')).toBeInTheDocument();
+      expect(screen.getByText('Terruño Torrontés de Altura')).toBeInTheDocument();
     });
   });
 });

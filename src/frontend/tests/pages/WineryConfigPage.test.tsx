@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WineryConfigPage from '@/pages/WineryConfigPage';
 import * as wineryApi from '@/features/winery/api/wineryApi';
-import * as userApi from '@/features/users/api/userApi';
 import type { RegionPickerProps } from '@/features/winery/components/RegionPicker';
 import type { WineryResponseDto } from '@/features/winery/types';
 
