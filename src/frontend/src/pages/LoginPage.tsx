@@ -41,7 +41,12 @@ export default function LoginPage() {
   // Redirigir a la ruta original o al Dashboard correspondiente si ya tiene sesión activa
   useEffect(() => {
     if (isAuthenticated) {
-      const defaultPath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+      const defaultPath =
+        user?.role === 'Admin'
+          ? '/admin'
+          : user?.role === 'Winery'
+            ? '/bodega/dashboard'
+            : '/dashboard';
       navigate(customRedirectPath ?? defaultPath, { replace: true });
     }
   }, [isAuthenticated, user?.role, customRedirectPath, navigate]);

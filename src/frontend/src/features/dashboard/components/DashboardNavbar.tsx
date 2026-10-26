@@ -10,6 +10,7 @@ import {
   History,
   Bookmark,
   User,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../auth';
 import { cn } from '../../../lib/utils';
@@ -200,6 +201,21 @@ export default function DashboardNavbar({
                 <span>Bodega</span>
               </NavLink>
             )}
+
+            {user?.role === 'Admin' && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    'text-[15px] font-medium transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap',
+                    isActive ? 'text-rose-300 font-semibold' : 'text-zinc-300 hover:text-white'
+                  )
+                }
+              >
+                <Shield className="h-4 w-4 text-rose-400" />
+                <span>Panel admin</span>
+              </NavLink>
+            )}
           </nav>
 
           {/* Columna 3 (Acciones): Avatar agrandado y Menú Desplegable Personal */}
@@ -321,6 +337,18 @@ export default function DashboardNavbar({
                       >
                         <LayoutDashboard className="h-4 w-4 text-zinc-400" />
                         <span>Panel Bodega</span>
+                      </Link>
+                    )}
+
+                    {user?.role === 'Admin' && (
+                      <Link
+                        role="menuitem"
+                        to="/admin"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-rose-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Shield className="h-4 w-4 text-rose-400" />
+                        <span>Panel admin</span>
                       </Link>
                     )}
 
@@ -451,6 +479,17 @@ export default function DashboardNavbar({
                   className="py-2 text-[15px] font-medium text-zinc-200 hover:text-white"
                 >
                   Panel Bodega
+                </Link>
+              )}
+
+              {user?.role === 'Admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2 text-[15px] font-medium text-rose-300 hover:text-white flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4 text-rose-400" />
+                  Panel admin
                 </Link>
               )}
             </div>

@@ -8,6 +8,7 @@ import {
   LogOut,
   Compass,
   LayoutDashboard,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth';
 import { cn } from '../../lib/utils';
@@ -72,7 +73,13 @@ export default function Navbar() {
   };
 
   const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
-  const homePath = isAuthenticated ? (user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard') : '/';
+  const homePath = isAuthenticated
+    ? user?.role === 'Admin'
+      ? '/admin'
+      : user?.role === 'Winery'
+        ? '/bodega/dashboard'
+        : '/dashboard'
+    : '/';
 
   const navLinks = [
     { label: 'Destacados', href: '/#seleccion-curada' },
@@ -159,6 +166,16 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Panel Bodega</span>
+              </Link>
+            )}
+
+            {user?.role === 'Admin' && (
+              <Link
+                to="/admin"
+                className="text-[15px] font-medium text-rose-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
+              >
+                <Shield className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Panel admin</span>
               </Link>
             )}
           </nav>
@@ -303,6 +320,17 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4 text-neutral-400" />
                 Panel Bodega
+              </Link>
+            )}
+
+            {user?.role === 'Admin' && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-white py-1 flex items-center gap-2 font-semibold"
+              >
+                <Shield className="w-4 h-4 text-rose-400" />
+                Panel admin
               </Link>
             )}
           </div>

@@ -31,6 +31,15 @@ const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
 const WineryWinesPage = lazy(() => import('../pages/WineryWinesPage'));
 const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
+// Layout y vistas del Panel de Administración
+const AdminLayout = lazy(() => import('../features/admin/components/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage'));
+const AdminWineriesPage = lazy(() => import('../pages/AdminWineriesPage'));
+const AdminCitiesPage = lazy(() => import('../pages/AdminCitiesPage'));
+const AdminUsersPage = lazy(() => import('../pages/AdminUsersPage'));
+const AdminGrapesPage = lazy(() => import('../pages/AdminGrapesPage'));
+const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
+
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
  * Renderizado durante la descarga del chunk de cada vista lazy.
@@ -53,7 +62,12 @@ function RouteFallbackLoader() {
  */
 function RootIndexRoute() {
   const { isAuthenticated, user } = useAuth();
-  const homePath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+  const homePath =
+    user?.role === 'Admin'
+      ? '/admin'
+      : user?.role === 'Winery'
+        ? '/bodega/dashboard'
+        : '/dashboard';
   return isAuthenticated ? <Navigate to={homePath} replace /> : <Landing />;
 }
 
@@ -285,6 +299,68 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <WineryClaimPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // Rutas Protegidas Exclusivas para Administradores
+      {
+        path: '/admin',
+        element: (
+          <ProtectedRoute allowedRoles={['Admin']}>
+            <Suspense fallback={<RouteFallbackLoader />}>
+              <AdminLayout />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminDashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'bodegas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminWineriesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'ciudades',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminCitiesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'usuarios',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminUsersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'uvas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminGrapesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'maridajes',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminPairingsPage />
               </Suspense>
             ),
           },
