@@ -2,6 +2,7 @@ using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Grapes.DTOs;
 using AyVino.Api.Features.Grapes.Enums;
 using AyVino.Api.Features.Grapes.Repositories;
+using Npgsql;
 
 namespace AyVino.Api.Features.Grapes.Services;
 
@@ -58,13 +59,22 @@ public class GrapeService(IGrapeRepository grapeRepository) : IGrapeService
         var success = await grapeRepository.UpdateAsync(updated, ct);
         if (!success) throw new NotFoundException($"Grape with ID {id} not found.");
 
+
         return updated.ToResponseDto();
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var success = await grapeRepository.DeleteAsync(id, ct);
-        if (!success) throw new NotFoundException($"Grape with ID {id} not found.");
+        try
+        {
+            var success = await grapeRepository.DeleteAsync(id, ct);
+            if (!success) throw new NotFoundException($"Grape with ID {id} not found.");
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        {
+            throw new ConflictException("No se puede eliminar la uva porque está asociada a uno o más vinos.");
+        }
+
     }
 
     private static void ValidatePagination(int pageNumber, int pageSize)

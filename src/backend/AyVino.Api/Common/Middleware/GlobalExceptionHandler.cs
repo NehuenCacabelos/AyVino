@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace AyVino.Api.Common.Middleware;
 
@@ -25,6 +26,11 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 badReq.StatusCode,
                 GetTitleForStatusCode(badReq.StatusCode),
                 "La solicitud es inválida o está mal formada."
+            ),
+            PostgresException pgEx when pgEx.SqlState == PostgresErrorCodes.ForeignKeyViolation => (
+                StatusCodes.Status409Conflict,
+                GetTitleForStatusCode(StatusCodes.Status409Conflict),
+                "No se puede eliminar el registro porque tiene otros datos asociados en el sistema."
             ),
             _ => (
                 StatusCodes.Status500InternalServerError,
