@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { UseMyWineryReturn } from '../hooks/useMyWinery';
 
 const WineryContext = createContext<UseMyWineryReturn | undefined>(undefined);
@@ -11,9 +11,12 @@ export interface WineryProviderProps {
 
 /**
  * Proveedor de contexto para la bodega activa del usuario en el panel.
+ * Suministra un `value` memoizado mediante `useMemo` cumpliendo la Regla 11.
  */
 export function WineryProvider({ value, children }: WineryProviderProps) {
-  return <WineryContext.Provider value={value}>{children}</WineryContext.Provider>;
+  const memoizedValue = useMemo(() => value, [value]);
+
+  return <WineryContext.Provider value={memoizedValue}>{children}</WineryContext.Provider>;
 }
 
 /**

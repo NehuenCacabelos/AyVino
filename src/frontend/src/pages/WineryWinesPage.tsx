@@ -113,19 +113,23 @@ export default function WineryWinesPage() {
     };
   }, [winery?.id, pageNumber]);
 
-  // Si la URL contiene ?action=new o ?nuevo=1 tras navegación, abrir modal
+  const actionParam = searchParams.get('action');
+  const nuevoParam = searchParams.get('nuevo');
+
+  // Limpiar parámetros transaccionales de URL (?action=new o ?nuevo=1) tras lectura inicial
   useEffect(() => {
-    if (searchParams.get('action') === 'new' || searchParams.get('nuevo') === '1') {
-      if (!isRejected) {
-        Promise.resolve().then(() => {
-          setIsCreateModalOpen(true);
-        });
-      }
-      searchParams.delete('action');
-      searchParams.delete('nuevo');
-      setSearchParams(searchParams, { replace: true });
+    if (actionParam === 'new' || nuevoParam === '1') {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('action');
+          next.delete('nuevo');
+          return next;
+        },
+        { replace: true }
+      );
     }
-  }, [searchParams, setSearchParams, isRejected]);
+  }, [actionParam, nuevoParam, setSearchParams]);
 
   const handleWineCreated = (newWine: WineResponseDto) => {
     setWines((prev) => [newWine, ...prev]);

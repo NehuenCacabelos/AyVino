@@ -55,18 +55,33 @@ export default function WineryProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Sincronizar formulario si cambia o se hidrata la bodega
+  // Auto-dismiss de confirmación con saneamiento estricto de timer (Regla 9)
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  const wineryId = winery?.id;
+  const wineryName = winery?.name;
+  const wineryLogo = winery?.logoUrl;
+  const wineryYear = winery?.foundationYear;
+  const wineryWeb = winery?.website;
+  const wineryDesc = winery?.description;
+
+  // Sincronizar formulario si cambia o se hidrata la bodega (vigilando exclusivamente primitivas estables)
   useEffect(() => {
     let isMounted = true;
-    if (!winery) return;
+    if (!wineryId) return;
 
     Promise.resolve().then(() => {
       if (!isMounted) return;
-      setName(winery.name ?? '');
-      setLogoUrl(winery.logoUrl ?? '');
-      setFoundationYear(winery.foundationYear ? winery.foundationYear.toString() : '');
-      setWebsite(winery.website ?? '');
-      setDescription(winery.description ?? '');
+      setName(wineryName ?? '');
+      setLogoUrl(wineryLogo ?? '');
+      setFoundationYear(wineryYear ? wineryYear.toString() : '');
+      setWebsite(wineryWeb ?? '');
+      setDescription(wineryDesc ?? '');
       setIsLocationDirty(false);
       setIsLogoDirty(false);
     });
@@ -74,7 +89,7 @@ export default function WineryProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [winery]);
+  }, [wineryId, wineryName, wineryLogo, wineryYear, wineryWeb, wineryDesc]);
 
   // Limpiar mensajes tras interacción
   const clearError = (field: string) => {

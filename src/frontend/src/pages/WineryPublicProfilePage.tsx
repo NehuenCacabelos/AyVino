@@ -22,13 +22,12 @@ import {
   getWines,
   getLocationById,
   WineryLogo,
+  WineryPublicWineCard,
+  WineryPublicWineDetailModal,
   type WineryResponseDto,
   type WineResponseDto,
   type LocationResponseDto,
 } from '../features/winery';
-import { WineCard, WineDetailModal } from '../features/wines';
-import { mapApiWineToCuratedWine } from '../features/wines/utils/wineMapper';
-import type { CuratedWine, WineApiDto } from '../types/wine';
 
 /**
  * WineryPublicProfilePage Component (/bodegas/:id)
@@ -53,7 +52,9 @@ export default function WineryPublicProfilePage() {
   const [isFollowingAction, setIsFollowingAction] = useState<boolean>(false);
 
   // Modal de Detalle
-  const [selectedWine, setSelectedWine] = useState<CuratedWine | null>(null);
+  const [selectedWine, setSelectedWine] = useState<WineResponseDto | null>(null);
+
+  const currentUserId = user?.id;
 
   useEffect(() => {
     let isMounted = true;
@@ -89,8 +90,8 @@ export default function WineryPublicProfilePage() {
             const followers = await getWineryFollowers(wineryId, { pageSize: 100 });
             if (isMounted) {
               setFollowersCount(followers.length);
-              if (user) {
-                const userFollows = followers.some((f) => f.userId === user.id);
+              if (currentUserId) {
+                const userFollows = followers.some((f) => f.userId === currentUserId);
                 setIsFollowing(userFollows);
               }
             }
@@ -109,7 +110,7 @@ export default function WineryPublicProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [wineryId, user]);
+  }, [wineryId, currentUserId]);
 
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
@@ -138,26 +139,7 @@ export default function WineryPublicProfilePage() {
   };
 
   const handleWineCardSelect = (wine: WineResponseDto) => {
-    const locName = locationData
-      ? `${locationData.cityName}, ${locationData.stateName}`
-      : 'Argentina';
-
-    const apiWine: WineApiDto = {
-      id: wine.id,
-      name: wine.name,
-      wineryId: wine.wineryId,
-      wineryNameText: winery?.name ?? null,
-      description: wine.description,
-      wineType: typeof wine.wineType === 'string' ? wine.wineType : 'Red',
-      locationId: wine.locationId,
-      sourceType: wine.sourceType,
-      duplicateOfWineId: wine.duplicateOfWineId,
-      averageRating: wine.averageRating,
-      reviewCount: wine.reviewCount,
-    };
-
-    const curated = mapApiWineToCuratedWine(apiWine, null, locName);
-    setSelectedWine(curated);
+    setSelectedWine(wine);
   };
 
   if (isNotFound) {
@@ -351,38 +333,27 @@ export default function WineryPublicProfilePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {wines.map((wine) => {
-                const apiWine: WineApiDto = {
-                  id: wine.id,
-                  name: wine.name,
-                  wineryId: wine.wineryId,
-                  wineryNameText: winery.name,
-                  description: wine.description,
-                  wineType: typeof wine.wineType === 'string' ? wine.wineType : 'Red',
-                  locationId: wine.locationId,
-                  sourceType: wine.sourceType,
-                  duplicateOfWineId: wine.duplicateOfWineId,
-                  averageRating: wine.averageRating,
-                  reviewCount: wine.reviewCount,
-                };
-
-                const curated = mapApiWineToCuratedWine(apiWine, null, locationLabel);
-
-                return (
-                  <WineCard
-                    key={wine.id}
-                    wine={curated}
-                    onSelect={() => handleWineCardSelect(wine)}
-                  />
-                );
-              })}
+              {wines.map((wine) => (
+                <WineryPublicWineCard
+                  key={wine.id}
+                  wine={wine}
+                  wineryName={winery.name}
+                  locationLabel={locationLabel}
+                  onSelect={handleWineCardSelect}
+                />
+              ))}
             </div>
           )}
         </section>
       </main>
 
       {/* Modal de Ficha Técnica */}
-      <WineDetailModal wine={selectedWine} onClose={() => setSelectedWine(null)} />
+      <WineryPublicWineDetailModal
+        wine={selectedWine}
+        wineryName={winery.name}
+        locationLabel={locationLabel}
+        onClose={() => setSelectedWine(null)}
+      />
     </div>
   );
 }

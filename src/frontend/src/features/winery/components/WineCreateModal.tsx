@@ -20,6 +20,7 @@ export interface WineCreateModalProps {
 }
 
 interface BlendRow {
+  id: string;
   grapeId: number | '';
   percentage: number | '';
 }
@@ -79,7 +80,7 @@ export default function WineCreateModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               data.find((g) => g.name.toLowerCase().includes('malbec')) ?? data[0];
-            return [{ grapeId: defaultGrape.id, percentage: '' }];
+            return [{ id: `blend-${defaultGrape.id}-${Date.now()}`, grapeId: defaultGrape.id, percentage: '' }];
           });
         }
       })
@@ -100,30 +101,34 @@ export default function WineCreateModal({
       (g) => !blend.some((b) => b.grapeId === g.id),
     );
     if (remainingGrapes.length === 0) return;
-    setBlend([...blend, { grapeId: remainingGrapes[0].id, percentage: '' }]);
+    const nextGrape = remainingGrapes[0];
+    setBlend((prev) => [
+      ...prev,
+      { id: `blend-${nextGrape.id}-${Date.now()}-${Math.random()}`, grapeId: nextGrape.id, percentage: '' },
+    ]);
   };
 
-  const handleRemoveGrape = (index: number) => {
-    setBlend(blend.filter((_, i) => i !== index));
+  const handleRemoveGrape = (id: string) => {
+    setBlend((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const handleGrapeChange = (index: number, grapeId: number) => {
-    const updated = [...blend];
-    updated[index].grapeId = grapeId;
-    setBlend(updated);
+  const handleGrapeChange = (id: string, grapeId: number) => {
+    setBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, grapeId } : row))
+    );
   };
 
-  const handlePercentageChange = (index: number, val: string) => {
-    const updated = [...blend];
-    if (val === '') {
-      updated[index].percentage = '';
-    } else {
+  const handlePercentageChange = (id: string, val: string) => {
+    let cleanVal: number | '' = '';
+    if (val !== '') {
       const num = Number(val);
       if (!isNaN(num)) {
-        updated[index].percentage = Math.max(0, Math.min(100, num));
+        cleanVal = Math.max(0, Math.min(100, num));
       }
     }
-    setBlend(updated);
+    setBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, percentage: cleanVal } : row))
+    );
     if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
@@ -466,18 +471,18 @@ export default function WineCreateModal({
               </p>
             ) : (
               <div className="space-y-2.5">
-                {blend.map((row, idx) => {
+                {blend.map((row) => {
                   const availableGrapes = grapesCatalog.filter(
                     (g) =>
                       g.id === row.grapeId ||
-                      !blend.some((b, i) => i !== idx && b.grapeId === g.id),
+                      !blend.some((b) => b.id !== row.id && b.grapeId === g.id),
                   );
 
                   return (
-                    <div key={idx} className="flex items-center gap-3">
+                    <div key={row.id} className="flex items-center gap-3">
                       <select
                         value={row.grapeId}
-                        onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
+                        onChange={(e) => handleGrapeChange(row.id, Number(e.target.value))}
                         className="h-11 flex-1 rounded-xl px-3 text-sm bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors"
                       >
                         {availableGrapes.map((g) => (
@@ -494,7 +499,7 @@ export default function WineCreateModal({
                           max="100"
                           step="0.01"
                           value={row.percentage}
-                          onChange={(e) => handlePercentageChange(idx, e.target.value)}
+                          onChange={(e) => handlePercentageChange(row.id, e.target.value)}
                           placeholder="%"
                           className="h-11 w-full rounded-xl pl-3 pr-7 text-sm font-mono bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors text-right"
                         />
@@ -506,9 +511,9 @@ export default function WineCreateModal({
                       {blend.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveGrape(idx)}
+                          onClick={() => handleRemoveGrape(row.id)}
                           className="w-10 h-10 rounded-xl bg-stone-900/60 border border-white/5 text-neutral-500 hover:text-rose-400 flex items-center justify-center cursor-pointer transition-colors"
-                          aria-label={`Quitar uva ${idx + 1}`}
+                          aria-label="Quitar uva del corte"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

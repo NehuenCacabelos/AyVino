@@ -60,6 +60,14 @@ export default function WineryClaimPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Auto-dismiss con limpieza garantizada de timer (Regla 9)
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   useEffect(() => {
     let isMounted = true;
     if (!winery?.id || winery.status !== 'Approved') return;
@@ -92,31 +100,30 @@ export default function WineryClaimPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.length === candidates.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(candidates.map((c) => c.id));
-    }
+    setSelectedIds((prev) =>
+      prev.length === candidates.length ? [] : candidates.map((c) => c.id)
+    );
   };
 
   const handleClaim = async () => {
     if (!winery?.id || selectedIds.length === 0) return;
 
+    const toClaim = [...selectedIds];
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
     try {
-      await claimWines(winery.id, { wineIds: selectedIds });
-      const claimedCount = selectedIds.length;
+      await claimWines(winery.id, { wineIds: toClaim });
+      const claimedCount = toClaim.length;
       setSuccessMessage(
         `¡Excelente! Se ${
           claimedCount === 1 ? 'certificó 1 vino' : `certificaron ${claimedCount} vinos`
         } para tu bodega. Ya figuran en tu catálogo oficial.`,
       );
 
-      // Remover los reclamados de la lista de candidatos
-      setCandidates((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
+      // Remover los reclamados de la lista de candidatos de forma inmutable
+      setCandidates((prev) => prev.filter((c) => !toClaim.includes(c.id)));
       setSelectedIds([]);
     } catch (err: unknown) {
       let detail: string | undefined;

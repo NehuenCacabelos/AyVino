@@ -13,3 +13,5 @@ export { default as WineryChecklistCard } from './WineryChecklistCard';
 export { default as WineryRecentWines } from './WineryRecentWines';
 export { default as WineCreateModal } from './WineCreateModal';
 export { default as WineVintagesModal } from './WineVintagesModal';
+export { default as WineryPublicWineCard } from './WineryPublicWineCard';
+export { default as WineryPublicWineDetailModal } from './WineryPublicWineDetailModal';

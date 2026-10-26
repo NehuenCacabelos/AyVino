@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { isAxiosError } from 'axios';
 import { getMyWinery } from '../api/wineryApi';
 import type { WineryResponseDto, ProblemDetails } from '../types';
@@ -78,16 +78,29 @@ export function useMyWinery(): UseMyWineryReturn {
   const isApproved = winery?.status === 'Approved';
   const isRejected = winery?.status === 'Rejected';
 
-  return {
-    winery,
-    isLoading,
-    error,
-    isNotFound,
-    isPending,
-    isApproved,
-    isRejected,
-    reload,
-    updateLocalWinery,
-  };
+  return useMemo(
+    () => ({
+      winery,
+      isLoading,
+      error,
+      isNotFound,
+      isPending,
+      isApproved,
+      isRejected,
+      reload,
+      updateLocalWinery,
+    }),
+    [
+      winery,
+      isLoading,
+      error,
+      isNotFound,
+      isPending,
+      isApproved,
+      isRejected,
+      reload,
+      updateLocalWinery,
+    ]
+  );
 }
 

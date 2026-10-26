@@ -31,6 +31,7 @@ export interface WineVintagesModalProps {
 }
 
 interface BlendRow {
+  id: string;
   grapeId: number | '';
   percentage: number | '';
 }
@@ -64,8 +65,18 @@ export default function WineVintagesModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Auto-dismiss del mensaje de éxito con limpieza estricta de timer
   useEffect(() => {
-    if (!isOpen || !wine) return;
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  const wineId = wine?.id;
+
+  useEffect(() => {
+    if (!isOpen || !wineId) return;
     let isMounted = true;
 
     Promise.resolve().then(async () => {
@@ -74,7 +85,7 @@ export default function WineVintagesModal({
 
       try {
         const [vintagesData, grapesData] = await Promise.all([
-          getWineVintages(wine.id),
+          getWineVintages(wineId),
           getGrapes({ pageSize: 100 }),
         ]);
 
@@ -86,7 +97,7 @@ export default function WineVintagesModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               grapesData.find((g) => g.name.toLowerCase().includes('malbec')) ?? grapesData[0];
-            return [{ grapeId: defaultGrape.id, percentage: '' }];
+            return [{ id: `vintage-blend-${defaultGrape.id}-${Date.now()}`, grapeId: defaultGrape.id, percentage: '' }];
           });
         }
       } catch {
@@ -101,7 +112,7 @@ export default function WineVintagesModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, wine]);
+  }, [isOpen, wineId]);
 
   if (!isOpen || !wine) return null;
 
@@ -115,30 +126,34 @@ export default function WineVintagesModal({
       (g) => !blend.some((b) => b.grapeId === g.id),
     );
     if (remainingGrapes.length === 0) return;
-    setBlend([...blend, { grapeId: remainingGrapes[0].id, percentage: '' }]);
+    const nextGrape = remainingGrapes[0];
+    setBlend((prev) => [
+      ...prev,
+      { id: `vintage-blend-${nextGrape.id}-${Date.now()}-${Math.random()}`, grapeId: nextGrape.id, percentage: '' },
+    ]);
   };
 
-  const handleRemoveGrape = (index: number) => {
-    setBlend(blend.filter((_, i) => i !== index));
+  const handleRemoveGrape = (id: string) => {
+    setBlend((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const handleGrapeChange = (index: number, grapeId: number) => {
-    const updated = [...blend];
-    updated[index].grapeId = grapeId;
-    setBlend(updated);
+  const handleGrapeChange = (id: string, grapeId: number) => {
+    setBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, grapeId } : row))
+    );
   };
 
-  const handlePercentageChange = (index: number, val: string) => {
-    const updated = [...blend];
-    if (val === '') {
-      updated[index].percentage = '';
-    } else {
+  const handlePercentageChange = (id: string, val: string) => {
+    let cleanVal: number | '' = '';
+    if (val !== '') {
       const num = Number(val);
       if (!isNaN(num)) {
-        updated[index].percentage = Math.max(0, Math.min(100, num));
+        cleanVal = Math.max(0, Math.min(100, num));
       }
     }
-    setBlend(updated);
+    setBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, percentage: cleanVal } : row))
+    );
     if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
@@ -408,18 +423,18 @@ export default function WineVintagesModal({
                     Todavía no hay uvas cargadas en el catálogo oficial.
                   </p>
                 ) : (
-                  blend.map((row, idx) => {
+                  blend.map((row) => {
                     const availableGrapes = grapesCatalog.filter(
                       (g) =>
                         g.id === row.grapeId ||
-                        !blend.some((b, i) => i !== idx && b.grapeId === g.id),
+                        !blend.some((b) => b.id !== row.id && b.grapeId === g.id),
                     );
 
                     return (
-                      <div key={idx} className="flex items-center gap-2">
+                      <div key={row.id} className="flex items-center gap-2">
                         <select
                           value={row.grapeId}
-                          onChange={(e) => handleGrapeChange(idx, Number(e.target.value))}
+                          onChange={(e) => handleGrapeChange(row.id, Number(e.target.value))}
                           className="h-9 flex-1 rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
                         >
                           {availableGrapes.map((g) => (
@@ -436,7 +451,7 @@ export default function WineVintagesModal({
                             max="100"
                             step="0.01"
                             value={row.percentage}
-                            onChange={(e) => handlePercentageChange(idx, e.target.value)}
+                            onChange={(e) => handlePercentageChange(row.id, e.target.value)}
                             placeholder="%"
                             className="h-9 w-full rounded-xl pl-2 pr-6 text-xs font-mono bg-zinc-900 text-zinc-100 border border-zinc-800 text-right"
                           />
@@ -448,9 +463,9 @@ export default function WineVintagesModal({
                         {blend.length > 1 && (
                           <button
                             type="button"
-                            onClick={() => handleRemoveGrape(idx)}
-                            className="text-neutral-500 hover:text-rose-400 p-1"
-                            aria-label={`Quitar uva ${idx + 1}`}
+                            onClick={() => handleRemoveGrape(row.id)}
+                            className="text-neutral-500 hover:text-rose-400 p-1 cursor-pointer"
+                            aria-label="Quitar uva de la cosecha"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -556,9 +571,9 @@ export default function WineVintagesModal({
                       {/* Desglose de Varietales */}
                       {v.grapes && v.grapes.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                          {v.grapes.map((g, gIdx) => (
+                          {v.grapes.map((g) => (
                             <span
-                              key={gIdx}
+                              key={g.grapeId}
                               className="inline-block text-[10px] font-mono bg-stone-900 border border-white/5 px-2 py-0.5 rounded text-neutral-300"
                             >
                               {getGrapeName(g.grapeId)} {g.percentage ? `(${g.percentage}%)` : ''}
