@@ -140,6 +140,14 @@ public static class UserEndpoints
         .WithName("ChangeUserStatus")
         .WithSummary("Activa o desactiva la cuenta de un usuario");
 
+        adminGroup.MapPatch("/{id:int}/role", async (int id, ChangeUserRoleRequestDto request, ClaimsPrincipal user, IUserService userService, CancellationToken ct) =>
+        {
+            await userService.ChangeRoleAsync(user.GetUserId(), id, request.Role, ct);
+            return Results.NoContent();
+        })
+        .WithName("ChangeUserRole")
+        .WithSummary("Cambia el rol de un usuario (solo Admin y User)");
+
         adminGroup.MapDelete("/{id:int}", async (int id, IUserService userService, CancellationToken ct) =>
         {
             await userService.DeleteAsync(id, ct);

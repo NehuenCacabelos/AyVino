@@ -185,6 +185,52 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         }
     }
 
+    public async Task ChangeRoleAsync(int actorId, int targetId, string role, CancellationToken ct = default)
+    {
+        if (targetId <= 0)
+        {
+            throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
+        }
+
+        var targetUser = await userRepository.GetByIdAsync(targetId, ct)
+            ?? throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
+
+        string canonicalRole;
+        if (string.Equals(role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            canonicalRole = AppRoles.Admin;
+        }
+        else if (string.Equals(role, AppRoles.User, StringComparison.OrdinalIgnoreCase))
+        {
+            canonicalRole = AppRoles.User;
+        }
+        else
+        {
+            throw new ValidationException($"Rol inválido: '{role}'. Valores permitidos: Admin, User.");
+        }
+
+        if (targetId == actorId)
+        {
+            throw new ForbiddenException("No se puede modificar el rol de la propia cuenta.");
+        }
+
+        if (string.Equals(targetUser.Role, AppRoles.Winery, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictException("El rol Winery se asigna al registrar una bodega y no puede modificarse manualmente.");
+        }
+
+        if (string.Equals(targetUser.Role, canonicalRole, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var updated = await userRepository.SetRoleAsync(targetId, canonicalRole, ct);
+        if (!updated)
+        {
+            throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
+        }
+    }
+
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         if (id <= 0)

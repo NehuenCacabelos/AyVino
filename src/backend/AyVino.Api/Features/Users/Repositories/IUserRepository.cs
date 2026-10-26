@@ -14,6 +14,7 @@ public interface IUserRepository
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);
     Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default);
     Task<bool> SetIsActiveAsync(int id, bool isActive, CancellationToken ct = default);
+    Task<bool> SetRoleAsync(int id, string role, CancellationToken ct = default) => Task.FromResult(true);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
     Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default);

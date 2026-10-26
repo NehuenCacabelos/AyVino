@@ -12,6 +12,7 @@ public interface IUserService
     Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default);
     Task<UserResponseDto> UpdateAvatarAsync(int id, string? photoUrl, CancellationToken ct = default);
     Task ChangeStatusAsync(int id, bool isActive, CancellationToken ct = default);
+    Task ChangeRoleAsync(int actorId, int targetId, string role, CancellationToken ct = default) => Task.CompletedTask;
     Task DeleteAsync(int id, CancellationToken ct = default);
 
 }

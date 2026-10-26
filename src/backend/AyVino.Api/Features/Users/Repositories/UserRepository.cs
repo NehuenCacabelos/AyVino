@@ -183,6 +183,21 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         return rowsAffected > 0;
     }
 
+    public async Task<bool> SetRoleAsync(int id, string role, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE users
+            SET role = @Role
+            WHERE id = @Id;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id, Role = role }, cancellationToken: ct));
+
+        return rowsAffected > 0;
+    }
+
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
