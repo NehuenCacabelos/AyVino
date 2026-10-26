@@ -5,10 +5,12 @@ import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as adminCitiesApi from '@/features/admin/api/adminCitiesApi';
 import * as adminUsersApi from '@/features/admin/api/adminUsersApi';
+import * as adminVintagesApi from '@/features/admin/api/adminVintagesApi';
 import * as authModule from '@/features/auth';
 import type { WineryResponseDto } from '@/features/winery/types/winery';
 import type { CityResponseDto } from '@/features/winery/types/location';
 import type { AdminUserListItemDto } from '@/features/admin/types/adminUsers';
+import type { AdminWineVintageListItem } from '@/features/admin/types/adminVintages';
 
 vi.mock('@/features/winery/api/wineryApi', () => ({
   getWineries: vi.fn(),
@@ -20,6 +22,10 @@ vi.mock('@/features/admin/api/adminCitiesApi', () => ({
 
 vi.mock('@/features/admin/api/adminUsersApi', () => ({
   getUsers: vi.fn(),
+}));
+
+vi.mock('@/features/admin/api/adminVintagesApi', () => ({
+  getAdminVintages: vi.fn(),
 }));
 
 const mockUseAuth = vi.fn();
@@ -87,6 +93,22 @@ describe('AdminDashboardPage Component', () => {
     isActive: true,
   }));
 
+  const mockVintages: AdminWineVintageListItem[] = Array.from({ length: 5 }, (_, i) => ({
+    vintageId: i + 1,
+    wineId: i + 10,
+    wineName: `Vino ${i + 1}`,
+    wineType: 'Red',
+    wineryId: 1,
+    wineryName: 'Bodega Test',
+    year: 2020 + i,
+    alcoholContent: 14,
+    imageUrl: null,
+    approvalStatus: 'Pending',
+    uploadedByUserId: 1,
+    uploadedByUsername: 'user1',
+    registerDate: '2026-01-01T00:00:00Z',
+  }));
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
@@ -102,6 +124,7 @@ describe('AdminDashboardPage Component', () => {
     vi.mocked(wineryApi.getWineries).mockResolvedValue(mockWineries);
     vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
 
     render(
       <MemoryRouter>
@@ -113,6 +136,7 @@ describe('AdminDashboardPage Component', () => {
       expect(screen.getByText('3')).toBeInTheDocument(); // 3 bodegas
       expect(screen.getByText('2')).toBeInTheDocument(); // 2 ciudades
       expect(screen.getByText('15')).toBeInTheDocument(); // 15 usuarios
+      expect(screen.getByText('5')).toBeInTheDocument(); // 5 cosechas
       expect(screen.getByText('Bodega La Rural')).toBeInTheDocument();
       expect(screen.getByText('Gualtallary')).toBeInTheDocument();
     });
@@ -134,6 +158,7 @@ describe('AdminDashboardPage Component', () => {
     vi.mocked(wineryApi.getWineries).mockResolvedValue(hundredWineries);
     vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
 
     render(
       <MemoryRouter>
@@ -146,12 +171,13 @@ describe('AdminDashboardPage Component', () => {
     });
   });
 
-  it('una tarjeta en error no rompe las otras dos tarjetas', async () => {
+  it('una tarjeta en error no rompe las otras tres tarjetas', async () => {
     vi.mocked(wineryApi.getWineries).mockRejectedValue(
       new Error('No se pudo conectar con el servidor.')
     );
     vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
 
     render(
       <MemoryRouter>
@@ -163,9 +189,10 @@ describe('AdminDashboardPage Component', () => {
       // La tarjeta de bodegas muestra error y botón de reintento
       expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
 
-      // Las tarjetas de ciudades y usuarios cargaron con éxito
+      // Las tarjetas de ciudades, usuarios y cosechas cargaron con éxito
       expect(screen.getByText('2')).toBeInTheDocument();
       expect(screen.getByText('15')).toBeInTheDocument();
+      expect(screen.getByText('5')).toBeInTheDocument();
     });
   });
 });

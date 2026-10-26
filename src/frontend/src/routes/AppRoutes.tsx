@@ -36,6 +36,7 @@ const AdminLayout = lazy(() => import('../features/admin/components/AdminLayout'
 const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage'));
 const AdminWineriesPage = lazy(() => import('../pages/AdminWineriesPage'));
 const AdminCitiesPage = lazy(() => import('../pages/AdminCitiesPage'));
+const AdminVintagesPage = lazy(() => import('../pages/AdminVintagesPage'));
 const AdminUsersPage = lazy(() => import('../pages/AdminUsersPage'));
 const AdminGrapesPage = lazy(() => import('../pages/AdminGrapesPage'));
 const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
@@ -337,6 +338,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <AdminCitiesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'cosechas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminVintagesPage />
               </Suspense>
             ),
           },

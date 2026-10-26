@@ -24,7 +24,7 @@ describe('AdminRoutes & AdminLayout access control', () => {
     vi.clearAllMocks();
   });
 
-  it('permite el acceso a un usuario con rol Admin y muestra los 6 enlaces de navegación', () => {
+  it('permite el acceso a un usuario con rol Admin y muestra los 7 enlaces de navegación', () => {
     mockUseAuth.mockReturnValue({
       user: {
         id: 1,
@@ -61,6 +61,7 @@ describe('AdminRoutes & AdminLayout access control', () => {
     expect(screen.getByRole('link', { name: /inicio/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /bodegas/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ciudades/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /cosechas/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /uvas/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /maridajes/i })).toBeInTheDocument();

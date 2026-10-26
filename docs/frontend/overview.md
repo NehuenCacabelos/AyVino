@@ -97,6 +97,7 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 - **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo al administrador, tres tarjetas KPI independientes con conteo real y soporte para desbordamiento ("100+"), listado directo de los últimos pendientes de moderación (bodegas y ciudades) y accesos rápidos a catálogos maestros.
 - **Moderación de Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Filtros por chip según estado de moderación (con sincronización en URL `?status=`), tabla detallada con iniciales/logo, acciones dinámicas de aprobación/rechazo, modal de detalle institucional con hipervínculo al perfil público y eliminación física con diálogo destructivo.
 - **Moderación de Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Gestión de ciudades sugeridas por la comunidad al registrar bodegas. Filtro por provincia con resolución en memoria de nombres de provincia, y aprobación o rechazo con confirmación.
+- **Moderación de Cosechas (`AdminVintagesPage.tsx` en `/admin/cosechas`)**: Bandeja centralizada de añadas cargadas por usuarios y bodegas. Filtros de estado, tabla con miniaturas, resolución sensorial de varietales (blends), modal de ficha técnica extendida (temperatura de servicio, guarda) y acciones de moderación o baja.
 - **Gestión de Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Catálogo de cuentas registradas con avatar, rol y fecha de alta. Buscador en tiempo real y selector de rol sobre la página cargada, acciones de activación y desactivación, eliminación con borrado de credenciales y protección estricta contra auto-modificación de la cuenta propia en sesión.
 - **Catálogo de Variedades de Uva (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM integral de cepas enológicas. Filtros por tipo de color, tabla con descriptores sensoriales (cuerpo, taninos, acidez), modal de alta/edición con validación de longitudes y selects opcionales, y borrado con captura de conflictos (409).
 - **Catálogo de Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM completo de sugerencias gastronómicas categorizadas (Carnes, Pescados, Quesos, Pastas, etc.), modal de creación/edición y eliminación con confirmación.
@@ -113,12 +114,12 @@ src/frontend/src/
 ├── constants/                 # Constantes globales compartidas (bannerThemes.ts)
 ├── features/                  # Arquitectura orientada a características
 │   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
-│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminUsersApi, adminGrapesApi, adminPairingsApi
+│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi
 │   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
 │   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
 │   │   ├── hooks/             # usePagedList
-│   │   ├── types/             # adminUsers, adminPairings
-│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels
+│   │   ├── types/             # adminUsers, adminPairings, adminVintages
+│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
@@ -140,6 +141,7 @@ src/frontend/src/
 │   ├── AdminGrapesPage.tsx    # Catálogo de variedades de uva (/admin/uvas)
 │   ├── AdminPairingsPage.tsx  # Catálogo de maridajes (/admin/maridajes)
 │   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
+│   ├── AdminVintagesPage.tsx  # Moderación de cosechas (/admin/cosechas)
 │   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
 │   ├── ForWineriesPage.tsx    # Landing para bodegas (/para-bodegas)
 │   ├── WineryRegisterPage.tsx # Registro split-card (/bodega/registro)

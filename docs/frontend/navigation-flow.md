@@ -69,6 +69,7 @@ flowchart TD
         AdminDash["/admin -> AdminDashboardPage.tsx (KPIs y Pendientes)"]
         AdminWineries["/admin/bodegas -> AdminWineriesPage.tsx (Moderación)"]
         AdminCities["/admin/ciudades -> AdminCitiesPage.tsx (Moderación)"]
+        AdminVintages["/admin/cosechas -> AdminVintagesPage.tsx (Moderación Cosechas)"]
         AdminUsers["/admin/usuarios -> AdminUsersPage.tsx (Gestión Cuentas)"]
         AdminGrapes["/admin/uvas -> AdminGrapesPage.tsx (Catálogo Variedades)"]
         AdminPairings["/admin/maridajes -> AdminPairingsPage.tsx (Catálogo Maridajes)"]
@@ -76,6 +77,7 @@ flowchart TD
         AdminLayoutComponent --> AdminDash
         AdminLayoutComponent --> AdminWineries
         AdminLayoutComponent --> AdminCities
+        AdminLayoutComponent --> AdminVintages
         AdminLayoutComponent --> AdminUsers
         AdminLayoutComponent --> AdminGrapes
         AdminLayoutComponent --> AdminPairings
@@ -177,6 +179,7 @@ flowchart TD
   - **Inicio (`AdminDashboardPage.tsx` en `/admin`)**: Saludo con nombre de usuario, tres tarjetas KPI independientes con detección de volumen ("100+"), tabla de últimos pendientes y accesos directos.
   - **Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Bandeja de moderación con chips por estado (`Pending` por defecto sincronizado con query param `?status=`), aprobación directa, rechazo con confirmación, modal de detalles institucionales y eliminación destructiva protegida.
   - **Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Moderación de localidades pendientes cargadas por usuarios, filtro por provincia en memoria y transiciones de estado.
+  - **Cosechas (`AdminVintagesPage.tsx` en `/admin/cosechas`)**: Moderación de cosechas y añadas de vinos con filtros de estado (`Pending` por defecto), ficha técnica detallada (blend de uvas, graduación, temperatura, guarda) y acciones de aprobación, rechazo y eliminación.
   - **Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Lista de cuentas con filtrado instantáneo por texto y rol en el cliente, toggle de activación/desactivación y eliminación definitiva. Se bloquean las acciones sobre la cuenta del propio administrador en sesión.
   - **Uvas (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM de cepas enológicas con filtros de color, tabla con descriptores sensoriales y modal de creación/edición con validación.
   - **Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM de maridajes gastronómicos con filtros por categoría (Carnes, Pescados, Quesos, etc.).
@@ -212,6 +215,7 @@ flowchart TD
 | `/admin` | `AdminDashboardPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/bodegas` | `AdminWineriesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/ciudades` | `AdminCitiesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/cosechas` | `AdminVintagesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/usuarios` | `AdminUsersPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/uvas` | `AdminGrapesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/maridajes` | `AdminPairingsPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |

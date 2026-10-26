@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Building2,
   MapPin,
+  Wine,
   Users,
   Grape,
   UtensilsCrossed,
@@ -19,6 +20,8 @@ import { getCities } from '../features/admin/api/adminCitiesApi';
 import type { CityResponseDto } from '../features/winery/types/location';
 import { getUsers } from '../features/admin/api/adminUsersApi';
 import type { AdminUserListItemDto } from '../features/admin/types/adminUsers';
+import { getAdminVintages } from '../features/admin/api/adminVintagesApi';
+import type { AdminWineVintageListItem } from '../features/admin/types/adminVintages';
 import { PageHeader, getApiErrorMessage } from '../features/admin';
 import { cn } from '../lib/utils';
 
@@ -44,10 +47,17 @@ export default function AdminDashboardPage() {
     error: string | null;
   }>({ items: [], isLoading: true, error: null });
 
+  const [vintagesState, setVintagesState] = useState<{
+    items: AdminWineVintageListItem[];
+    isLoading: boolean;
+    error: string | null;
+  }>({ items: [], isLoading: true, error: null });
+
   // Claves de recarga independientes para reintentos
   const [wineriesKey, setWineriesKey] = useState(0);
   const [citiesKey, setCitiesKey] = useState(0);
   const [usersKey, setUsersKey] = useState(0);
+  const [vintagesKey, setVintagesKey] = useState(0);
 
   // Carga de bodegas
   useEffect(() => {
@@ -100,6 +110,23 @@ export default function AdminDashboardPage() {
     };
   }, [usersKey]);
 
+  // Carga de cosechas pendientes
+  useEffect(() => {
+    let isMounted = true;
+    getAdminVintages({ status: 'Pending', pageNumber: 1, pageSize: 100 })
+      .then((data) => {
+        if (isMounted) setVintagesState({ items: data, isLoading: false, error: null });
+      })
+      .catch((err: unknown) => {
+        if (isMounted)
+          setVintagesState({ items: [], isLoading: false, error: getApiErrorMessage(err) });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [vintagesKey]);
+
   const retryWineries = useCallback(() => {
     setWineriesState((prev) => ({ ...prev, isLoading: true, error: null }));
     setWineriesKey((k) => k + 1);
@@ -115,6 +142,11 @@ export default function AdminDashboardPage() {
     setUsersKey((k) => k + 1);
   }, []);
 
+  const retryVintages = useCallback(() => {
+    setVintagesState((prev) => ({ ...prev, isLoading: true, error: null }));
+    setVintagesKey((k) => k + 1);
+  }, []);
+
   // Formateador de conteos (100 -> "100+")
   const formatCount = (count: number) => {
     return count >= 100 ? '100+' : String(count);
@@ -128,8 +160,8 @@ export default function AdminDashboardPage() {
         description={`Hola, ${user?.username || 'Administrador'}. Revisá las solicitudes pendientes y gestioná el ecosistema vitivinícola.`}
       />
 
-      {/* 3 Tarjetas de Resumen independientes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* 4 Tarjetas de Resumen independientes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Tarjeta 1: Bodegas pendientes */}
         <div
           className={cn(
@@ -295,6 +327,68 @@ export default function AdminDashboardPage() {
                 </span>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-neutral-400">
                   <span>Cuentas en plataforma</span>
+                </div>
+              </div>
+            </Link>
+          )}
+        </div>
+
+        {/* Tarjeta 4: Cosechas pendientes */}
+        <div
+          className={cn(
+            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
+            vintagesState.error
+              ? 'border-rose-900/60 bg-rose-950/20'
+              : !vintagesState.isLoading && vintagesState.items.length > 0
+                ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
+                : 'border-white/10 bg-[#121015] hover:border-white/20'
+          )}
+        >
+          {vintagesState.isLoading ? (
+            <div className="py-6 flex items-center justify-center text-neutral-400">
+              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+            </div>
+          ) : vintagesState.error ? (
+            <div className="py-2 space-y-3">
+              <p className="text-xs text-rose-300 font-sans">{vintagesState.error}</p>
+              <button
+                type="button"
+                onClick={retryVintages}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reintentar</span>
+              </button>
+            </div>
+          ) : (
+            <Link to="/admin/cosechas?status=Pending" className="flex-1 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
+                  Cosechas pendientes
+                </span>
+                <div
+                  className={cn(
+                    'p-2 rounded-xl border',
+                    vintagesState.items.length > 0
+                      ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
+                      : 'border-white/10 bg-white/5 text-neutral-400'
+                  )}
+                >
+                  <Wine className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
+                  {formatCount(vintagesState.items.length)}
+                </span>
+                <div className="mt-1 flex items-center gap-1.5 text-xs">
+                  {vintagesState.items.length === 0 ? (
+                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 font-medium">Requieren moderación</span>
+                  )}
                 </div>
               </div>
             </Link>
