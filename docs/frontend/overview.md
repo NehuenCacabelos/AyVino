@@ -77,7 +77,33 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
 
 ---
 
-## 4. Estructura de Directorios
+## 4. Arquitectura del Panel de Administración (`features/admin` y vistas `/admin/*`)
+
+El panel de administración es una herramienta interna, sobria y funcional diseñada exclusivamente para usuarios con rol `Admin`. Implementa el mismo tema oscuro `#0f0f11` y acentos borgoña `#6b1d28` que el resto del sistema, garantizando responsividad fluida (menú lateral drawer en móviles y barra lateral fija en escritorio).
+
+### 4.1 Componentes y Utilidades Compartidas (`features/admin`)
+- **`AdminLayout.tsx`**: Layout maestro protegido (`ProtectedRoute allowedRoles={['Admin']}`). Incluye sidebar con navegación activa, cabecera con avatar y badge de rol "Admin", menú colapsable para dispositivos móviles, y enlaces rápidos de pie ("Volver al sitio" y "Cerrar sesión"). Aloja el `AdminToastProvider`.
+- **`PageHeader.tsx`**: Título editorial, descripción explicativa de sección y slots para acciones primarias.
+- **`DataTable.tsx`**: Tabla genérica tipada `<T>` con estados de carga animados (5 skeletons), mensaje vacío personalizado y scroll horizontal contenido sin romper el viewport general.
+- **`PaginationControls.tsx`**: Paginación Anterior/Siguiente adaptada a colecciones sin conteo total de registros, indicador de página y selector de tamaño (10, 25, 50).
+- **`StatusBadge.tsx` y `ActiveBadge.tsx`**: Badges visuales para estados de moderación (`Pending` en ámbar, `Approved` en verde, `Rejected` en rojo) y actividad de usuarios (`Activo` en verde, `Inactivo` en gris).
+- **`ConfirmDialog.tsx`**: Diálogo modal accesible (`role="dialog"`, aria-modal, trampa de foco y cierre con Escape) con soporte para variantes neutras y críticas (`danger`) con feedback de procesamiento.
+- **`AdminToast.tsx` / `useAdminToast`**: Notificaciones flotantes no invasivas para confirmaciones de éxito y captura de errores.
+- **`ErrorBanner.tsx`**: Alertas visuales con botón de reintento ante fallos de red o de API.
+- **`usePagedList.ts`**: Hook reutilizable de paginación que aísla respuestas obsoletas asíncronas y reinicia a la página inicial ante cambios en dependencias o filtros.
+- **`getApiErrorMessage.ts`**: Extractor tipado de errores RFC 7807 (Problem Details) priorizando `detail` > `title`.
+
+### 4.2 Vistas del Panel de Administración
+- **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo al administrador, tres tarjetas KPI independientes con conteo real y soporte para desbordamiento ("100+"), listado directo de los últimos pendientes de moderación (bodegas y ciudades) y accesos rápidos a catálogos maestros.
+- **Moderación de Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Filtros por chip según estado de moderación (con sincronización en URL `?status=`), tabla detallada con iniciales/logo, acciones dinámicas de aprobación/rechazo, modal de detalle institucional con hipervínculo al perfil público y eliminación física con diálogo destructivo.
+- **Moderación de Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Gestión de ciudades sugeridas por la comunidad al registrar bodegas. Filtro por provincia con resolución en memoria de nombres de provincia, y aprobación o rechazo con confirmación.
+- **Gestión de Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Catálogo de cuentas registradas con avatar, rol y fecha de alta. Buscador en tiempo real y selector de rol sobre la página cargada, acciones de activación y desactivación, eliminación con borrado de credenciales y protección estricta contra auto-modificación de la cuenta propia en sesión.
+- **Catálogo de Variedades de Uva (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM integral de cepas enológicas. Filtros por tipo de color, tabla con descriptores sensoriales (cuerpo, taninos, acidez), modal de alta/edición con validación de longitudes y selects opcionales, y borrado con captura de conflictos (409).
+- **Catálogo de Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM completo de sugerencias gastronómicas categorizadas (Carnes, Pescados, Quesos, Pastas, etc.), modal de creación/edición y eliminación con confirmación.
+
+---
+
+## 5. Estructura de Directorios
 
 ```text
 src/frontend/src/
@@ -86,6 +112,13 @@ src/frontend/src/
 │   └── layout/                # RootLayout, AppLayout, ProfileTopBar, RouteErrorElement, Navbar
 ├── constants/                 # Constantes globales compartidas (bannerThemes.ts)
 ├── features/                  # Arquitectura orientada a características
+│   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
+│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminUsersApi, adminGrapesApi, adminPairingsApi
+│   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
+│   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
+│   │   ├── hooks/             # usePagedList
+│   │   ├── types/             # adminUsers, adminPairings
+│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
@@ -102,6 +135,12 @@ src/frontend/src/
 │       ├── types/             # DTOs tipados estrictos (winery, wine, location, grape, problemDetails)
 │       └── utils/             # Funciones puras auxiliares
 ├── pages/                     # Páginas y vistas principales
+│   ├── AdminCitiesPage.tsx    # Moderación de ciudades (/admin/ciudades)
+│   ├── AdminDashboardPage.tsx # Inicio del panel admin (/admin)
+│   ├── AdminGrapesPage.tsx    # Catálogo de variedades de uva (/admin/uvas)
+│   ├── AdminPairingsPage.tsx  # Catálogo de maridajes (/admin/maridajes)
+│   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
+│   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
 │   ├── ForWineriesPage.tsx    # Landing para bodegas (/para-bodegas)
 │   ├── WineryRegisterPage.tsx # Registro split-card (/bodega/registro)
 │   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
@@ -119,26 +158,26 @@ src/frontend/src/
 
 ---
 
-## 5. Calidad y Cumplimiento de Reglas 8 a 11
+## 6. Calidad y Cumplimiento de Reglas 8 a 11
 
-El área de bodega fue auditada y normalizada bajo cumplimiento estricto de las reglas constitucionales del proyecto:
+El área de bodega y el panel de administración fueron auditados y normalizados bajo cumplimiento estricto de las reglas constitucionales del proyecto:
 - **Regla 8 (Inmutabilidad y Actualizaciones Funcionales)**: Ninguna mutación in-place (`push`, `splice`, `sort`). Todos los setters con dependencia del estado previo usan forma funcional `setX(prev => ...)`. En listas dinámicas (`blend`), cada fila posee un identificador determinista único (`id: string`) para evitar claves por índice de array.
-- **Regla 9 (Saneamiento de Efectos y Limpieza de Recursos)**: Todos los `useEffect` que crean timers para auto-dismiss de mensajes devuelven funciones de limpieza con `clearTimeout`. Los efectos vigilan dependencias primitivas estables (`wineId`, `wineryId`) en lugar de objetos completos.
+- **Regla 9 (Saneamiento de Efectos y Limpieza de Recursos)**: Todos los `useEffect` que crean timers para auto-dismiss de mensajes devuelven funciones de limpieza con `clearTimeout`. Los efectos vigilan dependencias primitivas estables (`wineId`, `wineryId`, `key`) en lugar de objetos completos y controlan banderas de desmontaje (`cancelled`) para ignorar respuestas obsoletas.
 - **Regla 10 (Formularios Controlados y Validaciones)**: Todos los inputs inicializan con cadenas vacías controladas (nunca `null` ni `undefined`). Todos los formularios interceptan el envío mediante `e.preventDefault()`.
-- **Regla 11 (Contextos Memoizados y Estado Derivado Puro)**: `WineryContext` y `useMyWinery` devuelven objetos memoizados con `useMemo`. No se almacenan valores derivados en `useState`.
+- **Regla 11 (Contextos Memoizados y Estado Derivado Puro)**: `WineryContext`, `AdminToastContext` y sus proveedores devuelven objetos memoizados con `useMemo`. No se almacenan valores derivados en `useState`.
 
 ---
 
-## 6. Verificación y Testing
+## 7. Verificación y Testing
 
 ```bash
 # Frontend (Vitest + Testing Library)
 cd src/frontend
-npm test        # 19 suites de prueba, 69 tests pasando en verde
+npm test        # 29 suites de prueba, 101 tests pasando en verde
 npm run lint    # Cero errores y cero advertencias en ESLint
 npm run build   # Compilación estricta TypeScript (tsc -b && vite build)
 
 # Backend (.NET Core)
-dotnet test     # 545 tests unitarios pasando en verde
+dotnet test     # Tests unitarios pasando en verde
 dotnet build    # Cero errores de compilador
 ```

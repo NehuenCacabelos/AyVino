@@ -64,6 +64,23 @@ flowchart TD
         WineryWines --> WineVintagesModalComponent
     end
 
+    subgraph AdminArea["Panel de Administración (/admin/*)"]
+        AdminLayoutComponent["AdminLayout.tsx (Sidebar + Header + ToastProvider)"]
+        AdminDash["/admin -> AdminDashboardPage.tsx (KPIs y Pendientes)"]
+        AdminWineries["/admin/bodegas -> AdminWineriesPage.tsx (Moderación)"]
+        AdminCities["/admin/ciudades -> AdminCitiesPage.tsx (Moderación)"]
+        AdminUsers["/admin/usuarios -> AdminUsersPage.tsx (Gestión Cuentas)"]
+        AdminGrapes["/admin/uvas -> AdminGrapesPage.tsx (Catálogo Variedades)"]
+        AdminPairings["/admin/maridajes -> AdminPairingsPage.tsx (Catálogo Maridajes)"]
+
+        AdminLayoutComponent --> AdminDash
+        AdminLayoutComponent --> AdminWineries
+        AdminLayoutComponent --> AdminCities
+        AdminLayoutComponent --> AdminUsers
+        AdminLayoutComponent --> AdminGrapes
+        AdminLayoutComponent --> AdminPairings
+    end
+
     Landing -->|"Click en 'Comunidad' (Navbar / Footer)"| CommunityModal
     Landing -->|"Click en 'Para bodegas' (Navbar / Banner)"| ForWineries
     ForWineries -->|"Click en 'Registrar mi bodega'"| WineryRegister
@@ -74,14 +91,16 @@ flowchart TD
     Login -->|"Login exitoso (JWT + Refresh Token)"| AuthContext
     Register -->|"Registro exitoso"| AuthContext
     WineryRegister -->|"Registro + Login automático"| AuthContext
-    AuthContext -->|"Redirección post-login"| TargetRoute["Ruta solicitada, /bodega/dashboard o /dashboard"]
+    AuthContext -->|"Redirección post-login"| TargetRoute["Ruta solicitada, /admin, /bodega/dashboard o /dashboard"]
 
     Landing -->|"Navegación /dashboard"| Guard
     Landing -->|"Navegación /bodega/*"| Guard
+    Landing -->|"Navegación /admin/*"| Guard
 
     Guard -->|"!isAuthenticated (con state.from)"| Login
     Guard -->|"isAuthenticated (Rol User/Admin)"| Layout
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryLayoutComponent
+    Guard -->|"isAuthenticated + Rol Admin"| AdminLayoutComponent
     Guard -->|"Rol no autorizado"| Dashboard
 
     Fallback["Ruta desconocida (*)"] -->|"Redirect"| Landing
@@ -147,6 +166,21 @@ flowchart TD
 - Casillas individuales y botón maestro *"Seleccionar todos"*.
 - Preservación íntegra de reseñas, notas de cata y calificaciones de la comunidad.
 
+### 2.9 Panel de Administración (`AdminLayout.tsx` en `/admin/*`)
+- **Navegación e Interfaz Maestra**:
+  - Sidebar fija en desktop con 6 accesos directos (`NavLink` con `isActive`): Inicio, Bodegas, Ciudades, Usuarios, Uvas y Maridajes.
+  - Menú hamburguesa colapsable en pantallas móviles con cierre automático al navegar.
+  - Cabecera con datos del usuario administrador y badge distintivo "Admin".
+  - Enlaces de pie: *"Volver al sitio"* (`/dashboard`) y *"Cerrar sesión"* (logout reactivo).
+  - Integración global de notificaciones accesibles mediante `AdminToastProvider`.
+- **Secciones Operativas**:
+  - **Inicio (`AdminDashboardPage.tsx` en `/admin`)**: Saludo con nombre de usuario, tres tarjetas KPI independientes con detección de volumen ("100+"), tabla de últimos pendientes y accesos directos.
+  - **Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Bandeja de moderación con chips por estado (`Pending` por defecto sincronizado con query param `?status=`), aprobación directa, rechazo con confirmación, modal de detalles institucionales y eliminación destructiva protegida.
+  - **Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Moderación de localidades pendientes cargadas por usuarios, filtro por provincia en memoria y transiciones de estado.
+  - **Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Lista de cuentas con filtrado instantáneo por texto y rol en el cliente, toggle de activación/desactivación y eliminación definitiva. Se bloquean las acciones sobre la cuenta del propio administrador en sesión.
+  - **Uvas (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM de cepas enológicas con filtros de color, tabla con descriptores sensoriales y modal de creación/edición con validación.
+  - **Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM de maridajes gastronómicos con filtros por categoría (Carnes, Pescados, Quesos, etc.).
+
 ---
 
 ## 3. Matriz de Rutas y Políticas de Acceso
@@ -175,4 +209,10 @@ flowchart TD
 | `/bodega/vinos` | `WineryWinesPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
 | `/bodega/vinos/:wineId` | `WineryWinesPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
 | `/bodega/reclamar` | `WineryClaimPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin` | `AdminDashboardPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/bodegas` | `AdminWineriesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/ciudades` | `AdminCitiesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/usuarios` | `AdminUsersPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/uvas` | `AdminGrapesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
+| `/admin/maridajes` | `AdminPairingsPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `*` | Redirección `{ replace: true }` | `RootLayout` | Todos | Redirige a `/` |
