@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom';
-import Navbar from '../components/layout/Navbar';
 import {
   ShieldCheck,
   Sparkles,
   ArrowRight,
-  Building2,
   Users,
   Compass,
 } from 'lucide-react';
@@ -61,9 +59,7 @@ export default function ForWineriesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between overflow-x-hidden">
-      <Navbar />
-
+    <div className="w-full text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between overflow-x-hidden">
       {/* Hero Editorial */}
       <section className="relative overflow-hidden pt-28 md:pt-36 pb-16 sm:pb-24 border-b border-zinc-800/60">
         {/* Textura de fondo técnica */}
@@ -230,21 +226,6 @@ export default function ForWineriesPage() {
           </div>
         </div>
       </section>
-
-      {/* Footer Minimalista */}
-      <footer className="border-t border-neutral-800 bg-[#0c0c0e] py-10 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <Building2 className="h-4 w-4 text-neutral-400" />
-            <span className="font-serif text-lg font-semibold text-neutral-200">
-              AyVino para Bodegas
-            </span>
-          </div>
-          <p className="text-xs text-neutral-500 font-mono">
-            © {new Date().getFullYear()} — Compromiso de calidad vitivinícola argentina.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

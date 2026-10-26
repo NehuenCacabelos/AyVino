@@ -1,4 +1,5 @@
 export { default as WineryLayout } from './WineryLayout';
+export { default as WineryPublicLayout } from './WineryPublicLayout';
 export { default as WineryStatusBanner } from './WineryStatusBanner';
 export { default as WineryLoadingState } from './WineryLoadingState';
 export { default as WineryErrorState } from './WineryErrorState';

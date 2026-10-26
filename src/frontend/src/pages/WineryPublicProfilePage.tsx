@@ -13,7 +13,6 @@ import {
   Check,
   UserPlus,
 } from 'lucide-react';
-import Navbar from '../components/layout/Navbar';
 import { useAuth } from '../features/auth';
 import {
   getWineryById,
@@ -163,9 +162,8 @@ export default function WineryPublicProfilePage() {
 
   if (isNotFound) {
     return (
-      <div className="min-h-screen bg-[#0a0a0c] text-neutral-100 font-sans flex flex-col justify-between">
-        <Navbar />
-        <div className="max-w-md mx-auto text-center px-4 py-28 space-y-4">
+      <div className="w-full text-neutral-100 font-sans flex flex-col justify-between py-24">
+        <div className="max-w-md mx-auto text-center px-4 space-y-4">
           <Building2 className="w-12 h-12 text-neutral-600 mx-auto" />
           <h1 className="font-serif text-3xl font-semibold text-neutral-100">
             Bodega no encontrada
@@ -202,9 +200,7 @@ export default function WineryPublicProfilePage() {
       : 'Argentina';
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between">
-      <Navbar />
-
+    <div className="w-full text-neutral-100 font-sans selection:bg-[#6b1d28] selection:text-white flex flex-col justify-between">
       <main className="pt-24 sm:pt-28 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12">
         {/* Enlace de Retorno */}
         <div>
@@ -387,21 +383,6 @@ export default function WineryPublicProfilePage() {
 
       {/* Modal de Ficha Técnica */}
       <WineDetailModal wine={selectedWine} onClose={() => setSelectedWine(null)} />
-
-      {/* Footer Minimalista */}
-      <footer className="border-t border-neutral-800 bg-[#0c0c0e] py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-neutral-500" />
-            <span className="font-serif text-sm text-neutral-300">{winery.name}</span>
-            <span className="text-xs text-neutral-600">·</span>
-            <span className="text-xs text-neutral-500 font-mono">Ficha Oficial AyVino</span>
-          </div>
-          <p className="text-xs text-neutral-500 font-mono">
-            © {new Date().getFullYear()} — Plataforma vitivinícola argentina.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

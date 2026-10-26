@@ -18,12 +18,12 @@ const CatalogPage = lazy(() => import('../pages/CatalogPage'));
 const AccountPage = lazy(() => import('../pages/AccountPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
-// Vistas institucionales y públicas de Bodega
+// Layouts y vistas del área de Bodega
+const WineryPublicLayout = lazy(() => import('../features/winery/components/WineryPublicLayout'));
 const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
 const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
 const WineryPublicProfilePage = lazy(() => import('../pages/WineryPublicProfilePage'));
 
-// Layout y vistas del panel de Bodega
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryProfilePage = lazy(() => import('../pages/WineryProfilePage'));
@@ -112,15 +112,7 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // Rutas Públicas Institucionales de Bodega
-      {
-        path: '/para-bodegas',
-        element: (
-          <Suspense fallback={<RouteFallbackLoader />}>
-            <ForWineriesPage />
-          </Suspense>
-        ),
-      },
+      // Registro institucional de Bodega (pantalla inmersiva split-card sin navbar global)
       {
         path: '/bodega/registro',
         element: (
@@ -129,13 +121,32 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
+
+      // Vistas Públicas Institucionales de Bodega bajo Layout compartido (WineryPublicLayout)
       {
-        path: '/bodegas/:id',
         element: (
           <Suspense fallback={<RouteFallbackLoader />}>
-            <WineryPublicProfilePage />
+            <WineryPublicLayout />
           </Suspense>
         ),
+        children: [
+          {
+            path: '/para-bodegas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <ForWineriesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/bodegas/:id',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicProfilePage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
@@ -241,7 +252,27 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: 'perfil/editar',
+            element: <Navigate to="/bodega/configuracion" replace />,
+          },
+          {
+            path: 'configuracion',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryProfilePage />
+              </Suspense>
+            ),
+          },
+          {
             path: 'vinos',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryWinesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos/:wineId',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <WineryWinesPage />
