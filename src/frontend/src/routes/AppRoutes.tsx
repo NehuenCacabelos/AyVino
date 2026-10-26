@@ -27,6 +27,7 @@ const WineryPublicProfilePage = lazy(() => import('../pages/WineryPublicProfileP
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryProfilePage = lazy(() => import('../pages/WineryProfilePage'));
+const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
 const WineryWinesPage = lazy(() => import('../pages/WineryWinesPage'));
 const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
@@ -259,7 +260,7 @@ export const router = createBrowserRouter([
             path: 'configuracion',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryProfilePage />
+                <WineryConfigPage />
               </Suspense>
             ),
           },
