@@ -12,8 +12,17 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         approval_status, uploaded_by_user_id, register_date, rating_sum, review_count
         """;
 
-    public Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default) =>
-        GetByIdAsync(id, null, false, ct);
+    public async Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = $"""
+            SELECT {SelectColumns}
+            FROM wine_vintages
+            WHERE id = @Id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<WineVintage>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
 
     public async Task<WineVintage?> GetByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
@@ -36,8 +45,18 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, new { Id = id, CurrentUserId = currentUserId, IsAdmin = isAdmin }, cancellationToken: ct));
     }
 
-    public Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default) =>
-        GetAllByWineIdAsync(wineId, null, false, ct);
+    public async Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default)
+    {
+        const string sql = $"""
+            SELECT {SelectColumns}
+            FROM wine_vintages
+            WHERE wine_id = @WineId
+            ORDER BY year DESC NULLS LAST;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<WineVintage>(
+            new CommandDefinition(sql, new { WineId = wineId }, cancellationToken: ct));
+    }
 
     public async Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
