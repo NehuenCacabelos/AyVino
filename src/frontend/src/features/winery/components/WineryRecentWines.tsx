@@ -76,13 +76,13 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
           {[1, 2].map((i) => (
             <div
               key={i}
-              className="h-28 rounded-2xl bg-[#141416] border border-white/5 p-5 animate-pulse"
+              className="h-28 rounded-2xl bg-[#121015] border border-white/10 p-5 animate-pulse"
             />
           ))}
         </div>
       ) : previewWines.length === 0 ? (
         /* Empty State */
-        <div className="rounded-2xl bg-[#141416] border border-white/5 p-8 sm:p-10 text-center shadow-lg space-y-4">
+        <div className="rounded-2xl bg-[#121015] border border-white/10 p-8 sm:p-10 text-center shadow-lg space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-stone-900 border border-white/10 text-rose-300 mx-auto flex items-center justify-center shadow-sm">
             <Wine className="w-6 h-6" />
           </div>
@@ -100,7 +100,7 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
           <div className="pt-2">
             <Link
               to="/bodega/vinos"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
             >
               <Plus className="w-4 h-4" />
               <span>Cargar primera etiqueta</span>
@@ -113,7 +113,7 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
           {previewWines.map((wine) => (
             <div
               key={wine.id}
-              className="rounded-2xl bg-[#141416] border border-white/5 p-5 flex flex-col justify-between hover:border-white/10 transition-colors shadow-lg group"
+              className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">

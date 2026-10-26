@@ -246,7 +246,7 @@ export default function WineCreateModal({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
     >
-      <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#141416] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+      <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#121015] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
         {/* Header del Modal */}
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -320,7 +320,7 @@ export default function WineCreateModal({
                   className="h-12 w-full rounded-xl px-3 text-sm bg-zinc-900/50 text-zinc-100 border border-zinc-800/80 focus:outline-none focus:border-zinc-500 transition-colors cursor-pointer"
                 >
                   {WINE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value} className="bg-[#141416] text-zinc-100">
+                    <option key={t.value} value={t.value} className="bg-[#121015] text-zinc-100">
                       {t.label}
                     </option>
                   ))}
@@ -539,7 +539,7 @@ export default function WineCreateModal({
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg disabled:opacity-60"
             >
               {isLoading ? (
                 <div className="h-4 w-4 border-2 border-rose-200/30 border-t-rose-100 rounded-full animate-spin" />

@@ -173,7 +173,7 @@ export default function WineryWinesPage() {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md self-start md:self-auto"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md self-start md:self-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Nueva etiqueta</span>
@@ -254,7 +254,7 @@ export default function WineryWinesPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-48 rounded-2xl bg-[#141416] border border-white/5 p-6 animate-pulse"
+              className="h-48 rounded-2xl bg-[#121015] border border-white/10 p-6 animate-pulse"
             />
           ))}
         </div>
@@ -262,7 +262,7 @@ export default function WineryWinesPage() {
         /* Empty States */
         wines.length === 0 ? (
           pageNumber > 1 ? (
-            <div className="rounded-2xl bg-[#141416] border border-white/5 p-10 text-center space-y-3">
+            <div className="rounded-2xl bg-[#121015] border border-white/10 p-10 text-center space-y-3">
               <p className="text-sm font-sans text-neutral-400">
                 No hay más etiquetas en esta página.
               </p>
@@ -275,7 +275,7 @@ export default function WineryWinesPage() {
               </button>
             </div>
           ) : (
-            <div className="rounded-2xl bg-[#141416] border border-white/5 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
+            <div className="rounded-2xl bg-[#121015] border border-white/10 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
               <div className="w-14 h-14 rounded-2xl bg-stone-900 border border-white/10 text-rose-300 mx-auto flex items-center justify-center shadow-sm">
                 <Wine className="w-7 h-7" />
               </div>
@@ -293,7 +293,7 @@ export default function WineryWinesPage() {
                   <button
                     type="button"
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-lg"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Cargar primera etiqueta</span>
@@ -303,7 +303,7 @@ export default function WineryWinesPage() {
             </div>
           )
         ) : (
-          <div className="rounded-2xl bg-[#141416] border border-white/5 p-10 text-center space-y-3">
+          <div className="rounded-2xl bg-[#121015] border border-white/10 p-10 text-center space-y-3">
             <p className="text-sm font-sans text-neutral-400">
               No se encontraron etiquetas con los filtros seleccionados.
             </p>
@@ -330,7 +330,7 @@ export default function WineryWinesPage() {
               return (
                 <div
                   key={wine.id}
-                  className="rounded-2xl bg-[#141416] border border-white/5 p-6 flex flex-col justify-between hover:border-white/10 transition-all shadow-lg group"
+                  className="rounded-2xl bg-[#121015] border border-white/10 p-6 flex flex-col justify-between hover:border-white/20 transition-all shadow-lg group"
                 >
                   <div className="space-y-3">
                     {/* Top Bar: Categoría + Calificación */}

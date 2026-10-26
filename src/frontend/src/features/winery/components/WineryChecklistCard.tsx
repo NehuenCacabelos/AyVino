@@ -37,7 +37,7 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
       description: 'Subí el logo o escudo de tu bodega para personalizar tu vidriera.',
       completed: Boolean(winery.logoUrl && winery.logoUrl.trim().length > 0),
       actionText: 'Subir logo',
-      actionTo: '/bodega/perfil',
+      actionTo: '/bodega/configuracion',
     },
     {
       id: 'history',
@@ -47,7 +47,7 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
         winery.foundationYear && winery.description && winery.description.trim().length >= 10,
       ),
       actionText: 'Completar',
-      actionTo: '/bodega/perfil',
+      actionTo: '/bodega/configuracion',
     },
     {
       id: 'website',
@@ -55,7 +55,7 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
       description: 'Facilitá a los sommeliers visitar tu portal y redes institucionales.',
       completed: Boolean(winery.website && winery.website.trim().length > 0),
       actionText: 'Agregar',
-      actionTo: '/bodega/perfil',
+      actionTo: '/bodega/configuracion',
     },
     {
       id: 'wines',
@@ -72,7 +72,7 @@ export default function WineryChecklistCard({ winery, winesCount }: WineryCheckl
   const isComplete = percentage === 100;
 
   return (
-    <div className="rounded-2xl bg-[#141416] border border-white/5 p-6 sm:p-7 shadow-lg space-y-5">
+    <div className="rounded-2xl bg-[#121015] border border-white/10 p-6 sm:p-7 shadow-lg space-y-5">
       {/* Cabecera y Barra de Progreso */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

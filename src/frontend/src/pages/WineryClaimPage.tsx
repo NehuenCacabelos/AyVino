@@ -169,7 +169,7 @@ export default function WineryClaimPage() {
               type="button"
               onClick={handleClaim}
               disabled={selectedIds.length === 0 || isSubmitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <div className="h-4 w-4 border-2 border-rose-200/30 border-t-rose-100 rounded-full animate-spin" />
@@ -237,13 +237,13 @@ export default function WineryClaimPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-28 rounded-2xl bg-[#141416] border border-white/5 p-6 animate-pulse"
+              className="h-28 rounded-2xl bg-[#121015] border border-white/10 p-6 animate-pulse"
             />
           ))}
         </div>
       ) : candidates.length === 0 ? (
         /* Empty State */
-        <div className="rounded-2xl bg-[#141416] border border-white/5 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
+        <div className="rounded-2xl bg-[#121015] border border-white/10 p-12 text-center shadow-xl space-y-4 max-w-xl mx-auto">
           <div className="w-14 h-14 rounded-2xl bg-stone-900 border border-white/10 text-neutral-400 mx-auto flex items-center justify-center shadow-sm">
             <ShieldCheck className="w-7 h-7 text-emerald-400" />
           </div>
@@ -262,7 +262,7 @@ export default function WineryClaimPage() {
           <div className="pt-2">
             <Link
               to="/bodega/vinos"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-md"
             >
               <Wine className="w-4 h-4" />
               <span>Ir a Mis Vinos</span>
@@ -284,8 +284,8 @@ export default function WineryClaimPage() {
                 onClick={() => handleToggleSelect(candidate.id)}
                 className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                   isSelected
-                    ? 'bg-[#18181c] border-rose-800/60 shadow-lg shadow-black/40'
-                    : 'bg-[#141416] border-white/5 hover:border-white/10'
+                    ? 'bg-[#17151a] border-rose-800/60 shadow-lg shadow-black/40'
+                    : 'bg-[#121015] border-white/10 hover:border-white/20'
                 }`}
               >
                 <div className="flex items-start gap-4">

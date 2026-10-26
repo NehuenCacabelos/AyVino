@@ -34,7 +34,7 @@ export default function WineryKpiRibbon({
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-28 rounded-2xl bg-[#141416] border border-white/5 p-5 animate-pulse flex flex-col justify-between"
+            className="h-28 rounded-2xl bg-[#121015] border border-white/10 p-5 animate-pulse flex flex-col justify-between"
           >
             <div className="h-4 w-24 bg-white/5 rounded" />
             <div className="h-7 w-16 bg-white/10 rounded" />
@@ -48,7 +48,7 @@ export default function WineryKpiRibbon({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Etiquetas Oficiales */}
-      <div className="rounded-2xl bg-[#141416] border border-white/5 p-5 flex flex-col justify-between hover:border-white/10 transition-colors shadow-lg group">
+      <div className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-medium">
             Etiquetas
@@ -68,7 +68,7 @@ export default function WineryKpiRibbon({
       </div>
 
       {/* 2. Cosechas y Añadas */}
-      <div className="rounded-2xl bg-[#141416] border border-white/5 p-5 flex flex-col justify-between hover:border-white/10 transition-colors shadow-lg group">
+      <div className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-medium">
             Cosechas
@@ -90,7 +90,7 @@ export default function WineryKpiRibbon({
       </div>
 
       {/* 3. Seguidores */}
-      <div className="rounded-2xl bg-[#141416] border border-white/5 p-5 flex flex-col justify-between hover:border-white/10 transition-colors shadow-lg group">
+      <div className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-medium">
             Seguidores
@@ -123,7 +123,7 @@ export default function WineryKpiRibbon({
       </div>
 
       {/* 4. Calificación Promedio */}
-      <div className="rounded-2xl bg-[#141416] border border-white/5 p-5 flex flex-col justify-between hover:border-white/10 transition-colors shadow-lg group">
+      <div className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-medium">
             Puntaje Global

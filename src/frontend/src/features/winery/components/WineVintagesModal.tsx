@@ -248,7 +248,7 @@ export default function WineVintagesModal({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
     >
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-[#141416] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+      <div className="relative w-full max-w-3xl max-h-[90vh] bg-[#121015] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -438,7 +438,7 @@ export default function WineVintagesModal({
                           className="h-9 flex-1 rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
                         >
                           {availableGrapes.map((g) => (
-                            <option key={g.id} value={g.id} className="bg-[#141416]">
+                            <option key={g.id} value={g.id} className="bg-[#121015]">
                               {g.name}
                             </option>
                           ))}
@@ -480,7 +480,7 @@ export default function WineVintagesModal({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? 'Guardando...' : 'Guardar Cosecha'}</span>
@@ -509,7 +509,7 @@ export default function WineVintagesModal({
               {vintages.map((v) => (
                 <div
                   key={v.id}
-                  className="p-4 rounded-2xl bg-[#121214] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition-colors"
+                  className="p-4 rounded-2xl bg-[#121015] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/20 transition-colors"
                 >
                   <div className="flex items-start sm:items-center gap-4">
                     {/* Miniatura de Cosecha */}

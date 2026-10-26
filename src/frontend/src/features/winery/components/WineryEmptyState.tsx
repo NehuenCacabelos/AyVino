@@ -21,7 +21,7 @@ export default function WineryEmptyState({
 }: WineryEmptyStateProps) {
   return (
     <div
-      className={`rounded-2xl border border-white/5 bg-[#141416]/70 backdrop-blur-sm p-8 sm:p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto shadow-lg ${className}`}
+      className={`rounded-2xl border border-white/10 bg-[#121015] p-8 sm:p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto shadow-lg ${className}`}
     >
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-900/80 border border-white/10 text-neutral-400 mb-4 shadow-sm">
         <Icon className="h-7 w-7 text-neutral-300" />

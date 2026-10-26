@@ -73,7 +73,7 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
             return (
               <div
                 key={act.title}
-                className="p-5 rounded-2xl bg-[#141416]/50 border border-white/5 flex flex-col justify-between shadow-lg opacity-60 cursor-default"
+                className="p-5 rounded-2xl bg-[#121015]/60 border border-white/5 flex flex-col justify-between shadow-lg opacity-60 cursor-default"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -105,7 +105,7 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
             <Link
               key={act.title}
               to={act.to}
-              className="group p-5 rounded-2xl bg-[#141416] border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between shadow-lg hover:-translate-y-0.5 duration-200"
+              className="group p-5 rounded-2xl bg-[#121015] border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between shadow-lg hover:-translate-y-0.5 duration-200"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
