@@ -22,13 +22,19 @@ flowchart TD
         AuthContext["AuthContext (AuthProvider + useAuth)"]
     end
 
-    subgraph ProtectedRoutes["Rutas Protegidas (Requieren Sesión)"]
+    subgraph ProtectedRoutes["Rutas Protegidas bajo AppLayout (Requieren Sesión)"]
+        Layout["AppLayout (<Outlet /> + stockCount Context)"]
         Dashboard["/dashboard (o /app) -> DashboardPage.tsx (Exploración & Bodegas)"]
         Cava["/cava -> CavaPage.tsx (Mi Cava & Inventario Personal)"]
         Pairing["/maridaje -> PairingPage.tsx (Curaduría & Maridaje)"]
         Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
         Account["/cuenta -> AccountPage.tsx (Mi Cuenta & Seguridad)"]
         WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx (Exclusivo Bodega/Admin)"]
+        Layout --> Dashboard
+        Layout --> Cava
+        Layout --> Pairing
+        Layout --> Catalog
+        Layout --> Account
     end
 
     Landing -->|"Click en tarjeta de vino"| DetailModal

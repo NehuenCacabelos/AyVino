@@ -5,6 +5,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -155,19 +156,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(updatedUser);
   }, []);
 
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated,
+      isLoading,
+      login,
+      register,
+      loginDemo,
+      logout,
+      updateUserContext,
+    }),
+    [
+      user,
+      isAuthenticated,
+      isLoading,
+      login,
+      register,
+      loginDemo,
+      logout,
+      updateUserContext,
+    ]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoading,
-        login,
-        register,
-        loginDemo,
-        logout,
-        updateUserContext,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

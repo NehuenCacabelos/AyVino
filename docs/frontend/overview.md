@@ -62,7 +62,7 @@ src/frontend/src/
 ├── assets/                    # Recursos visuales estáticos optimizados (hero-bottles.webp, auth-vineyard.webp, corchos-vinos.webp)
 ├── components/                # Componentes transversales y reutilizables en toda la aplicación
 │   ├── community/             # Modales comunitarios transversales (CommunityModal.tsx)
-│   └── layout/                # Estructura visual global compartida (Navbar.tsx)
+│   └── layout/                # Estructura visual global compartida (Navbar.tsx, AppLayout.tsx, RootLayout.tsx, RouteErrorElement.tsx)
 ├── features/                  # Arquitectura orientada a características (Feature-Driven Architecture)
 │   ├── auth/                  # Módulo de Autenticación
 │   │   ├── api/               # Llamadas API del módulo (authApi.ts)

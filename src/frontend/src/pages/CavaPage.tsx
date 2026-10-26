@@ -1,20 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
-import {
-  DashboardNavbar,
-  DashboardSection,
-  UncorkDialog,
-} from '../features/dashboard';
+import { DashboardSection, UncorkDialog } from '../features/dashboard';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
+import type { AppOutletContext } from '../components/layout/AppLayout';
 
 /**
  * CavaPage Component (/cava)
  * Página dedicada al inventario personal del sommelier y botellas listas para descorchar:
  * - Vinculada a la opción "Mi Cava" del menú de usuario.
- * - Incluye DashboardNavbar persistente, switch Con Stock / Usuario Nuevo, carrusel y diálogo de descorche.
+ * - Sincroniza el contador de stock mediante useOutletContext hacia el layout compartido.
+ * - Integra carrusel de stock, onboarding de usuario nuevo y diálogo interactivo de descorche.
  */
 export default function CavaPage() {
-  const [stockCount, setStockCount] = useState(24);
+  const { setStockCount } = useOutletContext<AppOutletContext>();
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -39,7 +38,7 @@ export default function CavaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
+    <>
       {/* Toast de Notificación Flotante */}
       {notification && (
         <aside
@@ -52,10 +51,7 @@ export default function CavaPage() {
         </aside>
       )}
 
-      {/* 1. Navbar Superior Persistente */}
-      <DashboardNavbar stockCount={stockCount} />
-
-      {/* 2. Contenido Principal de Cava */}
+      {/* Contenido Principal de Cava */}
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-12 sm:gap-16 px-4 sm:px-6 lg:px-8 pb-24 pt-28 sm:pt-32">
         <DashboardSection
           onUncorkRequested={(wine) => setUncorkingWine(wine)}
@@ -71,22 +67,6 @@ export default function CavaPage() {
         onClose={() => setUncorkingWine(null)}
         onSave={handleUncorkSaved}
       />
-
-      {/* 3. Footer Editorial */}
-      <footer className="border-t border-neutral-800 bg-[#0c0c0e] transition-colors">
-        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-8 text-xs text-neutral-500">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold tracking-tight text-zinc-100">
-              AyVino<span className="text-rose-500">.</span>
-            </span>
-          </div>
-
-          <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-neutral-500 text-center sm:text-right">
-            Beber con moderación · Prohibida su venta a menores de 18 años
-          </span>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
-

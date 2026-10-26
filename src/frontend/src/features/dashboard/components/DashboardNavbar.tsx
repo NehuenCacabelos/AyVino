@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Wine,
   Menu,
@@ -171,24 +171,34 @@ export default function DashboardNavbar({
                   {link.label}
                 </button>
               ) : (
-                <Link
+                <NavLink
                   key={link.label}
                   to={link.to!}
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 whitespace-nowrap"
+                  className={({ isActive }) =>
+                    cn(
+                      'text-[15px] font-medium transition-colors duration-150 whitespace-nowrap',
+                      isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                    )
+                  }
                 >
                   {link.label}
-                </Link>
+                </NavLink>
               )
             )}
 
             {isWineryOrAdmin && (
-              <Link
+              <NavLink
                 to="/bodega/dashboard"
-                className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
+                className={({ isActive }) =>
+                  cn(
+                    'text-[15px] font-medium transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap',
+                    isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                  )
+                }
               >
                 <LayoutDashboard className="h-4 w-4 text-zinc-400" />
                 <span>Bodega</span>
-              </Link>
+              </NavLink>
             )}
           </nav>
 
@@ -381,14 +391,19 @@ export default function DashboardNavbar({
                     {link.label}
                   </button>
                 ) : (
-                  <Link
+                  <NavLink
                     key={link.label}
                     to={link.to!}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
+                    className={({ isActive }) =>
+                      cn(
+                        'py-2 text-[15px] font-medium transition-colors',
+                        isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                      )
+                    }
                   >
                     {link.label}
-                  </Link>
+                  </NavLink>
                 )
               )}
 

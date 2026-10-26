@@ -131,7 +131,7 @@ export default function StockCarousel({ wines = defaultStock, onUncork }: StockC
       >
         {wines.map((wine) => (
           <li
-            key={wine.name}
+            key={wine.id ?? `${wine.winery}-${wine.name}-${wine.vintage}`}
             className="w-[280px] sm:w-[310px] shrink-0 snap-start flex flex-col"
           >
             <article className="group h-full flex flex-col justify-between rounded-xl border border-neutral-800 bg-[#121214] p-5 hover:border-neutral-700 transition-all duration-200">

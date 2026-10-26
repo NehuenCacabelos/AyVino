@@ -114,14 +114,6 @@ export default function AccountPage() {
     };
   }, [updateUserContext, navigate]);
 
-  // Sincronizar datos si el usuario cambia externamente
-  useEffect(() => {
-    if (user) {
-      setUsername(user.username || '');
-      setBio(user.bio || '');
-    }
-  }, [user]);
-
   // Limpiar mensajes después de unos segundos
   useEffect(() => {
     if (profileSuccessMsg) {

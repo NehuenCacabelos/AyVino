@@ -1,5 +1,9 @@
+/* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import RootLayout from '../components/layout/RootLayout';
+import AppLayout from '../components/layout/AppLayout';
+import RouteErrorElement from '../components/layout/RouteErrorElement';
 import { ProtectedRoute, useAuth } from '../features/auth';
 
 // Carga diferida de vistas: cada página genera un chunk independiente en Vite
@@ -32,108 +36,165 @@ function RouteFallbackLoader() {
 }
 
 /**
- * Configuración Central de Rutas de la Aplicación (AyVino).
- * Integra rutas públicas (Landing, Login, Register, Terms), protegidas generales
- * (Dashboard, Catálogo) y protegidas por rol de bodega/administrador.
- * Cada vista se carga de forma diferida con React.lazy para optimizar el bundle inicial.
+ * Componente de resolución para la raíz:
+ * Dirige a los usuarios autenticados hacia su respectivo dashboard y a los visitantes hacia la Landing.
  */
-export default function AppRoutes() {
+function RootIndexRoute() {
   const { isAuthenticated, user } = useAuth();
   const homePath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+  return isAuthenticated ? <Navigate to={homePath} replace /> : <Landing />;
+}
 
-  return (
-    <Suspense fallback={<RouteFallbackLoader />}>
-      <Routes>
-        {/* Ruta Raíz: Landing para visitantes, Homepage/Dashboard para usuarios autenticados */}
-        <Route
-          path="/"
-          element={isAuthenticated ? <Navigate to={homePath} replace /> : <Landing />}
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-
-        {/* Ruta Protegida: Dashboard Principal Post-Login */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Ruta Protegida: Mi Cava Personal */}
-        <Route
-          path="/cava"
-          element={
-            <ProtectedRoute>
-              <CavaPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Ruta Protegida: Recomendaciones y Maridajes */}
-        <Route
-          path="/maridaje"
-          element={
-            <ProtectedRoute>
-              <PairingPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Alias /app hacia /dashboard */}
-        <Route path="/app" element={<Navigate to="/dashboard" replace />} />
-
-        {/* Ruta Protegida General: Catálogo */}
-        <Route
-          path="/catalogo"
-          element={
-            <ProtectedRoute>
-              <CatalogPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Ruta Protegida: Gestión de Cuenta y Perfil */}
-        <Route
-          path="/cuenta"
-          element={
-            <ProtectedRoute>
-              <AccountPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Ruta Pública: Perfil de Usuario por Username */}
-        <Route path="/perfil/:username" element={<ProfilePage />} />
-
-        {/* Redirección /perfil: hacia perfil propio si está logueado, o /login si no */}
-        <Route
-          path="/perfil"
-          element={
-            isAuthenticated && user?.username ? (
-              <Navigate to={`/perfil/${user.username}`} replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-
-        {/* Ruta Protegida Exclusiva para Bodegas y Administradores */}
-        <Route
-          path="/bodega/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['Winery', 'Admin']}>
-              <WineryDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Fallback 404: Redirigir a inicio */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+/**
+ * Componente de resolución para /perfil:
+ * Redirige al perfil propio si hay sesión activa, o a /login si no.
+ */
+function ProfileRedirectRoute() {
+  const { isAuthenticated, user } = useAuth();
+  return isAuthenticated && user?.username ? (
+    <Navigate to={`/perfil/${user.username}`} replace />
+  ) : (
+    <Navigate to="/login" replace />
   );
+}
+
+/**
+ * Configuración Central de Rutas de AyVino (Data Router v7).
+ * Integra jerarquía de Layouts compartidos con <Outlet />, contención con errorElement,
+ * code-splitting lazy y guardias de autenticación desacopladas.
+ */
+export const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    errorElement: <RouteErrorElement />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <RootIndexRoute />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/login',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <LoginPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/register',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <RegisterPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/terms',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+
+      // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
+      {
+        element: (
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: '/dashboard',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <DashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/cava',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <CavaPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/maridaje',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <PairingPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/catalogo',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <CatalogPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/cuenta',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/app',
+            element: <Navigate to="/dashboard" replace />,
+          },
+        ],
+      },
+
+      // Rutas de Perfil
+      {
+        path: '/perfil/:username',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <ProfilePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/perfil',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <ProfileRedirectRoute />
+          </Suspense>
+        ),
+      },
+
+      // Ruta de Bodega / Administración
+      {
+        path: '/bodega/dashboard',
+        element: (
+          <ProtectedRoute allowedRoles={['Winery', 'Admin']}>
+            <Suspense fallback={<RouteFallbackLoader />}>
+              <WineryDashboardPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+
+      // Fallback 404
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
+      },
+    ],
+  },
+]);
+
+export default function AppRoutes() {
+  return null;
 }

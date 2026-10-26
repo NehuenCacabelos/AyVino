@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Wine, CheckCircle2 } from 'lucide-react';
 import {
-  DashboardNavbar,
   QuickActions,
   Metrics,
   FilterChips,
@@ -12,6 +12,7 @@ import {
 import corksBackground from '../assets/corchos-vinos.webp';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
+import type { AppOutletContext } from '../components/layout/AppLayout';
 
 const catenaWines: DashboardWine[] = [
   {
@@ -209,7 +210,7 @@ const colomeWines: DashboardWine[] = [
  * - Catálogo "Explorá por Bodegas" inmediatamente debajo, responsivo a los filtros superiores.
  */
 export default function DashboardPage() {
-  const [stockCount, setStockCount] = useState(24);
+  const { stockCount, setStockCount } = useOutletContext<AppOutletContext>();
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [heroFilters, setHeroFilters] = useState<HeroFilterState>({
@@ -424,10 +425,7 @@ export default function DashboardPage() {
         </aside>
       )}
 
-      {/* 1. Navbar Superior */}
-      <DashboardNavbar stockCount={stockCount} />
-
-      {/* 2. Hero Section Unificado con Cava Strip Horizontal cerrando el viewport */}
+      {/* Hero Section Unificado con Cava Strip Horizontal cerrando el viewport */}
       <section
         id="hero-section"
         aria-labelledby="welcome-title"
@@ -623,21 +621,6 @@ export default function DashboardPage() {
         onClose={() => setUncorkingWine(null)}
         onSave={handleUncorkSaved}
       />
-
-      {/* 5. Footer Editorial */}
-      <footer className="relative z-20 border-t border-neutral-800 bg-[#0c0c0e] transition-colors">
-        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-8 text-xs text-neutral-500">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold tracking-tight text-zinc-100">
-              AyVino<span className="text-rose-500">.</span>
-            </span>
-          </div>
-
-          <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-neutral-500 text-center sm:text-right">
-            Beber con moderación · Prohibida su venta a menores de 18 años
-          </span>
-        </div>
-      </footer>
     </div>
   );
 }

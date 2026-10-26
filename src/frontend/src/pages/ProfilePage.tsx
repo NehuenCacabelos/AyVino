@@ -148,15 +148,18 @@ export default function ProfilePage() {
     };
   }, [username, currentUser, navigate]);
 
-  // Cargar vinos públicos si es visitante
-  useEffect(() => {
-    if (!profile || isOwner) return;
+  // Cargar vinos públicos si es visitante (vigilando únicamente el identificador primitivo estable)
+  const profileUsername = profile?.username;
 
+  useEffect(() => {
+    if (!profileUsername || isOwner) return;
+
+    const targetUsername = profileUsername;
     let isMounted = true;
     async function loadPublicWines() {
       setPublicWinesLoading(true);
       try {
-        const wines = await getPublicCellarItemsApi(profile!.username);
+        const wines = await getPublicCellarItemsApi(targetUsername);
         if (isMounted) setPublicWines(wines);
       } catch {
         if (isMounted) setPublicWines([]);
@@ -169,7 +172,7 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [profile, isOwner]);
+  }, [profileUsername, isOwner]);
 
   // Cargar datos del owner según pestaña activa
   useEffect(() => {
