@@ -34,6 +34,17 @@ export async function changeUserStatus(
 }
 
 /**
+ * Cambia el rol de un usuario (solo Admin).
+ * PATCH /api/users/{id}/role
+ */
+export async function changeUserRole(
+  id: number,
+  role: 'Admin' | 'User'
+): Promise<void> {
+  await apiClient.patch<void>(`/users/${id}/role`, { role });
+}
+
+/**
  * Elimina permanentemente a un usuario y sus credenciales (solo Admin).
  * DELETE /api/users/{id}
  */

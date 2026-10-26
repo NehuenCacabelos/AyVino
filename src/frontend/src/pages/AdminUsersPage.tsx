@@ -1,11 +1,22 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Search, UserX, UserCheck, Trash2, Shield, Building2, User as UserIcon } from 'lucide-react';
+import {
+  Search,
+  UserX,
+  UserCheck,
+  Trash2,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Building2,
+  User as UserIcon,
+} from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { getAvatarUrl } from '../lib/avatar';
 import {
   getUsers,
   changeUserStatus,
   deleteUser,
+  changeUserRole,
 } from '../features/admin/api/adminUsersApi';
 import type { AdminUserListItemDto } from '../features/admin/types/adminUsers';
 import {
@@ -149,6 +160,38 @@ export default function AdminUsersPage() {
     });
   };
 
+  const handleOpenRoleDialog = (user: AdminUserListItemDto) => {
+    if (user.role === 'Winery' || currentUser?.id === user.id) return;
+
+    const isPromoting = user.role !== 'Admin';
+    const targetRole = isPromoting ? 'Admin' : 'User';
+
+    setConfirmDialog({
+      open: true,
+      title: isPromoting ? 'Hacer administrador' : 'Quitar rol de administrador',
+      message: isPromoting
+        ? `${user.username} tendrá acceso total al panel de administración. El cambio se aplica cuando el usuario renueve su sesión (hasta 2 horas).`
+        : `${user.username} pasará a ser un usuario común. El cambio se aplica cuando el usuario renueve su sesión (hasta 2 horas).`,
+      confirmLabel: isPromoting ? 'Hacer administrador' : 'Quitar administrador',
+      tone: isPromoting ? 'default' : 'danger',
+      onConfirm: async () => {
+        setIsConfirmLoading(true);
+        setProcessingId(user.id);
+        try {
+          await changeUserRole(user.id, targetRole);
+          toast.success('Rol actualizado');
+          setConfirmDialog((prev) => ({ ...prev, open: false }));
+          await reload();
+        } catch (err: unknown) {
+          toast.error(getApiErrorMessage(err));
+        } finally {
+          setIsConfirmLoading(false);
+          setProcessingId(null);
+        }
+      },
+    });
+  };
+
   // Badge de rol
   const renderRoleBadge = (role: string) => {
     switch (role) {
@@ -249,17 +292,64 @@ export default function AdminUsersPage() {
         render: (row) => {
           const isOwnRow = currentUser?.id === row.id;
           const isProcessing = processingId === row.id;
+          const isWinery = row.role === 'Winery';
 
-          const actionDisabled = isOwnRow || isProcessing;
-          const tooltip = isOwnRow ? 'No podés modificar tu propia cuenta' : undefined;
+          let roleTitle = 'Hacer administrador';
+          let roleIcon = <ShieldCheck className="w-4 h-4" />;
+          let roleColorClass =
+            'border-purple-900/60 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60';
+
+          if (row.role === 'Admin') {
+            roleTitle = 'Quitar administrador';
+            roleIcon = <ShieldAlert className="w-4 h-4" />;
+            roleColorClass =
+              'border-amber-900/60 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60';
+          } else if (isWinery) {
+            roleTitle = 'El rol Bodega se asigna al registrar una bodega';
+            roleIcon = <Shield className="w-4 h-4" />;
+            roleColorClass =
+              'border-neutral-800 bg-neutral-900/40 text-neutral-500';
+          }
+
+          if (isOwnRow) {
+            roleTitle = 'No podés modificar tu propia cuenta';
+          }
+
+          const isRoleDisabled = isOwnRow || isProcessing || isWinery;
+          const generalDisabled = isOwnRow || isProcessing;
+          const generalTooltip = isOwnRow
+            ? 'No podés modificar tu propia cuenta'
+            : undefined;
 
           return (
             <div className="flex items-center justify-end gap-1.5">
+              {/* Cambiar rol */}
+              <button
+                type="button"
+                disabled={isRoleDisabled}
+                title={roleTitle}
+                aria-label={roleTitle}
+                onClick={() => handleOpenRoleDialog(row)}
+                className={cn(
+                  'p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer',
+                  roleColorClass
+                )}
+              >
+                {roleIcon}
+              </button>
+
               {/* Desactivar / Activar */}
               <button
                 type="button"
-                disabled={actionDisabled}
-                title={tooltip ?? (row.isActive ? 'Desactivar cuenta' : 'Activar cuenta')}
+                disabled={generalDisabled}
+                title={
+                  generalTooltip ??
+                  (row.isActive ? 'Desactivar cuenta' : 'Activar cuenta')
+                }
+                aria-label={
+                  generalTooltip ??
+                  (row.isActive ? 'Desactivar cuenta' : 'Activar cuenta')
+                }
                 onClick={() => void handleToggleStatus(row)}
                 className={cn(
                   'p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer',
@@ -268,14 +358,19 @@ export default function AdminUsersPage() {
                     : 'border-emerald-900/60 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60'
                 )}
               >
-                {row.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                {row.isActive ? (
+                  <UserX className="w-4 h-4" />
+                ) : (
+                  <UserCheck className="w-4 h-4" />
+                )}
               </button>
 
               {/* Eliminar */}
               <button
                 type="button"
-                disabled={actionDisabled}
-                title={tooltip ?? 'Eliminar usuario'}
+                disabled={generalDisabled}
+                title={generalTooltip ?? 'Eliminar usuario'}
+                aria-label={generalTooltip ?? 'Eliminar usuario'}
                 onClick={() => openDeleteDialog(row)}
                 className="p-1.5 rounded-lg border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
