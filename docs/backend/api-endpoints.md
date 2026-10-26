@@ -168,6 +168,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `GET` | `/api/users/{id}` | Admin (`RequireAdmin`) | Obtiene los detalles de cualquier usuario por ID. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/{id}/profile`| Admin (`RequireAdmin`) | Modifica el perfil de un usuario específico. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
 | `PATCH`| `/api/users/{id}/status` | Admin (`RequireAdmin`) | Activa o desactiva la cuenta de un usuario. | `ChangeUserStatusRequestDto` | `204 NoContent` |
+| `PATCH`| `/api/users/{id}/role` | Admin (`RequireAdmin`) | Cambia el rol de un usuario (`Admin` o `User`). Respuestas: `204 NoContent`, `400 Validation` (rol inválido), `403 Forbidden` (propia cuenta), `404 NotFound`, `409 Conflict` (rol Winery). | `ChangeUserRoleRequestDto` | `204 NoContent` |
 | `DELETE`| `/api/users/{id}` | Admin (`RequireAdmin`) | Elimina un usuario y sus credenciales de acceso. | - | `204 NoContent` |
 
 ---

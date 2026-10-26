@@ -132,6 +132,12 @@ La autorización no se limita a políticas por rol en los endpoints, sino que ev
 - **Reglas puras (`WineryAccessRules`)**: Funciones determinísticas aisladas de base de datos (`IsOwner`, `CanManage`, `CanPublish`) que centralizan la matriz de permisos para bodegas y sus recursos asociados (vinos, cosechas, maridajes).
 - **Manejo de errores**: Si un usuario autenticado intenta modificar un recurso público sin los privilegios requeridos, los servicios arrojan `ForbiddenException` (HTTP 403 Forbidden).
 
+### 5.2 Modificación de Roles Administrativa
+Un administrador puede promover o degradar roles de usuarios (`Admin` ↔ `User`) mediante el endpoint `PATCH /api/users/{id}/role`.
+- No es posible asignar ni quitar manualmente el rol `Winery` (se asigna exclusivamente al registrar una bodega).
+- Un administrador no puede modificar el rol de su propia cuenta.
+- **Vigencia del cambio de rol**: El cambio de rol se aplica en el próximo refresh o login; un access token ya emitido conserva el rol anterior hasta expirar (JwtSettings.ExpirationMinutes, 120 por defecto).
+
 ---
 
 ## 6. Gestión Segura de Secretos y Configuración JWT

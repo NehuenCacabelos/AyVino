@@ -167,6 +167,7 @@
                       "if (pm.response.code === 200) {",
                       "    var json = pm.response.json();",
                       "    if (json && json.accessToken) { pm.environment.set('adminToken', json.accessToken); }",
+                      "    if (json && json.user && json.user.id) { pm.environment.set('adminUserId', json.user.id); }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -640,6 +641,59 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin: Change User Role (User -> Admin)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}/role",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}",
+                    "role"
+                  ],
+                  "query": []
+                },
+                "description": "Cambia el rol de un usuario a Admin o User",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"Admin\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5204,6 +5258,59 @@
               ]
             },
             {
+              "name": "403 - Admin attempts to change own role",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{adminUserId}}/role",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{adminUserId}}",
+                    "role"
+                  ],
+                  "query": []
+                },
+                "description": "Falla porque un administrador no puede modificar el rol de su propia cuenta",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"User\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
               "name": "403 - Common User attempts Admin Action (List Vintages for Admin)",
               "request": {
                 "method": "GET",
@@ -5478,6 +5585,59 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"wineVintageId\": 1,\n  \"quantity\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 - Change User Role with Invalid Role",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/{{testUserId}}/role",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "{{testUserId}}",
+                    "role"
+                  ],
+                  "query": []
+                },
+                "description": "Falla por intentar asignar un rol inválido (no permitido)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"SuperAdmin\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
