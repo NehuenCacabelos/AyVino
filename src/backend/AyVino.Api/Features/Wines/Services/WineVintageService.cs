@@ -203,6 +203,25 @@ public class WineVintageService(
         await vintageRepository.DeleteAsync(vintageId, ct);
     }
 
+    public async Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
+    {
+        if (pageNumber <= 0)
+            throw new ValidationException("pageNumber debe ser mayor a 0.");
+        if (pageSize is < 1 or > 100)
+            throw new ValidationException("pageSize debe estar entre 1 y 100.");
+
+        int? statusValue = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+                throw new ValidationException($"Invalid status: '{status}'.");
+            statusValue = (int)parsedStatus;
+        }
+
+        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        return rows.ToListItemDtoList();
+    }
+
     // El "ownership check" (wineId de la URL vs. wine_id real del vintage) evita que alguien
     // pida /api/wines/5/vintages/99 cuando el vintage 99 en realidad es de otra etiqueta.
     private async Task<WineVintage> GetOwnedVintageOrThrowAsync(int wineId, int vintageId, CancellationToken ct)

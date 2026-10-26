@@ -199,4 +199,25 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
+
+    public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT wv.id AS VintageId, wv.wine_id AS WineId, w.name AS WineName, w.wine_type AS WineType, w.winery_id AS WineryId,
+                   COALESCE(wy.name, w.winery_name_text) AS WineryName, wv.year AS Year, wv.alcohol_content AS AlcoholContent,
+                   wv.image_url AS ImageUrl, wv.approval_status AS ApprovalStatus, wv.uploaded_by_user_id AS UploadedByUserId,
+                   u.username AS UploadedByUsername, wv.register_date AS RegisterDate
+            FROM wine_vintages wv
+            JOIN wines w ON w.id = wv.wine_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN users u ON u.id = wv.uploaded_by_user_id
+            WHERE (@Status IS NULL OR wv.approval_status = @Status)
+            ORDER BY wv.register_date ASC, wv.id ASC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var offset = (pageNumber - 1) * pageSize;
+        return await connection.QueryAsync<AdminWineVintageListRow>(
+            new CommandDefinition(sql, new { Status = status, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+    }
 }

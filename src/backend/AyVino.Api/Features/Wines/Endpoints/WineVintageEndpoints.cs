@@ -51,6 +51,15 @@ public static class WineVintageEndpoints
             .WithName("DeleteWineVintage")
             .WithSummary("Deletes a single vintage.");
 
+        var adminGroup = app.MapGroup("/api/wine-vintages")
+            .WithTags("Admin - Wine Vintages")
+            .RequireAuthorization(AppPolicies.RequireAdmin);
+
+        adminGroup.MapGet("/", async (IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null) =>
+            Results.Ok(await service.GetPagedForAdminAsync(pageNumber, pageSize, status, ct)))
+            .WithName("GetWineVintagesForAdmin")
+            .WithSummary("Lists all wine vintages with optional moderation status filter for administrative review.");
+
         return app;
     }
 }
