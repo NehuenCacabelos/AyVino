@@ -74,6 +74,17 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         return user.ToResponseDto();
     }
 
+    public async Task<PublicUserProfileDto> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new NotFoundException($"Usuario con username '{username}' no encontrado.");
+        }
+
+        var profile = await userRepository.GetPublicProfileByUsernameAsync(username.Trim(), ct);
+        return profile ?? throw new NotFoundException($"Usuario con username '{username}' no encontrado.");
+    }
+
     public async Task<IEnumerable<UserResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
         ValidatePagination(pageNumber, pageSize);
@@ -120,6 +131,38 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             Username = normalizedUsername,
             Bio = dto.Bio?.Trim(),
             Photo = dto.Photo?.Trim()
+        };
+
+        return updatedUser.ToResponseDto();
+    }
+
+    public async Task<UserResponseDto> UpdateAvatarAsync(int id, string? photoUrl, CancellationToken ct = default)
+    {
+        if (id <= 0)
+        {
+            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
+        }
+
+        var existingUser = await userRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Usuario con ID {id} no encontrado.");
+
+        var normalizedPhoto = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl.Trim();
+
+        var updated = await userRepository.UpdateProfileAsync(
+            id,
+            existingUser.Username,
+            existingUser.Bio,
+            normalizedPhoto,
+            ct);
+
+        if (!updated)
+        {
+            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
+        }
+
+        var updatedUser = existingUser with
+        {
+            Photo = normalizedPhoto
         };
 
         return updatedUser.ToResponseDto();

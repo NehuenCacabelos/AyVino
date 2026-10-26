@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { ArrowRight, Heart, Plus, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, Heart, Plus, Star } from 'lucide-react';
 import BottleVector from './BottleVector';
 import type { DashboardWine } from '../../../types/wine';
 
 export interface WineryBlockProps {
-  id?: number | string;
   name: string;
   region: string;
   initials: string;
@@ -21,7 +20,6 @@ export interface WineryBlockProps {
  * border-neutral-800 y tipografía editorial Fraunces.
  */
 export default function WineryBlock({
-  id,
   name,
   region,
   initials,
@@ -38,8 +36,6 @@ export default function WineryBlock({
     setFavorites((prev) => ({ ...prev, [wineName]: nextState }));
     onToggleFavorite?.(wine, nextState);
   };
-
-  const targetUrl = id ? `/bodegas/${id}` : '#catalogo';
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-6">
@@ -59,30 +55,18 @@ export default function WineryBlock({
               {region}
             </p>
             <h3 id={headingId} className="font-serif text-2xl sm:text-3xl font-semibold text-neutral-100 tracking-tight">
-              {id ? (
-                <Link to={targetUrl} className="hover:text-amber-200 transition-colors">
-                  {name}
-                </Link>
-              ) : (
-                name
-              )}
+              {name}
             </h3>
           </div>
         </div>
 
-        {id ? (
-          <Link
-            to={targetUrl}
-            className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
-          >
-            <span>Ver catálogo completo ({total})</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
-          </Link>
-        ) : (
-          <span className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-500 font-mono">
-            <span>{total} {total === 1 ? 'etiqueta' : 'etiquetas'}</span>
-          </span>
-        )}
+        <Link
+          to="/dashboard#catalogo"
+          className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
+        >
+          <span>Ver catálogo completo ({total})</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
+        </Link>
       </header>
 
       {/* Grilla de Vinos */}
@@ -91,7 +75,7 @@ export default function WineryBlock({
           const isFav = !!favorites[wine.name];
 
           return (
-            <li key={wine.name} className="flex">
+            <li key={wine.id ?? `${wine.winery}-${wine.name}-${wine.vintage}`} className="flex">
               <article className="group relative w-full flex flex-col justify-between rounded-2xl bg-stone-950/40 backdrop-blur-xl p-5 hover:bg-stone-900/55 hover:shadow-2xl hover:shadow-black/70 transition-all duration-300 shadow-xl shadow-black/50">
                 
                 {/* Botón de Favorito Flotante Esmerilado */}

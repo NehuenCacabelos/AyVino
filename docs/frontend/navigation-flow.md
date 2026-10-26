@@ -25,14 +25,21 @@ flowchart TD
         AuthContext["AuthContext (AuthProvider + useAuth)"]
     end
 
-    subgraph ProtectedRoutes["Rutas Protegidas (Requieren Sesión)"]
+    subgraph ProtectedRoutes["Rutas Protegidas bajo AppLayout (Requieren Sesión)"]
+        Layout["AppLayout (<Outlet /> + stockCount Context)"]
         Dashboard["/dashboard (o /app) -> DashboardPage.tsx (Exploración & Bodegas)"]
         Cava["/cava -> CavaPage.tsx (Mi Cava & Inventario Personal)"]
         Pairing["/maridaje -> PairingPage.tsx (Curaduría & Maridaje)"]
         Catalog["/catalogo -> CatalogPage.tsx (Catálogo General)"]
-        
+        Account["/cuenta -> AccountPage.tsx (Mi Cuenta y Seguridad)"]
+        Layout --> Dashboard
+        Layout --> Cava
+        Layout --> Pairing
+        Layout --> Catalog
+        Layout --> Account
+
         subgraph WineryArea["Área Exclusiva de Bodega (/bodega/*)"]
-            WineryLayoutComponent["WineryLayout.tsx (Header + Sidebar + Contexto)"]
+            WineryLayoutComponent["WineryLayout.tsx (Navbar Bodega + Contexto)"]
             WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx"]
             WineryProfile["/bodega/perfil -> WineryProfilePage.tsx"]
             WineryWines["/bodega/vinos -> WineryWinesPage.tsx"]
@@ -69,6 +76,7 @@ flowchart TD
     Landing -->|"Navegación /cava"| Guard
     Landing -->|"Navegación /maridaje"| Guard
     Landing -->|"Navegación /catalogo"| Guard
+    Landing -->|"Navegación /cuenta"| Guard
     Landing -->|"Navegación /bodega/*"| Guard
 
     Guard -->|"!isAuthenticated (con state.from)"| Login
@@ -76,6 +84,7 @@ flowchart TD
     Guard -->|"Navegación /cava (Autenticado)"| Cava
     Guard -->|"Navegación /maridaje (Autenticado)"| Pairing
     Guard -->|"Navegación /catalogo (Autenticado)"| Catalog
+    Guard -->|"Navegación /cuenta (Autenticado)"| Account
     Guard -->|"isAuthenticated + Rol Winery/Admin"| WineryLayoutComponent
     Guard -->|"Rol no autorizado"| Dashboard
 
@@ -202,6 +211,42 @@ flowchart TD
   - Grilla de etiquetas oficiales representadas con [`WineCard.tsx`](../../src/frontend/src/features/wines/components/WineCard.tsx).
   - Apertura directa de la ficha técnica completa en [`WineDetailModal.tsx`](../../src/frontend/src/features/wines/components/WineDetailModal.tsx).
 
+### 2.8 Página de Mi Cuenta y Seguridad (`AccountPage.tsx`)
+- Vista post-login dedicada accesible en `/cuenta` (vinculada desde el menú desplegable del Avatar de usuario y desde la Top Bar Contextual Slim de `/perfil`):
+  - **Navegación Inmersiva**: Barra superior contextual minimalista (`ProfileTopBar.tsx`) con branding `AyVino.` y botón de escape directo `← Volver a Mi Perfil` (redirige a `/perfil/:username`), suprimiendo el Navbar global para maximizar el área útil.
+  - **Sidebar con Jerarquía Sommelier**:
+    * Avatar circular destacado (`w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg mx-auto object-cover`).
+    * Nombre de usuario en tipografía Serif destacada (`font-serif text-xl sm:text-2xl text-white font-medium mt-3 tracking-tight text-center`) y correo en `text-xs sm:text-sm text-zinc-400`.
+    * Botón *"Cargar foto"* compacto y sobrio (`bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 text-xs text-zinc-300`).
+    * Navegación exclusiva de "CONFIGURACIÓN": "Mi Perfil" y "Seguridad y Contraseña" con píldora activa en borgoña profundo (`bg-[#6e1a24] text-white`).
+    * Pie del sidebar con botón directo de "Cerrar sesión".
+  - **Layout Abierto y Balanceado (Sin Doble Caja Aislada)**:
+    * Eliminación del marco rectangular rígido para una integración fluida sobre el lienzo `#0b0b0e`.
+    * Contenedor de ancho controlado (`max-w-3xl w-full`) con cabecera en `font-serif text-3xl text-white`, bajada descriptiva en `text-zinc-400 text-sm mt-1` y divisor `border-b border-white/5 pb-4 mb-6`.
+    * Disposición de inputs en grilla balanceada (`grid grid-cols-1 sm:grid-cols-2 gap-4`), con la Biografía ocupando el ancho completo (`sm:col-span-2`).
+    * Botones de acción alineados a la derecha y unificados en borgoña de marca (`bg-[#6e1a24] hover:bg-[#85222e] text-white font-medium px-6 py-2.5 rounded-lg shadow-sm`).
+
+### 2.9 Página de Perfil de Usuario (`ProfilePage.tsx`)
+- Vista accesible en `/perfil/:username` (pública y canónica) y `/perfil` (redirección contextual al usuario activo o `/login`).
+- **Navegación Inmersiva Contextual**: Implementa [`ProfileTopBar.tsx`](../../src/frontend/src/components/layout/ProfileTopBar.tsx) fija en el tope (`h-14` con `bg-[#0b0b0e]/90` y backdrop-blur), con vía de escape explícita `← Volver a Explorar` hacia `/dashboard`, eliminando la sobrecarga cognitiva del Navbar global.
+- **Banner Atmosférico & Identidad**:
+  - Banner superior con altura optimizada (`h-28 sm:h-32 md:h-36`) y tema cromático vitivinícola 100% determinista en frontend calculado según el hash del username (5 presets de guarda: *Gran Reserva*, *Cava Nocturna*, *Roble Tostado*, *Sauvignon Oliva*, *Cosecha Tardía*).
+  - **Avatar Circular Superpuesto**: Avatar circular (`rounded-full`) con solapamiento orgánico (`-mt-12 sm:-mt-14 relative z-10`), aro protector `ring-4 ring-[#0b0b0e]`, sombra profunda `shadow-2xl` y borde sutil `white/15`.
+- **Jerarquía Tipográfica Editorial**:
+  - Nombre de usuario en tipografía Serif noble (`font-serif text-3xl sm:text-4xl font-medium tracking-tight text-white`), completamente limpio sin píldoras ni badges artificiales para máxima pureza visual, en armonía con los títulos de sección.
+  - Metadatos y biografía en tipografía Sans nítida (`text-zinc-200` y `text-zinc-300`), garantizando alto contraste sobre el fondo `#0b0b0e`.
+  - Cifras estadísticas en bloque compacto `#17151a` usando `font-mono text-xl sm:text-2xl font-bold text-white`.
+- **Navegación Segmentada**:
+  - Pestañas en cápsula flotante (`bg-[#17151a] border border-white/10 rounded-md p-1`) con píldora activa en borgoña profundo (`bg-[#6e1a24] text-white`):
+    * *Joyas de la Cava*: Mosaico curado de las botellas más destacadas/calificadas de la colección, con badge dinámico de botellas totales y enlace a `/cava`.
+    * *Historial de Catas*: Mosaico de etiquetas descorchadas y notas sensoriales.
+    * *Deseados & Favoritos*: Mosaico de vinos guardados con chips contextuales ("Favorito" / "Deseado").
+- **Empty State Condicional e Interactivo**:
+  - **Para el Dueño (`isOwner === true`)**: Grilla con slots punteados interactivos (`border-2 border-dashed border-rose-500/25 hover:border-rose-400/60 bg-[#17151a]/30`) e ícono `+` que invitan directamente a sumar la primera joya desde el catálogo (`/dashboard`).
+  - **Para Visitantes (`isOwner === false`)**: Tarjeta editorial sobria en `#17151a` indicando "Cava en curación", con botones para explorar el catálogo general o crear su propia cuenta (sin dropzones ni slots punteados).
+- **Mosaico de Botellas**:
+  - Tarjetas con esquinas suavizadas `rounded-md` sobre `#17151a` y hover borgoña sutil (`hover:border-rose-900/40 hover:-translate-y-0.5`). Escaparate oscuro para silueta o imagen, varietal y añada en `font-mono`, bodega y calificación en estrellas doradas.
+
 ---
 
 ## 3. Vistas Protegidas y Políticas de Acceso
@@ -215,9 +260,12 @@ flowchart TD
 | `/login` | `LoginPage.tsx` | Público (redirige a `state.from`, `/bodega/dashboard` o `/dashboard`) | N/A |
 | `/register` | `RegisterPage.tsx` | Público (redirige a `/dashboard` si ya está autenticado) | N/A |
 | `/terms` | `TermsPage.tsx` | Público (todos) | N/A |
+| `/perfil/:username` | `ProfilePage.tsx` | Público (todos) | Si no existe el usuario: mensaje 404 sobrio |
+| `/perfil` | Alias Redirección | Todos | Redirige a `/perfil/:myUsername` si está logueado, o `/login` si no |
 | `/dashboard` | `DashboardPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/cava` | `CavaPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/maridaje` | `PairingPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
+| `/cuenta` | `AccountPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/app` | Alias Redirección | Redirige automáticamente a `/dashboard` | N/A |
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/bodega` | `WineryLayout.tsx` | Exclusivo `Winery` o `Admin` | Redirige internamente a `/bodega/dashboard` |

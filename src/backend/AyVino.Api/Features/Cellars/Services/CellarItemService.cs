@@ -53,6 +53,18 @@ public class CellarItemService(
         return rows.ToResponseDtoList();
     }
 
+    public async Task<IReadOnlyList<PublicCellarItemResponseDto>> GetPublicCellarItemsAsync(string username, int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+            throw new NotFoundException($"Usuario '{username}' no encontrado.");
+
+        if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+            throw new ValidationException("Los parámetros de paginación no son válidos.");
+
+        var rows = await itemRepository.GetAllByUsernameAsync(username.Trim(), pageNumber, pageSize, ct);
+        return rows.ToPublicResponseDtoList();
+    }
+
     public async Task<CellarItemResponseDto> GetAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default)
     {
         await EnsureCellarOwnedAsync(userId, cellarId, ct);

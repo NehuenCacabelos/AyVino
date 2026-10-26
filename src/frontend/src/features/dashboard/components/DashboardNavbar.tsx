@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Wine,
   Menu,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth';
 import { cn } from '../../../lib/utils';
+import { getAvatarUrl } from '../../../lib/avatar';
 import CommunityModal from '../../../components/community/CommunityModal';
 
 interface DashboardNavbarProps {
@@ -122,16 +123,6 @@ export default function DashboardNavbar({
     navigate('/', { replace: true });
   };
 
-  // Obtener iniciales del usuario
-  const getUserInitials = () => {
-    if (!user?.username) return 'AV';
-    const parts = user.username.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return user.username.slice(0, 2).toUpperCase();
-  };
-
   const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
 
   // Solo secciones de descubrimiento general en la barra horizontal central
@@ -139,6 +130,7 @@ export default function DashboardNavbar({
     { label: 'Explorar', to: '/dashboard#catalogo' },
     { label: 'Maridaje', to: '/maridaje' },
     { label: 'Comunidad', isModal: true },
+    ...(user ? [{ label: 'Perfil', to: `/perfil/${user.username}` }] : []),
   ];
 
   return (
@@ -179,24 +171,34 @@ export default function DashboardNavbar({
                   {link.label}
                 </button>
               ) : (
-                <Link
+                <NavLink
                   key={link.label}
                   to={link.to!}
-                  className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 whitespace-nowrap"
+                  className={({ isActive }) =>
+                    cn(
+                      'text-[15px] font-medium transition-colors duration-150 whitespace-nowrap',
+                      isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                    )
+                  }
                 >
                   {link.label}
-                </Link>
+                </NavLink>
               )
             )}
 
             {isWineryOrAdmin && (
-              <Link
+              <NavLink
                 to="/bodega/dashboard"
-                className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
+                className={({ isActive }) =>
+                  cn(
+                    'text-[15px] font-medium transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap',
+                    isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                  )
+                }
               >
                 <LayoutDashboard className="h-4 w-4 text-zinc-400" />
                 <span>Bodega</span>
-              </Link>
+              </NavLink>
             )}
           </nav>
 
@@ -210,9 +212,16 @@ export default function DashboardNavbar({
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
                 aria-label="Menú de perfil de usuario"
-                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/10 bg-stone-900/90 font-mono text-xs sm:text-sm font-semibold text-zinc-200 hover:border-white/25 hover:text-white hover:bg-stone-800 transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40 active:scale-95"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/10 bg-stone-900/90 overflow-hidden hover:border-white/25 hover:bg-stone-800 transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40 active:scale-95"
               >
-                {getUserInitials()}
+                <img
+                  src={getAvatarUrl(user)}
+                  alt={user?.username || 'Usuario'}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user?.username || 'AyVino')}&backgroundColor=1c1917,292524`;
+                  }}
+                />
               </button>
 
               {profileOpen && (
@@ -239,6 +248,17 @@ export default function DashboardNavbar({
 
                   {/* Bloque Colección Personal */}
                   <div className="space-y-0.5 text-xs font-medium">
+                    {/* Mi Perfil */}
+                    <Link
+                      role="menuitem"
+                      to={user?.username ? `/perfil/${user.username}` : '/perfil'}
+                      onClick={() => setProfileOpen(false)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <User className="h-4 w-4 text-zinc-400" />
+                      <span>Mi Perfil</span>
+                    </Link>
+
                     {/* Mi Cava */}
                     <Link
                       role="menuitem"
@@ -282,15 +302,15 @@ export default function DashboardNavbar({
                   {/* Bloque Cuenta */}
                   <div className="space-y-0.5 text-xs font-medium">
                     {/* Cuenta */}
-                    <button
-                      type="button"
+                    <Link
                       role="menuitem"
+                      to="/cuenta"
                       onClick={() => setProfileOpen(false)}
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer text-left"
                     >
                       <User className="h-4 w-4 text-zinc-400" />
                       <span>Cuenta</span>
-                    </button>
+                    </Link>
 
                     {isWineryOrAdmin && (
                       <Link
@@ -340,8 +360,15 @@ export default function DashboardNavbar({
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-white/5 bg-stone-950/95 backdrop-blur-md px-6 py-5 space-y-4">
             <div className="flex items-center gap-3 p-3 bg-stone-900/60 rounded-xl border border-white/5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-800 font-mono text-sm font-bold text-zinc-200">
-                {getUserInitials()}
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-800 overflow-hidden">
+                <img
+                  src={getAvatarUrl(user)}
+                  alt={user?.username || 'Usuario'}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user?.username || 'AyVino')}&backgroundColor=1c1917,292524`;
+                  }}
+                />
               </div>
               <div>
                 <p className="text-xs font-semibold text-zinc-100">{user?.username || 'Martina Sommelier'}</p>
@@ -364,14 +391,19 @@ export default function DashboardNavbar({
                     {link.label}
                   </button>
                 ) : (
-                  <Link
+                  <NavLink
                     key={link.label}
                     to={link.to!}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
+                    className={({ isActive }) =>
+                      cn(
+                        'py-2 text-[15px] font-medium transition-colors',
+                        isActive ? 'text-white font-semibold' : 'text-zinc-300 hover:text-white'
+                      )
+                    }
                   >
                     {link.label}
-                  </Link>
+                  </NavLink>
                 )
               )}
 
@@ -403,6 +435,14 @@ export default function DashboardNavbar({
               >
                 Deseados
               </a>
+
+              <Link
+                to="/cuenta"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
+              >
+                Cuenta
+              </Link>
 
               {isWineryOrAdmin && (
                 <Link

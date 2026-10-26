@@ -90,6 +90,7 @@ public class UserSecurityTests
         public Task<User?> GetByIdAsync(int id, CancellationToken ct = default) => Task.FromResult<User?>(null);
         public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) => Task.FromResult<User?>(null);
         public Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default) => Task.FromResult<User?>(null);
+        public Task<PublicUserProfileDto?> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default) => Task.FromResult<PublicUserProfileDto?>(null);
         public Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<User>>([]);
         public Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default) => Task.FromResult<(User?, UserCredential?)>((null, null));
         public Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default) => Task.FromResult(1);

@@ -7,6 +7,7 @@ public interface ICellarItemRepository
     Task<CellarItem?> GetAsync(int cellarId, int wineVintageId, CancellationToken ct = default);
     Task<CellarItemListRow?> GetRowAsync(int cellarId, int wineVintageId, CancellationToken ct = default);
     Task<IEnumerable<CellarItemListRow>> GetAllByCellarAsync(int cellarId, int pageNumber, int pageSize, int? wineType, int? year, CancellationToken ct = default);
+    Task<IEnumerable<CellarItemListRow>> GetAllByUsernameAsync(string username, int pageNumber, int pageSize, CancellationToken ct = default);
     Task CreateAsync(CellarItem item, CancellationToken ct = default);
     Task<bool> UpdateAsync(int cellarId, int wineVintageId, int quantity, DateOnly? purchaseDate, string? notes, CancellationToken ct = default);
     Task<bool> DeleteAsync(int cellarId, int wineVintageId, CancellationToken ct = default);

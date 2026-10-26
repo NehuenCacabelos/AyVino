@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Data;
+using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
 using Dapper;
 
@@ -42,6 +43,39 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<User>(
+            new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
+    }
+
+    public async Task<PublicUserProfileDto?> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT u.id AS Id,
+                   u.username AS Username,
+                   u.photo AS Photo,
+                   u.bio AS Bio,
+                   u.register_date AS RegisterDate,
+                   COALESCE((
+                       SELECT COUNT(DISTINCT ci.wine_vintage_id)
+                       FROM cellars c
+                       JOIN cellar_items ci ON ci.cellar_id = c.id
+                       WHERE c.user_id = u.id
+                   ), 0)::int AS CellarWinesCount,
+                   COALESCE((
+                       SELECT COUNT(*)
+                       FROM user_follows uf
+                       WHERE uf.followed_user_id = u.id
+                   ), 0)::int AS FollowersCount,
+                   COALESCE((
+                       SELECT COUNT(*)
+                       FROM user_follows uf
+                       WHERE uf.follower_id = u.id
+                   ), 0)::int AS FollowingCount
+            FROM users u
+            WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<PublicUserProfileDto>(
             new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
 

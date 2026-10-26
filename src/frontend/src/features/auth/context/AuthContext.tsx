@@ -5,6 +5,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +20,7 @@ export interface AuthContextType {
   register: (data: RegisterRequestDto) => Promise<void>;
   loginDemo: (customUser?: Partial<UserProfileDto>) => void;
   logout: () => Promise<void>;
+  updateUserContext: (updatedUser: UserProfileDto) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -149,18 +151,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const updateUserContext = useCallback((updatedUser: UserProfileDto): void => {
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  }, []);
+
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated,
+      isLoading,
+      login,
+      register,
+      loginDemo,
+      logout,
+      updateUserContext,
+    }),
+    [
+      user,
+      isAuthenticated,
+      isLoading,
+      login,
+      register,
+      loginDemo,
+      logout,
+      updateUserContext,
+    ]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoading,
-        login,
-        register,
-        loginDemo,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

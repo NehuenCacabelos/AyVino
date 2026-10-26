@@ -187,4 +187,61 @@ public class CellarItemServiceTests
         // Assert
         await _itemRepository.Received(1).DeleteAsync(10, 20, Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task GetPublicCellarItemsAsync_ValidRequest_ReturnsMappedPublicDtos()
+    {
+        // Arrange
+        var rows = new List<CellarItemListRow>
+        {
+            new()
+            {
+                WineVintageId = 1,
+                WineId = 101,
+                Name = "Gran Malbec",
+                WineType = (AyVino.Api.Features.Wines.Enums.WineType)1,
+                WineryId = 5,
+                WineryNameText = "Catena",
+                Year = 2020,
+                ImageUrl = "https://example.com/malbec.png",
+                RatingSum = 45,
+                ReviewCount = 10,
+                Quantity = 3
+            }
+        };
+
+        _itemRepository.GetAllByUsernameAsync("sommelier", 1, 10, Arg.Any<CancellationToken>())
+            .Returns(rows);
+
+        // Act
+        var result = await _cellarItemService.GetPublicCellarItemsAsync("sommelier", 1, 10);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal("Gran Malbec", result[0].Name);
+        Assert.Equal("Catena", result[0].WineryNameText);
+        Assert.Equal(4.5m, result[0].AverageRating);
+        await _itemRepository.Received(1).GetAllByUsernameAsync("sommelier", 1, 10, Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task GetPublicCellarItemsAsync_InvalidUsername_ThrowsNotFoundException(string? username)
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _cellarItemService.GetPublicCellarItemsAsync(username!, 1, 10));
+    }
+
+    [Theory]
+    [InlineData(0, 10)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetPublicCellarItemsAsync_InvalidPagination_ThrowsValidationException(int page, int size)
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => _cellarItemService.GetPublicCellarItemsAsync("sommelier", page, size));
+    }
 }

@@ -469,8 +469,10 @@ public class WineryServiceTests
 
         public Task<UserResponseDto> GetByIdAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<UserResponseDto> GetByEmailAsync(string email, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<PublicUserProfileDto> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<IEnumerable<UserResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<UserResponseDto> UpdateAvatarAsync(int id, string? photoUrl, CancellationToken ct = default) => throw new NotImplementedException();
         public Task ChangeStatusAsync(int id, bool isActive, CancellationToken ct = default) => throw new NotImplementedException();
     }
 
