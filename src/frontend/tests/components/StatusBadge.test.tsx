@@ -23,9 +23,8 @@ describe('StatusBadge Component', () => {
     expect(screen.getByText('Activo')).toBeInTheDocument();
   });
 
-  it('renderiza ActiveBadge como Inactivo cuando isActive es false', () => {
+  it('renderiza ActiveBadge como Bloqueado cuando isActive es false', () => {
     render(<ActiveBadge isActive={false} />);
-    expect(screen.getByText('Inactivo')).toBeInTheDocument();
+    expect(screen.getByText('Bloqueado')).toBeInTheDocument();
   });
 });
-

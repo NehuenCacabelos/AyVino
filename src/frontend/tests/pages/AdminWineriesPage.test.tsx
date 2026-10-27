@@ -35,6 +35,24 @@ describe('AdminWineriesPage Component', () => {
     },
   ];
 
+  const mockApprovedWineries: WineryResponseDto[] = [
+    {
+      id: 102,
+      name: 'Catena Zapata',
+      description: 'Bodega histórica',
+      locationId: 5,
+      foundationYear: 1902,
+      website: 'https://catenazapata.com',
+      userId: 15,
+      status: 'Approved',
+      registerDate: '2026-01-10T10:00:00Z',
+      latitude: -33.1,
+      longitude: -68.9,
+      logoUrl: null,
+      location: { stateName: 'Mendoza', regionName: 'Luján de Cuyo' },
+    },
+  ];
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -86,6 +104,46 @@ describe('AdminWineriesPage Component', () => {
     });
   });
 
+  it('para una bodega Approved la acción se llama Suspender con confirmación específica', async () => {
+    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockApprovedWineries);
+    vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas?status=Approved']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Catena Zapata')).toBeInTheDocument();
+    });
+
+    const suspendBtn = screen.getByTitle('Suspender bodega');
+    expect(suspendBtn).toBeInTheDocument();
+    fireEvent.click(suspendBtn);
+
+    // Diálogo abierto
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('¿Suspender bodega?')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'La bodega dejará de ser visible para el público y su dueño no podrá publicar vinos. Podés volver a aprobarla cuando quieras.'
+      )
+    ).toBeInTheDocument();
+    expect(adminWineriesApi.changeWineryStatus).not.toHaveBeenCalled();
+
+    // Confirmar en el modal
+    const confirmSuspendBtn = screen.getByRole('button', { name: /^suspender$/i });
+    fireEvent.click(confirmSuspendBtn);
+
+    await waitFor(() => {
+      expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(102, 'Rejected');
+      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteWinery', async () => {
     vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
     vi.mocked(adminWineriesApi.deleteWinery).mockResolvedValue(undefined);
@@ -121,4 +179,3 @@ describe('AdminWineriesPage Component', () => {
     });
   });
 });
-

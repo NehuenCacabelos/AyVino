@@ -1162,6 +1162,85 @@ async function run() {
       `Detail: ${getDetail(h7Delete.data)}`,
     );
 
+    // -------------------------------------------------------------------------
+    // SECCIÓN I: BLOQUEO Y VISIBILIDAD DE BODEGAS (BLOQUE 17)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECCIÓN I: BLOQUEO Y VISIBILIDAD DE BODEGAS ---');
+
+    // Registrar una bodega de prueba para esta sección
+    const iWineryEmail = `e2e_winery_sec_i_${timestamp}@bodega.com`;
+    const iWineryUser = `e2e_winery_sec_i_${timestamp}`;
+    const iWineryName = `e2e_Bodega_Sec_I_${timestamp}`;
+
+    const regSecIWinery = await request('/wineries/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: iWineryUser,
+        email: iWineryEmail,
+        password: 'Password123!',
+        wineryName: iWineryName,
+        locationId,
+        foundationYear: 2015,
+        website: 'https://bodegaseci.com',
+        description: 'Bodega para pruebas de visibilidad y bloqueo.',
+      }),
+    });
+
+    const iWineryId = regSecIWinery.data?.winery?.id;
+    const iWineryToken = regSecIWinery.data?.accessToken;
+
+    // I.1 Anónimo con ?status=Pending y ?status=Rejected siempre recibe solo Approved
+    const anonPendingRes = await request('/wineries?pageNumber=1&pageSize=100&status=Pending');
+    const anonRejectedRes = await request('/wineries?pageNumber=1&pageSize=100&status=Rejected');
+
+    const hasOnlyApprovedInPending = Array.isArray(anonPendingRes.data) &&
+      anonPendingRes.data.every(w => w.status === 'Approved');
+    const hasOnlyApprovedInRejected = Array.isArray(anonRejectedRes.data) &&
+      anonRejectedRes.data.every(w => w.status === 'Approved');
+
+    const i1Ok = anonPendingRes.status === 200 && anonRejectedRes.status === 200 &&
+      hasOnlyApprovedInPending && hasOnlyApprovedInRejected;
+
+    record(
+      'I.1 GET /api/wineries anónimo con ?status=Pending y ?status=Rejected',
+      'HTTP 200 con bodegas únicamente Approved (filtros no-admin ignorados)',
+      `Pending Status: ${anonPendingRes.status} (all Approved: ${hasOnlyApprovedInPending}), Rejected Status: ${anonRejectedRes.status} (all Approved: ${hasOnlyApprovedInRejected})`,
+      i1Ok,
+      'Se asegura que usuarios anónimos nunca reciben bodegas pendientes ni suspendidas/rechazadas'
+    );
+
+    // Cambiar estado a Rejected (Suspender)
+    await request(`/wineries/${iWineryId}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Rejected' }),
+    });
+
+    // I.2 Detalle de bodega Rejected según actor: anónimo 404, usuario común 404, dueño 200, admin 200
+    const anonDetail = await request(`/wineries/${iWineryId}`);
+    const userDetail = await request(`/wineries/${iWineryId}`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    const ownerDetail = await request(`/wineries/${iWineryId}`, {
+      headers: { Authorization: `Bearer ${iWineryToken}` },
+    });
+    const adminDetail = await request(`/wineries/${iWineryId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+
+    const i2Ok = anonDetail.status === 404 &&
+      userDetail.status === 404 &&
+      ownerDetail.status === 200 && ownerDetail.data?.status === 'Rejected' &&
+      adminDetail.status === 200 && adminDetail.data?.status === 'Rejected';
+
+    record(
+      'I.2 GET /api/wineries/{id} detalle de bodega Rejected (Suspendida)',
+      'Anónimo: 404, Usuario común: 404, Dueño: 200, Admin: 200',
+      `Anónimo: ${anonDetail.status}, Usuario: ${userDetail.status}, Dueño: ${ownerDetail.status}, Admin: ${adminDetail.status}`,
+      i2Ok,
+      `Detail anónimo: ${getDetail(anonDetail.data)}, dueño status: ${ownerDetail.data?.status}`
+    );
+
   } catch (err) {
     console.error('\n💥 ERROR FATAL DURANTE LA EJECUCIÓN:', err);
     failed++;

@@ -85,7 +85,7 @@ describe('AdminUsersPage Component', () => {
     });
   });
 
-  it('la fila propia tiene las acciones deshabilitadas con el tooltip de protección', async () => {
+  it('las filas con rol Admin tienen Bloquear y Eliminar deshabilitados con tooltip de protección', async () => {
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
 
     render(
@@ -100,34 +100,37 @@ describe('AdminUsersPage Component', () => {
       expect(screen.getByText('superadmin')).toBeInTheDocument();
       expect(screen.getByText('juanperez')).toBeInTheDocument();
       expect(screen.getByText('bodegabianchi')).toBeInTheDocument();
+      expect(screen.getByText('otroadmin')).toBeInTheDocument();
     });
 
-    // En la fila propia (id 1), los botones tienen el title de advertencia y están deshabilitados
-    const ownButtons = screen.getAllByTitle('No podés modificar tu propia cuenta');
-    expect(ownButtons.length).toBe(3); // Cambiar rol, Desactivar y Eliminar
-    ownButtons.forEach((btn) => {
+    // En todas las filas con rol Admin (id 1 y id 4), Bloquear y Eliminar están deshabilitados con el title requerido
+    const adminProtectedButtons = screen.getAllByTitle('Los administradores no se pueden modificar desde el panel');
+    // 2 administradores * 2 botones (Bloquear + Eliminar) = 4 botones protegidos
+    expect(adminProtectedButtons.length).toBe(4);
+    adminProtectedButtons.forEach((btn) => {
       expect(btn).toBeDisabled();
     });
+
+    // En la fila propia (id 1), cambiar rol está deshabilitado
+    const ownRoleBtn = screen.getByTitle('No podés modificar tu propia cuenta');
+    expect(ownRoleBtn).toBeDisabled();
 
     // En la fila de Winery (id 3), cambiar rol está deshabilitado con su title específico
     const wineryRoleBtn = screen.getByTitle('El rol Bodega se asigna al registrar una bodega');
     expect(wineryRoleBtn).toBeDisabled();
 
-    // En las filas de otros usuarios (id 2 y 4), los botones de cambiar rol están habilitados
-    expect(screen.getByTitle('Hacer administrador')).toBeEnabled();
-    expect(screen.getByTitle('Quitar administrador')).toBeEnabled();
+    // En las filas de otros usuarios no admin, bloquear/desbloquear y eliminar están habilitados
+    expect(screen.getByTitle('Bloquear usuario')).toBeEnabled();
+    expect(screen.getByTitle('Desbloquear usuario')).toBeEnabled();
 
-    // En las filas de otros usuarios, desactivar y eliminar están habilitados
-    const otherDeactivateBtns = screen.getAllByTitle('Desactivar cuenta');
     const otherDeleteBtns = screen.getAllByTitle('Eliminar usuario');
-    expect(otherDeactivateBtns.length).toBe(2);
-    expect(otherDeleteBtns.length).toBe(3);
+    expect(otherDeleteBtns.length).toBe(2); // juanperez y bodegabianchi
     otherDeleteBtns.forEach((btn) => {
       expect(btn).toBeEnabled();
     });
   });
 
-  it('desactivar llama changeUserStatus(id, false) tras confirmar en el diálogo', async () => {
+  it('bloquear llama changeUserStatus(id, false) tras confirmar en el diálogo con mensaje adecuado', async () => {
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
     vi.mocked(adminUsersApi.changeUserStatus).mockResolvedValue(undefined);
 
@@ -143,20 +146,50 @@ describe('AdminUsersPage Component', () => {
       expect(screen.getByText('juanperez')).toBeInTheDocument();
     });
 
-    const deactivateBtns = screen.getAllByTitle('Desactivar cuenta');
-    fireEvent.click(deactivateBtns[0]);
+    const blockBtn = screen.getByTitle('Bloquear usuario');
+    fireEvent.click(blockBtn);
 
     // Diálogo abierto
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('¿Desactivar usuario?')).toBeInTheDocument();
+    expect(screen.getByText('¿Bloquear usuario?')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No podrá iniciar sesión ni renovar su sesión. Si ya tiene una sesión abierta, puede seguir hasta 2 horas.'
+      )
+    ).toBeInTheDocument();
     expect(adminUsersApi.changeUserStatus).not.toHaveBeenCalled();
 
     // Confirmar
-    const confirmBtn = within(screen.getByRole('dialog')).getByRole('button', { name: /^desactivar$/i });
+    const confirmBtn = within(screen.getByRole('dialog')).getByRole('button', { name: /^bloquear$/i });
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(adminUsersApi.changeUserStatus).toHaveBeenCalledWith(2, false);
+      expect(adminUsersApi.getUsers).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('desbloquear llama changeUserStatus(id, true) directamente sin modal', async () => {
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.changeUserStatus).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/usuarios']}>
+        <AdminToastProvider>
+          <AdminUsersPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('bodegabianchi')).toBeInTheDocument();
+    });
+
+    const unblockBtn = screen.getByTitle('Desbloquear usuario');
+    fireEvent.click(unblockBtn);
+
+    await waitFor(() => {
+      expect(adminUsersApi.changeUserStatus).toHaveBeenCalledWith(3, true);
       expect(adminUsersApi.getUsers).toHaveBeenCalledTimes(2);
     });
   });
@@ -307,4 +340,3 @@ describe('AdminUsersPage Component', () => {
     });
   });
 });
-
