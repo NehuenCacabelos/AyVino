@@ -22,7 +22,9 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const WineryPublicLayout = lazy(() => import('../features/winery/components/WineryPublicLayout'));
 const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
 const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
-const WineryPublicProfilePage = lazy(() => import('../pages/WineryPublicProfilePage'));
+const WineryPublicProfileLayout = lazy(() => import('../pages/WineryPublicProfileLayout'));
+const WineryPublicOverviewPage = lazy(() => import('../pages/WineryPublicOverviewPage'));
+const WineryPublicCatalogPage = lazy(() => import('../pages/WineryPublicCatalogPage'));
 
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
@@ -155,15 +157,7 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: '/bodegas/:id',
-            element: (
-              <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryPublicProfilePage />
-              </Suspense>
-            ),
-          },
-        ],
+          ],
       },
 
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
@@ -237,6 +231,34 @@ export const router = createBrowserRouter([
             <ProfileRedirectRoute />
           </Suspense>
         ),
+      },
+
+      // Rutas de Perfil Público de Bodega (inmersivo con layout propio)
+      {
+        path: '/bodegas/:id',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <WineryPublicProfileLayout />
+          </Suspense>
+        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicOverviewPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'catalogo',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicCatalogPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
       // Rutas Protegidas Exclusivas para Bodegas y Administradores
