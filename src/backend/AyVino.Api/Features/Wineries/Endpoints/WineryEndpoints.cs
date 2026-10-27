@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Services;
 
@@ -11,8 +12,8 @@ public static class WineryEndpoints
     {
         var group = app.MapGroup("/api/wineries").WithTags("Wineries");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, string? status, int? locationId, IWineryService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, status, locationId, ct)))
+        group.MapGet("/", async (int pageNumber, int pageSize, string? status, int? locationId, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
+            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, status, locationId, user.GetActorOrNull(), ct)))
             .WithName("GetAllWineries")
             .WithSummary("Lists wineries, paginated, with optional status and location filters.");
 
@@ -25,8 +26,8 @@ public static class WineryEndpoints
             .WithName("GetMyWinery")
             .WithSummary("Gets the winery associated with the authenticated user.");
 
-        group.MapGet("/{id:int}", async (int id, IWineryService service, CancellationToken ct) =>
-            Results.Ok(await service.GetByIdAsync(id, ct)))
+        group.MapGet("/{id:int}", async (int id, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
+            Results.Ok(await service.GetByIdAsync(id, user.GetActorOrNull(), ct)))
             .WithName("GetWineryById")
             .WithSummary("Gets a winery by ID.");
 

@@ -24,11 +24,19 @@ public class WineryService(
     IJwtTokenGenerator jwtTokenGenerator,
     IImageStorage? imageStorage = null) : IWineryService
 {
-    public async Task<WineryResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<WineryResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
         if (id <= 0) throw new NotFoundException($"Winery with ID {id} not found.");
         var winery = await wineryRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Winery with ID {id} not found.");
+
+        var isAdmin = actor?.IsAdmin == true;
+        var isOwner = actor != null && winery.UserId == actor.UserId;
+        if (!isAdmin && !isOwner && winery.Status != WineryStatus.Approved)
+        {
+            throw new NotFoundException($"Winery with ID {id} not found.");
+        }
+
         return winery.ToResponseDto();
     }
 
@@ -40,17 +48,27 @@ public class WineryService(
         return winery.ToResponseDto();
     }
 
-    public async Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, CancellationToken ct = default)
+    public async Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
         int? statusValue = null;
-        if (!string.IsNullOrWhiteSpace(status))
+        var isAdmin = actor?.IsAdmin == true;
+
+        if (isAdmin)
         {
-            if (!Enum.TryParse<WineryStatus>(status, ignoreCase: true, out var parsedStatus))
-                throw new ValidationException($"Invalid status: '{status}'.");
-            statusValue = (int)parsedStatus;
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                if (!Enum.TryParse<WineryStatus>(status, ignoreCase: true, out var parsedStatus))
+                    throw new ValidationException($"Invalid status: '{status}'.");
+                statusValue = (int)parsedStatus;
+            }
+        }
+        else
+        {
+            // quien no es admin siempre recibe solo Approved, sin importar el status que mande (ignoralo)
+            statusValue = (int)WineryStatus.Approved;
         }
 
         var wineries = await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
