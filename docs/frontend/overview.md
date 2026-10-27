@@ -148,7 +148,6 @@ src/frontend/src/
 │   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
 │   ├── WineryConfigPage.tsx   # Configuración inmersiva (/bodega/configuracion)
 │   ├── WineryOverviewPage.tsx # Ficha institucional con banner (/bodega/perfil)
-│   ├── WineryProfilePage.tsx  # Reexport limpio hacia WineryOverviewPage
 │   ├── WineryWinesPage.tsx    # Catálogo y cosechas (/bodega/vinos)
 │   ├── WineryClaimPage.tsx    # Reclamo de vinos comunitarios (/bodega/reclamar)
 │   └── WineryPublicProfilePage.tsx # Vidriera pública (/bodegas/:id)
