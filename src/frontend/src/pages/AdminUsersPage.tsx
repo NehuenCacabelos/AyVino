@@ -94,20 +94,23 @@ export default function AdminUsersPage() {
 
   // Acciones
   const handleToggleStatus = async (user: AdminUserListItemDto) => {
+    if (user.role === 'Admin') return;
+
     if (user.isActive) {
-      // Desactivar: pide confirmación
+      // Bloquear: pide confirmación
       setConfirmDialog({
         open: true,
-        title: '¿Desactivar usuario?',
-        message: `¿Estás seguro de que deseás desactivar la cuenta de "${user.username}"? El usuario no podrá iniciar sesión.`,
-        confirmLabel: 'Desactivar',
+        title: '¿Bloquear usuario?',
+        message:
+          'No podrá iniciar sesión ni renovar su sesión. Si ya tiene una sesión abierta, puede seguir hasta 2 horas.',
+        confirmLabel: 'Bloquear',
         tone: 'default',
         onConfirm: async () => {
           setIsConfirmLoading(true);
           setProcessingId(user.id);
           try {
             await changeUserStatus(user.id, false);
-            toast.success('Usuario desactivado.');
+            toast.success('Usuario bloqueado.');
             setConfirmDialog((prev) => ({ ...prev, open: false }));
             await reload();
           } catch (err: unknown) {
@@ -119,11 +122,11 @@ export default function AdminUsersPage() {
         },
       });
     } else {
-      // Activar: directo
+      // Desbloquear: directo
       setProcessingId(user.id);
       try {
         await changeUserStatus(user.id, true);
-        toast.success('Usuario activado.');
+        toast.success('Usuario desbloqueado.');
         await reload();
       } catch (err: unknown) {
         toast.error(getApiErrorMessage(err));
@@ -134,6 +137,8 @@ export default function AdminUsersPage() {
   };
 
   const openDeleteDialog = (user: AdminUserListItemDto) => {
+    if (user.role === 'Admin') return;
+
     setConfirmDialog({
       open: true,
       title: '¿Eliminar usuario?',
@@ -291,6 +296,7 @@ export default function AdminUsersPage() {
         className: 'text-right',
         render: (row) => {
           const isOwnRow = currentUser?.id === row.id;
+          const isTargetAdmin = row.role === 'Admin';
           const isProcessing = processingId === row.id;
           const isWinery = row.role === 'Winery';
 
@@ -299,7 +305,7 @@ export default function AdminUsersPage() {
           let roleColorClass =
             'border-purple-900/60 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60';
 
-          if (row.role === 'Admin') {
+          if (isTargetAdmin) {
             roleTitle = 'Quitar administrador';
             roleIcon = <ShieldAlert className="w-4 h-4" />;
             roleColorClass =
@@ -316,10 +322,15 @@ export default function AdminUsersPage() {
           }
 
           const isRoleDisabled = isOwnRow || isProcessing || isWinery;
-          const generalDisabled = isOwnRow || isProcessing;
-          const generalTooltip = isOwnRow
-            ? 'No podés modificar tu propia cuenta'
+
+          // Deshabilitar Bloquear y Eliminar en TODAS las filas con rol Admin (con title "Los administradores no se pueden modificar desde el panel"), no solo en la propia.
+          const isActionDisabled = isProcessing || isTargetAdmin;
+          const adminProtectionTooltip = isTargetAdmin
+            ? 'Los administradores no se pueden modificar desde el panel'
             : undefined;
+
+          const blockTitle = adminProtectionTooltip ?? (row.isActive ? 'Bloquear usuario' : 'Desbloquear usuario');
+          const deleteTitle = adminProtectionTooltip ?? 'Eliminar usuario';
 
           return (
             <div className="flex items-center justify-end gap-1.5">
@@ -338,18 +349,12 @@ export default function AdminUsersPage() {
                 {roleIcon}
               </button>
 
-              {/* Desactivar / Activar */}
+              {/* Bloquear / Desbloquear */}
               <button
                 type="button"
-                disabled={generalDisabled}
-                title={
-                  generalTooltip ??
-                  (row.isActive ? 'Desactivar cuenta' : 'Activar cuenta')
-                }
-                aria-label={
-                  generalTooltip ??
-                  (row.isActive ? 'Desactivar cuenta' : 'Activar cuenta')
-                }
+                disabled={isActionDisabled}
+                title={blockTitle}
+                aria-label={blockTitle}
                 onClick={() => void handleToggleStatus(row)}
                 className={cn(
                   'p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer',
@@ -368,9 +373,9 @@ export default function AdminUsersPage() {
               {/* Eliminar */}
               <button
                 type="button"
-                disabled={generalDisabled}
-                title={generalTooltip ?? 'Eliminar usuario'}
-                aria-label={generalTooltip ?? 'Eliminar usuario'}
+                disabled={isActionDisabled}
+                title={deleteTitle}
+                aria-label={deleteTitle}
                 onClick={() => openDeleteDialog(row)}
                 className="p-1.5 rounded-lg border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >

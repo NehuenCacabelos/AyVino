@@ -61,7 +61,7 @@ export interface ActiveBadgeProps {
 
 /**
  * Badge para representar el estado de actividad de una cuenta de usuario.
- * Activo (verde) / Inactivo (gris).
+ * Activo (verde) / Bloqueado (gris).
  */
 export function ActiveBadge({ isActive, className }: ActiveBadgeProps) {
   if (isActive) {
@@ -86,8 +86,7 @@ export function ActiveBadge({ isActive, className }: ActiveBadgeProps) {
       )}
     >
       <XCircle className="w-3.5 h-3.5 shrink-0" />
-      <span>Inactivo</span>
+      <span>Bloqueado</span>
     </span>
   );
 }
-

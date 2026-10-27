@@ -119,18 +119,21 @@ export default function AdminWineriesPage() {
   };
 
   const openRejectDialog = (winery: WineryResponseDto) => {
+    const isApproved = winery.status === 'Approved';
     setConfirmDialog({
       open: true,
-      title: '¿Rechazar bodega?',
-      message: `¿Estás seguro de que deseás rechazar la bodega "${winery.name}"?`,
-      confirmLabel: 'Rechazar',
+      title: isApproved ? '¿Suspender bodega?' : '¿Rechazar bodega?',
+      message: isApproved
+        ? 'La bodega dejará de ser visible para el público y su dueño no podrá publicar vinos. Podés volver a aprobarla cuando quieras.'
+        : `¿Estás seguro de que deseás rechazar la bodega "${winery.name}"?`,
+      confirmLabel: isApproved ? 'Suspender' : 'Rechazar',
       tone: 'default',
       onConfirm: async () => {
         setIsConfirmLoading(true);
         setProcessingId(winery.id);
         try {
           await changeWineryStatus(winery.id, 'Rejected');
-          toast.success('Bodega rechazada.');
+          toast.success(isApproved ? 'Bodega suspendida.' : 'Bodega rechazada.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
           await reload();
         } catch (err: unknown) {
@@ -248,6 +251,7 @@ export default function AdminWineriesPage() {
                 <button
                   type="button"
                   title="Aprobar bodega"
+                  aria-label="Aprobar bodega"
                   disabled={isProcessing}
                   onClick={() => void handleApprove(row.id)}
                   className="p-1.5 rounded-lg border border-emerald-900/60 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
@@ -256,11 +260,12 @@ export default function AdminWineriesPage() {
                 </button>
               )}
 
-              {/* Rechazar */}
+              {/* Rechazar o Suspender */}
               {(status === 'Pending' || status === 'Approved') && (
                 <button
                   type="button"
-                  title="Rechazar bodega"
+                  title={status === 'Approved' ? 'Suspender bodega' : 'Rechazar bodega'}
+                  aria-label={status === 'Approved' ? 'Suspender bodega' : 'Rechazar bodega'}
                   disabled={isProcessing}
                   onClick={() => openRejectDialog(row)}
                   className="p-1.5 rounded-lg border border-amber-900/60 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
@@ -273,6 +278,7 @@ export default function AdminWineriesPage() {
               <button
                 type="button"
                 title="Ver detalle"
+                aria-label="Ver detalle"
                 disabled={isProcessing}
                 onClick={() => setDetailWinery(row)}
                 className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
@@ -284,6 +290,7 @@ export default function AdminWineriesPage() {
               <button
                 type="button"
                 title="Eliminar bodega"
+                aria-label="Eliminar bodega"
                 disabled={isProcessing}
                 onClick={() => openDeleteDialog(row)}
                 className="p-1.5 rounded-lg border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
