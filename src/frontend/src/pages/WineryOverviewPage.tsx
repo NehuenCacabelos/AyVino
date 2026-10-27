@@ -33,10 +33,9 @@ import {
   WineryLogo,
   WineryTopBar,
   WineryStatusBanner,
+  WineryBanner,
   type WineResponseDto,
 } from '../features/winery';
-import { getBannerThemeByUsername } from '../constants/bannerThemes';
-import { cn } from '../lib/utils';
 
 // Configuración de íconos de Leaflet en Vite
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -67,8 +66,6 @@ export default function WineryOverviewPage() {
   const [totalReviews, setTotalReviews] = useState<number>(0);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(() => Boolean(winery?.id));
 
-  // Banner temático determinista a partir del nombre de la bodega
-  const bannerTheme = getBannerThemeByUsername(winery?.name);
 
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
@@ -186,22 +183,11 @@ export default function WineryOverviewPage() {
 
       {/* 2. Contenedor Principal con offset para TopBar fija (h-14) */}
       <div className="flex-1 flex flex-col pt-14">
-        {/* BANNER DINÁMICO VITIVINÍCOLA DETERMINISTA */}
-        <div
-          className={cn(
-            'relative w-full h-32 sm:h-36 md:h-44 overflow-hidden transition-colors duration-300',
-            bannerTheme.classes,
-          )}
-        >
-          <div
-            className={cn(
-              'absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] via-transparent to-transparent pointer-events-none',
-              bannerTheme.radialOverlayClass,
-            )}
-          />
-          {/* Fade-out degradado inferior para fundir con el fondo inmersivo */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
-        </div>
+        {/* BANNER DE BODEGA UNIFICADO */}
+        <WineryBanner
+          wineryName={winery?.name}
+          bannerUrl={winery?.bannerUrl}
+        />
 
         {/* CABECERA INSTITUCIONAL CON LOGO CIRCULAR SUPERPUESTO */}
         <header className="w-full bg-[#0b0b0e] border-b border-white/10 pb-8">

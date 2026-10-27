@@ -9,12 +9,12 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export interface ImageUploadFieldProps {
   value?: string | null;
   onChange: (url: string) => void;
-  folder: 'wineries' | 'vintages';
+  folder: 'wineries' | 'vintages' | 'banners';
   label?: string;
   helperText?: string;
   disabled?: boolean;
   onUploadingChange?: (isUploading: boolean) => void;
-  aspectRatio?: 'square' | 'bottle';
+  aspectRatio?: 'square' | 'bottle' | 'banner';
 }
 
 /**
@@ -132,10 +132,28 @@ export default function ImageUploadField({
   const handleRemoveImage = () => {
     if (disabled || isUploading) return;
     setUploadError(null);
-    onChange(''); // Contrato de backend: cadena vacía "" quita el logo / imagen
+    onChange(''); // Contrato de backend: cadena vacía "" quita el logo / banner / imagen
   };
 
   const hasImage = Boolean(value && value.trim().length > 0);
+
+  const getLoadedLabel = () => {
+    if (folder === 'banners') return 'Banner oficial cargado';
+    if (folder === 'wineries') return 'Logo oficial cargado';
+    return 'Fotografía de cosecha cargada';
+  };
+
+  const getRemoveLabel = () => {
+    if (folder === 'banners') return 'Quitar banner';
+    if (folder === 'wineries') return 'Quitar logo';
+    return 'Quitar imagen';
+  };
+
+  const getAspectRatioClasses = () => {
+    if (aspectRatio === 'banner') return 'w-36 h-12 aspect-[3/1]';
+    if (aspectRatio === 'bottle') return 'w-16 h-22';
+    return 'w-16 h-16';
+  };
 
   return (
     <div className="space-y-2">
@@ -153,16 +171,14 @@ export default function ImageUploadField({
         onChange={handleFileInputChange}
         disabled={disabled || isUploading}
         className="hidden"
-        aria-label={label}
+        aria-label={label || 'Cargar imagen'}
       />
 
       {hasImage ? (
         /* Vista Previa con opción de Quitar */
         <div className="relative flex items-center gap-4 p-3.5 rounded-2xl bg-zinc-900/40 border border-white/10">
           <div
-            className={`overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shrink-0 ${
-              aspectRatio === 'square' ? 'w-16 h-16' : 'w-16 h-22'
-            }`}
+            className={`overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shrink-0 ${getAspectRatioClasses()}`}
           >
             <img
               src={value!}
@@ -175,7 +191,7 @@ export default function ImageUploadField({
 
           <div className="flex-1 min-w-0 space-y-1">
             <p className="text-xs font-medium text-zinc-200 truncate">
-              {folder === 'wineries' ? 'Logo oficial cargado' : 'Fotografía de cosecha cargada'}
+              {getLoadedLabel()}
             </p>
             <p className="text-[11px] text-zinc-500 font-mono truncate">{value}</p>
 
@@ -186,7 +202,7 @@ export default function ImageUploadField({
                 disabled={disabled || isUploading}
                 className="text-xs text-amber-200/90 hover:text-amber-100 font-medium underline transition-colors cursor-pointer disabled:opacity-50"
               >
-                Cambiar imagen
+                {folder === 'banners' ? 'Cambiar banner' : folder === 'wineries' ? 'Cambiar logo' : 'Cambiar imagen'}
               </button>
               <span className="text-zinc-600">·</span>
               <button
@@ -194,9 +210,9 @@ export default function ImageUploadField({
                 onClick={handleRemoveImage}
                 disabled={disabled || isUploading}
                 className="text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors cursor-pointer disabled:opacity-50"
-                aria-label={folder === 'wineries' ? 'Quitar logo' : 'Quitar imagen'}
+                aria-label={getRemoveLabel()}
               >
-                {folder === 'wineries' ? 'Quitar logo' : 'Quitar imagen'}
+                {getRemoveLabel()}
               </button>
             </div>
           </div>

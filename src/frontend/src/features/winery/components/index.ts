@@ -25,3 +25,4 @@ export { default as WineryCatalogEmptyState } from './WineryCatalogEmptyState';
 export { default as WineryVintageCard } from './WineryVintageCard';
 export { default as WineryWinePairingsList } from './WineryWinePairingsList';
 export { default as WineEditModal } from './WineEditModal';
+export { default as WineryBanner } from './WineryBanner';
