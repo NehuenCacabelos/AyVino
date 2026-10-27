@@ -40,11 +40,17 @@ export default function AdminCitiesPage() {
 
   // Carga inicial de provincias
   useEffect(() => {
+    let isMounted = true;
     getStates()
-      .then((data) => setStates(data))
+      .then((data) => {
+        if (isMounted) setStates(data);
+      })
       .catch(() => {
         // Fallback silencioso si falla la lista de provincias
       });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const statesMap = useMemo(() => {
