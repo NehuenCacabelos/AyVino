@@ -17,3 +17,8 @@ export { default as WineCreateModal } from './WineCreateModal';
 export { default as WineVintagesModal } from './WineVintagesModal';
 export { default as WineryPublicWineCard } from './WineryPublicWineCard';
 export { default as WineryPublicWineDetailModal } from './WineryPublicWineDetailModal';
+export { default as WineryCatalogBottleSilhouette } from './WineryCatalogBottleSilhouette';
+export { default as WineryCatalogRibbon } from './WineryCatalogRibbon';
+export { default as WineryCatalogCard } from './WineryCatalogCard';
+export { default as WineryCatalogToolbar } from './WineryCatalogToolbar';
+export { default as WineryCatalogEmptyState } from './WineryCatalogEmptyState';
