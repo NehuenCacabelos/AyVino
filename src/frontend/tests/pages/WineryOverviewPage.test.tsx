@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WineryOverviewPage from '@/pages/WineryOverviewPage';
-import type { WineryResponseDto } from '@/features/winery/types';
+import type { WineryResponseDto, WineryPublicProfileResponseDto } from '@/features/winery/types';
+import * as wineryApi from '@/features/winery/api';
 
 // Mock de Leaflet para evitar problemas de canvas en jsdom
 vi.mock('react-leaflet', () => ({
@@ -12,6 +13,8 @@ vi.mock('react-leaflet', () => ({
   TileLayer: () => <div data-testid="mock-tile-layer" />,
   Marker: () => <div data-testid="mock-marker" />,
 }));
+
+let currentWineryStatus: 'Approved' | 'Pending' | 'Rejected' = 'Approved';
 
 const mockWinery: WineryResponseDto = {
   id: 42,
@@ -34,7 +37,10 @@ const mockWinery: WineryResponseDto = {
 
 vi.mock('@/features/winery/context/WineryContext', () => ({
   useWinery: () => ({
-    winery: mockWinery,
+    winery: {
+      ...mockWinery,
+      status: currentWineryStatus,
+    },
     reload: vi.fn(),
     isLoading: false,
     error: null,
@@ -70,11 +76,32 @@ vi.mock('@/features/winery/api', () => ({
     cityName: 'Luján de Cuyo',
     stateName: 'Mendoza',
   }),
+  getWineryPublicProfile: vi.fn().mockResolvedValue({
+    id: 42,
+    name: 'Bodega El Terruño',
+    status: 'Approved',
+    followersCount: 37,
+    averageRating: 4.6,
+    reviewCount: 15,
+    totals: { labels: 2, vintages: 4 },
+    isPreview: false,
+  }),
 }));
 
 describe('WineryOverviewPage (/bodega/perfil)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentWineryStatus = 'Approved';
+    vi.mocked(wineryApi.getWineryPublicProfile).mockResolvedValue({
+      id: 42,
+      name: 'Bodega El Terruño',
+      status: 'Approved',
+      followersCount: 37,
+      averageRating: 4.6,
+      reviewCount: 15,
+      totals: { labels: 2, vintages: 4 },
+      isPreview: false,
+    } as WineryPublicProfileResponseDto);
   });
 
   const renderComponent = () =>
@@ -109,13 +136,66 @@ describe('WineryOverviewPage (/bodega/perfil)', () => {
     });
   });
 
-  it('muestra la cinta de métricas con etiquetas, cosechas y seguidores', async () => {
+  it('muestra la cinta de métricas con etiquetas, cosechas y seguidores mayores a 1 (ej: 37)', async () => {
     renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Etiquetas')).toBeInTheDocument();
       expect(screen.getByText('Cosechas')).toBeInTheDocument();
       expect(screen.getByText('Seguidores')).toBeInTheDocument();
+      expect(screen.getByText('37')).toBeInTheDocument();
+      expect(screen.getByText('4.6')).toBeInTheDocument();
+    });
+  });
+
+  it('renderiza texto sobrio "Aún sin valoración" cuando el promedio es null', async () => {
+    vi.mocked(wineryApi.getWineryPublicProfile).mockResolvedValueOnce({
+      id: 42,
+      name: 'Bodega El Terruño',
+      status: 'Approved',
+      followersCount: 12,
+      averageRating: null,
+      reviewCount: 3,
+      totals: { labels: 2, vintages: 4 },
+      isPreview: false,
+    } as WineryPublicProfileResponseDto);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 reseñas · aún sin valoración/i)).toBeInTheDocument();
+    });
+  });
+
+  it('muestra "—" para seguidores cuando la bodega está en estado Pending', async () => {
+    currentWineryStatus = 'Pending';
+    vi.mocked(wineryApi.getWineryPublicProfile).mockResolvedValueOnce({
+      id: 42,
+      name: 'Bodega El Terruño',
+      status: 'Pending',
+      followersCount: 0,
+      averageRating: null,
+      reviewCount: 0,
+      totals: { labels: 2, vintages: 4 },
+      isPreview: true,
+    } as WineryPublicProfileResponseDto);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+  });
+
+  it('no rompe la pantalla cuando la consulta del perfil público falla', async () => {
+    vi.mocked(wineryApi.getWineryPublicProfile).mockRejectedValueOnce(new Error('Network error'));
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega El Terruño')).toBeInTheDocument();
+      expect(screen.getByText('Etiquetas')).toBeInTheDocument();
+      expect(screen.getByText('Gran Terruño Malbec')).toBeInTheDocument();
     });
   });
 
