@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../auth';
 import { useMyWinery } from '../hooks/useMyWinery';
 import { WineryProvider } from '../context/WineryContext';
+import { WineryCatalogProvider } from '../context/WineryCatalogContext';
 import WineryNavbar from './WineryNavbar';
 import WineryStatusBanner from './WineryStatusBanner';
 import WineryLoadingState from './WineryLoadingState';
@@ -133,7 +134,8 @@ export default function WineryLayout() {
 
   return (
     <WineryProvider value={wineryData}>
-      <div className="min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#6e1a24] selection:text-white flex flex-col justify-between">
+      <WineryCatalogProvider>
+        <div className="min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#6e1a24] selection:text-white flex flex-col justify-between">
         {/* Navbar Superior Persistente */}
         <WineryNavbar />
 
@@ -163,6 +165,7 @@ export default function WineryLayout() {
           </div>
         </footer>
       </div>
+      </WineryCatalogProvider>
     </WineryProvider>
   );
 }

@@ -5,3 +5,4 @@ export * from './location';
 export * from './grape';
 export * from './image';
 
+export * from './catalog';
