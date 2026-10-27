@@ -19,7 +19,7 @@ flowchart TD
 
         subgraph WineryPublic["Vistas Públicas de Bodega (WineryPublicLayout)"]
             ForWineries["/para-bodegas -> ForWineriesPage.tsx (Propuesta de Valor)"]
-            WineryPublicProfile["/bodegas/:id -> WineryPublicProfilePage.tsx (Vidriera Pública)"]
+            WineryPublicProfile["/bodegas/:id -> WineryPublicProfileLayout.tsx (Perfil Público Vidriera)"]
         end
     end
 
@@ -121,10 +121,18 @@ flowchart TD
 - **Portal de Bodegas (`ForWineriesPage.tsx` en `/para-bodegas`)**: Presentación editorial de ventajas competitivas (certificación técnica, reclamo de vinos, seguidores).
 - **Registro de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card en 2 pasos con geolocalización interactiva vía `RegionPicker`.
 
-### 2.2 Vidriera Pública Institucional (`WineryPublicProfilePage.tsx` en `/bodegas/:id`)
-- Acceso universal (visitantes y sommeliers).
-- Cabecera con monograma/logo de bodega, terruño resuelto, año de fundación y botón interactivo *"Seguir bodega"*.
-- Desacoplado 100% de `features/wines`: utiliza `WineryPublicWineCard` y `WineryPublicWineDetailModal`.
+### 2.2 Perfil Público Inmersivo de Bodega (`WineryPublicProfileLayout.tsx` en `/bodegas/:id`)
+- **Arquitectura con subrutas anidadas y Layout propio**:
+  - `/bodegas/:id` (índice): *"La bodega"* (`WineryPublicOverviewPage.tsx`), semblanza institucional, datos geográficos con mapa de solo lectura (`WineryReadOnlyMap.tsx`) y totales de producción.
+  - `/bodegas/:id/catalogo`: *"Catálogo"* (`WineryPublicCatalogPage.tsx`), catálogo paginado con filtros server-side en `searchParams` (tipo, uva, año, orden), tarjetas `WineryPublicCatalogCard.tsx` y punto de entrada único (`onSelectWine`) hacia el modal provisorio `WineryPublicWineDetailModal.tsx`.
+- **Cabecera Inmersiva**:
+  - `WineryPublicTopBar`: barra minimalista superior fija; logo redirige a `/` si es anónimo o a `/dashboard` si hay sesión.
+  - `WineryBanner`: banner unificado con degradado temático determinista o fotografía oficial (proporción 3:1) con overlay oscuro de contraste.
+  - Logo circular superpuesto con aro aislante, insignia de *"Bodega oficial"* si está aprobada, terruño, año de fundación, sitio web externo, seguidores y valoración ponderada.
+  - Botón *"Seguir bodega"* con comportamiento diferenciado: visitante redirige a `/login` con `state.from`; usuario autenticado opera con actualización optimista y rollback automático ante error de red.
+  - Botón *"Copiar enlace"* al portapapeles con feedback temporal.
+  - En modo vista previa (`isPreview: true` para dueño o admin de bodega en revisión): cartel fijo explicativo *"Vista previa: así la verán los usuarios cuando te aprueben"*, y etiquetas en revisión señaladas como *"Borrador"*.
+  - Estado 404 amable cuando la bodega no existe o se encuentra pendiente/rechazada para terceros.
 
 ### 2.3 Panel Institucional de Bodega (`WineryLayout.tsx` en `/bodega/*`)
 - **Navegación Superior Persistente (`WineryNavbar.tsx`)**:
@@ -204,7 +212,7 @@ flowchart TD
 | `/` | `Landing.tsx` | `RootLayout` | Público | Redirige al dashboard según rol si ya está logueado |
 | `/para-bodegas` | `ForWineriesPage.tsx` | `WineryPublicLayout` | Público | N/A |
 | `/bodega/registro` | `WineryRegisterPage.tsx` | `RootLayout` | Público | Si ya está autenticado, redirige a `/bodega/dashboard` |
-| `/bodegas/:id` | `WineryPublicProfilePage.tsx` | `WineryPublicLayout` | Público | N/A |
+| `/bodegas/:id` | `WineryPublicProfileLayout.tsx` | Propio (`WineryPublicTopBar`) | Público (Auth opcional) | 404 amable si no está disponible |
 | `/login` | `LoginPage.tsx` | `RootLayout` | Público | Redirige a ruta previa o dashboard según rol |
 | `/register` | `RegisterPage.tsx` | `RootLayout` | Público | N/A |
 | `/terms` | `TermsPage.tsx` | `RootLayout` | Público | N/A |
