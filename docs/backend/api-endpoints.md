@@ -387,14 +387,14 @@ Cálculo de temperatura óptima de servicio, tiempo y conveniencia de decantaci�
 
 ## 15. Almacenamiento de Imágenes (`/api/images`)
 
-Subida y validación estricta de imágenes para logotipos de bodegas y fotografías de botellas/cosechas en Supabase Storage.
+Subida y validación estricta de imágenes para logotipos, banners institucionales de bodegas y fotografías de botellas/cosechas en Supabase Storage.
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/images` | Autenticado | Sube una imagen a Supabase Storage (`multipart/form-data`) validando folder, tamaño (máx 2 MB) y magic bytes (JPEG, PNG, WebP). | Form: `file` (`IFormFile`), `folder` (`wineries` \| `vintages`) | `201 Created` (`ImageUploadResponseDto`: `{ "url": "..." }`) |
+| `POST` | `/api/images` | Autenticado | Sube una imagen a Supabase Storage (`multipart/form-data`) validando folder, tamaño (máx 2 MB) y magic bytes (JPEG, PNG, WebP). | Form: `file` (`IFormFile`), `folder` (`wineries` \| `vintages` \| `banners`) | `201 Created` (`ImageUploadResponseDto`: `{ "url": "..." }`) |
 
 ### Reglas y Restricciones de `/api/images`
-- **Carpetas admitidas (`folder`)**: Únicamente `wineries` o `vintages`. Cualquier otro valor es rechazado con `400 Bad Request`.
+- **Carpetas admitidas (`folder`)**: Únicamente `wineries`, `vintages` o `banners`. Cualquier otro valor es rechazado con `400 Bad Request`.
 - **Límite de tamaño**: 2 MB (2,097,152 bytes). Archivos mayores devuelven `413 Payload Too Large`.
 - **Formatos y Magic Bytes**: Se validan los primeros bytes reales del stream (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF....WEBP`). Archivos con magic bytes inválidos o extensiones no soportadas devuelven `415 Unsupported Media Type`.
 - **Nombres de archivo**: Se asigna un GUID único para evitar colisiones y sobreescrituras accidentales.

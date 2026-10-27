@@ -71,7 +71,7 @@ export default function WineryPublicCatalogPage() {
   const grapeIdParam = searchParams.get('grapeId') ?? '';
   const yearParam = searchParams.get('year') ?? '';
   const sortParam = searchParams.get('sort') ?? 'name';
-  const pageParam = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
+  const pageParam = Math.max(1, parseInt(searchParams.get('pageNumber') ?? searchParams.get('page') ?? '1', 10) || 1);
 
   // 2. Input de búsqueda local con sincronización durante render (sin effect)
   const [searchInput, setSearchInput] = useState<string>(searchParam);
@@ -93,7 +93,8 @@ export default function WineryPublicCatalogPage() {
           } else {
             next.delete('search');
           }
-          next.set('page', '1');
+          next.set('pageNumber', '1');
+          next.delete('page');
           return next;
         });
       }
@@ -178,7 +179,8 @@ export default function WineryPublicCatalogPage() {
       } else {
         next.delete(key);
       }
-      next.set('page', '1');
+      next.set('pageNumber', '1');
+      next.delete('page');
       return next;
     });
   };
@@ -403,7 +405,8 @@ export default function WineryPublicCatalogPage() {
                     setIsLoading(true);
                     setSearchParams((prev) => {
                       const next = new URLSearchParams(prev);
-                      next.set('page', String(catalogData.pageNumber - 1));
+                      next.set('pageNumber', String(catalogData.pageNumber - 1));
+                      next.delete('page');
                       return next;
                     });
                   }}
@@ -420,7 +423,8 @@ export default function WineryPublicCatalogPage() {
                     setIsLoading(true);
                     setSearchParams((prev) => {
                       const next = new URLSearchParams(prev);
-                      next.set('page', String(catalogData.pageNumber + 1));
+                      next.set('pageNumber', String(catalogData.pageNumber + 1));
+                      next.delete('page');
                       return next;
                     });
                   }}

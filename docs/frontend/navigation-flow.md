@@ -203,6 +203,23 @@ flowchart TD
   - **Uvas (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM de cepas enológicas con filtros de color, tabla con descriptores sensoriales y modal de creación/edición con validación.
   - **Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM de maridajes gastronómicos con filtros por categoría (Carnes, Pescados, Quesos, etc.).
 
+### 2.11 Perfil Público y Vidriera de Bodega (`/bodegas/:id` y `/bodegas/:id/catalogo`)
+- **Layout Institucional Desacoplado (`WineryPublicProfileLayout.tsx`)**:
+  - `WineryPublicTopBar`: barra superior con botón de regreso contextual, título de la bodega, botón de "Copiar enlace" y acción optimista de "Seguir bodega" (con redirección a login preservando retorno para visitantes anónimos).
+  - `WineryBanner`: portada panorámica oficial (aspect ratio 3:1) o degradado temático determinista a partir del nombre de la bodega (`getBannerThemeByUsername(winery.name)`) con la paleta de `constants/bannerThemes.ts`. Soporte de imágenes de hasta 2 MB en formato JPG, PNG o WebP.
+  - Cartel de modo vista previa (`isPreview: true`): barra de alerta superior ámbar visible solo para el productor o administradores cuando la bodega está en revisión (`Pending`).
+  - Navegación por pestañas: *"La bodega"* (`/bodegas/:id`) y *"Catálogo"* (`/bodegas/:id/catalogo`).
+- **Pestaña "La bodega" (`WineryPublicOverviewPage.tsx`)**:
+  - Historia institucional y semblanza de la bodega.
+  - Indicadores clave de producción (etiquetas y cosechas registradas).
+  - Mapa Leaflet interactivo de solo lectura en modo oscuro con geolocalización de la bodega (`WineryReadOnlyMap.tsx`).
+  - Datos de contacto institucional (teléfono, correo y sitio web).
+- **Pestaña "Catálogo" (`WineryPublicCatalogPage.tsx`)**:
+  - Filtros y paginación sincronizados con la URL mediante `searchParams`: `pageNumber`, `pageSize`, `search`, `wineType`, `grapeId`, `year` y `sort`.
+  - Buscador con debounce y limpieza de timer.
+  - Grilla de tarjetas `WineryPublicCatalogCard` con punto de entrada único (`onSelectWine`) para abrir la ficha de cata `WineryPublicWineDetailModal`.
+  - Muestra de valoración promedio comunitaria cuando hay al menos 1 reseña, con manejo de singular/plural ("(1 reseña)" vs. "(X reseñas)") y "Sin valoraciones" cuando no hay reseñas.
+
 ---
 
 ## 3. Matriz de Rutas y Políticas de Acceso
@@ -213,6 +230,7 @@ flowchart TD
 | `/para-bodegas` | `ForWineriesPage.tsx` | `WineryPublicLayout` | Público | N/A |
 | `/bodega/registro` | `WineryRegisterPage.tsx` | `RootLayout` | Público | Si ya está autenticado, redirige a `/bodega/dashboard` |
 | `/bodegas/:id` | `WineryPublicProfileLayout.tsx` | Propio (`WineryPublicTopBar`) | Público (Auth opcional) | 404 amable si no está disponible |
+| `/bodegas/:id/catalogo` | `WineryPublicCatalogPage.tsx` | `WineryPublicProfileLayout` | Público (Auth opcional) | 404 amable si no está disponible |
 | `/login` | `LoginPage.tsx` | `RootLayout` | Público | Redirige a ruta previa o dashboard según rol |
 | `/register` | `RegisterPage.tsx` | `RootLayout` | Público | N/A |
 | `/terms` | `TermsPage.tsx` | `RootLayout` | Público | N/A |

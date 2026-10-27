@@ -56,8 +56,8 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
    - Barra contextual superior fija (`h-14`, backdrop-blur, borde `border-b border-white/10`), marca enlazando a `/bodega/dashboard` y botón *"Volver al panel"*.
 4. **`WineryPublicProfileLayout` (Perfil Público Vidriera `/bodegas/:id`)**:
    - Layout inmersivo con barra contextual propia `WineryPublicTopBar` (logo redirige a `/` si es anónimo o a `/dashboard` si hay sesión; botón volver).
-   - Cabecera inmersiva con `WineryBanner` (degradado determinista o fotografía oficial con overlay oscuro de contraste), logo circular superpuesto, metadatos, botón Seguir con rollback optimista y redirección de login, copiar enlace y tabs NavLink.
-   - Pestañas anidadas vía `<Outlet />` con contexto compartido memoizado (`useMemo`): *"La bodega"* (`WineryPublicOverviewPage`) y *"Catálogo"* (`WineryPublicCatalogPage`).
+   - Cabecera inmersiva con `WineryBanner` (degradado temático determinista a partir del nombre de la bodega con los temas de `constants/bannerThemes.ts` o fotografía oficial panorámica 3:1 con overlay oscuro de contraste, límite de 2 MB), logo circular superpuesto, metadatos, botón Seguir con rollback optimista y redirección de login, copiar enlace y tabs NavLink.
+   - Pestañas anidadas vía `<Outlet />` con contexto compartido memoizado (`useMemo`): *"La bodega"* (`WineryPublicOverviewPage`) y *"Catálogo"* (`WineryPublicCatalogPage` paginado en servidor con `pageNumber`, `pageSize`, `search`, `wineType`, `grapeId`, `year`, `sort` y punto de selección único `onSelectWine`).
    - Modo vista previa (`isPreview: true` para dueño o admin de bodega en revisión): cartel fijo explicativo y etiquetas marcadas como borrador. Estado 404 amable para bodegas no disponibles.
 
 ### 3.2 Vistas del Área de Bodega
@@ -136,7 +136,7 @@ src/frontend/src/
 │   └── winery/                # Módulo Institucional de Bodegas (100% Desacoplado)
 │       ├── api/               # wineryApi, wineApi, locationApi, grapeApi, imageApi
 │       ├── components/        # WineryNavbar, WineryTopBar, WineryLayout, WineryPublicLayout,
-│       │                      # WineryPublicWineCard, WineryPublicWineDetailModal, WineryLogo,
+│       │                      # WineryPublicCatalogCard, WineryPublicWineDetailModal, WineryLogo,
 │       │                      # WineryStatusBanner, WineryKpiRibbon, WineryQuickActions,
 │       │                      # WineryChecklistCard, WineryRecentWines, RegionPicker,
 │       │                      # WineCreateModal, WineVintagesModal, ImageUploadField, etc.

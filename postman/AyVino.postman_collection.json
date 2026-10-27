@@ -1134,7 +1134,7 @@
                     "public"
                   ]
                 },
-                "description": "Perfil público vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoración agregada."
+                "description": "Perfil público vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoración ponderada (con >= 1 reseña; null con 0)."
               },
               "response": [],
               "event": [
@@ -1201,7 +1201,7 @@
                     }
                   ]
                 },
-                "description": "Catálogo público paginado con filtros de servidor (búsqueda, tipo, uva, año, orden), uvas, añadas y metadatos de filtros."
+                "description": "Catálogo público paginado con filtros de servidor (pageNumber, pageSize, search, wineType, grapeId, year, sort), uvas, añadas y metadatos de filtros."
               },
               "response": [],
               "event": [
