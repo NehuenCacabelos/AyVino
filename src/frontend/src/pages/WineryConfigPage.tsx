@@ -159,8 +159,8 @@ export default function WineryConfigPage() {
         if (isMounted) {
           setLiveUser(u);
         }
-      } catch (err) {
-        console.warn('No se pudo obtener el usuario en vivo:', err);
+      } catch {
+        // Fallo no crítico: se utiliza el usuario autenticado desde AuthContext (user?.username / user?.email) como respaldo silencioso.
       } finally {
         if (isMounted) {
           setIsLoadingUser(false);
