@@ -179,13 +179,13 @@ Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/wineries` | Público | Listado paginado con filtros opcionales de estado (`status`) y región (`locationId`). | Query params: `pageNumber`, `pageSize`, `status?`, `locationId?` | `200 OK` (`IEnumerable<WineryResponseDto>`) |
+| `GET` | `/api/wineries` | Público | Listado paginado con filtros opcionales de estado (`status`) y región (`locationId`). Quien no es admin siempre recibe exclusivamente bodegas en estado `Approved` (cualquier parámetro `status` enviado es ignorado). Administradores conservan todos los filtros. | Query params: `pageNumber`, `pageSize`, `status?`, `locationId?` | `200 OK` (`IEnumerable<WineryResponseDto>`) |
 | `GET` | `/api/wineries/me` | Autenticado | Obtiene la bodega asociada al usuario autenticado (fuente de verdad del panel). | - | `200 OK` (`WineryResponseDto`) / `404 Not Found` |
-| `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil público de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
+| `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil de una bodega por su ID. Para usuarios no administradores devuelve `404 Not Found` si la bodega no está `Approved`, salvo que quien consulte sea su dueño registrado. Para administradores siempre devuelve `200 OK`. | - | `200 OK` (`WineryResponseDto`) / `404 Not Found` |
 | `POST` | `/api/wineries` | Autenticado | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
 | `POST` | `/api/wineries/register` | Público | Onboarding unificado: crea usuario con rol `Winery` y entidad bodega en una transacción, devolviendo JWT. | `RegisterWineryRequestDto` | `201 Created` (`RegisterWineryResponseDto`) |
 | `PUT` | `/api/wineries/{id}` | Autenticado (Admin o Dueño) | Actualiza los datos informativos y de contacto de una bodega. | `UpdateWineryRequestDto` | `200 OK` (`WineryResponseDto`) |
-| `PATCH` | `/api/wineries/{id}/status` | Admin (`RequireAdmin`) | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). | `ChangeWineryStatusRequestDto` | `200 OK` (`WineryResponseDto`) |
+| `PATCH` | `/api/wineries/{id}/status` | Admin (`RequireAdmin`) | Modifica el estado de moderación (`Pending`, `Approved`, `Rejected`). Para una bodega aprobada, pasar a `Rejected` actúa como suspensión (la oculta del público y bloquea publicaciones y reclamos). | `ChangeWineryStatusRequestDto` | `200 OK` (`WineryResponseDto`) |
 | `DELETE`| `/api/wineries/{id}` | Admin (`RequireAdmin`) | Elimina una bodega del catálogo. | - | `204 NoContent` |
 
 ---

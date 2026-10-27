@@ -1074,6 +1074,126 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Admin: Suspend Winery (Status Rejected)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "status"
+                  ]
+                },
+                "description": "Suspende una bodega activa poniéndola en estado Rejected",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Rejected\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery by ID - Suspended as Anonymous (404 Not Found)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}"
+                  ]
+                },
+                "description": "Una bodega suspendida (Rejected) o pendiente no es visible para usuarios anónimos ni terceros (404)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery by ID - Suspended as Admin (200 OK)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}"
+                  ]
+                },
+                "description": "El administrador siempre puede visualizar una bodega suspendida (Rejected) o pendiente (200)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             }
           ]
         },
