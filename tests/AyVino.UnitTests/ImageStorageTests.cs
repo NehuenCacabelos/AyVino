@@ -347,5 +347,82 @@ public class ImageStorageTests
 
         await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.LogoUrl == "https://storage/new-logo.png"), Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public void ImageValidator_ValidFolderBanners_Accepted()
+    {
+        var jpegBytes = new byte[20];
+        jpegBytes[0] = 0xFF;
+        jpegBytes[1] = 0xD8;
+        jpegBytes[2] = 0xFF;
+
+        var file = CreateMockFile(jpegBytes, "banner.jpg", "image/jpeg");
+        var (ext, mime) = ImageValidator.Validate(file, "banners");
+
+        Assert.Equal(".jpg", ext);
+        Assert.Equal("image/jpeg", mime);
+    }
+
+    [Fact]
+    public async Task WineryService_UpdateAsync_WithValidStorageBannerUrl_UpdatesBanner()
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved, BannerUrl = "https://storage/old-banner.png" };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.IsUrlFromStorage("https://storage/new-banner.png").Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), storage);
+
+        var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", BannerUrl: "  https://storage/new-banner.png  ");
+        var actor = new Actor(10, AppRoles.Winery);
+
+        await service.UpdateAsync(1, dto, actor);
+
+        await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.BannerUrl == "https://storage/new-banner.png"), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task WineryService_UpdateAsync_WithEmptyOrWhitespaceBannerUrl_RemovesBanner(string emptyOrWhitespace)
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved, BannerUrl = "https://storage/banner.png" };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+        wineryRepo.UpdateAsync(Arg.Any<Winery>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), Substitute.For<IImageStorage>());
+
+        var dto = new UpdateWineryRequestDto(Name: "Catena Zapata", BannerUrl: emptyOrWhitespace);
+        var actor = new Actor(10, AppRoles.Winery);
+
+        await service.UpdateAsync(1, dto, actor);
+
+        await wineryRepo.Received(1).UpdateAsync(Arg.Is<Winery>(w => w.BannerUrl == null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WineryService_UpdateAsync_WithThirdPartyBannerUrl_ThrowsValidationException()
+    {
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        var existing = new Winery { Id = 1, Name = "Catena", UserId = 10, LocationId = 1, Status = WineryStatus.Approved };
+        wineryRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existing);
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.IsUrlFromStorage(Arg.Any<string>()).Returns(false);
+
+        var service = new WineryService(wineryRepo, Substitute.For<ILocationRepository>(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>(), storage);
+
+        var dto = new UpdateWineryRequestDto(
+            Name: "Catena Zapata",
+            BannerUrl: "https://external-site.com/banner.png");
+        var actor = new Actor(10, AppRoles.Winery);
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(1, dto, actor));
+        Assert.Contains("almacenamiento oficial", ex.Message);
+    }
 }
 

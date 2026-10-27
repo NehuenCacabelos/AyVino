@@ -8,7 +8,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 {
     private const string SelectColumns = """
         w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
-        w.user_id, w.status, w.register_date, w.latitude, w.longitude, w.logo_url,
+        w.user_id, w.status, w.register_date, w.latitude, w.longitude, w.logo_url, w.banner_url,
         s.name AS StateName, c.name AS RegionName
         FROM wineries w
         LEFT JOIN locations l ON l.id = w.location_id
@@ -92,7 +92,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 website = @Website,
                 latitude = @Latitude,
                 longitude = @Longitude,
-                logo_url = @LogoUrl
+                logo_url = @LogoUrl,
+                banner_url = @BannerUrl
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -107,7 +108,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.Website,
                 winery.Latitude,
                 winery.Longitude,
-                winery.LogoUrl
+                winery.LogoUrl,
+                winery.BannerUrl
             }, cancellationToken: ct));
         return rowsAffected > 0;
     }

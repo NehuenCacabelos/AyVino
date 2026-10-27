@@ -116,6 +116,24 @@ public class WineryService(
             targetLogoUrl = trimmedLogo;
         }
 
+        string? targetBannerUrl;
+        if (dto.BannerUrl == null)
+        {
+            targetBannerUrl = existing.BannerUrl;
+        }
+        else if (string.IsNullOrWhiteSpace(dto.BannerUrl))
+        {
+            targetBannerUrl = null;
+        }
+        else
+        {
+            var trimmedBanner = dto.BannerUrl.Trim();
+            if (imageStorage != null && !imageStorage.IsUrlFromStorage(trimmedBanner))
+                throw new ValidationException("La URL del banner debe pertenecer al almacenamiento oficial del sistema.");
+
+            targetBannerUrl = trimmedBanner;
+        }
+
         var winery = existing with
         {
             Name = dto.Name,
@@ -125,7 +143,8 @@ public class WineryService(
             Longitude = targetLongitude,
             FoundationYear = dto.FoundationYear,
             Website = dto.Website,
-            LogoUrl = targetLogoUrl
+            LogoUrl = targetLogoUrl,
+            BannerUrl = targetBannerUrl
         };
 
         var updated = await wineryRepository.UpdateAsync(winery, ct);

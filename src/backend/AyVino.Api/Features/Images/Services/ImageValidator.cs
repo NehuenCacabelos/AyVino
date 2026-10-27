@@ -6,13 +6,13 @@ namespace AyVino.Api.Features.Images.Services;
 public static class ImageValidator
 {
     private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
-    private static readonly HashSet<string> AllowedFolders = new(StringComparer.OrdinalIgnoreCase) { "wineries", "vintages" };
+    private static readonly HashSet<string> AllowedFolders = new(StringComparer.OrdinalIgnoreCase) { "wineries", "vintages", "banners" };
 
     public static (string Extension, string ContentType) Validate(IFormFile? file, string? folder)
     {
         if (string.IsNullOrWhiteSpace(folder) || !AllowedFolders.Contains(folder))
         {
-            throw new UnprocessableEntityException("La carpeta destino debe ser 'wineries' o 'vintages'.");
+            throw new UnprocessableEntityException("La carpeta destino debe ser 'wineries', 'vintages' o 'banners'.");
         }
 
         if (file == null || file.Length == 0)

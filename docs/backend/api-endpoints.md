@@ -67,6 +67,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `FoundationYear` | `[Range(1000, 2100)]` | "El año de fundación debe estar entre 1000 y 2100." |
 | | | `Website` | `[Url]`, `[StringLength(200)]` | "El sitio web debe ser una URL válida." / "El sitio web no puede superar los 200 caracteres." |
 | | | `LogoUrl` | `[Url]`, `[StringLength(500)]` | "La URL del logo no puede superar los 500 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. |
+| | | `BannerUrl` | `[StringLength(500)]` | "La URL del banner no puede superar los 500 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. Null conserva el existente, cadena vacía lo elimina. |
 | | `RegisterWineryRequestDto` | Campos de usuario (`Username`, `Email`, `Password`) + campos de bodega (`WineryName`, `LocationId`, etc.). | | |
 | | `ChangeWineryStatusRequestDto` | `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
 | **Locations**| `CreateCityRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la ciudad es obligatorio." / "El nombre de la ciudad no puede superar los 100 caracteres." |
