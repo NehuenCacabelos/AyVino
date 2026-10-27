@@ -280,10 +280,11 @@ describe('WineryPublicProfile Integration Flow', () => {
     });
   });
 
-  it('renderiza correctamente el singular "(1 reseña)" cuando la bodega o vino tiene exactamente 1 reseña', async () => {
+  it('renderiza correctamente textos de valoración para 0, 1, 4 y 5 reseñas según el umbral', async () => {
+    // Caso 1: 1 reseña (menos de 5 -> promedio null, muestra "1 reseña · Aún sin valoración")
     const singleReviewProfile: WineryPublicProfileResponseDto = {
       ...sampleApprovedProfile,
-      averageRating: 4.0,
+      averageRating: null,
       reviewCount: 1,
     };
     mockGetWineryPublicProfile.mockResolvedValue(singleReviewProfile);
@@ -293,12 +294,120 @@ describe('WineryPublicProfile Integration Flow', () => {
       items: [
         {
           ...sampleCatalogResponse.items[0],
-          averageRating: 4.5,
+          averageRating: null,
           reviewCount: 1,
         },
       ],
     };
     mockGetWineryPublicCatalog.mockResolvedValue(singleReviewCatalog);
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route path="catalogo" element={<WineryPublicCatalogPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const singularMatches = screen.getAllByText(/1 reseña · aún sin valoración/i);
+      expect(singularMatches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    unmount();
+
+    // Caso 2: 4 reseñas (menos de 5 -> promedio null, muestra "4 reseñas · Aún sin valoración")
+    const fourReviewProfile: WineryPublicProfileResponseDto = {
+      ...sampleApprovedProfile,
+      averageRating: null,
+      reviewCount: 4,
+    };
+    mockGetWineryPublicProfile.mockResolvedValue(fourReviewProfile);
+    const fourReviewCatalog: WineryPublicCatalogResponseDto = {
+      ...sampleCatalogResponse,
+      items: [
+        {
+          ...sampleCatalogResponse.items[0],
+          averageRating: null,
+          reviewCount: 4,
+        },
+      ],
+    };
+    mockGetWineryPublicCatalog.mockResolvedValue(fourReviewCatalog);
+
+    const { unmount: unmountFour } = render(
+      <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route path="catalogo" element={<WineryPublicCatalogPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const fourMatches = screen.getAllByText(/4 reseñas · aún sin valoración/i);
+      expect(fourMatches.length).toBeGreaterThanOrEqual(1);
+    });
+
+    unmountFour();
+
+    // Caso 3: 5 reseñas (alcanza umbral de 5 -> muestra número y "(5 reseñas)")
+    const fiveReviewProfile: WineryPublicProfileResponseDto = {
+      ...sampleApprovedProfile,
+      averageRating: 4.2,
+      reviewCount: 5,
+    };
+    mockGetWineryPublicProfile.mockResolvedValue(fiveReviewProfile);
+    const fiveReviewCatalog: WineryPublicCatalogResponseDto = {
+      ...sampleCatalogResponse,
+      items: [
+        {
+          ...sampleCatalogResponse.items[0],
+          averageRating: 4.2,
+          reviewCount: 5,
+        },
+      ],
+    };
+    mockGetWineryPublicCatalog.mockResolvedValue(fiveReviewCatalog);
+
+    const { unmount: unmountFive } = render(
+      <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route path="catalogo" element={<WineryPublicCatalogPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/4\.2/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/\(5 reseñas\)/i).length).toBeGreaterThanOrEqual(1);
+    });
+
+    unmountFive();
+
+    // Caso 4: 0 reseñas -> muestra "Sin valoraciones"
+    const zeroReviewProfile: WineryPublicProfileResponseDto = {
+      ...sampleApprovedProfile,
+      averageRating: null,
+      reviewCount: 0,
+    };
+    mockGetWineryPublicProfile.mockResolvedValue(zeroReviewProfile);
+    const zeroReviewCatalog: WineryPublicCatalogResponseDto = {
+      ...sampleCatalogResponse,
+      items: [
+        {
+          ...sampleCatalogResponse.items[0],
+          averageRating: null,
+          reviewCount: 0,
+        },
+      ],
+    };
+    mockGetWineryPublicCatalog.mockResolvedValue(zeroReviewCatalog);
 
     render(
       <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
@@ -311,8 +420,7 @@ describe('WineryPublicProfile Integration Flow', () => {
     );
 
     await waitFor(() => {
-      const singularMatches = screen.getAllByText(/\(1 reseña\)/i);
-      expect(singularMatches.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/sin valoraciones/i).length).toBeGreaterThanOrEqual(1);
     });
   });
 });

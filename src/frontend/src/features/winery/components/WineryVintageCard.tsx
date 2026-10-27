@@ -123,12 +123,18 @@ export default function WineryVintageCard({
               <Star className="w-3.5 h-3.5 fill-amber-300 shrink-0" />
               <span>{vintage.averageRating.toFixed(1)}</span>
               <span className="text-neutral-500 font-sans text-[11px]">
-                ({vintage.reviewCount})
+                ({vintage.reviewCount} {vintage.reviewCount === 1 ? 'reseña' : 'reseñas'})
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#0a0a0c] border border-white/5 text-neutral-500 text-[11px]">
-              <span>Sin valoraciones</span>
+              {vintage.reviewCount > 0 ? (
+                <span>
+                  {vintage.reviewCount} {vintage.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración
+                </span>
+              ) : (
+                <span>Sin valoraciones</span>
+              )}
             </div>
           )}
 

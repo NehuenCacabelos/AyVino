@@ -175,6 +175,10 @@ export default function WineryWineDetailPage() {
                   ({wine.reviewCount} {wine.reviewCount === 1 ? 'reseña' : 'reseñas'})
                 </span>
               </div>
+            ) : wine.reviewCount > 0 ? (
+              <span className="text-neutral-400 font-sans text-xs">
+                {wine.reviewCount} {wine.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración
+              </span>
             ) : (
               <span className="text-neutral-500 font-mono text-[11px]">
                 Sin valoraciones globales registradas

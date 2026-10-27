@@ -1134,7 +1134,7 @@
                     "public"
                   ]
                 },
-                "description": "Perfil público vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoración ponderada (con >= 1 reseña; null con 0)."
+                "description": "Perfil público vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoración ponderada (con >= 5 reseñas; null con menos de 5)."
               },
               "response": [],
               "event": [

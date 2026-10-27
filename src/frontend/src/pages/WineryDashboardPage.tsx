@@ -139,7 +139,7 @@ export default function WineryDashboardPage() {
             approved: approvedVintages,
             pending: pendingVintages,
           });
-          setAverageRating(ratedCount > 0 ? sumRatings / ratedCount : null);
+          setAverageRating(ratedCount > 0 && reviewsSum >= 5 ? sumRatings / ratedCount : null);
           setTotalReviews(reviewsSum);
           setFollowersCount(resolvedFollowers);
         }

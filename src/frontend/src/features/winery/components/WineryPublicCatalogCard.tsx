@@ -151,7 +151,9 @@ export default function WineryPublicCatalogCard({
               </span>
             ) : (
               <span className="text-zinc-500 font-sans text-[11px]">
-                Sin valoraciones
+                {wine.reviewCount > 0
+                  ? `${wine.reviewCount} ${wine.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                  : 'Sin valoraciones'}
               </span>
             )}
           </div>

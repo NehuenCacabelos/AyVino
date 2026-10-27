@@ -378,7 +378,11 @@ export default function WineryPublicProfileLayout() {
                           </span>
                         </>
                       ) : (
-                        <span className="text-zinc-500">Sin valoraciones</span>
+                        <span className="text-zinc-500">
+                          {profile.reviewCount > 0
+                            ? `${profile.reviewCount} ${profile.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                            : 'Sin valoraciones'}
+                        </span>
                       )}
                     </span>
                   </div>

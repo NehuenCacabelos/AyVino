@@ -131,7 +131,7 @@ export default function WineryOverviewPage() {
 
           if (isMounted) {
             setVintagesCount(totalVints);
-            setAverageRating(ratedCount > 0 ? sumRatings / ratedCount : null);
+            setAverageRating(ratedCount > 0 && sumReviews >= 5 ? sumRatings / ratedCount : null);
             setTotalReviews(sumReviews);
           }
         }
@@ -482,10 +482,18 @@ export default function WineryOverviewPage() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs text-amber-200 font-mono shrink-0">
-                          <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                          <span>{wine.averageRating ? wine.averageRating.toFixed(1) : '—'}</span>
-                        </div>
+                        {wine.averageRating ? (
+                          <div className="flex items-center gap-1 text-xs text-amber-200 font-mono shrink-0">
+                            <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                            <span>{wine.averageRating.toFixed(1)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-zinc-500 font-sans shrink-0">
+                            {wine.reviewCount > 0
+                              ? `${wine.reviewCount} ${wine.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                              : 'Sin reseñas'}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

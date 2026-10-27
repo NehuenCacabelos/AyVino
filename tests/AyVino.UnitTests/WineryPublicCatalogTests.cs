@@ -122,41 +122,79 @@ public class WineryPublicCatalogTests
     }
 
     [Fact]
-    public async Task GetPublicProfileAsync_OneReview_ReturnsCalculatedAverage()
+    public async Task GetPublicProfileAsync_ZeroReviews_ReturnsNullAverageRating()
+    {
+        // Arrange
+        var winery = CreateWineryRow(1, WineryStatus.Approved);
+        _repository.GetWineryPublicProfileRowAsync(1, Arg.Any<CancellationToken>()).Returns(winery);
+        _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(0);
+        _repository.GetPublicRatingsAndTotalsAsync(1, false, Arg.Any<CancellationToken>())
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 1, Vintages: 1, RatingSum: 0, ReviewCount: 0));
+
+        // Act
+        var result = await _service.GetPublicProfileAsync(1, actor: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.AverageRating);
+        Assert.Equal(0, result.ReviewCount);
+    }
+
+    [Fact]
+    public async Task GetPublicProfileAsync_FourReviews_BelowThreshold_ReturnsNullAverageRating()
+    {
+        // Arrange
+        var winery = CreateWineryRow(1, WineryStatus.Approved);
+        _repository.GetWineryPublicProfileRowAsync(1, Arg.Any<CancellationToken>()).Returns(winery);
+        _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(2);
+        _repository.GetPublicRatingsAndTotalsAsync(1, false, Arg.Any<CancellationToken>())
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 1, Vintages: 2, RatingSum: 16, ReviewCount: 4));
+
+        // Act
+        var result = await _service.GetPublicProfileAsync(1, actor: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.AverageRating); // 4 < 5 -> null
+        Assert.Equal(4, result.ReviewCount);
+    }
+
+    [Fact]
+    public async Task GetPublicProfileAsync_FiveReviews_ReachesThreshold_ReturnsCalculatedAverage()
     {
         // Arrange
         var winery = CreateWineryRow(1, WineryStatus.Approved);
         _repository.GetWineryPublicProfileRowAsync(1, Arg.Any<CancellationToken>()).Returns(winery);
         _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(5);
         _repository.GetPublicRatingsAndTotalsAsync(1, false, Arg.Any<CancellationToken>())
-            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 1, Vintages: 1, RatingSum: 4, ReviewCount: 1));
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 2, Vintages: 3, RatingSum: 20, ReviewCount: 5));
 
         // Act
         var result = await _service.GetPublicProfileAsync(1, actor: null);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4.0m, result.AverageRating); // 1 review -> 4.0
-        Assert.Equal(1, result.ReviewCount);
+        Assert.Equal(4.0m, result.AverageRating); // 20 / 5 = 4.0
+        Assert.Equal(5, result.ReviewCount);
     }
 
     [Fact]
-    public async Task GetPublicProfileAsync_MultipleReviews_ReturnsCalculatedAverage()
+    public async Task GetPublicProfileAsync_MoreThanFiveReviews_ReturnsCalculatedAverage()
     {
         // Arrange
         var winery = CreateWineryRow(1, WineryStatus.Approved);
         _repository.GetWineryPublicProfileRowAsync(1, Arg.Any<CancellationToken>()).Returns(winery);
-        _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(8);
+        _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(10);
         _repository.GetPublicRatingsAndTotalsAsync(1, false, Arg.Any<CancellationToken>())
-            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 3, Vintages: 5, RatingSum: 14, ReviewCount: 3));
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 3, Vintages: 5, RatingSum: 48, ReviewCount: 10));
 
         // Act
         var result = await _service.GetPublicProfileAsync(1, actor: null);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4.67m, result.AverageRating); // 14 / 3 = 4.67
-        Assert.Equal(3, result.ReviewCount);
+        Assert.Equal(4.8m, result.AverageRating); // 48 / 10 = 4.8
+        Assert.Equal(10, result.ReviewCount);
     }
 
     [Fact]
@@ -270,13 +308,14 @@ public class WineryPublicCatalogTests
 
         var wineRows = new List<WineryCatalogWineRow>
         {
-            new(Id: 1, Name: "Vino Alto Rating", Description: null, WineType: WineType.Red, SourceType: SourceType.Official, RatingSum: 24, ReviewCount: 5), // avg 4.8
-            new(Id: 2, Name: "Vino Una Reseña", Description: null, WineType: WineType.White, SourceType: SourceType.Official, RatingSum: 4, ReviewCount: 1),  // avg 4.0
-            new(Id: 3, Name: "Vino Sin Reseñas", Description: null, WineType: WineType.Red, SourceType: SourceType.Official, RatingSum: 0, ReviewCount: 0)     // avg null
+            new(Id: 1, Name: "Vino Diez Reseñas", Description: null, WineType: WineType.Red, SourceType: SourceType.Official, RatingSum: 48, ReviewCount: 10), // avg 4.8
+            new(Id: 2, Name: "Vino Cinco Reseñas", Description: null, WineType: WineType.White, SourceType: SourceType.Official, RatingSum: 20, ReviewCount: 5),  // avg 4.0
+            new(Id: 3, Name: "Vino Cuatro Reseñas", Description: null, WineType: WineType.Red, SourceType: SourceType.Official, RatingSum: 16, ReviewCount: 4),  // avg null (< 5)
+            new(Id: 4, Name: "Vino Cero Reseñas", Description: null, WineType: WineType.Red, SourceType: SourceType.Official, RatingSum: 0, ReviewCount: 0)      // avg null (0)
         };
         var query = new WineryPublicCatalogQueryParams(PageNumber: 1, PageSize: 12, Sort: "rating");
         _repository.GetPublicCatalogWinesPagedAsync(1, false, Arg.Is<WineryPublicCatalogQueryParams>(q => q.Sort == "rating"), Arg.Any<CancellationToken>())
-            .Returns((TotalCount: 3, Wines: wineRows));
+            .Returns((TotalCount: 4, Wines: wineRows));
 
         _repository.GetPublicVintagesByWineIdsAsync(Arg.Any<IEnumerable<int>>(), false, Arg.Any<CancellationToken>())
             .Returns(Array.Empty<WineryCatalogVintageRow>());
@@ -288,23 +327,28 @@ public class WineryPublicCatalogTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.TotalCount);
-        Assert.Equal(3, result.Items.Count);
+        Assert.Equal(4, result.TotalCount);
+        Assert.Equal(4, result.Items.Count);
 
-        // Vino con múltiples reseñas
+        // Vino con más de 5 reseñas (expone promedio)
         Assert.Equal(1, result.Items[0].Id);
         Assert.Equal(4.8m, result.Items[0].AverageRating);
-        Assert.Equal(5, result.Items[0].ReviewCount);
+        Assert.Equal(10, result.Items[0].ReviewCount);
 
-        // Vino con 1 sola reseña (ahora muestra promedio)
+        // Vino con exactamente 5 reseñas (alcanza el umbral, expone promedio)
         Assert.Equal(2, result.Items[1].Id);
         Assert.Equal(4.0m, result.Items[1].AverageRating);
-        Assert.Equal(1, result.Items[1].ReviewCount);
+        Assert.Equal(5, result.Items[1].ReviewCount);
 
-        // Vino con 0 reseñas (promedio nulo)
+        // Vino con 4 reseñas (menor a 5, promedio null)
         Assert.Equal(3, result.Items[2].Id);
         Assert.Null(result.Items[2].AverageRating);
-        Assert.Equal(0, result.Items[2].ReviewCount);
+        Assert.Equal(4, result.Items[2].ReviewCount);
+
+        // Vino con 0 reseñas (promedio null)
+        Assert.Equal(4, result.Items[3].Id);
+        Assert.Null(result.Items[3].AverageRating);
+        Assert.Equal(0, result.Items[3].ReviewCount);
     }
 }
 
