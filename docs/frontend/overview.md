@@ -71,7 +71,8 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
   - Botones de acción: *"Editar configuración"* (hacia `/bodega/configuracion`) y *"Ver cómo lo ven los usuarios"* (hacia `/bodegas/:id`, siempre habilitado).
   - Cinta de métricas consolidadas (seguidores, etiquetas oficiales, cosechas y puntaje de la comunidad).
   - Mapa Leaflet de terruño de solo lectura y catálogo resumido.
-- **Gestión de Catálogo y Cosechas (`WineryWinesPage.tsx` en `/bodega/vinos`)**: Grilla con filtros por tipo de vino, buscador en tiempo real, alta de etiqueta oficial (`WineCreateModal`) y administración de cosechas/añadas (`WineVintagesModal`).
+- **"Mi catálogo" de la Bodega (`WineryCatalogPage.tsx` en `/bodega/vinos`)**: Catálogo integral de etiquetas con cinta de métricas (`WineryCatalogRibbon`), barra de búsqueda y filtros reactivos por tipo, uva, año y estado de añada (`WineryCatalogToolbar`), visualización dual grilla/lista (`WineryCatalogCard`), paginación inmutable de 12 etiquetas por página, silueta de botella estilizada propia de bodega (`WineryCatalogBottleSilhouette`), estados vacíos (`WineryCatalogEmptyState`), alta oficial (`WineCreateModal`) y agregado rápido de añadas (`WineVintagesModal`).
+- **Ficha Detallada de Vino (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)**: Ficha técnica completa de la etiqueta con botón "Volver al catálogo", cabecera editorial con origen ("Oficial de tu bodega" / "Agregado por la comunidad"), valoración comunitaria, notas de cata y acciones "Editar etiqueta" (`WineEditModal`) y "Agregar añada" (`WineVintagesModal`). Listado vertical cronológico de cosechas (`WineryVintageCard`) con barra proporcional de corte varietal, alcohol, temperatura, consejo de guarda y estado de moderación. Sección de maridajes recomendados de solo lectura (`WineryWinePairingsList`) y 404 amigable para etiquetas inexistentes o ajenas.
 - **Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)**: Adopción de botellas subidas por aficionados conservando sus reseñas históricas.
 - **Vidriera Pública Universal (`WineryPublicProfilePage.tsx` en `/bodegas/:id`)**: Vidriera accesible sin sesión con seguimiento comunitario, desacoplada 100% de `features/wines` mediante `WineryPublicWineCard` y `WineryPublicWineDetailModal`.
 
@@ -148,7 +149,8 @@ src/frontend/src/
 │   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
 │   ├── WineryConfigPage.tsx   # Configuración inmersiva (/bodega/configuracion)
 │   ├── WineryOverviewPage.tsx # Ficha institucional con banner (/bodega/perfil)
-│   ├── WineryWinesPage.tsx    # Catálogo y cosechas (/bodega/vinos)
+│   ├── WineryCatalogPage.tsx  # Mi catálogo del dueño (/bodega/vinos)
+│   ├── WineryWineDetailPage.tsx # Ficha técnica de vino (/bodega/vinos/:wineId)
 │   ├── WineryClaimPage.tsx    # Reclamo de vinos comunitarios (/bodega/reclamar)
 │   └── WineryPublicProfilePage.tsx # Vidriera pública (/bodegas/:id)
 ├── routes/                    # Data Router v7

@@ -50,7 +50,8 @@ flowchart TD
         WineryDash["/bodega/dashboard -> WineryDashboardPage.tsx"]
         WineryProfile["/bodega/perfil -> WineryOverviewPage.tsx (Ficha con Banner)"]
         WineryConfig["/bodega/configuracion -> WineryConfigPage.tsx (Configuración Inmersiva)"]
-        WineryWines["/bodega/vinos -> WineryWinesPage.tsx"]
+        WineryWines["/bodega/vinos -> WineryCatalogPage.tsx"]
+        WineryWineDetail["/bodega/vinos/:wineId -> WineryWineDetailPage.tsx"]
         WineryClaim["/bodega/reclamar -> WineryClaimPage.tsx"]
         WineCreateModalComponent["WineCreateModal (Alta + Corte Varietal)"]
         WineVintagesModalComponent["WineVintagesModal (Gestión de Cosechas)"]
@@ -156,19 +157,29 @@ flowchart TD
   - Cinta de datos compacta en `#17151a` (etiquetas, cosechas, seguidores y puntaje de la comunidad).
   - Mapa Leaflet de terruño de solo lectura y resumen de catálogo oficial.
 
-### 2.7 Catálogo de Etiquetas y Cosechas (`WineryWinesPage.tsx` en `/bodega/vinos`)
-- Buscador reactivo, filtros por tipo enológico (`Red`, `White`, `Rose`, `Sparkling`, `Orange`) y paginación.
-- Soporte para bodegas en revisión (`Pending`): las etiquetas se guardan como borradores visibles solo para el productor.
+### 2.7 "Mi catálogo" de la Bodega (`WineryCatalogPage.tsx` en `/bodega/vinos`)
+- Cinta de totales consolidados (`WineryCatalogRibbon`: etiquetas, añadas totales, publicadas, en revisión, borradores o rechazadas).
+- Barra de herramientas con búsqueda instantánea, selectores por tipo, uva, año y estado de añada, orden (nombre, valoración, año más reciente) y alternador de vista grilla/lista (`WineryCatalogToolbar`).
+- Tarjetas de vino con silueta estilizada o foto de la añada más reciente, uva principal y porcentaje, rango de años y badges de estado (`WineryCatalogCard`). Paginación cliente de 12 por página.
+- Soporte integral para bodegas en revisión (`Pending`): las añadas en revisión se visualizan como borradores privados.
+- Acceso directo a vista pública *"Ver cómo lo ven los usuarios"* hacia `/bodegas/:id`.
 - Modales técnicos:
-  - `WineCreateModal`: Alta de etiqueta con añada inaugural y corte varietal sin cepas repetidas.
-  - `WineVintagesModal`: Historial de cosechas, badges de moderación y registro de nuevas añadas.
+  - `WineCreateModal`: Alta de etiqueta oficial con añada inaugural y corte varietal.
+  - `WineVintagesModal`: Acceso rápido para incorporar nuevas añadas desde las tarjetas.
 
-### 2.8 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)
+### 2.8 Ficha Detallada de Vino (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)
+- Enlace *"Volver al catálogo"*, cabecera editorial con foto de botella, nombre, tipo, notas de cata y badge de origen (*"Oficial de tu bodega"* o *"Agregado por la comunidad"*).
+- Acciones de cabecera: *"Editar etiqueta"* (`WineEditModal`) y *"Agregar añada"* (`WineVintagesModal`).
+- Lista vertical de añadas (`WineryVintageCard`): foto, año, alcohol, temperatura de servicio, consejo de guarda, barra proporcional y chips del blend varietal de uvas, estado de moderación, reseñas y fecha de registro.
+- Maridajes recomendados (`WineryWinePairingsList`): consulta asíncrona de maridajes de solo lectura contra `GET /api/wines/{wineId}/pairings`.
+- Manejo amigable de error 404 para etiquetas inexistentes o ajenas con botón de regreso.
+
+### 2.9 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)
 - Detección automática de botellas cargadas por aficionados que coinciden con el nombre de la bodega.
 - Casillas individuales y botón maestro *"Seleccionar todos"*.
 - Preservación íntegra de reseñas, notas de cata y calificaciones de la comunidad.
 
-### 2.9 Panel de Administración (`AdminLayout.tsx` en `/admin/*`)
+### 2.10 Panel de Administración (`AdminLayout.tsx` en `/admin/*`)
 - **Navegación e Interfaz Maestra**:
   - Sidebar fija en desktop con 6 accesos directos (`NavLink` con `isActive`): Inicio, Bodegas, Ciudades, Usuarios, Uvas y Maridajes.
   - Menú hamburguesa colapsable en pantallas móviles con cierre automático al navegar.
@@ -209,8 +220,8 @@ flowchart TD
 | `/bodega/configuracion` | `WineryConfigPage.tsx` | Inmersivo | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
 | `/bodega/perfil/editar` | Redirección `{ replace: true }` | Inmersivo | `Winery`, `Admin` | Redirige a `/bodega/configuracion` |
 | `/bodega/perfil` | `WineryOverviewPage.tsx` | Inmersivo | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
-| `/bodega/vinos` | `WineryWinesPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
-| `/bodega/vinos/:wineId` | `WineryWinesPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
+| `/bodega/vinos` | `WineryCatalogPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
+| `/bodega/vinos/:wineId` | `WineryWineDetailPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
 | `/bodega/reclamar` | `WineryClaimPage.tsx` | `WineryLayout` | `Winery`, `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin` | `AdminDashboardPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
 | `/admin/bodegas` | `AdminWineriesPage.tsx` | `AdminLayout` | `Admin` | Redirige a `/login` o `/dashboard` |
