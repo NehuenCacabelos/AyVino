@@ -120,7 +120,9 @@ export default function WineryPublicWineDetailModal({
               <div className="flex items-center gap-1.5 text-amber-300 font-mono text-sm font-semibold">
                 <Star className="w-4 h-4 fill-amber-300" />
                 <span>{wine.averageRating.toFixed(1)}</span>
-                <span className="text-xs text-neutral-500 font-normal">({wine.reviewCount ?? 0} notas)</span>
+                <span className="text-xs text-neutral-500 font-normal">
+                  ({wine.reviewCount ?? 0} {(wine.reviewCount ?? 0) === 1 ? 'reseña' : 'reseñas'})
+                </span>
               </div>
             </div>
           )}

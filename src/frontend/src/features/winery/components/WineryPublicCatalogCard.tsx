@@ -141,15 +141,17 @@ export default function WineryPublicCatalogCard({
         {/* Pie de tarjeta: Valoración y botón de apertura */}
         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5">
-            {typeof wine.averageRating === 'number' && wine.reviewCount >= 5 ? (
+            {typeof wine.averageRating === 'number' ? (
               <span className="flex items-center gap-1 text-amber-300 font-mono font-medium">
                 <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
                 <span>{wine.averageRating.toFixed(1)}</span>
-                <span className="text-zinc-500 text-[11px]">({wine.reviewCount})</span>
+                <span className="text-zinc-500 text-[11px]">
+                  ({wine.reviewCount} {wine.reviewCount === 1 ? 'reseña' : 'reseñas'})
+                </span>
               </span>
             ) : (
               <span className="text-zinc-500 font-sans text-[11px]">
-                {wine.reviewCount > 0 ? `${wine.reviewCount} reseñas` : 'Sin valoraciones'}
+                Sin valoraciones
               </span>
             )}
           </div>

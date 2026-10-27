@@ -81,7 +81,7 @@ public class WineryCatalogTests
         var wines = new List<WineryCatalogWineRow>
         {
             new(101, "Altos de Mendoza Malbec", "Gran reserva", WineType.Red, SourceType.Official, 24, 5), // avg: 4.8
-            new(102, "Valle Blanco Torrontes", null, WineType.White, SourceType.Official, 8, 2)            // avg: null (< 5 reviews)
+            new(102, "Valle Blanco Torrontes", null, WineType.White, SourceType.Official, 0, 0)            // avg: null (0 reviews)
         };
         _repository.GetWinesByWineryIdAsync(12, 201, Arg.Any<CancellationToken>()).Returns(wines);
 

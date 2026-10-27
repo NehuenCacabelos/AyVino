@@ -279,4 +279,41 @@ describe('WineryPublicProfile Integration Flow', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
+
+  it('renderiza correctamente el singular "(1 reseña)" cuando la bodega o vino tiene exactamente 1 reseña', async () => {
+    const singleReviewProfile: WineryPublicProfileResponseDto = {
+      ...sampleApprovedProfile,
+      averageRating: 4.0,
+      reviewCount: 1,
+    };
+    mockGetWineryPublicProfile.mockResolvedValue(singleReviewProfile);
+
+    const singleReviewCatalog: WineryPublicCatalogResponseDto = {
+      ...sampleCatalogResponse,
+      items: [
+        {
+          ...sampleCatalogResponse.items[0],
+          averageRating: 4.5,
+          reviewCount: 1,
+        },
+      ],
+    };
+    mockGetWineryPublicCatalog.mockResolvedValue(singleReviewCatalog);
+
+    render(
+      <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route path="catalogo" element={<WineryPublicCatalogPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      const singularMatches = screen.getAllByText(/\(1 reseña\)/i);
+      expect(singularMatches.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });
+

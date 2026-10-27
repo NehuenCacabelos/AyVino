@@ -253,7 +253,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
         const string sortYearVintageCondition = "((@IsPreview = TRUE AND v_s.approval_status != 3) OR (@IsPreview = FALSE AND v_s.approval_status = 2))";
         var sortClause = (query.Sort?.Trim().ToLowerInvariant()) switch
         {
-            "rating" => "ORDER BY (w.review_count >= 5) DESC, (CAST(w.rating_sum AS double precision) / NULLIF(w.review_count, 0)) DESC NULLS LAST, w.name ASC, w.id ASC",
+            "rating" => "ORDER BY (w.review_count >= 1) DESC, (CAST(w.rating_sum AS double precision) / NULLIF(w.review_count, 0)) DESC NULLS LAST, w.name ASC, w.id ASC",
             "year" => $"ORDER BY (SELECT MAX(v_s.year) FROM wine_vintages v_s WHERE v_s.wine_id = w.id AND {sortYearVintageCondition}) DESC NULLS LAST, w.name ASC, w.id ASC",
             _ => "ORDER BY w.name ASC, w.id ASC"
         };

@@ -367,20 +367,18 @@ export default function WineryPublicProfileLayout() {
                     <span className="text-zinc-700">·</span>
 
                     <span className="inline-flex items-center gap-1.5">
-                      {typeof profile.averageRating === 'number' && profile.reviewCount >= 5 ? (
+                      {typeof profile.averageRating === 'number' ? (
                         <>
                           <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
                           <span className="text-amber-300 font-semibold">
                             {profile.averageRating.toFixed(1)}
                           </span>
-                          <span className="text-zinc-500">({profile.reviewCount} reseñas)</span>
+                          <span className="text-zinc-500">
+                            ({profile.reviewCount} {profile.reviewCount === 1 ? 'reseña' : 'reseñas'})
+                          </span>
                         </>
                       ) : (
-                        <span className="text-zinc-500">
-                          {profile.reviewCount > 0
-                            ? `${profile.reviewCount} reseñas`
-                            : 'Sin valoraciones'}
-                        </span>
+                        <span className="text-zinc-500">Sin valoraciones</span>
                       )}
                     </span>
                   </div>
