@@ -84,15 +84,7 @@ public class PairingService(
         var wine = await wineRepository.GetByIdAsync(wineId, ct)
             ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
 
-        if (!actor.IsAdmin)
-        {
-            var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
-            if (!WineryAccessRules.IsOwner(winery, actor))
-                throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
-
-            if (!WineryAccessRules.CanPublish(winery, actor))
-                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.");
-        }
+        await ValidateWineryAccessForWinePairingAsync(wine.WineryId, actor, ct);
 
         if (!await pairingRepository.ExistsByIdAsync(pairingId, ct))
             throw new NotFoundException($"Pairing with ID {pairingId} not found.");
@@ -108,18 +100,22 @@ public class PairingService(
         var wine = await wineRepository.GetByIdAsync(wineId, ct)
             ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
 
-        if (!actor.IsAdmin)
-        {
-            var winery = wine.WineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
-            if (!WineryAccessRules.IsOwner(winery, actor))
-                throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
-
-            if (!WineryAccessRules.CanPublish(winery, actor))
-                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.");
-        }
+        await ValidateWineryAccessForWinePairingAsync(wine.WineryId, actor, ct);
 
         var removed = await pairingRepository.RemoveFromWineAsync(wineId, pairingId, ct);
         if (!removed) throw new NotFoundException($"Wine {wineId} is not paired with pairing {pairingId}.");
+    }
+
+    private async Task ValidateWineryAccessForWinePairingAsync(int? wineryId, Actor actor, CancellationToken ct)
+    {
+        if (actor.IsAdmin) return;
+
+        var winery = wineryId is int wid ? await wineryRepository.GetByIdAsync(wid, ct) : null;
+        if (!WineryAccessRules.IsOwner(winery, actor))
+            throw new ForbiddenException("No tenés permiso para modificar los maridajes de este vino.");
+
+        if (!WineryAccessRules.CanPublish(winery, actor))
+            throw new ForbiddenException("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.");
     }
 
     private static void ValidatePagination(int pageNumber, int pageSize)
