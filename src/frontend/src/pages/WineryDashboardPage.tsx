@@ -12,9 +12,9 @@ import {
 import { useAuth } from '../features/auth';
 import {
   useWinery,
+  useWineryCatalog,
   getWines,
-  getWineVintages,
-  getWineryFollowers,
+  getWineryPublicProfile,
   getLocationById,
   WineryKpiRibbon,
   WineryQuickActions,
@@ -33,18 +33,21 @@ import {
 export default function WineryDashboardPage() {
   const { user } = useAuth();
   const { winery } = useWinery();
+  const { catalog, isLoading: isCatalogLoading } = useWineryCatalog();
 
-  const [wines, setWines] = useState<WineResponseDto[]>([]);
-  const [locationName, setLocationName] = useState<string | null>(null);
-  const [followersCount, setFollowersCount] = useState<number | null>(null);
-  const [vintagesStats, setVintagesStats] = useState({
-    total: 0,
-    approved: 0,
-    pending: 0,
+  const [asyncLocationName, setAsyncLocationName] = useState<string | null>(null);
+  const [winesFallback, setWinesFallback] = useState<WineResponseDto[]>([]);
+  const [isLoadingWines, setIsLoadingWines] = useState<boolean>(false);
+  const [publicData, setPublicData] = useState<{
+    followersCount: number | null;
+    averageRating: number | null;
+    totalReviews: number;
+  }>({
+    followersCount: null,
+    averageRating: null,
+    totalReviews: 0,
   });
-  const [averageRating, setAverageRating] = useState<number | null>(null);
-  const [totalReviews, setTotalReviews] = useState<number>(0);
-  const [isLoadingData, setIsLoadingData] = useState<boolean>(() => Boolean(winery?.id));
+  const [isLoadingPublic, setIsLoadingPublic] = useState<boolean>(() => Boolean(winery?.id));
 
   // Fecha editorial formateada en español rioplatense
   const formattedDate = new Date().toLocaleDateString('es-AR', {
@@ -55,107 +58,131 @@ export default function WineryDashboardPage() {
   });
   const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
-  // Carga de datos operativos de la bodega (etiquetas, cosechas, seguidores y terruño)
-  useEffect(() => {
-    let isMounted = true;
+  // Terruño derivado directamente de la entidad o del lookup asíncrono
+  const locationName = winery?.location
+    ? `${winery.location.regionName}, ${winery.location.stateName}`
+    : asyncLocationName;
 
-    if (!winery?.id) {
-      return;
-    }
+  // Derivar etiquetas a partir del contexto de catálogo (o fallback)
+  const wines: WineResponseDto[] = (catalog?.wines && catalog.wines.length > 0)
+    ? catalog.wines.map((w) => ({
+        id: w.id,
+        name: w.name,
+        wineryId: winery?.id ?? null,
+        wineryNameText: winery?.name ?? null,
+        wineType: w.wineType,
+        sourceType: w.sourceType,
+        description: w.description ?? null,
+        locationId: winery?.locationId ?? null,
+        duplicateOfWineId: null,
+        averageRating: w.averageRating ?? null,
+        reviewCount: w.reviewCount,
+      }))
+    : winesFallback;
+
+  const winesCount = catalog?.totals.labels ?? wines.length;
+
+  // Derivar métricas de añadas a partir de los totales del catálogo
+  const vintagesStats = catalog?.totals
+    ? {
+        total: catalog.totals.vintages,
+        approved: catalog.totals.vintagesApproved,
+        pending: catalog.totals.vintagesPending,
+      }
+    : {
+        total: 0,
+        approved: 0,
+        pending: 0,
+      };
+
+  // 1. Carga de fallback para etiquetas si no están disponibles en el contexto
+  const wineryId = winery?.id;
+  useEffect(() => {
+    if (catalog) return;
+    let isMounted = true;
+    if (!wineryId) return;
 
     Promise.resolve().then(async () => {
-      if (!isMounted) return;
-      setIsLoadingData(true);
-
+      setIsLoadingWines(true);
       try {
-        // 1. Obtener Terruño Geográfico
-        let resolvedLocation: string | null = null;
-        if (winery.locationId) {
-          try {
-            const loc = await getLocationById(winery.locationId);
-            resolvedLocation = `${loc.cityName}, ${loc.stateName}`;
-          } catch {
-            // Ignorar fallo de geolocalización
-          }
-        }
-
-        // 2. Obtener Etiquetas Oficiales de la Bodega
-        let winesList: WineResponseDto[] = [];
-        try {
-          winesList = await getWines({ wineryId: winery.id, pageSize: 100 });
-        } catch {
-          winesList = [];
-        }
-
-        // 3. Consultar Cosechas (Añadas) en paralelo para calcular estadísticas
-        let totalVintages = 0;
-        let approvedVintages = 0;
-        let pendingVintages = 0;
-        let sumRatings = 0;
-        let ratedCount = 0;
-        let reviewsSum = 0;
-
-        if (winesList.length > 0) {
-          const vintageResults = await Promise.allSettled(
-            winesList.map((wine) => getWineVintages(wine.id)),
-          );
-
-          vintageResults.forEach((result) => {
-            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-              totalVintages += result.value.length;
-              result.value.forEach((v) => {
-                if (v.approvalStatus === 'Approved') {
-                  approvedVintages += 1;
-                } else if (v.approvalStatus === 'Pending') {
-                  pendingVintages += 1;
-                }
-
-                if (v.averageRating && v.averageRating > 0) {
-                  sumRatings += v.averageRating;
-                  ratedCount += 1;
-                }
-                reviewsSum += v.reviewCount ?? 0;
-              });
-            }
-          });
-        }
-
-        // 4. Obtener Seguidores (Solo si la bodega está aprobada para evitar 404)
-        let resolvedFollowers: number | null = null;
-        if (winery.status === 'Approved') {
-          try {
-            const followers = await getWineryFollowers(winery.id, { pageSize: 1 });
-            resolvedFollowers = followers.length;
-          } catch {
-            resolvedFollowers = 0;
-          }
-        }
-
-        if (isMounted) {
-          setLocationName(resolvedLocation);
-          setWines(winesList);
-          setVintagesStats({
-            total: totalVintages,
-            approved: approvedVintages,
-            pending: pendingVintages,
-          });
-          setAverageRating(ratedCount > 0 && reviewsSum >= 5 ? sumRatings / ratedCount : null);
-          setTotalReviews(reviewsSum);
-          setFollowersCount(resolvedFollowers);
-        }
+        const list = await getWines({ wineryId, pageSize: 100 });
+        if (isMounted) setWinesFallback(list);
       } catch {
-        // Fallo silencioso de carga de métricas de panel
+        if (isMounted) setWinesFallback([]);
       } finally {
-        if (isMounted) {
-          setIsLoadingData(false);
-        }
+        if (isMounted) setIsLoadingWines(false);
       }
     });
 
     return () => {
       isMounted = false;
     };
-  }, [winery?.id, winery?.locationId, winery?.status]);
+  }, [catalog, wineryId]);
+
+  // 2. Resolver Terruño Geográfico de respaldo si no viene embebido
+  const locationId = winery?.locationId;
+  const hasEmbeddedLocation = Boolean(winery?.location);
+  useEffect(() => {
+    if (hasEmbeddedLocation || !locationId) return;
+    let isMounted = true;
+
+    Promise.resolve().then(async () => {
+      try {
+        const loc = await getLocationById(locationId);
+        if (isMounted) {
+          setAsyncLocationName(`${loc.cityName}, ${loc.stateName}`);
+        }
+      } catch {
+        // Ignorar fallo de geolocalización
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasEmbeddedLocation, locationId]);
+
+  // 3. Consulta unificada al endpoint público (seguidores, valoración y totales)
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    if (!wineryId) {
+      return;
+    }
+
+    Promise.resolve().then(async () => {
+      if (!isMounted) return;
+      setIsLoadingPublic(true);
+
+      try {
+        const profile = await getWineryPublicProfile(wineryId, controller.signal);
+        if (!isMounted) return;
+        setPublicData({
+          followersCount: profile.followersCount ?? 0,
+          averageRating: profile.averageRating ?? null,
+          totalReviews: profile.reviewCount ?? 0,
+        });
+      } catch {
+        if (!isMounted) return;
+        // Un error en este dato no debe romper el resto de la pantalla
+        setPublicData({
+          followersCount: null,
+          averageRating: null,
+          totalReviews: 0,
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingPublic(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [wineryId]);
 
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
@@ -259,15 +286,15 @@ export default function WineryDashboardPage() {
 
       {/* 2. Cinta de 4 KPIs */}
       <WineryKpiRibbon
-        winesCount={wines.length}
+        winesCount={winesCount}
         vintagesCount={vintagesStats.total}
         approvedVintagesCount={vintagesStats.approved}
         pendingVintagesCount={vintagesStats.pending}
-        followersCount={followersCount}
-        averageRating={averageRating}
-        totalReviews={totalReviews}
+        followersCount={isApproved ? publicData.followersCount : null}
+        averageRating={publicData.averageRating}
+        totalReviews={publicData.totalReviews}
         isWineryApproved={isApproved}
-        isLoading={isLoadingData}
+        isLoading={isLoadingPublic || isCatalogLoading || isLoadingWines}
       />
 
       {/* 3. Accesos Rápidos Operativos */}
@@ -277,11 +304,11 @@ export default function WineryDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Checklist Institucional */}
         {winery && (
-          <WineryChecklistCard winery={winery} winesCount={wines.length} />
+          <WineryChecklistCard winery={winery} winesCount={winesCount} />
         )}
 
         {/* Resumen de Últimos Vinos */}
-        <WineryRecentWines wines={wines} isLoading={isLoadingData} />
+        <WineryRecentWines wines={wines} isLoading={isLoadingWines || isCatalogLoading} />
       </div>
     </div>
   );

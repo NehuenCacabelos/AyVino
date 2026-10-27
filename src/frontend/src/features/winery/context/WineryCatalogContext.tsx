@@ -84,10 +84,14 @@ export function WineryCatalogProvider({ children }: WineryCatalogProviderProps) 
   );
 }
 
+const defaultCatalogContextValue: WineryCatalogContextValue = {
+  catalog: null,
+  isLoading: false,
+  error: null,
+  reload: async () => {},
+};
+
 export function useWineryCatalog(): WineryCatalogContextValue {
   const context = useContext(WineryCatalogContext);
-  if (!context) {
-    throw new Error('useWineryCatalog debe ser utilizado dentro de un WineryCatalogProvider.');
-  }
-  return context;
+  return context ?? defaultCatalogContextValue;
 }
