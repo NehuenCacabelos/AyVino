@@ -181,6 +181,7 @@ Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wineries` | Público | Listado paginado con filtros opcionales de estado (`status`) y región (`locationId`). | Query params: `pageNumber`, `pageSize`, `status?`, `locationId?` | `200 OK` (`IEnumerable<WineryResponseDto>`) |
 | `GET` | `/api/wineries/me` | Autenticado | Obtiene la bodega asociada al usuario autenticado (fuente de verdad del panel). | - | `200 OK` (`WineryResponseDto`) / `404 Not Found` |
+| GET | /api/wineries/me/catalog | Autenticado (RequireWinery) | Catálogo integral del productor: todas sus etiquetas y añadas con uvas y métricas de resumen. | - |  OK (WineryCatalogResponseDto) /  4 Not Found |
 | `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil público de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
 | `POST` | `/api/wineries` | Autenticado | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
 | `POST` | `/api/wineries/register` | Público | Onboarding unificado: crea usuario con rol `Winery` y entidad bodega en una transacción, devolviendo JWT. | `RegisterWineryRequestDto` | `201 Created` (`RegisterWineryResponseDto`) |

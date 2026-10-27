@@ -1074,6 +1074,48 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Get My Winery Catalog",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/me/catalog",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "me",
+                    "catalog"
+                  ]
+                },
+                "description": "Devuelve el catálogo integral de la bodega del productor autenticado, con todas sus etiquetas, añadas, uvas y métricas de resumen."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             }
           ]
         },
