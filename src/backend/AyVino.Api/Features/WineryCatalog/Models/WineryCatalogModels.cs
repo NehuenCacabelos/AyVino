@@ -39,3 +39,34 @@ public record WineryCatalogGrapeRow(
     int GrapeId,
     string GrapeName,
     decimal? Percentage);
+
+public record WineryPublicProfileRow(
+    int Id,
+    string Name,
+    string? Description,
+    int? FoundationYear,
+    string? Website,
+    int? UserId,
+    WineryStatus Status,
+    DateTime RegisterDate,
+    decimal? Latitude,
+    decimal? Longitude,
+    string? LogoUrl,
+    string? BannerUrl,
+    string? StateName,
+    string? RegionName);
+
+public record WineryPublicRatingsAndTotalsRow(
+    int Labels,
+    int Vintages,
+    long RatingSum,
+    int ReviewCount);
+
+public record WineryPublicCatalogQueryParams(
+    int PageNumber = 1,
+    int PageSize = 12,
+    string? Search = null,
+    string? WineType = null,
+    int? GrapeId = null,
+    int? Year = null,
+    string? Sort = "name");

@@ -963,7 +963,7 @@
                 "description": "Edición por dueño o administrador",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Bodegas Bianchi Actualizada\",\n  \"locationId\": 1,\n  \"description\": \"Descripción renovada por el propietario.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
+                  "raw": "{\n  \"name\": \"Bodegas Bianchi Actualizada\",\n  \"locationId\": 1,\n  \"description\": \"Descripción renovada por el propietario.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\",\n  \"bannerUrl\": \"https://storage.ayvino.com/banners/sample-banner.webp\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1111,6 +1111,105 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Public Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/public",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "public"
+                  ]
+                },
+                "description": "Perfil público vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoración agregada."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Public Catalog",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/catalog?pageNumber=1&pageSize=12",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "catalog"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "12"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "wineType",
+                      "value": "Red",
+                      "disabled": true
+                    },
+                    {
+                      "key": "grapeId",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "year",
+                      "value": "2021",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "name",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Catálogo público paginado con filtros de servidor (búsqueda, tipo, uva, año, orden), uvas, añadas y metadatos de filtros."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
