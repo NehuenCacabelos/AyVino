@@ -29,6 +29,7 @@ const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryOverviewPage = lazy(() => import('../pages/WineryOverviewPage'));
 const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
 const WineryCatalogPage = lazy(() => import('../pages/WineryCatalogPage'));
+const WineryWineDetailPage = lazy(() => import('../pages/WineryWineDetailPage'));
 const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
 // Layout y vistas del Panel de Administración
@@ -291,7 +292,7 @@ export const router = createBrowserRouter([
             path: 'vinos/:wineId',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryCatalogPage />
+                <WineryWineDetailPage />
               </Suspense>
             ),
           },

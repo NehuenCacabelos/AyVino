@@ -22,3 +22,6 @@ export { default as WineryCatalogRibbon } from './WineryCatalogRibbon';
 export { default as WineryCatalogCard } from './WineryCatalogCard';
 export { default as WineryCatalogToolbar } from './WineryCatalogToolbar';
 export { default as WineryCatalogEmptyState } from './WineryCatalogEmptyState';
+export { default as WineryVintageCard } from './WineryVintageCard';
+export { default as WineryWinePairingsList } from './WineryWinePairingsList';
+export { default as WineEditModal } from './WineEditModal';
