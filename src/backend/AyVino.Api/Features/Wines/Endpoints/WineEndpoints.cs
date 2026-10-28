@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
 
@@ -34,7 +36,8 @@ public static class WineEndpoints
             Results.Ok(await service.UpdateAsync(id, request, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("UpdateWine")
-            .WithSummary("Updates a wine label's data (name, type, winery, location, description).");
+            .WithSummary("Updates a wine label's data (name, type, winery, location, description).")
+            .WithAudit(AuditAction.WineUpdatedByAdmin, "Wine", idRouteKey: "id", adminOnly: true, details: (ctx, res) => ctx.Arguments.OfType<UpdateWineRequestDto>().FirstOrDefault()?.Name);
 
         group.MapDelete("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
         {
@@ -43,7 +46,8 @@ public static class WineEndpoints
         })
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWine")
-            .WithSummary("Deletes a wine label and all of its vintages (cascade).");
+            .WithSummary("Deletes a wine label and all of its vintages (cascade).")
+            .WithAudit(AuditAction.WineDeleted, "Wine", idRouteKey: "id");
 
         group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.GetClaimCandidatesAsync(wineryId, user.GetActor(), ct)))

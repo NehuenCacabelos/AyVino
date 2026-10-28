@@ -1,6 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Cellars.Services;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Services;
@@ -138,7 +140,8 @@ public static class UserEndpoints
             return Results.NoContent();
         })
         .WithName("ChangeUserStatus")
-        .WithSummary("Activa o desactiva la cuenta de un usuario");
+        .WithSummary("Activa o desactiva la cuenta de un usuario")
+        .WithAudit(AuditAction.UserStatusChanged, "User", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<ChangeUserStatusRequestDto>().FirstOrDefault()?.IsActive == true ? "isActive=true" : "isActive=false");
 
         adminGroup.MapPatch("/{id:int}/role", async (int id, ChangeUserRoleRequestDto request, ClaimsPrincipal user, IUserService userService, CancellationToken ct) =>
         {
@@ -146,7 +149,8 @@ public static class UserEndpoints
             return Results.NoContent();
         })
         .WithName("ChangeUserRole")
-        .WithSummary("Cambia el rol de un usuario (solo Admin y User)");
+        .WithSummary("Cambia el rol de un usuario (solo Admin y User)")
+        .WithAudit(AuditAction.UserRoleChanged, "User", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<ChangeUserRoleRequestDto>().FirstOrDefault()?.Role);
 
         adminGroup.MapDelete("/{id:int}", async (int id, IUserService userService, CancellationToken ct) =>
         {
@@ -154,7 +158,8 @@ public static class UserEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteUser")
-        .WithSummary("Elimina un usuario y sus credenciales asociadas");
+        .WithSummary("Elimina un usuario y sus credenciales asociadas")
+        .WithAudit(AuditAction.UserDeleted, "User", idRouteKey: "id");
 
         return app;
     }

@@ -6,6 +6,9 @@ using AyVino.Api.Common.Middleware;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Security.Jwt;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Repositories;
+using AyVino.Api.Features.Audit.Services;
 using AyVino.Api.Features.Auth.Endpoints;
 using AyVino.Api.Features.Auth.Services;
 using AyVino.Api.Features.Auth.Repositories;
@@ -254,6 +257,8 @@ builder.Services.AddScoped<ICellarItemService, CellarItemService>();
 builder.Services.AddScoped<ICellarCareService, CellarCareService>();
 builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
 builder.Services.AddScoped<IWineCareService, WineCareService>();
+builder.Services.AddScoped<IAuditRepository, AuditRepository>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -355,6 +360,7 @@ app.MapCellarItemEndpoints();
 app.MapCellarCareEndpoints();
 app.MapWineCareEndpoints();
 app.MapImageEndpoints();
+app.MapAuditEndpoints();
 
 
 

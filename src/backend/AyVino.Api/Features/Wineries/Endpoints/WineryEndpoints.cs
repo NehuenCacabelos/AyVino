@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Jwt;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Services;
 
@@ -59,7 +61,8 @@ public static class WineryEndpoints
             Results.Ok(await service.ChangeStatusAsync(id, request, ct)))
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("ChangeWineryStatus")
-            .WithSummary("Changes a winery's moderation status (Pending/Approved/Rejected).");
+            .WithSummary("Changes a winery's moderation status (Pending/Approved/Rejected).")
+            .WithAudit(AuditAction.WineryStatusChanged, "Winery", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<ChangeWineryStatusRequestDto>().FirstOrDefault()?.Status);
 
         group.MapDelete("/{id:int}", async (int id, IWineryService service, CancellationToken ct) =>
         {
@@ -68,7 +71,8 @@ public static class WineryEndpoints
         })
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWinery")
-            .WithSummary("Deletes a winery.");
+            .WithSummary("Deletes a winery.")
+            .WithAudit(AuditAction.WineryDeleted, "Winery", idRouteKey: "id");
 
         return app;
     }

@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
 
@@ -40,7 +42,8 @@ public static class WineVintageEndpoints
             Results.Ok(await service.ChangeStatusAsync(wineId, vintageId, request, ct)))
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("ChangeWineVintageStatus")
-            .WithSummary("Changes a vintage's moderation status (Pending/Approved/Rejected).");
+            .WithSummary("Changes a vintage's moderation status (Pending/Approved/Rejected).")
+            .WithAudit(AuditAction.VintageStatusChanged, "Vintage", idRouteKey: "vintageId", details: (ctx, res) => ctx.Arguments.OfType<ChangeWineVintageStatusRequestDto>().FirstOrDefault()?.Status);
 
         group.MapDelete("/{vintageId:int}", async (int wineId, int vintageId, IWineVintageService service, CancellationToken ct) =>
         {
@@ -49,7 +52,8 @@ public static class WineVintageEndpoints
         })
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWineVintage")
-            .WithSummary("Deletes a single vintage.");
+            .WithSummary("Deletes a single vintage.")
+            .WithAudit(AuditAction.VintageDeleted, "Vintage", idRouteKey: "vintageId");
 
         var adminGroup = app.MapGroup("/api/wine-vintages")
             .WithTags("Admin - Wine Vintages")
