@@ -101,6 +101,7 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 - **Gestión de Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Catálogo de cuentas registradas con avatar, rol y fecha de alta. Buscador en tiempo real y selector de rol sobre la página cargada, acciones de bloqueo y desbloqueo (badge Activo/Bloqueado) con advertencia de persistencia de sesión abierta, cambio de rol entre Admin y User, eliminación definitiva y protección de todas las cuentas con rol Admin (deshabilitando Bloquear y Eliminar con tooltip informativo).
 - **Catálogo de Variedades de Uva (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM integral de cepas enológicas. Filtros por tipo de color, tabla con descriptores sensoriales (cuerpo, taninos, acidez), modal de alta/edición con validación de longitudes y selects opcionales, y borrado con captura de conflictos (409).
 - **Catálogo de Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM completo de sugerencias gastronómicas categorizadas (Carnes, Pescados, Quesos, Pastas, etc.), modal de creación/edición y eliminación con confirmación.
+- **Registro de Auditoría (`AdminAuditPage.tsx` en `/admin/auditoria`)**: Historial inmutable de acciones realizadas por administradores. Filtros combinados por acción, tipo de entidad y rango de fechas (desde/hasta), reseteo dinámico de filtros, tabla con fecha formateada en `es-AR`, enlaces directos a las secciones del panel para cada entidad auditada y detalle con truncado contextual.
 
 ---
 
@@ -114,12 +115,12 @@ src/frontend/src/
 ├── constants/                 # Constantes globales compartidas (bannerThemes.ts)
 ├── features/                  # Arquitectura orientada a características
 │   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
-│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi
+│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi
 │   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
 │   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
 │   │   ├── hooks/             # usePagedList
-│   │   ├── types/             # adminUsers, adminPairings, adminVintages
-│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels
+│   │   ├── types/             # adminUsers, adminPairings, adminVintages, adminAudit
+│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
@@ -140,6 +141,7 @@ src/frontend/src/
 │   ├── AdminDashboardPage.tsx # Inicio del panel admin (/admin)
 │   ├── AdminGrapesPage.tsx    # Catálogo de variedades de uva (/admin/uvas)
 │   ├── AdminPairingsPage.tsx  # Catálogo de maridajes (/admin/maridajes)
+│   │   AdminAuditPage.tsx     # Registro de auditoría (/admin/auditoria)
 │   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
 │   ├── AdminVintagesPage.tsx  # Moderación de cosechas (/admin/cosechas)
 │   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
