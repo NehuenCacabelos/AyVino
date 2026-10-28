@@ -2,10 +2,31 @@
 // Comprehensive real-world validation against running backend (.NET 10 + PostgreSQL)
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const API_BASE = process.env.API_BASE || 'http://localhost:5230/api';
-const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino';
-const DB_UTIL_PROJECT = process.env.DB_UTIL_PROJECT || 'C:\\Users\\brian\\.gemini\\antigravity\\brain\\ef200946-c376-4f5b-9f80-ef2a4622950d\\scratch\\DbUtil\\DbUtil.csproj';
+const JWT_SECRET = process.env.JWT_SECRET;
+const E2E_DB_CONNECTION = process.env.E2E_DB_CONNECTION;
+const DB_UTIL_PROJECT = process.env.DB_UTIL_PROJECT || path.resolve(__dirname, 'db-util', 'DbUtil.csproj');
+
+if (!JWT_SECRET) {
+  console.error('⛔ ERROR: La variable de entorno JWT_SECRET no está definida.');
+  console.error('   Podés obtenerla desde los User Secrets del backend ejecutando:');
+  console.error('   dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api');
+  process.exit(1);
+}
+
+if (!E2E_DB_CONNECTION) {
+  console.error('⛔ ERROR: La variable de entorno E2E_DB_CONNECTION no está definida.');
+  console.error('   Debe contener la cadena de conexión a la base de datos PostgreSQL.');
+  console.error('   Podés obtenerla desde los User Secrets del backend ejecutando:');
+  console.error('   dotnet user-secrets get ConnectionStrings:DefaultConnection --project src/backend/AyVino.Api');
+  process.exit(1);
+}
 
 // -----------------------------------------------------------------------------
 // SEGURIDAD: Negarse a correr si no apunta a localhost salvo E2E_ALLOW_REMOTE=true
@@ -26,10 +47,16 @@ function base64UrlEncode(str) {
 
 function executeSql(sql) {
   const sanitized = sql.replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/"/g, '\\"');
-  return execSync(`dotnet run --project "${DB_UTIL_PROJECT}" -- "${sanitized}"`, {
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  try {
+    return execSync(`dotnet run --project "${DB_UTIL_PROJECT}" --no-launch-profile -v q -- "${sanitized}"`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env,
+    });
+  } catch (err) {
+    const stderr = err.stderr ? String(err.stderr).trim() : '';
+    throw new Error(`Fallo al ejecutar SQL con db-util: ${stderr || err.message}`);
+  }
 }
 
 async function request(path, options = {}) {

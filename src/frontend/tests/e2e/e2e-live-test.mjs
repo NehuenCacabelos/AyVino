@@ -2,8 +2,21 @@
 // Comprehensive real-world validation against running backend (.NET Core + PostgreSQL)
 import crypto from 'node:crypto';
 
-const API_BASE = 'http://localhost:5230/api';
-const JWT_SECRET = 'clave_secreta_super_segura_de_al_menos_32_caracteres_ayvino';
+const API_BASE = process.env.API_BASE || 'http://localhost:5230/api';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('⛔ ERROR: La variable de entorno JWT_SECRET no está definida.');
+  console.error('   Podés obtenerla desde los User Secrets del backend ejecutando:');
+  console.error('   dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api');
+  process.exit(1);
+}
+
+const isLocal = API_BASE.includes('localhost') || API_BASE.includes('127.0.0.1');
+if (!isLocal && process.env.E2E_ALLOW_REMOTE !== 'true') {
+  console.error('⛔ SEGURIDAD: API_BASE no apunta a localhost. Para forzar ejecución remota establezca E2E_ALLOW_REMOTE=true.');
+  process.exit(1);
+}
 
 function base64UrlEncode(str) {
   return Buffer.from(str)
