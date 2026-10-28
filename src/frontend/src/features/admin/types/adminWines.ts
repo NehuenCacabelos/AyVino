@@ -18,3 +18,13 @@ export interface UpdateWineAdminRequest {
   description?: string | null;
   locationId?: number | null;
 }
+
+export interface MergeWinesResultDto {
+  targetId: number;
+  duplicateId: number;
+  movedVintages: number;
+  mergedVintages: number;
+  movedReviews: number;
+  discardedReviews: number;
+  movedCellarItems: number;
+}

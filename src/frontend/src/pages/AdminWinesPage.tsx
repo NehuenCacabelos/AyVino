@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Eye, Pen, Trash2, X, AlertTriangle, Wine } from 'lucide-react';
+import { Eye, Pen, Trash2, X, AlertTriangle, Wine, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   getAdminWines,
   updateWine,
   deleteWine,
+  mergeWines,
 } from '../features/admin/api/adminWinesApi';
 import { getWineVintages } from '../features/winery/api/wineApi';
 import { getWineries } from '../features/winery/api/wineryApi';
@@ -199,6 +200,70 @@ export default function AdminWinesPage() {
     }
   };
 
+  // Modal de Fusión
+  const [mergeDuplicateWine, setMergeDuplicateWine] = useState<WineResponseDto | null>(null);
+  const [mergeStep, setMergeStep] = useState<1 | 2>(1);
+  const [mergeSearchQuery, setMergeSearchQuery] = useState('');
+  const [mergeSearchResults, setMergeSearchResults] = useState<WineResponseDto[]>([]);
+  const [isSearchingMerge, setIsSearchingMerge] = useState(false);
+  const [selectedTargetWine, setSelectedTargetWine] = useState<WineResponseDto | null>(null);
+  const [confirmedUndone, setConfirmedUndone] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+
+  const handleOpenMerge = (wine: WineResponseDto) => {
+    setMergeDuplicateWine(wine);
+    setMergeStep(1);
+    setMergeSearchQuery('');
+    setMergeSearchResults([]);
+    setSelectedTargetWine(null);
+    setConfirmedUndone(false);
+    setMergeError(null);
+  };
+
+  const handleSearchTargetWines = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!mergeSearchQuery.trim()) {
+      setMergeSearchResults([]);
+      return;
+    }
+    setIsSearchingMerge(true);
+    setMergeError(null);
+    try {
+      const results = await getAdminWines({
+        name: mergeSearchQuery.trim(),
+        pageSize: 20,
+      });
+      // Excluir el mismo vino y vinos que ya son duplicados
+      const filtered = results.filter(
+        (w) => w.id !== mergeDuplicateWine?.id && w.duplicateOfWineId == null
+      );
+      setMergeSearchResults(filtered);
+    } catch (err: unknown) {
+      setMergeError(getApiErrorMessage(err));
+    } finally {
+      setIsSearchingMerge(false);
+    }
+  };
+
+  const handleConfirmMerge = async () => {
+    if (!mergeDuplicateWine || !selectedTargetWine || !confirmedUndone) return;
+    setIsMerging(true);
+    setMergeError(null);
+    try {
+      const res = await mergeWines(selectedTargetWine.id, mergeDuplicateWine.id);
+      toast.success(
+        `Fusión exitosa: ${res.movedVintages} cosechas movidas, ${res.mergedVintages} fusionadas. ${res.movedReviews} reseñas movidas, ${res.discardedReviews} descartadas.`
+      );
+      setMergeDuplicateWine(null);
+      await reload();
+    } catch (err: unknown) {
+      setMergeError(getApiErrorMessage(err));
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   const columns: Column<WineResponseDto>[] = useMemo(
     () => [
       {
@@ -296,6 +361,19 @@ export default function AdminWinesPage() {
                   className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors cursor-pointer"
                 >
                   <Pen className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Fusionar (oculto si ya es duplicado) */}
+              {!isDuplicate && (
+                <button
+                  type="button"
+                  title="Fusionar vino..."
+                  aria-label="Fusionar vino..."
+                  onClick={() => handleOpenMerge(row)}
+                  className="p-1.5 rounded-lg border border-amber-800/60 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60 transition-colors cursor-pointer"
+                >
+                  <GitMerge className="w-4 h-4" />
                 </button>
               )}
 
@@ -645,6 +723,220 @@ export default function AdminWinesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Fusión de Vinos Duplicados */}
+      {mergeDuplicateWine && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="merge-modal-title"
+            className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl space-y-4"
+          >
+            <div className="flex items-start justify-between border-b border-white/10 pb-3">
+              <div>
+                <h3 id="merge-modal-title" className="text-base font-semibold text-zinc-100 flex items-center gap-2">
+                  <GitMerge className="w-5 h-5 text-amber-400" />
+                  <span>Fusionar vino duplicado</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Paso {mergeStep} de 2: {mergeStep === 1 ? 'Seleccionar vino principal' : 'Confirmar fusión'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMergeDuplicateWine(null)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                aria-label="Cerrar modal de fusión"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {mergeError && <ErrorBanner message={mergeError} />}
+
+            {mergeStep === 1 && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-800/40 text-xs text-amber-200">
+                  <span className="font-semibold text-amber-100">Vino a absorber (duplicado):</span> «{mergeDuplicateWine.name}» (#{mergeDuplicateWine.id}).
+                  Dejará de ser visible públicamente y todas sus cosechas y reseñas pasarán al vino principal canónico.
+                </div>
+
+                <form onSubmit={handleSearchTargetWines} className="space-y-2">
+                  <label htmlFor="merge-search-input" className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400">
+                    Buscar vino principal canónico
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-neutral-500" />
+                      <input
+                        id="merge-search-input"
+                        type="text"
+                        placeholder="Escribí el nombre del vino..."
+                        value={mergeSearchQuery}
+                        onChange={(e) => setMergeSearchQuery(e.target.value)}
+                        className="w-full h-9 pl-9 pr-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-amber-500/60"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSearchingMerge || !mergeSearchQuery.trim()}
+                      className="px-3.5 h-9 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-neutral-200 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSearchingMerge ? 'Buscando...' : 'Buscar'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2">
+                  <span className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400">
+                    Resultados ({mergeSearchResults.length})
+                  </span>
+                  {mergeSearchResults.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-neutral-500 italic bg-zinc-950 rounded-lg border border-white/5">
+                      {mergeSearchQuery.trim()
+                        ? 'No se encontraron vinos candidatos para fusionar.'
+                        : 'Realizá una búsqueda por nombre para encontrar el vino principal.'}
+                    </div>
+                  ) : (
+                    <div className="max-h-52 overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-lg bg-zinc-950">
+                      {mergeSearchResults.map((candidate) => {
+                        const isSelected = selectedTargetWine?.id === candidate.id;
+                        return (
+                          <div
+                            key={candidate.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedTargetWine(candidate)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                setSelectedTargetWine(candidate);
+                              }
+                            }}
+                            className={cn(
+                              'p-3 flex items-center justify-between text-xs cursor-pointer transition-colors',
+                              isSelected
+                                ? 'bg-amber-950/40 border-l-2 border-amber-400'
+                                : 'hover:bg-white/5'
+                            )}
+                          >
+                            <div>
+                              <div className="font-semibold text-zinc-100 flex items-center gap-1.5">
+                                <span>{candidate.name}</span>
+                                <span className="text-[10px] text-neutral-500 font-mono">#{candidate.id}</span>
+                              </div>
+                              <div className="text-[11px] text-neutral-400 mt-0.5">
+                                Tipo: {getWineTypeLabel(candidate.wineType)} · {candidate.wineryNameText ?? (candidate.wineryId ? `Bodega #${candidate.wineryId}` : 'Sin bodega')}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isSelected ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-400 text-zinc-950">
+                                  Seleccionado
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-neutral-400 underline hover:text-white">
+                                  Elegir
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setMergeDuplicateWine(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedTargetWine}
+                    onClick={() => {
+                      setMergeStep(2);
+                      setMergeError(null);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-zinc-950 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>Siguiente</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mergeStep === 2 && selectedTargetWine && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-300 leading-relaxed space-y-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Resumen de la operación</span>
+                  </div>
+                  <p>
+                    «{mergeDuplicateWine.name}» (#{mergeDuplicateWine.id}) se fusionará dentro de «{selectedTargetWine.name}» (#{selectedTargetWine.id}).
+                    Sus cosechas, reseñas, marcas y maridajes pasarán a «{selectedTargetWine.name}».
+                    Si ambos tienen una cosecha del mismo año se unirán; si un usuario reseñó las dos, se conserva la reseña de «{selectedTargetWine.name}».
+                    «{mergeDuplicateWine.name}» dejará de ser visible para el público. Esta acción no se puede deshacer.
+                  </p>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-950/20 border border-rose-900/40">
+                  <input
+                    type="checkbox"
+                    id="merge-undone-checkbox"
+                    checked={confirmedUndone}
+                    onChange={(e) => setConfirmedUndone(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-rose-800 bg-zinc-950 text-rose-600 focus:ring-rose-500 focus:ring-offset-zinc-900 cursor-pointer"
+                  />
+                  <label htmlFor="merge-undone-checkbox" className="text-xs text-rose-200 cursor-pointer select-none">
+                    Entiendo que no se puede deshacer
+                  </label>
+                </div>
+
+                <div className="flex justify-between gap-2 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    disabled={isMerging}
+                    onClick={() => {
+                      setMergeStep(1);
+                      setConfirmedUndone(false);
+                      setMergeError(null);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Volver</span>
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={isMerging}
+                      onClick={() => setMergeDuplicateWine(null)}
+                      className="px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!confirmedUndone || isMerging}
+                      onClick={() => void handleConfirmMerge()}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {isMerging ? 'Fusionando...' : 'Fusionar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

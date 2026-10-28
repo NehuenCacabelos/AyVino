@@ -3,6 +3,7 @@ import type {
   WineResponseDto,
   GetAdminWinesParams,
   UpdateWineAdminRequest,
+  MergeWinesResultDto,
 } from '../types/adminWines';
 
 /**
@@ -56,4 +57,18 @@ export async function updateWine(
  */
 export async function deleteWine(id: number): Promise<void> {
   await apiClient.delete(`/wines/${id}`);
+}
+
+/**
+ * Fusiona un vino duplicado dentro del vino principal (solo administrador).
+ * POST /api/wines/{targetId}/merge/{duplicateId}
+ */
+export async function mergeWines(
+  targetId: number,
+  duplicateId: number
+): Promise<MergeWinesResultDto> {
+  const response = await apiClient.post<MergeWinesResultDto>(
+    `/wines/${targetId}/merge/${duplicateId}`
+  );
+  return response.data;
 }
