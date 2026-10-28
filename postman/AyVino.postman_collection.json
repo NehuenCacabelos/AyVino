@@ -3045,6 +3045,54 @@
           "name": "Reviews",
           "item": [
             {
+              "name": "List Reviews for Admin (Moderation)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/reviews?pageNumber=1&pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Bandeja global de moderación de reseñas para rol Admin."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(Array.isArray(json)).to.be.true;"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
               "name": "Create Review for Vintage",
               "request": {
                 "method": "POST",
@@ -3349,6 +3397,43 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Review by Admin",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/reviews/{{reviewId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reviews",
+                    "{{reviewId}}"
+                  ]
+                },
+                "description": "Elimina una reseña como administrador, recalculando los puntajes y registrando auditoría."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 204 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([204, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
