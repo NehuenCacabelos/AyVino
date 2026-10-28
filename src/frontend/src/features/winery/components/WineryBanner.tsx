@@ -18,7 +18,7 @@ export default function WineryBanner({
   wineryName,
   bannerUrl,
   className,
-  heightClassName = 'h-32 sm:h-36 md:h-44',
+  heightClassName = 'h-44 sm:h-52 md:h-60 lg:h-64',
 }: WineryBannerProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -38,15 +38,13 @@ export default function WineryBanner({
         <img
           src={bannerUrl!}
           alt={wineryName ? `Banner de ${wineryName}` : 'Banner de bodega'}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-center"
           loading="eager"
           decoding="async"
           onError={() => setImageError(true)}
         />
-        {/* Overlay oscuro para garantizar contraste de tipografía y logo superpuesto */}
-        <div className="absolute inset-0 bg-black/40 bg-gradient-to-t from-[#0b0b0e] via-black/20 to-transparent pointer-events-none" />
-        {/* Fade-out inferior para fundir con el fondo inmersivo */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
+        {/* Overlay armónico: protege contraste y funde de forma gradual hacia el fondo inferior */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0e] via-black/25 to-black/10 pointer-events-none" />
       </div>
     );
   }
@@ -68,7 +66,7 @@ export default function WineryBanner({
         )}
       />
       {/* Fade-out inferior para fundir con el fondo inmersivo */}
-      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0b0b0e] via-[#0b0b0e]/60 to-transparent pointer-events-none" />
     </div>
   );
 }

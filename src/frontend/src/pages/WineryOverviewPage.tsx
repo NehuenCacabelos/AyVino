@@ -1,3 +1,4 @@
+import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -222,50 +223,59 @@ export default function WineryOverviewPage() {
 
       {/* 2. Contenedor Principal con offset para TopBar fija (h-14) */}
       <div className="flex-1 flex flex-col pt-14">
-        {/* BANNER DE BODEGA UNIFICADO */}
+        {/* BANNER DE BODEGA UNIFICADO CON ALTURA DELIMITADA */}
         <WineryBanner
           wineryName={winery?.name}
           bannerUrl={winery?.bannerUrl}
+          heightClassName="h-44 sm:h-52 md:h-60 lg:h-64"
         />
 
-        {/* CABECERA INSTITUCIONAL CON LOGO CIRCULAR SUPERPUESTO */}
+        {/* CABECERA INSTITUCIONAL */}
         <header className="w-full bg-[#0b0b0e] border-b border-white/10 pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="relative z-10 -mt-14 sm:-mt-16 md:-mt-20 flex flex-col md:flex-row md:items-start justify-between gap-6">
-              {/* Bloque Izquierdo: Logo Circular superpuesto + Nombre Serif + Terruño */}
-              <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
-                {/* Logo Circular con aro aislante */}
-                <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0 flex items-center justify-center">
-                  <WineryLogo
-                    src={winery?.logoUrl}
-                    name={winery?.name}
-                    size="lg"
-                    className="w-full h-full object-cover rounded-full"
-                  />
+            <div className="relative flex flex-col lg:flex-row lg:items-start justify-between gap-6 pt-0">
+              {/* Bloque Izquierdo: Logo circular flotante + Identidad y Metadatos */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 flex-1 min-w-0">
+                {/* Logo Circular flotante entre el banner y el contenido (-mt-14 sm:-mt-16 md:-mt-20) */}
+                <div className="-mt-14 sm:-mt-16 md:-mt-20 relative z-20 shrink-0">
+                  <div
+                    className={cn(
+                      'w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 flex items-center justify-center p-2.5 sm:p-3 transition-transform',
+                      winery?.logoUrl ? 'bg-white' : 'bg-[#17151a]'
+                    )}
+                  >
+                    <WineryLogo
+                      src={winery?.logoUrl}
+                      name={winery?.name}
+                      size="lg"
+                      objectFit="contain"
+                      className="w-full h-full object-contain rounded-full bg-transparent border-0 shadow-none"
+                    />
+                  </div>
                 </div>
 
                 {/* Identidad y Metadatos */}
-                <div className="max-w-2xl pt-2 sm:pt-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
+                <div className="flex-1 min-w-0 pt-2 sm:pt-3 text-center sm:text-left space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                    <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white break-words">
                       {winery?.name || 'Mi Bodega'}
                     </h1>
 
                     {/* Badge de Estado */}
                     {isApproved && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 shrink-0">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Bodega Oficial</span>
                       </span>
                     )}
                     {isPending && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-950/40 text-amber-300 border border-amber-800/40">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-amber-950/40 text-amber-300 border border-amber-800/40 shrink-0">
                         <Clock className="w-3.5 h-3.5" />
                         <span>En revisión editorial</span>
                       </span>
                     )}
                     {isRejected && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-rose-950/40 text-rose-300 border border-rose-800/40">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-mono font-medium bg-rose-950/40 text-rose-300 border border-rose-800/40 shrink-0">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         <span>Observaciones pendientes</span>
                       </span>
@@ -273,7 +283,7 @@ export default function WineryOverviewPage() {
                   </div>
 
                   {/* Metadatos Geográficos y de Fundación */}
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 font-sans mt-2.5">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-2 text-xs text-zinc-400 font-sans">
                     {locationLabel && (
                       <span className="flex items-center gap-1.5 text-zinc-200">
                         <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
@@ -307,7 +317,7 @@ export default function WineryOverviewPage() {
                   </div>
 
                   {/* Semblanza Histórica y Filosofía */}
-                  <div className="mt-3.5 max-w-xl">
+                  <div className="pt-1 max-w-xl">
                     <p className="text-sm text-zinc-300 leading-relaxed font-sans">
                       {winery?.description && winery.description.trim().length > 0 ? (
                         winery.description
@@ -322,9 +332,9 @@ export default function WineryOverviewPage() {
               </div>
 
               {/* Bloque Derecho: Acciones y Cinta de Métricas */}
-              <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end justify-end gap-3.5 pt-2">
+              <div className="flex flex-col items-center sm:items-start lg:items-end justify-start gap-4 pt-2 shrink-0">
                 {/* Botones de Acción */}
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap justify-center lg:justify-end w-full sm:w-auto">
                   <Link
                     to="/bodega/configuracion"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#17151a] hover:bg-[#221f26] border border-white/15 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors shadow-sm"
@@ -347,7 +357,7 @@ export default function WineryOverviewPage() {
                 </div>
 
                 {/* Métricas Consolidadas en Card Sobria */}
-                <div className="bg-[#17151a]/90 border border-white/10 rounded-md px-5 py-2.5 flex items-center gap-5 sm:gap-6 shadow-sm">
+                <div className="bg-[#17151a]/90 border border-white/10 rounded-md px-5 py-2.5 flex items-center justify-between sm:justify-start gap-4 sm:gap-6 shadow-sm w-full sm:w-auto overflow-x-auto">
                   <div className="text-center sm:text-right">
                     <div className="text-xl sm:text-2xl font-bold text-white font-mono leading-none">
                       {winesCount}

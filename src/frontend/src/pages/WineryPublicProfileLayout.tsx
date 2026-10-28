@@ -291,25 +291,33 @@ export default function WineryPublicProfileLayout() {
         <WineryBanner
           wineryName={profile.name}
           bannerUrl={profile.bannerUrl}
-          heightClassName="h-36 sm:h-44 md:h-56"
+          heightClassName="h-44 sm:h-52 md:h-60 lg:h-64"
         />
 
         {/* CABECERA INSTITUCIONAL */}
         <header className="w-full bg-[#0b0b0e] border-b border-white/5 pb-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="relative z-10 -mt-14 sm:-mt-16 md:-mt-20 flex flex-col md:flex-row md:items-start justify-between gap-6">
-              {/* Bloque Izquierdo: Logo Circular + Nombre + Metadatos */}
-              <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
-                <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0 flex items-center justify-center">
-                  <WineryLogo
-                    src={profile.logoUrl}
-                    name={profile.name}
-                    size="lg"
-                    className="h-full w-full object-cover rounded-full"
-                  />
+            <div className="relative flex flex-col md:flex-row md:items-start justify-between gap-6 pt-0">
+              {/* Bloque Izquierdo: Logo Circular Flotante + Nombre + Metadatos */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 flex-1 min-w-0">
+                <div className="-mt-14 sm:-mt-16 md:-mt-20 relative z-20 shrink-0">
+                  <div
+                    className={cn(
+                      'w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 flex items-center justify-center p-2.5 sm:p-3 transition-transform',
+                      profile.logoUrl ? 'bg-white' : 'bg-[#17151a]'
+                    )}
+                  >
+                    <WineryLogo
+                      src={profile.logoUrl}
+                      name={profile.name}
+                      size="lg"
+                      objectFit="contain"
+                      className="h-full w-full object-contain rounded-full bg-transparent border-0 shadow-none"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2 pt-1 sm:pt-4">
+                <div className="space-y-2 pt-2 sm:pt-3 text-center sm:text-left flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight text-white">
                       {profile.name}

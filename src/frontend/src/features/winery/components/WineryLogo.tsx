@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getWineryInitials } from '../utils/wineryUtils';
+import { cn } from '../../../lib/utils';
 
 export interface WineryLogoProps {
   src?: string | null;
@@ -7,6 +8,7 @@ export interface WineryLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   alt?: string;
+  objectFit?: 'cover' | 'contain';
 }
 
 const SIZE_CLASSES = {
@@ -20,6 +22,8 @@ const SIZE_CLASSES = {
  * Componente WineryLogo
  * Renderiza el logo oficial de la bodega si está disponible,
  * o un monograma editorial circular con iniciales como respaldo sobrio.
+ * Soporta objectFit ('contain' por defecto para proteger la legibilidad de insignias y tipografía)
+ * y resuelve colisiones de clases mediante cn() / tailwind-merge.
  */
 export default function WineryLogo({
   src,
@@ -27,6 +31,7 @@ export default function WineryLogo({
   size = 'md',
   className = '',
   alt,
+  objectFit = 'contain',
 }: WineryLogoProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -42,7 +47,12 @@ export default function WineryLogo({
         onError={() => setImageFailed(true)}
         loading="lazy"
         decoding="async"
-        className={`rounded-full object-cover border border-white/10 bg-zinc-950 shadow-md shrink-0 ${sizeClass} ${className}`}
+        className={cn(
+          'rounded-full border border-white/10 bg-zinc-950 shadow-md shrink-0',
+          objectFit === 'cover' ? 'object-cover' : 'object-contain',
+          sizeClass,
+          className,
+        )}
       />
     );
   }
@@ -50,7 +60,11 @@ export default function WineryLogo({
   return (
     <div
       aria-hidden="true"
-      className={`rounded-full bg-stone-900 border border-white/10 flex items-center justify-center font-serif font-semibold text-rose-200 shadow-md shrink-0 select-none ${sizeClass} ${className}`}
+      className={cn(
+        'rounded-full bg-stone-900 border border-white/10 flex items-center justify-center font-serif font-semibold text-rose-200 shadow-md shrink-0 select-none',
+        sizeClass,
+        className,
+      )}
     >
       <span>{initials}</span>
     </div>
