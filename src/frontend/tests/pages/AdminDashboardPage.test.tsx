@@ -1,31 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
-import * as wineryApi from '@/features/winery/api/wineryApi';
-import * as adminCitiesApi from '@/features/admin/api/adminCitiesApi';
-import * as adminUsersApi from '@/features/admin/api/adminUsersApi';
-import * as adminVintagesApi from '@/features/admin/api/adminVintagesApi';
+import * as adminStatsApi from '@/features/admin/api/adminStatsApi';
+import * as adminAuditApi from '@/features/admin/api/adminAuditApi';
 import * as authModule from '@/features/auth';
-import type { WineryResponseDto } from '@/features/winery/types/winery';
-import type { CityResponseDto } from '@/features/winery/types/location';
-import type { AdminUserListItemDto } from '@/features/admin/types/adminUsers';
-import type { AdminWineVintageListItem } from '@/features/admin/types/adminVintages';
+import type { AdminStatsDto } from '@/features/admin/types/adminStats';
+import type { AuditLogEntryDto } from '@/features/admin/types/adminAudit';
 
-vi.mock('@/features/winery/api/wineryApi', () => ({
-  getWineries: vi.fn(),
+vi.mock('@/features/admin/api/adminStatsApi', () => ({
+  getAdminStats: vi.fn(),
 }));
 
-vi.mock('@/features/admin/api/adminCitiesApi', () => ({
-  getCities: vi.fn(),
-}));
-
-vi.mock('@/features/admin/api/adminUsersApi', () => ({
-  getUsers: vi.fn(),
-}));
-
-vi.mock('@/features/admin/api/adminVintagesApi', () => ({
-  getAdminVintages: vi.fn(),
+vi.mock('@/features/admin/api/adminAuditApi', () => ({
+  getAuditLogs: vi.fn(),
 }));
 
 const mockUseAuth = vi.fn();
@@ -43,71 +31,37 @@ vi.mock('@/features/auth', async (importOriginal) => {
 });
 
 describe('AdminDashboardPage Component', () => {
-  const mockWineries: WineryResponseDto[] = [
+  const mockStats: AdminStatsDto = {
+    users: { total: 150, blocked: 3 },
+    wineries: { pending: 4, approved: 25, rejected: 2 },
+    cities: { pending: 5 },
+    vintages: { pending: 8, approved: 80, rejected: 1 },
+    wines: { total: 45, community: 15, official: 30 },
+    reviews: { total: 320 },
+  };
+
+  const mockAuditLogs: AuditLogEntryDto[] = [
     {
       id: 1,
-      name: 'Bodega La Rural',
-      description: null,
-      locationId: 1,
-      foundationYear: 1885,
-      website: null,
       userId: 1,
-      status: 'Pending',
-      registerDate: '2026-02-10T00:00:00Z',
+      username: 'admin_master',
+      action: 'WineMerged',
+      entityType: 'Wine',
+      entityId: 10,
+      details: '20',
+      createdAt: '2026-10-27T10:00:00Z',
     },
     {
       id: 2,
-      name: 'Bodega Zuccardi',
-      description: null,
-      locationId: 2,
-      foundationYear: 1963,
-      website: null,
-      userId: 2,
-      status: 'Pending',
-      registerDate: '2026-02-12T00:00:00Z',
-    },
-    {
-      id: 3,
-      name: 'Bodega Catena',
-      description: null,
-      locationId: 3,
-      foundationYear: 1902,
-      website: null,
-      userId: 3,
-      status: 'Pending',
-      registerDate: '2026-02-14T00:00:00Z',
+      userId: 1,
+      username: 'admin_master',
+      action: 'UserStatusChanged',
+      entityType: 'User',
+      entityId: 5,
+      details: 'isActive=false',
+      createdAt: '2026-10-27T09:30:00Z',
     },
   ];
-
-  const mockCities: CityResponseDto[] = [
-    { id: 1, name: 'Gualtallary', stateId: 1, status: 'Pending' },
-    { id: 2, name: 'Altamira', stateId: 1, status: 'Pending' },
-  ];
-
-  const mockUsers: AdminUserListItemDto[] = Array.from({ length: 15 }, (_, i) => ({
-    id: i + 1,
-    username: `usuario${i + 1}`,
-    email: `user${i + 1}@example.com`,
-    role: 'User',
-    registerDate: '2026-01-01T00:00:00Z',
-    isActive: true,
-  }));
-
-  const mockVintages: AdminWineVintageListItem[] = Array.from({ length: 5 }, (_, i) => ({
-    vintageId: i + 1,
-    wineId: i + 10,
-    wineName: `Vino ${i + 1}`,
-    wineType: 'Red',
-    wineryId: 1,
-    wineryName: 'Bodega Test',
-    year: 2020 + i,
-    alcoholContent: 14,
-    imageUrl: null,
-    approvalStatus: 'Pending',
-    uploadedByUserId: 1,
-    uploadedByUsername: 'user1',
-    registerDate: '2026-01-01T00:00:00Z',
-  }));
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,11 +74,9 @@ describe('AdminDashboardPage Component', () => {
     });
   });
 
-  it('muestra los conteos correctos y la lista de últimos pendientes', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockWineries);
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+  it('muestra los conteos exactos de los 4 KPIs y las métricas completas del ecosistema', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockAuditLogs);
 
     render(
       <MemoryRouter>
@@ -133,32 +85,28 @@ describe('AdminDashboardPage Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument(); // 3 bodegas
-      expect(screen.getByText('2')).toBeInTheDocument(); // 2 ciudades
-      expect(screen.getByText('15')).toBeInTheDocument(); // 15 usuarios
-      expect(screen.getByText('5')).toBeInTheDocument(); // 5 cosechas
-      expect(screen.getByText('Bodega La Rural')).toBeInTheDocument();
-      expect(screen.getByText('Gualtallary')).toBeInTheDocument();
+      // 4 KPIs principales con conteos exactos (sin "+")
+      expect(screen.getByText('4')).toBeInTheDocument(); // Bodegas pendientes
+      expect(screen.getByText('8')).toBeInTheDocument(); // Cosechas pendientes
+      expect(screen.getByText('5')).toBeInTheDocument(); // Ciudades pendientes
+      expect(screen.getByText('3')).toBeInTheDocument(); // Usuarios bloqueados
+
+      // Resumen del ecosistema
+      expect(screen.getByText('150')).toBeInTheDocument(); // Total usuarios
+      expect(screen.getByText('25')).toBeInTheDocument(); // Bodegas aprobadas
+      expect(screen.getByText(/30 oficiales · 15 com\./i)).toBeInTheDocument(); // Desglose vinos
+      expect(screen.getByText('320')).toBeInTheDocument(); // Total reseñas
+
+      // Widget de actividad reciente
+      expect(screen.getByText('Fusión de vinos')).toBeInTheDocument();
+      expect(screen.getByText('Bloqueo/desbloqueo de usuario')).toBeInTheDocument();
+      expect(screen.getAllByText('admin_master')).toHaveLength(2);
     });
   });
 
-  it('muestra 100+ cuando se devuelven 100 elementos', async () => {
-    const hundredWineries: WineryResponseDto[] = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1,
-      name: `Bodega ${i + 1}`,
-      description: null,
-      locationId: 1,
-      foundationYear: 2000,
-      website: null,
-      userId: i + 1,
-      status: 'Pending',
-      registerDate: '2026-01-01',
-    }));
-
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(hundredWineries);
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+  it('cuando hay usuarios bloqueados (> 0) muestra alerta de cuentas suspendidas', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -167,17 +115,15 @@ describe('AdminDashboardPage Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('100+')).toBeInTheDocument();
+      expect(screen.getByText(/cuentas suspendidas/i)).toBeInTheDocument();
     });
   });
 
-  it('una tarjeta en error no rompe las otras tres tarjetas', async () => {
-    vi.mocked(wineryApi.getWineries).mockRejectedValue(
+  it('error en getAdminStats no rompe el widget de auditoría y permite reintentar', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockRejectedValueOnce(
       new Error('No se pudo conectar con el servidor.')
     );
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockCities);
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockAuditLogs);
 
     render(
       <MemoryRouter>
@@ -186,14 +132,47 @@ describe('AdminDashboardPage Component', () => {
     );
 
     await waitFor(() => {
-      // La tarjeta de bodegas muestra error y botón de reintento
-      expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
+      // Reintentar disponible en tarjetas
+      expect(screen.getAllByRole('button', { name: /reintentar/i }).length).toBeGreaterThan(0);
+      // El log de auditoría cargó correctamente
+      expect(screen.getByText('Fusión de vinos')).toBeInTheDocument();
+    });
 
-      // Las tarjetas de ciudades, usuarios y cosechas cargaron con éxito
-      expect(screen.getByText('2')).toBeInTheDocument();
-      expect(screen.getByText('15')).toBeInTheDocument();
-      expect(screen.getByText('5')).toBeInTheDocument();
+    // Simulamos éxito en el reintento
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    const retryBtn = screen.getAllByRole('button', { name: /reintentar/i })[0];
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+  });
+
+  it('error en getAuditLogs no rompe las tarjetas de estadísticas', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail: 'Error al cargar auditoría.',
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // KPIs renderizados normalmente
+      expect(screen.getByText('4')).toBeInTheDocument();
+      expect(screen.getByText('8')).toBeInTheDocument();
+
+      // Error en el bloque de auditoría
+      expect(screen.getByText('Error al cargar auditoría.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
     });
   });
 });
-

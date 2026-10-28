@@ -1693,6 +1693,41 @@ async function run() {
       `Encontrada: ${Boolean(l10Entry)}, EntityId: ${l10Entry?.entityId}, Details: ${l10Entry?.details}`,
       l10Entry != null && l10Entry.action === 'WineMerged' && l10Entry.details === lDupId.toString()
     );
+
+    // -------------------------------------------------------------------------
+    // SECCIÓN M: ESTADÍSTICAS DEL PANEL (BLOQUE 25)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECCIÓN M: ESTADÍSTICAS DEL PANEL (GET /api/admin/stats) ---');
+
+    // M.1 Sin token -> 401
+    const m1 = await request('/admin/stats');
+    record('M.1 GET /api/admin/stats sin token', 'HTTP 401', `HTTP ${m1.status}`, m1.status === 401);
+
+    // M.2 Con usuario común -> 403
+    const m2 = await request('/admin/stats', {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    record('M.2 GET /api/admin/stats con usuario común', 'HTTP 403', `HTTP ${m2.status}`, m2.status === 403);
+
+    // M.3 Con admin -> 200 con estructura AdminStatsDto
+    const m3 = await request('/admin/stats', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const s = m3.data;
+    const m3Valid = m3.status === 200 &&
+      s?.users != null && typeof s.users.total === 'number' && typeof s.users.blocked === 'number' &&
+      s?.wineries != null && typeof s.wineries.pending === 'number' && typeof s.wineries.approved === 'number' && typeof s.wineries.rejected === 'number' &&
+      s?.cities != null && typeof s.cities.pending === 'number' &&
+      s?.vintages != null && typeof s.vintages.pending === 'number' && typeof s.vintages.approved === 'number' && typeof s.vintages.rejected === 'number' &&
+      s?.wines != null && typeof s.wines.total === 'number' && typeof s.wines.community === 'number' && typeof s.wines.official === 'number' &&
+      s?.reviews != null && typeof s.reviews.total === 'number';
+
+    record(
+      'M.3 GET /api/admin/stats con admin retorna conteos exactos',
+      'HTTP 200 con AdminStatsDto estructurado',
+      `HTTP ${m3.status}, Users: ${s?.users?.total} (${s?.users?.blocked} blocked), Wineries Pending: ${s?.wineries?.pending}, Wines Total: ${s?.wines?.total}, Reviews: ${s?.reviews?.total}`,
+      m3Valid
+    );
 } catch (err) {
     console.error('\n💥 ERROR FATAL DURANTE LA EJECUCIÓN:', err);
     failed++;
