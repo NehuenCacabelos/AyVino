@@ -474,22 +474,46 @@ export default function WineryConfigPage() {
           <div className="space-y-6">
             {/* Bloque Identidad de la Bodega */}
             <div className="flex flex-col items-center text-center">
-              <div className="relative group mx-auto">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleLogoFileChange}
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                aria-label="Cargar logo de bodega"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingLogo || isDeletingLogo}
+                aria-label={winery?.logoUrl ? 'Cambiar logo institucional' : 'Cargar logo institucional'}
+                title="Hacé clic para cambiar el logo"
+                className="relative group mx-auto cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-full transition-transform active:scale-95 disabled:cursor-not-allowed"
+              >
                 <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg overflow-hidden bg-stone-950 flex items-center justify-center">
                   <WineryLogo
                     src={winery?.logoUrl}
                     name={winery?.name}
                     size="lg"
-                    className="h-full w-full object-cover rounded-full"
+                    className="h-full w-full object-cover rounded-full group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
 
+                {/* Overlay hover interactivo para cambiar el logo */}
+                <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-white gap-1 backdrop-blur-[1px]">
+                  <Upload className="w-5 h-5 text-zinc-200" />
+                  <span className="text-[10px] font-sans font-medium tracking-wide">
+                    {winery?.logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                  </span>
+                </div>
+
                 {(isUploadingLogo || isDeletingLogo) && (
-                  <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-black/70 flex items-center justify-center">
                     <Loader2 className="h-6 w-6 text-rose-400 animate-spin" />
                   </div>
                 )}
-              </div>
+              </button>
 
               {/* Nombre y Estado de Bodega */}
               <h2 className="font-serif text-xl sm:text-2xl text-white font-medium mt-3 tracking-tight text-center truncate max-w-full">
@@ -515,28 +539,9 @@ export default function WineryConfigPage() {
                 )}
               </div>
 
-              {/* Controles de Logo compactos */}
-              <div className="flex flex-col items-center gap-1.5 mt-3">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoFileChange}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  aria-label="Cargar logo de bodega"
-                />
-
-                <button
-                  type="button"
-                  disabled={isUploadingLogo || isDeletingLogo}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Upload className="h-3 w-3 text-zinc-400" />
-                  <span>{winery?.logoUrl ? 'Cambiar logo' : 'Cargar logo'}</span>
-                </button>
-
-                {winery?.logoUrl && (
+              {/* Botón secundario para quitar logo si existe */}
+              {winery?.logoUrl && (
+                <div className="mt-2.5">
                   <button
                     type="button"
                     disabled={isUploadingLogo || isDeletingLogo}
@@ -546,8 +551,8 @@ export default function WineryConfigPage() {
                     <Trash2 className="h-3 w-3" />
                     <span>Quitar logo</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Mensajes de feedback de logo en el sidebar */}
               {logoSuccessMsg && (

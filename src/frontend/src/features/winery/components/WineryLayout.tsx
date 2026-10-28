@@ -4,6 +4,8 @@ import {
   Compass,
   LogOut,
   Plus,
+  Shield,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../auth';
 import { useMyWinery } from '../hooks/useMyWinery';
@@ -42,61 +44,125 @@ export default function WineryLayout() {
 
   // 2. Estado 404: La cuenta autenticada no tiene bodega asociada
   if (isNotFound) {
+    const isAdmin = user?.role === 'Admin';
+
     return (
       <div className="min-h-screen bg-[#0f0f11] text-neutral-100 font-sans flex flex-col justify-between selection:bg-[#6e1a24] selection:text-white">
         {/* Header simple */}
         <header className="h-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between border-b border-white/[0.08]">
           <Link
-            to="/dashboard"
+            to={isAdmin ? '/admin' : '/dashboard'}
             className="text-xl font-bold tracking-tight text-zinc-100 hover:text-white transition-colors"
           >
             AyVino<span className="text-rose-500">.</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-rose-400 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Salir</span>
-          </button>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-white transition-colors inline-flex items-center gap-1.5 font-semibold"
+              >
+                <Shield className="h-3.5 w-3.5 text-rose-400" />
+                <span>Panel Admin</span>
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-rose-400 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Salir</span>
+            </button>
+          </div>
         </header>
 
         {/* Tarjeta central explicativa */}
         <main className="flex-1 max-w-2xl mx-auto px-6 py-16 flex items-center justify-center w-full">
           <div className="rounded-3xl border border-white/10 bg-[#121015] p-8 sm:p-12 text-center shadow-2xl shadow-black/80 w-full">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-900/80 border border-white/10 text-amber-200/80 mb-6 shadow-sm">
-              <Building2 className="h-8 w-8" />
+            <div
+              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border mb-6 shadow-sm ${
+                isAdmin
+                  ? 'bg-rose-950/40 border-rose-900/60 text-rose-300'
+                  : 'bg-stone-900/80 border-white/10 text-amber-200/80'
+              }`}
+            >
+              {isAdmin ? <Shield className="h-8 w-8" /> : <Building2 className="h-8 w-8" />}
             </div>
 
-            <span className="text-[11px] font-mono uppercase tracking-[0.25em] text-amber-200/60 block mb-2 font-medium">
-              Gestión Vitivinícola
+            <span
+              className={`text-[11px] font-mono uppercase tracking-[0.25em] block mb-2 font-medium ${
+                isAdmin ? 'text-rose-300/80 font-semibold' : 'text-amber-200/60'
+              }`}
+            >
+              {isAdmin ? 'Rol Administrador' : 'Gestión Vitivinícola'}
             </span>
 
             <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-neutral-100 tracking-tight">
-              Tu cuenta no tiene una bodega asociada
+              {isAdmin
+                ? 'Gestión y Supervisión del Ecosistema'
+                : 'Tu cuenta no tiene una bodega asociada'}
             </h1>
 
             <p className="mt-3 text-sm text-neutral-400 font-sans leading-relaxed max-w-lg mx-auto">
-              Estás conectado con el usuario <strong className="text-neutral-200">{user?.username}</strong> ({user?.email}).
-              Para gestionar etiquetas, cosechas y certificaciones de terruño, podés dar de alta tu bodega oficial en AyVino.
+              {isAdmin ? (
+                <>
+                  Estás conectado como administrador con la cuenta{' '}
+                  <strong className="text-neutral-200">{user?.username}</strong> ({user?.email}).
+                  Esta sección está reservada para el panel operativo de una bodega específica.
+                  Para auditar, moderar o supervisar bodegas, ingresá al Panel de Administración.
+                </>
+              ) : (
+                <>
+                  Estás conectado con el usuario <strong className="text-neutral-200">{user?.username}</strong> ({user?.email}).
+                  Para gestionar etiquetas, cosechas y certificaciones de terruño, podés dar de alta tu bodega oficial en AyVino.
+                </>
+              )}
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/bodega/registro"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Registrar mi bodega</span>
-              </Link>
-              <Link
-                to="/dashboard"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
-              >
-                <Compass className="h-4 w-4 text-neutral-400" />
-                <span>Ir al catálogo / Mi Cava</span>
-              </Link>
+              {isAdmin ? (
+                <>
+                  <Link
+                    to="/admin/bodegas"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6b1d28] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-sm"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span>Gestionar Bodegas</span>
+                  </Link>
+                  <Link
+                    to="/admin"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <LayoutDashboard className="h-4 w-4 text-neutral-400" />
+                    <span>Panel Global</span>
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <Compass className="h-4 w-4 text-neutral-400" />
+                    <span>Explorar como usuario</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/bodega/registro"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Registrar mi bodega</span>
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <Compass className="h-4 w-4 text-neutral-400" />
+                    <span>Ir al catálogo / Mi Cava</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </main>

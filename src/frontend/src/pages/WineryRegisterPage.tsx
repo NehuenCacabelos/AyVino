@@ -186,11 +186,18 @@ export default function WineryRegisterPage() {
       }
 
       if (status === 409) {
-        // Volver al paso 1 marcando el error en el campo de correo
+        // Volver al paso 1 marcando el error en el campo específico de conflicto
         setCurrentStep(1);
         const conflictMsg =
           detail ?? 'El correo electrónico o nombre de usuario ya se encuentra registrado.';
-        setErrors({ email: conflictMsg });
+        const lowerDetail = (detail ?? '').toLowerCase();
+        if (lowerDetail.includes('usuario') || lowerDetail.includes('username')) {
+          setErrors({ username: conflictMsg });
+        } else if (lowerDetail.includes('correo') || lowerDetail.includes('email')) {
+          setErrors({ email: conflictMsg });
+        } else {
+          setErrors({});
+        }
         setErrorMessage(conflictMsg);
       } else {
         setErrorMessage(
@@ -337,7 +344,7 @@ export default function WineryRegisterPage() {
                             }`}
                           />
                           <p className="text-[11px] text-zinc-500 mt-1 pl-1">
-                            Quién administra la cuenta institucional de la bodega
+                            Nombre y apellido de quien administra la cuenta institucional
                           </p>
                           {errors.username && (
                             <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.username}</p>

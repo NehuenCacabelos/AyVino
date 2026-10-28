@@ -10,6 +10,7 @@ import {
   History,
   Bookmark,
   User,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../auth';
 import { cn } from '../../../lib/utils';
@@ -123,7 +124,8 @@ export default function DashboardNavbar({
     navigate('/', { replace: true });
   };
 
-  const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
+  const isWinery = user?.role === 'Winery';
+  const isAdmin = user?.role === 'Admin';
 
   // Solo secciones de descubrimiento general en la barra horizontal central
   const discoveryLinks: { label: string; to?: string; isModal?: boolean }[] = [
@@ -186,7 +188,7 @@ export default function DashboardNavbar({
               )
             )}
 
-            {isWineryOrAdmin && (
+            {isWinery && (
               <NavLink
                 to="/bodega/dashboard"
                 className={({ isActive }) =>
@@ -198,6 +200,21 @@ export default function DashboardNavbar({
               >
                 <LayoutDashboard className="h-4 w-4 text-zinc-400" />
                 <span>Bodega</span>
+              </NavLink>
+            )}
+
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    'text-[15px] font-medium transition-colors duration-150 flex items-center gap-1.5 whitespace-nowrap text-rose-300 hover:text-white font-semibold',
+                    isActive && 'text-white'
+                  )
+                }
+              >
+                <Shield className="h-4 w-4 text-rose-400" />
+                <span>Panel Admin</span>
               </NavLink>
             )}
           </nav>
@@ -312,7 +329,7 @@ export default function DashboardNavbar({
                       <span>Cuenta</span>
                     </Link>
 
-                    {isWineryOrAdmin && (
+                    {isWinery && (
                       <Link
                         role="menuitem"
                         to="/bodega/dashboard"
@@ -321,6 +338,18 @@ export default function DashboardNavbar({
                       >
                         <LayoutDashboard className="h-4 w-4 text-zinc-400" />
                         <span>Panel Bodega</span>
+                      </Link>
+                    )}
+
+                    {isAdmin && (
+                      <Link
+                        role="menuitem"
+                        to="/admin"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-rose-300 hover:bg-rose-950/30 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Shield className="h-4 w-4 text-rose-400" />
+                        <span>Panel de Administración</span>
                       </Link>
                     )}
 
@@ -444,13 +473,25 @@ export default function DashboardNavbar({
                 Cuenta
               </Link>
 
-              {isWineryOrAdmin && (
+              {isWinery && (
                 <Link
                   to="/bodega/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="py-2 text-[15px] font-medium text-zinc-200 hover:text-white"
+                  className="py-2 text-[15px] font-medium text-zinc-200 hover:text-white flex items-center gap-2"
                 >
-                  Panel Bodega
+                  <LayoutDashboard className="h-4 w-4 text-zinc-400" />
+                  <span>Panel Bodega</span>
+                </Link>
+              )}
+
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2 text-[15px] font-medium text-rose-300 hover:text-white flex items-center gap-2 font-semibold"
+                >
+                  <Shield className="h-4 w-4 text-rose-400" />
+                  <span>Panel de Administración</span>
                 </Link>
               )}
             </div>

@@ -33,7 +33,22 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
 
         if (await userRepository.ExistsByUsernameAsync(normalizedUsername, ct))
         {
-            throw new ConflictException($"El nombre de usuario '{dto.Username}' ya está en uso.");
+            if (string.Equals(dto.Role, AppRoles.Winery, StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = 2;
+                var candidate = $"{normalizedUsername} {suffix}";
+                while (await userRepository.ExistsByUsernameAsync(candidate, ct))
+                {
+                    suffix++;
+                    candidate = $"{normalizedUsername} {suffix}";
+                }
+                normalizedUsername = candidate;
+                dto = dto with { Username = normalizedUsername };
+            }
+            else
+            {
+                throw new ConflictException($"El nombre de usuario '{dto.Username}' ya está en uso.");
+            }
         }
 
         var userEntity = dto.ToEntity();

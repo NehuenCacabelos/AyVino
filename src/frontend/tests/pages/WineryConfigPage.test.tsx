@@ -231,4 +231,39 @@ describe('WineryConfigPage (/bodega/configuracion)', () => {
       expect(screen.getByText(/¡Ubicación y terruño actualizados correctamente!/i)).toBeInTheDocument();
     });
   });
+
+  it('permite hacer clic directamente en la imagen del logo institucional para seleccionar y subir un nuevo logo', async () => {
+    const uploadSpy = vi.spyOn(wineryApi, 'uploadImage').mockResolvedValueOnce({
+      url: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
+    });
+    const updateSpy = vi.spyOn(wineryApi, 'updateWinery').mockResolvedValueOnce({
+      ...mockWinery,
+      logoUrl: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
+    });
+
+    renderComponent();
+
+    const logoButton = screen.getByRole('button', { name: /cambiar logo institucional/i });
+    expect(logoButton).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(/cargar logo de bodega/i);
+    const newFile = new File(['mock-image-bytes'], 'nuevo-logo.webp', { type: 'image/webp' });
+
+    fireEvent.change(fileInput, { target: { files: [newFile] } });
+
+    await waitFor(() => {
+      expect(uploadSpy).toHaveBeenCalledWith(newFile, 'wineries');
+      expect(updateSpy).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({
+          logoUrl: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
+        })
+      );
+      expect(mockReload).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/¡Logo institucional actualizado con éxito!/i)).toBeInTheDocument();
+    });
+  });
 });

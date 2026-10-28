@@ -278,4 +278,54 @@ describe('WineryRegisterPage Stepper Flow', () => {
       ).toBeGreaterThanOrEqual(1);
     });
   });
+
+  it('navigates back to Step 1 and displays error on username field when backend returns 409 conflict for username', async () => {
+    const axios409Error = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: { detail: "El nombre de usuario 'Juan Pérez' ya está en uso." },
+      },
+    };
+    vi.mocked(wineryApi.registerWinery).mockRejectedValueOnce(axios409Error);
+
+    render(
+      <MemoryRouter>
+        <WineryRegisterPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Nombre del responsable'), {
+      target: { value: 'Juan Pérez' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Correo institucional de contacto'), {
+      target: { value: 'contacto@catena.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Contraseña (mín. 8)'), {
+      target: { value: 'Password123!' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Repetir clave'), {
+      target: { value: 'Password123!' },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Nombre oficial de la bodega (ej: Bodega Catena Zapata)'),
+      {
+        target: { value: 'Bodega Catena' },
+      },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a ubicación/i }));
+
+    fireEvent.click(screen.getByTestId('select-manual-btn'));
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    fireEvent.click(screen.getByRole('button', { name: /Finalizar registro de bodega/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Paso 1 de 2')).toBeInTheDocument();
+      expect(
+        screen.getAllByText("El nombre de usuario 'Juan Pérez' ya está en uso.").length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

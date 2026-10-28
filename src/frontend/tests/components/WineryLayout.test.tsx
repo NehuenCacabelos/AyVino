@@ -5,12 +5,14 @@ import WineryLayout from '@/features/winery/components/WineryLayout';
 import * as useMyWineryHook from '@/features/winery/hooks/useMyWinery';
 import type { WineryResponseDto } from '@/features/winery/types';
 
+let mockRole = 'Winery';
+
 vi.mock('@/features/auth', () => ({
   useAuth: () => ({
     user: {
       username: 'don_alberto',
       email: 'alberto@bodegaelterruno.com',
-      role: 'Winery',
+      role: mockRole,
     },
     logout: vi.fn(),
   }),
@@ -32,6 +34,7 @@ const mockWinery: WineryResponseDto = {
 describe('WineryLayout Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRole = 'Winery';
   });
 
   it('muestra estado de carga mientras se sincronizan los datos de bodega', () => {
@@ -118,5 +121,34 @@ describe('WineryLayout Component', () => {
     expect(
       screen.getByText(/beber con moderación · prohibida su venta a menores de 18 años/i)
     ).toBeInTheDocument();
+  });
+
+  it('muestra tarjeta de Administrador con enlaces de gestión cuando el usuario tiene rol Admin y no tiene bodega', () => {
+    mockRole = 'Admin';
+    vi.spyOn(useMyWineryHook, 'useMyWinery').mockReturnValue({
+      winery: null,
+      isLoading: false,
+      error: null,
+      isNotFound: true,
+      reload: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <WineryLayout />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/rol administrador/i)).toBeInTheDocument();
+    expect(screen.getByText(/gestión y supervisión del ecosistema/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /gestionar bodegas/i })).toHaveAttribute(
+      'href',
+      '/admin/bodegas'
+    );
+    expect(screen.getByRole('link', { name: /panel global/i })).toHaveAttribute(
+      'href',
+      '/admin'
+    );
+    expect(screen.queryByRole('link', { name: /registrar mi bodega/i })).not.toBeInTheDocument();
   });
 });

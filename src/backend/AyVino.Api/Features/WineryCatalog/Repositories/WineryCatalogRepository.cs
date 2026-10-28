@@ -12,7 +12,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
     public async Task<WineryCatalogOwnerWinery?> GetWineryByUserIdAsync(int userId, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT id, status
+            SELECT id, CAST(status AS integer) AS Status
             FROM wineries
             WHERE user_id = @UserId
             LIMIT 1;
@@ -107,7 +107,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
         const string sql = """
             SELECT 
                 w.id, w.name, w.description, w.foundation_year AS FoundationYear, w.website,
-                w.user_id AS UserId, w.status, w.register_date AS RegisterDate,
+                w.user_id AS UserId, CAST(w.status AS integer) AS Status, w.register_date AS RegisterDate,
                 w.latitude, w.longitude, w.logo_url AS LogoUrl, w.banner_url AS BannerUrl,
                 s.name AS StateName, c.name AS RegionName
             FROM wineries w

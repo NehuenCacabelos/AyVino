@@ -72,7 +72,7 @@ export default function Navbar() {
     navigate('/', { replace: true });
   };
 
-  const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
+  const isWinery = user?.role === 'Winery';
   const homePath = isAuthenticated
     ? user?.role === 'Admin'
       ? '/admin'
@@ -159,7 +159,7 @@ export default function Navbar() {
               </>
             )}
 
-            {isWineryOrAdmin && (
+            {isWinery && (
               <Link
                 to="/bodega/dashboard"
                 className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
@@ -312,7 +312,7 @@ export default function Navbar() {
               </>
             )}
 
-            {isWineryOrAdmin && (
+            {isWinery && (
               <Link
                 to="/bodega/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
