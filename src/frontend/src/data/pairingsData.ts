@@ -71,6 +71,8 @@ export interface FoodPairingEntity {
   servingTemperature: string;
   principle: PairingPrinciple;
   curatedWineIds: number[];
+  headline?: string;
+  affinityNote?: string;
 }
 
 export interface WineVarietyEntity {
@@ -88,6 +90,11 @@ export interface WineVarietyEntity {
   glassware: string;
   servingTemperature: string;
   curatedWineIds: number[];
+  headline?: string;
+  agingPotential?: string;
+  tanninsScore?: number; // Escala 1 a 10
+  acidityScore?: number; // Escala 1 a 10
+  bodyScore?: number;    // Escala 1 a 10
 }
 
 /**
@@ -98,6 +105,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'asado-fuegos',
     title: 'Asado & Fuegos',
     badge: 'Brasas, Humo & Cortes Nobles',
+    headline: 'Colágeno, Leña Seca & Redondez Tánica',
+    affinityNote: 'CORTE GRASO / FUEGO',
     dishes: ['Asado de tira', 'Vacío a la llama', 'Entraña jugosa', 'Matambre a la pizza', 'Achuras / mollejas'],
     recommendedVarieties: ['malbec', 'cabernet-sauvignon', 'bonarda', 'syrah', 'tannat', 'cabernet-franc'],
     sommelierNote:
@@ -112,6 +121,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'empanadas-regional',
     title: 'Empanadas & Cocina Regional',
     badge: 'Olla de Barro, Pimentón & Identidad Andina',
+    headline: 'Comino, Masa Hojaldrada & Frescura Criolla',
+    affinityNote: 'ESPECIAS & CEBOLLA',
     dishes: ['Empanadas salteñas de corte a cuchillo', 'Humita en chala', 'Locro criollo', 'Tamales'],
     recommendedVarieties: ['torrontes', 'criolla-chica', 'malbec', 'bonarda', 'semillon'],
     sommelierNote:
@@ -126,6 +137,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'pastas-robustas',
     title: 'Pastas Caseras & Salsas Robustas',
     badge: 'Mesa Familiar, Tuco Casero & Herencia Italiana',
+    headline: 'Reducción de Tomate, Osobuco & Acidez Viva',
+    affinityNote: 'ACIDEZ & REDUCCIÓN',
     dishes: ['Ñoquis de la abuela con estofado', 'Sorrentinos de jamón y mozzarella con fileto', 'Tuco casero'],
     recommendedVarieties: ['bonarda', 'cabernet-franc', 'tempranillo', 'merlot', 'ancellotta'],
     sommelierNote:
@@ -140,6 +153,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'picadas-quesos',
     title: 'Picadas, Picoteo & Quesos',
     badge: 'Tradición de Campo & Charcutería Artesanal',
+    headline: 'Caseína, Fiambres Curados & Fruta Crujiente',
+    affinityNote: 'SALITRE & CONTRASTE',
     dishes: ['Picada de fiambres artesanales', 'Quesos duros de Tandil', 'Jamón crudo', 'Aceitunas y frutos secos'],
     recommendedVarieties: ['malbec', 'syrah', 'garnacha', 'criolla-chica', 'rosado-seco'],
     sommelierNote:
@@ -154,6 +169,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'pescados-rio-mar',
     title: 'Pescados de Río & Mar',
     badge: 'Aguas Dulces, Atlántico & Cordillera',
+    headline: 'Cítricos, Salinidad & Texturas Delicadas',
+    affinityNote: 'YODO & EQUILIBRIO',
     dishes: ['Surubí a la parrilla', 'Pacú al limón', 'Rabas', 'Trucha patagónica'],
     recommendedVarieties: ['chardonnay', 'sauvignon-blanc', 'torrontes', 'pinot-gris', 'pinot-noir'],
     sommelierNote:
@@ -168,6 +185,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'cocina-urbana',
     title: 'Cocina Urbana & Gourmet',
     badge: 'Bodegón Contemporáneo & Cocina de Autor',
+    headline: 'Cocciones al Disco, Verdeo & Elegancia Cárnica',
+    affinityNote: 'PROFUNDIDAD & EMULSIÓN',
     dishes: ['Ojo de bife con papas rústicas', 'Cordero patagónico al disco', 'Pollo al verdeo'],
     recommendedVarieties: ['cabernet-sauvignon', 'petit-verdot', 'pinot-noir', 'viognier', 'chardonnay'],
     sommelierNote:
@@ -182,6 +201,8 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
     id: 'dulces-criollos',
     title: 'Dulces & Postres Criollos',
     badge: 'Sobremesa Criolla & Tradición Porteña',
+    headline: 'Dulce de Leche, Almíbares & Burbuja Cremosa',
+    affinityNote: 'DULZOR & EQUILIBRIO',
     dishes: ['Flan casero con dulce de leche', 'Vigilante de queso y batata', 'Alfajores artesanales', 'Postre borracho'],
     recommendedVarieties: ['espumante-dulce', 'moscatel-alejandria', 'moscatel-rosado', 'pedro-gimenez', 'cereza'],
     sommelierNote:
@@ -196,10 +217,7 @@ export const FOOD_PAIRINGS: Record<FoodCategoryId, FoodPairingEntity> = {
 
 /**
  * Matriz consolidada de Cepas Enológicas Argentinas e Internacionales (¿Qué vas a tomar?)
- * 29 cepas distribuidas en:
- * - 13 Tintos
- * - 9 Blancos
- * - 7 Criollas / Otras / Rosados
+ * 29 cepas con métricas sensoriales precisas
  */
 export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
   // ==========================================
@@ -213,6 +231,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Con cuerpo',
     acidity: 'Media-Alta',
     tannins: 'Sedosos y pulposos',
+    headline: 'Potencia Andina, Violetas & Tiza Calcárea',
+    agingPotential: '5 a 15 años',
+    tanninsScore: 7.5,
+    acidityScore: 7.2,
+    bodyScore: 8.5,
     flavorProfile: 'Ciruelas negras confitadas, moras silvestres, violetas andinas y leves dejos de cacao.',
     recommendedFoods: ['asado-fuegos', 'picadas-quesos', 'cocina-urbana'],
     sommelierNote:
@@ -230,6 +253,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Robusto y estructurado',
     acidity: 'Media-Alta',
     tannins: 'Firmes y calcáreos',
+    headline: 'Estructura Imponente, Casis & Grafito',
+    agingPotential: '8 a 20 años',
+    tanninsScore: 9.0,
+    acidityScore: 7.5,
+    bodyScore: 9.2,
     flavorProfile: 'Casis, pimiento rojo asado, cedro, tabaco y pimienta negra en grano.',
     recommendedFoods: ['asado-fuegos', 'cocina-urbana', 'picadas-quesos'],
     sommelierNote:
@@ -247,6 +275,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Medio',
     acidity: 'Vibrante y filosa',
     tannins: 'Firmes y calcáreos',
+    headline: 'Tensión Mineral, Pirazinas Elegantes & Fruta Roja',
+    agingPotential: '6 a 12 años',
+    tanninsScore: 7.8,
+    acidityScore: 8.6,
+    bodyScore: 7.5,
     flavorProfile: 'Pimientos dulces horneados, grafito, jarilla, frambuesas y textura mineral de tiza.',
     recommendedFoods: ['pastas-robustas', 'asado-fuegos', 'cocina-urbana'],
     sommelierNote:
@@ -264,6 +297,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Medio',
     acidity: 'Vibrante y filosa',
     tannins: 'Dóciles y amables',
+    headline: 'Fruta Golosa, Frescura Viva & Taninos Sedosos',
+    agingPotential: '3 a 7 años',
+    tanninsScore: 6.0,
+    acidityScore: 7.8,
+    bodyScore: 6.8,
     flavorProfile: 'Cerezas maduras, granada, higos frescos y una sutil nota especiada anisada.',
     recommendedFoods: ['pastas-robustas', 'asado-fuegos', 'empanadas-regional'],
     sommelierNote:
@@ -281,6 +319,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Con cuerpo',
     acidity: 'Media',
     tannins: 'Cárnicos y potentes',
+    headline: 'Pimienta Negra, Ahumados & Carnosidad Andina',
+    agingPotential: '5 a 12 años',
+    tanninsScore: 8.0,
+    acidityScore: 6.5,
+    bodyScore: 8.4,
     flavorProfile: 'Pimienta negra recién molida, aceitunas negras, cuero noble y compota de arándanos.',
     recommendedFoods: ['asado-fuegos', 'picadas-quesos', 'cocina-urbana'],
     sommelierNote:
@@ -298,6 +341,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Medio',
     acidity: 'Media',
     tannins: 'Sedosos y pulposos',
+    headline: 'Terciopelo en Boca, Ciruelas & Moca',
+    agingPotential: '4 a 8 años',
+    tanninsScore: 6.2,
+    acidityScore: 6.8,
+    bodyScore: 7.0,
     flavorProfile: 'Ciruelas rojas, especias dulces, notas de moca y taninos aterciopelados.',
     recommendedFoods: ['pastas-robustas', 'cocina-urbana', 'empanadas-regional'],
     sommelierNote:
@@ -315,6 +363,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
     tannins: 'Sedosos y pulposos',
+    headline: 'Elegancia Patagónica, Frutos Rojos & Tierra Húmeda',
+    agingPotential: '4 a 10 años',
+    tanninsScore: 4.8,
+    acidityScore: 8.5,
+    bodyScore: 5.2,
     flavorProfile: 'Frutillas silvestres, tierra mojada, hongos de pino y un fondo sutil de té negro.',
     recommendedFoods: ['pescados-rio-mar', 'cocina-urbana', 'pastas-robustas'],
     sommelierNote:
@@ -332,6 +385,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Robusto y estructurado',
     acidity: 'Media-Alta',
     tannins: 'Firmes y calcáreos',
+    headline: 'Fuerza Calchaquí, Cacao Amargo & Agarre Tánico',
+    agingPotential: '8 a 18 años',
+    tanninsScore: 9.5,
+    acidityScore: 7.6,
+    bodyScore: 9.4,
     flavorProfile: 'Moras negras, grafito, chocolate amargo, café tostado y notas minerales profundas.',
     recommendedFoods: ['asado-fuegos', 'cocina-urbana'],
     sommelierNote:
@@ -349,6 +407,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Medio',
     acidity: 'Media-Alta',
     tannins: 'Dóciles y amables',
+    headline: 'Frambuesas Crujientes, Trago Ágil & Flor Silvestre',
+    agingPotential: '3 a 6 años',
+    tanninsScore: 5.5,
+    acidityScore: 7.5,
+    bodyScore: 6.4,
     flavorProfile: 'Frambuesas crujientes, cáscara de naranja, pimienta rosa y flores silvestres.',
     recommendedFoods: ['picadas-quesos', 'empanadas-regional', 'pastas-robustas'],
     sommelierNote:
@@ -366,6 +429,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Medio',
     acidity: 'Media',
     tannins: 'Estructurados y envolventes',
+    headline: 'Herencia Tradicional, Higos Secos & Roble Integrado',
+    agingPotential: '5 a 12 años',
+    tanninsScore: 7.2,
+    acidityScore: 6.8,
+    bodyScore: 7.5,
     flavorProfile: 'Cerezas maduras, cuero fino, vainilla especiada, hojas de tabaco y clavo de olor.',
     recommendedFoods: ['pastas-robustas', 'asado-fuegos', 'picadas-quesos'],
     sommelierNote:
@@ -383,6 +451,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Robusto y estructurado',
     acidity: 'Vibrante y filosa',
     tannins: 'Firmes y calcáreos',
+    headline: 'Intensidad Violácea, Arándanos & Tensión',
+    agingPotential: '7 a 15 años',
+    tanninsScore: 8.8,
+    acidityScore: 8.2,
+    bodyScore: 9.0,
     flavorProfile: 'Arándanos, violetas concentradas, pimienta negra, grafito y mentol.',
     recommendedFoods: ['asado-fuegos', 'cocina-urbana'],
     sommelierNote:
@@ -400,6 +473,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Con cuerpo',
     acidity: 'Media-Alta',
     tannins: 'Cárnicos y potentes',
+    headline: 'Cepa Tintorera Patrimonial, Humo & Densidad',
+    agingPotential: '4 a 8 años',
+    tanninsScore: 8.2,
+    acidityScore: 7.4,
+    bodyScore: 8.6,
     flavorProfile: 'Frutos negros del bosque, especias terrosas, toque ahumado y pulpa densa.',
     recommendedFoods: ['asado-fuegos', 'cocina-urbana'],
     sommelierNote:
@@ -417,6 +495,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Con cuerpo',
     acidity: 'Media',
     tannins: 'Sedosos y pulposos',
+    headline: 'Color Opulento, Moras Confitadas & Suavidad',
+    agingPotential: '4 a 9 años',
+    tanninsScore: 6.8,
+    acidityScore: 6.5,
+    bodyScore: 8.2,
     flavorProfile: 'Mermelada de moras, higos maduros, cacao dulce y notas tostadas.',
     recommendedFoods: ['pastas-robustas', 'asado-fuegos'],
     sommelierNote:
@@ -437,6 +520,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
+    headline: 'Floral Inconfundible, Cítrico Seco & Altura Calchaquí',
+    agingPotential: '1 a 3 años',
+    acidityScore: 8.8,
+    bodyScore: 5.0,
     flavorProfile: 'Jazmines frescos, cáscara de pomelo rosado, flores blancas y mineralidad salina.',
     recommendedFoods: ['empanadas-regional', 'pescados-rio-mar'],
     sommelierNote:
@@ -453,6 +540,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Con cuerpo',
     acidity: 'Media-Alta',
+    headline: 'Untuosidad Mantecosa, Avellanas & Brioche',
+    agingPotential: '4 a 10 años',
+    acidityScore: 7.6,
+    bodyScore: 8.0,
     flavorProfile: 'Manzanas doradas, ananá maduro, manteca clarificada, brioche y avellanas tostadas.',
     recommendedFoods: ['pescados-rio-mar', 'cocina-urbana'],
     sommelierNote:
@@ -469,6 +560,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
+    headline: 'Cuchillo Cítrico, Ruda & Pedernal Andino',
+    agingPotential: '1 a 3 años',
+    acidityScore: 9.4,
+    bodyScore: 4.8,
     flavorProfile: 'Ruda, maracuyá ácido, espárragos frescos, lima y pedernal.',
     recommendedFoods: ['pescados-rio-mar', 'picadas-quesos'],
     sommelierNote:
@@ -485,6 +580,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Media-Alta',
+    headline: 'Sutileza Cristalina, Peras & Textura Sedosa',
+    agingPotential: '2 a 4 años',
+    acidityScore: 7.4,
+    bodyScore: 5.6,
     flavorProfile: 'Peras maduras, durazno blanco, notas florales tenues y textura sedosa.',
     recommendedFoods: ['pescados-rio-mar', 'picadas-quesos'],
     sommelierNote:
@@ -501,6 +600,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Medio',
     acidity: 'Media',
+    headline: 'Damasco Turco, Azahar & Volumen Sedoso',
+    agingPotential: '2 a 5 años',
+    acidityScore: 6.2,
+    bodyScore: 7.2,
     flavorProfile: 'Damasco turco, flores blancas de azahar, miel suave y textura envolvente.',
     recommendedFoods: ['cocina-urbana', 'pescados-rio-mar'],
     sommelierNote:
@@ -517,6 +620,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Medio',
     acidity: 'Vibrante y filosa',
+    headline: 'Brisa Atlántica, Salinidad & Limas Frescas',
+    agingPotential: '2 a 4 años',
+    acidityScore: 8.9,
+    bodyScore: 6.2,
     flavorProfile: 'Damasco fresco, cáscara de lima, salinidad marina y fondo floral blanco.',
     recommendedFoods: ['pescados-rio-mar', 'empanadas-regional'],
     sommelierNote:
@@ -533,6 +640,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Medio',
     acidity: 'Media-Alta',
+    headline: 'Cera de Abejas, Manzanas & Rescate Histórico',
+    agingPotential: '5 a 15 años',
+    acidityScore: 7.8,
+    bodyScore: 7.4,
     flavorProfile: 'Miel de azahar, cera de abejas, manzana verde, té blanco y notas secas de avellana.',
     recommendedFoods: ['pescados-rio-mar', 'empanadas-regional', 'cocina-urbana'],
     sommelierNote:
@@ -549,6 +660,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
+    headline: 'Membrillo Crujiente, Tradición Sanrafaelina & Nervio',
+    agingPotential: '2 a 5 años',
+    acidityScore: 8.7,
+    bodyScore: 5.4,
     flavorProfile: 'Membrillo fresco, manzana ácida, flores silvestres y notas cítricas crujientes.',
     recommendedFoods: ['pescados-rio-mar', 'picadas-quesos'],
     sommelierNote:
@@ -565,6 +680,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
+    headline: 'Frescura Lineal, Limón Sutil & Trago Directo',
+    agingPotential: '1 a 2 años',
+    acidityScore: 8.6,
+    bodyScore: 4.6,
     flavorProfile: 'Limón sutil, manzana verde, hierba recién cortada y final seco y limpio.',
     recommendedFoods: ['pescados-rio-mar', 'picadas-quesos'],
     sommelierNote:
@@ -586,6 +705,11 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     body: 'Ligero',
     acidity: 'Vibrante y filosa',
     tannins: 'Dóciles y amables',
+    headline: 'Patrimonio Autóctono, Frutilla Silvestre & Trago Fluido',
+    agingPotential: '2 a 4 años',
+    tanninsScore: 4.2,
+    acidityScore: 8.4,
+    bodyScore: 4.8,
     flavorProfile: 'Frutillas silvestres, té negro, hierbas de cerro y jugo puro sin astringencia.',
     recommendedFoods: ['empanadas-regional', 'picadas-quesos', 'pescados-rio-mar'],
     sommelierNote:
@@ -602,6 +726,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Rosado',
     body: 'Ligero',
     acidity: 'Media',
+    headline: 'Pétalos de Rosa, Perfume Embriagador & Delicadeza',
+    agingPotential: '1 a 3 años',
+    acidityScore: 6.4,
+    bodyScore: 5.0,
     flavorProfile: 'Pétalos de rosa, uvas moscatel frescas, cáscara de naranja confitada y almíbar liviano.',
     recommendedFoods: ['dulces-criollos', 'picadas-quesos'],
     sommelierNote:
@@ -618,6 +746,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Medio',
     acidity: 'Media',
+    headline: 'Miel de Azahar, Mandarina & Dulzor Noble',
+    agingPotential: '1 a 3 años',
+    acidityScore: 6.2,
+    bodyScore: 6.5,
     flavorProfile: 'Miel de flores, uvas frescas de mesa, azahar y dejos cítricos de mandarina.',
     recommendedFoods: ['dulces-criollos', 'empanadas-regional'],
     sommelierNote:
@@ -634,6 +766,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Blanco',
     body: 'Ligero',
     acidity: 'Media-Alta',
+    headline: 'Sencillez Cuyana, Durazno Blanco & Pureza',
+    agingPotential: '1 a 3 años',
+    acidityScore: 7.5,
+    bodyScore: 5.2,
     flavorProfile: 'Flores de campo, durazno blanco, notas herbáceas y final seco refrescante.',
     recommendedFoods: ['dulces-criollos', 'picadas-quesos', 'pescados-rio-mar'],
     sommelierNote:
@@ -650,6 +786,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Rosado',
     body: 'Ligero',
     acidity: 'Media',
+    headline: 'Granada Jugosa, Melón Rosado & Trago Popular',
+    agingPotential: '1 a 2 años',
+    acidityScore: 6.5,
+    bodyScore: 4.8,
     flavorProfile: 'Cerezas frescas, jugo de granada, melón rosado y trago ligero.',
     recommendedFoods: ['dulces-criollos', 'picadas-quesos'],
     sommelierNote:
@@ -666,6 +806,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Rosado',
     body: 'Ligero',
     acidity: 'Media-Alta',
+    headline: 'Frutillas Frescas, Mineralidad & Versatilidad',
+    agingPotential: '1 a 3 años',
+    acidityScore: 7.6,
+    bodyScore: 5.2,
     flavorProfile: 'Frutillas frescas, pomelo rosado, flores rojas y toque mineral crocante.',
     recommendedFoods: ['picadas-quesos', 'pescados-rio-mar'],
     sommelierNote:
@@ -682,6 +826,10 @@ export const WINE_VARIETIES: Record<WineVarietyId, WineVarietyEntity> = {
     wineType: 'Espumante',
     body: 'Ligero',
     acidity: 'Media-Alta',
+    headline: 'Burbujas Finas, Azahar & Cierre Dulce Equilibrado',
+    agingPotential: '1 a 2 años',
+    acidityScore: 7.9,
+    bodyScore: 5.4,
     flavorProfile: 'Flores de azahar, duraznos blancos en almíbar, burbuja cremosa y final dulce balanceado.',
     recommendedFoods: ['dulces-criollos'],
     sommelierNote:

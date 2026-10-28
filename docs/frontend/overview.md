@@ -209,6 +209,9 @@ La vista de maridaje implementa un motor de descubrimiento y recomendación bidi
   - Para evitar bloques oscuros planos, la zona de lectura de resultados (*"Por qué funciona"*, *"Cepas recomendadas"* y *"Platos sugeridos"*) se presenta sobre tarjetas en gris grafito elevado (`bg-[#16161c]/95 backdrop-blur-md border border-neutral-700/60 shadow-2xl`).
 - **Microinteracciones e Indicadores Sensoriales**:
   - Tarjetas de cepa con indicador textual minimalista en una sola línea que se ilumina en dorado cava (`group-hover:text-amber-200/90`) al posar el cursor, indicando *Cuerpo*, *Acidez* y *Taninos*.
+  - Matriz Sensorial de la Cepa con medidores visuales en escala de 10 puntos (Taninos, Acidez, Cuerpo) e indicadores de potencial de guarda y cristalería.
+  - Halos ambientales de cava (`bg-rose-950/20 blur-[100px]` y `bg-amber-500/5 blur-[90px]`) inspirados en el diseño de Google Stitch.
+  - Botón de guardado rápido *"Guardar en Mi Cava"* con feedback visual reactivo de 3 segundos.
   - *Smooth scroll* inteligente condicional hacia `#maridaje-detalle`: ejecuta desplazamiento suave solo cuando la zona de lectura no se encuentra completamente visible en el viewport del usuario.
 
 ### 8.2 Taxonomía Gastronómica Argentina (7 Categorías)
