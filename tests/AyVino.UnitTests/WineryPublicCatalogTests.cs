@@ -350,5 +350,60 @@ public class WineryPublicCatalogTests
         Assert.Null(result.Items[3].AverageRating);
         Assert.Equal(0, result.Items[3].ReviewCount);
     }
-}
 
+    [Fact]
+    public async Task GetPublicProfileAsync_RejectedWinery_AnonymousUser_ThrowsNotFoundException()
+    {
+        var winery = CreateWineryRow(3, WineryStatus.Rejected, userId: 10);
+        _repository.GetWineryPublicProfileRowAsync(3, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _service.GetPublicProfileAsync(3, actor: null));
+        Assert.Contains("Esta bodega no está disponible", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetPublicProfileAsync_RejectedWinery_Admin_ReturnsProfileWithIsPreviewTrue()
+    {
+        var winery = CreateWineryRow(3, WineryStatus.Rejected, userId: 10);
+        _repository.GetWineryPublicProfileRowAsync(3, Arg.Any<CancellationToken>()).Returns(winery);
+        _repository.GetFollowersCountAsync(3, Arg.Any<CancellationToken>()).Returns(0);
+        _repository.GetPublicRatingsAndTotalsAsync(3, true, Arg.Any<CancellationToken>())
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 1, Vintages: 1, RatingSum: 0, ReviewCount: 0));
+
+        var adminActor = new Actor(UserId: 1, Role: AppRoles.Admin);
+        var result = await _service.GetPublicProfileAsync(3, adminActor);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsPreview);
+        Assert.Equal("Rejected", result.Status);
+    }
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_PendingWinery_AnonymousUser_ThrowsNotFoundException()
+    {
+        var winery = CreateWineryRow(2, WineryStatus.Pending, userId: 10);
+        _repository.GetWineryPublicProfileRowAsync(2, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var query = new WineryPublicCatalogQueryParams(1, 10, null, null, null, null, null);
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _service.GetPublicCatalogAsync(2, actor: null, query));
+        Assert.Contains("Esta bodega no está disponible", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_PendingWinery_Owner_ReturnsCatalogWithItems()
+    {
+        var winery = CreateWineryRow(2, WineryStatus.Pending, userId: 10);
+        _repository.GetWineryPublicProfileRowAsync(2, Arg.Any<CancellationToken>()).Returns(winery);
+        _repository.GetPublicCatalogFiltersAsync(2, true, Arg.Any<CancellationToken>())
+            .Returns(new WineryPublicCatalogFiltersDto([], [], []));
+        _repository.GetPublicCatalogWinesPagedAsync(2, true, Arg.Any<WineryPublicCatalogQueryParams>(), Arg.Any<CancellationToken>())
+            .Returns((TotalCount: 0, Wines: (IReadOnlyList<WineryCatalogWineRow>)[]));
+
+        var ownerActor = new Actor(UserId: 10, Role: AppRoles.Winery);
+        var query = new WineryPublicCatalogQueryParams(1, 10, null, null, null, null, null);
+        var result = await _service.GetPublicCatalogAsync(2, ownerActor, query);
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Items);
+    }
+}

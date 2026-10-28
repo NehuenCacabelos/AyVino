@@ -34,7 +34,8 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
                 COUNT(CASE WHEN v.approval_status = 3 THEN 1 END) AS VintagesRejected
             FROM wines w
             LEFT JOIN wine_vintages v ON v.wine_id = w.id
-            WHERE w.winery_id = @WineryId;
+            WHERE w.winery_id = @WineryId
+              AND w.duplicate_of_wine_id IS NULL;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -49,6 +50,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
                    rating_sum AS RatingSum, review_count AS ReviewCount
             FROM wines
             WHERE winery_id = @WineryId
+              AND duplicate_of_wine_id IS NULL
             ORDER BY name ASC, id ASC
             LIMIT @Limit;
             """;
@@ -148,6 +150,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
             FROM wines w
             INNER JOIN wine_vintages v ON v.wine_id = w.id
             WHERE w.winery_id = @WineryId
+              AND w.duplicate_of_wine_id IS NULL
               AND ((@IsPreview = TRUE AND v.approval_status != 3) OR (@IsPreview = FALSE AND v.approval_status = 2));
             """;
 
@@ -163,6 +166,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
             FROM wines w
             INNER JOIN wine_vintages v ON v.wine_id = w.id
             WHERE w.winery_id = @WineryId
+              AND w.duplicate_of_wine_id IS NULL
               AND ((@IsPreview = TRUE AND v.approval_status != 3) OR (@IsPreview = FALSE AND v.approval_status = 2))
             ORDER BY w.wine_type;
 
@@ -172,6 +176,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
             INNER JOIN wine_vintages v ON v.id = wg.wine_vintage_id
             INNER JOIN wines w ON w.id = v.wine_id
             WHERE w.winery_id = @WineryId
+              AND w.duplicate_of_wine_id IS NULL
               AND ((@IsPreview = TRUE AND v.approval_status != 3) OR (@IsPreview = FALSE AND v.approval_status = 2))
             ORDER BY g.name ASC;
 
@@ -179,6 +184,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
             FROM wine_vintages v
             INNER JOIN wines w ON w.id = v.wine_id
             WHERE w.winery_id = @WineryId
+              AND w.duplicate_of_wine_id IS NULL
               AND v.year IS NOT NULL
               AND ((@IsPreview = TRUE AND v.approval_status != 3) OR (@IsPreview = FALSE AND v.approval_status = 2))
             ORDER BY v.year DESC;
@@ -206,7 +212,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
 
-        var conditions = new List<string> { "w.winery_id = @WineryId" };
+        var conditions = new List<string> { "w.winery_id = @WineryId", "w.duplicate_of_wine_id IS NULL" };
         var parameters = new DynamicParameters();
         parameters.Add("WineryId", wineryId);
         parameters.Add("IsPreview", isPreview);
