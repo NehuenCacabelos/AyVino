@@ -684,6 +684,7 @@ async function run() {
       { method: 'PATCH', path: `/wineries/1/status`, body: { status: 'Approved' } },
       { method: 'DELETE', path: `/wineries/1` },
       { method: 'PATCH', path: `/cities/1/status`, body: { status: 'Approved' } },
+      { method: 'GET', path: '/reviews' },
     ];
 
     let gNoTokenPassed = true;
@@ -1319,7 +1320,81 @@ async function run() {
       `Detalles de la entrada: ${JSON.stringify(wineryEntry)}`
     );
 
-  } catch (err) {
+  
+
+    // -------------------------------------------------------------------------
+    // SECCIÓN K: MODERACIÓN DE RESEÑAS (BLOQUE 20)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECCIÓN K: MODERACIÓN DE RESEÑAS ---');
+
+    // K.1 GET /api/reviews sin token -> 401
+    const k1 = await request('/reviews');
+    record('K.1 GET /api/reviews sin token', 'HTTP 401', `HTTP ${k1.status}`, k1.status === 401);
+
+    // K.2 GET /api/reviews con usuario común -> 403
+    const k2 = await request('/reviews', { headers: { Authorization: `Bearer ${userToken}` } });
+    record('K.2 GET /api/reviews con usuario común', 'HTTP 403', `HTTP ${k2.status}`, k2.status === 403);
+
+    // K.3 GET /api/reviews con admin -> 200
+    const k3 = await request('/reviews', { headers: { Authorization: `Bearer ${adminToken}` } });
+    record('K.3 GET /api/reviews con admin', 'HTTP 200 (array)', `HTTP ${k3.status}, isArray: ${Array.isArray(k3.data)}`, k3.status === 200 && Array.isArray(k3.data));
+
+    // K.4 Crear reseña de prueba por usuario común
+    const kReviewComment = `e2e_Review_Mod_${timestamp}`;
+    const kReviewRes = await request('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        wineVintageId: vintageId,
+        rating: 4,
+        comment: kReviewComment,
+      }),
+    });
+    const kReviewId = kReviewRes.data?.id;
+    record('K.4 POST /api/reviews crear reseña por usuario común', 'HTTP 201', `HTTP ${kReviewRes.status}, ID: ${kReviewId}`, kReviewRes.status === 201 && kReviewId != null);
+
+    // K.5 GET /api/reviews con filtros por rating y userId
+    const k5 = await request(`/reviews?rating=4&userId=${commonUserId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const k5Found = Array.isArray(k5.data) && k5.data.some(r => r.id === kReviewId);
+    record('K.5 GET /api/reviews filtrado por rating y userId', 'HTTP 200 con la reseña creada', `HTTP ${k5.status}, encontrada: ${k5Found}`, k5.status === 200 && k5Found);
+
+    // K.6 Usuario ajeno no puede borrar la reseña de otro usuario -> 403
+    const kIntruderRes = await request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: `e2e_intruder_${timestamp}`,
+        email: `e2e_intruder_${timestamp}@ayvino.com`,
+        password: 'Password123!',
+      }),
+    });
+    const kIntruderToken = kIntruderRes.data?.accessToken;
+    const k6 = await request(`/reviews/${kReviewId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${kIntruderToken}` },
+    });
+    record('K.6 DELETE /api/reviews/{id} por usuario ajeno', 'HTTP 403 Forbidden', `HTTP ${k6.status}`, k6.status === 403);
+
+    // K.7 Admin borra reseña ajena -> 204
+    const k7 = await request(`/reviews/${kReviewId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record('K.7 DELETE /api/reviews/{id} por admin', 'HTTP 204 NoContent', `HTTP ${k7.status}`, k7.status === 204);
+
+    // K.8 Auditoría ReviewDeletedByAdmin registrada
+    const k8Audit = await request('/audit-log?action=ReviewDeletedByAdmin', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const k8Entry = Array.isArray(k8Audit.data) && k8Audit.data.find(e => e.entityType === 'Review' && e.entityId === kReviewId);
+    record(
+      'K.8 Auditoría ReviewDeletedByAdmin registrada correctamente',
+      'Entrada en audit_log con entityType Review y id correspondiente',
+      `Encontrada: ${Boolean(k8Entry)}, Admin: ${k8Entry?.username}, Detalles: ${k8Entry?.details}`,
+      k8Entry != null && k8Entry.action === 'ReviewDeletedByAdmin'
+    );
+} catch (err) {
     console.error('\n💥 ERROR FATAL DURANTE LA EJECUCIÓN:', err);
     failed++;
   } finally {
