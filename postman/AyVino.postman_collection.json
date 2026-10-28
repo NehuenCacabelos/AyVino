@@ -2379,6 +2379,47 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Admin: Merge Duplicate Wine",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{targetWineId}}/merge/{{duplicateWineId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{targetWineId}}",
+                    "merge",
+                    "{{duplicateWineId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Fusiona un vino duplicado dentro del vino destino (solo Admin)"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                      "pm.test('Response has merge metrics', function () { const res = pm.response.json(); pm.expect(res).to.have.property('targetId'); pm.expect(res).to.have.property('duplicateId'); pm.expect(res).to.have.property('movedVintages'); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             }
           ]
         },

@@ -255,3 +255,43 @@ Registro inmutable de acciones administrativas y de moderación sobre entidades 
   - Alta, edición y baja de variedades de uva y maridajes (`GrapeCreated`, `GrapeUpdated`, `GrapeDeleted`, `PairingCreated`, `PairingUpdated`, `PairingDeleted`).
   - Edición por administrador y borrado de vinos (`WineUpdatedByAdmin`, `WineDeleted`).
 - **Resiliencia**: Si el guardado de auditoría falla, se captura y registra el error con `ILogger` sin interrumpir ni fallar la operación principal solicitada por el usuario.
+
+---
+
+## 17. Fusión de Vinos Duplicados (`/api/wines/{targetId}/merge/{duplicateId}`)
+
+Permite a los administradores unificar etiquetas de vino duplicadas dentro de una etiqueta principal canónica de manera transaccional y atómica, consolidando cosechas, reseñas, inventario de cavas y marcas personales.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/wines/{targetId}/merge/{duplicateId}` | Admin (`RequireAdmin`) | Fusiona el vino duplicado dentro del vino destino. | Route params: `targetId`, `duplicateId` | `200 OK` (`MergeWinesResultDto`) |
+
+### DTO de Respuesta (`MergeWinesResultDto`)
+- `targetId` (`int`): ID del vino principal conservado.
+- `duplicateId` (`int`): ID del vino duplicado absorbido.
+- `movedVintages` (`int`): Cosechas del duplicado cuyo año no existía en el principal y fueron reasignadas directamente.
+- `mergedVintages` (`int`): Cosechas del duplicado fusionadas con una del mismo año en el principal.
+- `movedReviews` (`int`): Reseñas de cosechas fusionadas que fueron trasladadas al vino principal.
+- `discardedReviews` (`int`): Reseñas del duplicado descartadas porque el mismo usuario ya había reseñado la cosecha principal homónima.
+- `movedCellarItems` (`int`): Elementos de cava del duplicado trasladados o consolidados (sumando cantidades) en la cosecha principal.
+
+### Validaciones Previas
+- **Permisos**: Requiere rol `Admin` (`403 Forbidden` si no es admin).
+- **Distintos**: `targetId` y `duplicateId` deben ser distintos (`400 ValidationException`).
+- **Existencia**: Ambos vinos deben existir en la base de datos (`404 NotFoundException`).
+- **No duplicados**: Ni el destino ni el origen pueden tener `duplicate_of_wine_id` no nulo (`409 ConflictException`).
+
+### Reglas de la Transacción Atómica
+1. **Cosechas sin conflicto de año**: Se reasignan al principal (`UPDATE wine_vintages SET wine_id = @targetId`).
+2. **Cosechas con año homónimo (`NULL = NULL`)**: Se fusionan en la del principal:
+   - **Reseñas**: Se mueven a la cosecha destino; si el usuario ya tiene reseña en la cosecha destino, se conserva la del principal y se descarta la del duplicado.
+   - **Cavas**: Se trasladan; si la cava ya posee la cosecha destino, se suman las cantidades (`LEAST(999, quantity + dupQuantity)`).
+   - **Uvas (`wine_grapes`)**: Se conservan las de la cosecha principal y se descartan las del duplicado.
+   - Se elimina la cosecha duplicada sobrante.
+3. **Maridajes (`wine_pairings`)**: Se copian al principal los maridajes que falten (`ON CONFLICT DO NOTHING`) y se borran los del duplicado.
+4. **Marcas personales (`user_wines`)**: Se combinan aplicando operador lógico OR a `is_wanted`, `is_tried` y `is_favorite` (`ON CONFLICT DO UPDATE`) y se borran las del duplicado.
+5. **Recálculo de puntajes**: Se actualizan `rating_sum` y `review_count` de las cosechas fusionadas y del vino principal a partir de los datos consolidados reales.
+6. **Marcado del duplicado**: `UPDATE wines SET duplicate_of_wine_id = @targetId, rating_sum = 0, review_count = 0 WHERE id = @duplicateId`. El vino duplicado no se elimina físicamente.
+7. **Visibilidad pública**: Los vinos con `duplicate_of_wine_id` asignado quedan ocultos de búsquedas, listados públicos y de `GET /api/wines/{id}` para usuarios no administradores (`404 Not Found`). Los administradores continúan visualizándolos con el badge de referencia al original.
+8. **Auditoría**: Se registra automáticamente la acción `WineMerged` (action 18, entityType `Wine`, entityId `targetId`, details `duplicateId`).
+
