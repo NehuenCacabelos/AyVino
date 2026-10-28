@@ -49,20 +49,37 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
 
     public async Task<IEnumerable<City>> GetAllAsync(int pageNumber, int pageSize, int? stateId, int? status, CancellationToken ct = default)
     {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (stateId.HasValue)
+        {
+            conditions.Add("state_id = @StateId");
+            parameters.Add("StateId", stateId.Value);
+        }
+
+        if (status.HasValue)
+        {
+            conditions.Add("Status = @Status");
+            parameters.Add("Status", status.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
         var sql = $"""
             SELECT {SelectColumns}
             FROM Cities
-            WHERE (@StateId IS NULL OR state_id = @StateId)
-            AND (@Status IS NULL OR Status = @Status)
+            {whereClause}
             ORDER BY Name ASC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
-        var offset = (pageNumber - 1) * pageSize;
-
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<City>(
-            new CommandDefinition(sql, new { StateId = stateId, Status = status, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
     public async Task<int> CreateAsync(City city, CancellationToken ct = default)

@@ -40,17 +40,36 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
     {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (status.HasValue)
+        {
+            conditions.Add("w.status = @Status");
+            parameters.Add("Status", status.Value);
+        }
+
+        if (locationId.HasValue)
+        {
+            conditions.Add("w.location_id = @LocationId");
+            parameters.Add("LocationId", locationId.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
         var sql = $"""
             SELECT {SelectColumns}
-            WHERE (@Status IS NULL OR w.status = @Status)
-              AND (@LocationId IS NULL OR w.location_id = @LocationId)
+            {whereClause}
             ORDER BY w.id
             OFFSET @Offset LIMIT @PageSize;
             """;
+
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var offset = (pageNumber - 1) * pageSize;
         return await connection.QueryAsync<Winery>(
-            new CommandDefinition(sql, new { Status = status, LocationId = locationId, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)

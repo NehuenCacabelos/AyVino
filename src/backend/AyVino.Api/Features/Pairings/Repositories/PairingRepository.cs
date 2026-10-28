@@ -20,17 +20,31 @@ public class PairingRepository(IDbConnectionFactory connectionFactory) : IPairin
 
     public async Task<IEnumerable<Pairing>> GetAllAsync(int pageNumber, int pageSize, int? category = null, CancellationToken ct = default)
     {
-        const string sql = """
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (category.HasValue)
+        {
+            conditions.Add("category = @Category");
+            parameters.Add("Category", category.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
             SELECT id, name, category
             FROM pairings
-            WHERE (@Category IS NULL OR category = @Category)
+            {whereClause}
             ORDER BY name
             OFFSET @Offset LIMIT @PageSize;
             """;
-        var offset = (pageNumber - 1) * pageSize;
+
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Pairing>(
-            new CommandDefinition(sql, new { Category = category, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
     public async Task<int> CreateAsync(Pairing pairing, CancellationToken ct = default)

@@ -96,6 +96,19 @@ function ProfileRedirectRoute() {
  * Integra jerarquía de Layouts compartidos con <Outlet />, contención con errorElement,
  * code-splitting lazy y guardias de autenticación desacopladas.
  */
+
+/**
+ * Componente de resolución para /dashboard:
+ * Redirige a las Bodegas directamente a /bodega/dashboard para garantizar su espacio operativo.
+ */
+function DashboardRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'Winery') {
+    return <Navigate to="/bodega/dashboard" replace />;
+  }
+  return <DashboardPage />;
+}
+
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
@@ -175,7 +188,7 @@ export const router = createBrowserRouter([
             path: '/dashboard',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <DashboardPage />
+                <DashboardRoute />
               </Suspense>
             ),
           },

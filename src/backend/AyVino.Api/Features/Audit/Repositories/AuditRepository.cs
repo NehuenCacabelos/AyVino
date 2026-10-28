@@ -40,7 +40,45 @@ public class AuditRepository(IDbConnectionFactory connectionFactory) : IAuditRep
         DateTime? to = null,
         CancellationToken ct = default)
     {
-        const string sql = """
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (action.HasValue)
+        {
+            conditions.Add("action = @Action");
+            parameters.Add("Action", action.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(entityType))
+        {
+            conditions.Add("entity_type = @EntityType");
+            parameters.Add("EntityType", entityType.Trim());
+        }
+
+        if (userId.HasValue)
+        {
+            conditions.Add("user_id = @UserId");
+            parameters.Add("UserId", userId.Value);
+        }
+
+        if (from.HasValue)
+        {
+            conditions.Add("created_at >= @From");
+            parameters.Add("From", from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            conditions.Add("created_at <= @To");
+            parameters.Add("To", to.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
             SELECT id AS Id,
                    user_id AS UserId,
                    username AS Username,
@@ -50,28 +88,13 @@ public class AuditRepository(IDbConnectionFactory connectionFactory) : IAuditRep
                    details AS Details,
                    created_at AS CreatedAt
             FROM audit_log
-            WHERE (@Action IS NULL OR action = @Action)
-              AND (@EntityType IS NULL OR entity_type = @EntityType)
-              AND (@UserId IS NULL OR user_id = @UserId)
-              AND (@From IS NULL OR created_at >= @From)
-              AND (@To IS NULL OR created_at <= @To)
+            {whereClause}
             ORDER BY created_at DESC, id DESC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
-        var offset = (pageNumber - 1) * pageSize;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-
         return await connection.QueryAsync<AuditLogEntry>(
-            new CommandDefinition(sql, new
-            {
-                Action = action,
-                EntityType = entityType,
-                UserId = userId,
-                From = from,
-                To = to,
-                Offset = offset,
-                PageSize = pageSize
-            }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 }

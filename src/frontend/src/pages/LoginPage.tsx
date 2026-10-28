@@ -13,6 +13,21 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
  * Columna derecha: Foto vertical con degradado hacia la columna izquierda.
  * Redirige a /bodega/dashboard si el usuario autenticado tiene rol Winery.
  */
+// Resolución de ruta de inicio garantizando que Bodegas y Administradores vayan a su panel operativo
+function resolveTargetRoute(role?: string, customRedirectPath?: string | null): string {
+  if (role === 'Admin') {
+    return customRedirectPath && customRedirectPath !== '/dashboard' && customRedirectPath !== '/'
+      ? customRedirectPath
+      : '/admin';
+  }
+  if (role === 'Winery') {
+    return customRedirectPath && customRedirectPath !== '/dashboard' && customRedirectPath !== '/'
+      ? customRedirectPath
+      : '/bodega/dashboard';
+  }
+  return customRedirectPath ?? '/dashboard';
+}
+
 export default function LoginPage() {
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -31,23 +46,20 @@ export default function LoginPage() {
     locationState &&
     typeof locationState === 'object' &&
     'from' in locationState &&
-    locationState.from &&
-    typeof locationState.from === 'object' &&
-    'pathname' in (locationState.from as Record<string, unknown>) &&
-    typeof (locationState.from as Record<string, unknown>).pathname === 'string'
-      ? ((locationState.from as Record<string, unknown>).pathname as string)
+    locationState.from
+      ? typeof locationState.from === 'string'
+        ? locationState.from
+        : typeof locationState.from === 'object' &&
+          'pathname' in (locationState.from as Record<string, unknown>) &&
+          typeof (locationState.from as Record<string, unknown>).pathname === 'string'
+        ? ((locationState.from as Record<string, unknown>).pathname as string)
+        : null
       : null;
 
-  // Redirigir a la ruta original o al Dashboard correspondiente si ya tiene sesión activa
+  // Redirigir al Dashboard correspondiente si ya tiene sesión activa
   useEffect(() => {
     if (isAuthenticated) {
-      const defaultPath =
-        user?.role === 'Admin'
-          ? '/admin'
-          : user?.role === 'Winery'
-            ? '/bodega/dashboard'
-            : '/dashboard';
-      navigate(customRedirectPath ?? defaultPath, { replace: true });
+      navigate(resolveTargetRoute(user?.role, customRedirectPath), { replace: true });
     }
   }, [isAuthenticated, user?.role, customRedirectPath, navigate]);
 
@@ -82,7 +94,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login({ email: email.trim(), password });
+      const loggedUser = await login({ email: email.trim(), password });
+      navigate(resolveTargetRoute(loggedUser?.role, customRedirectPath), { replace: true });
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
