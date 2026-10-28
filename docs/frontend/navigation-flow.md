@@ -116,12 +116,15 @@ flowchart TD
     - Tinte suave `bg-black/20`, capa superpuesta con degradado hacia el borde izquierdo (`bg-gradient-to-r from-[#141416] via-transparent to-transparent`) para fundirse armónicamente con la columna del formulario, y sutil degradado inferior `bg-gradient-to-t from-black/70 via-transparent to-transparent`.
     - Sin cajas ni contenedores artificiales: texto tipográfico plano en la parte inferior *"VALLE DE UCO · MENDOZA"* (`text-xs tracking-[0.3em] text-white/80 font-light uppercase`).
 
-### 2.3 Pantalla Provisional de Términos y Condiciones (`TermsPage.tsx`)
-- Vista pública accesible en `/terms` con estética editorial de cava oscura (`min-h-screen bg-[#0e0e11] text-zinc-100 flex flex-col items-center justify-center p-6`):
-  - Tarjeta central flotante en `bg-zinc-900 border border-white/10 rounded-3xl p-8 md:p-10`.
-  - Botón de navegación `← Volver` con retorno inteligente (`history.back()` o redirección al home).
-  - Título en Serif noble (*"Términos y Condiciones"*) y mensaje explicativo de disponibilidad próxima.
-  - Accesible desde los enlaces integrados en los formularios de autenticación (`/register` y `/login`).
+### 2.3 Pantalla de Términos y Condiciones (`TermsPage.tsx`)
+- Vista pública accesible en `/terms` con estética editorial completa de cava oscura (`min-h-screen bg-[#0e0e11] text-zinc-100 flex flex-col`):
+  - **Cabecera Sticky**: Botón de navegación `← Volver` con retorno inteligente (`history.length > 1 ? navigate(-1) : navigate('/')`), isotipo de `AyVino` y etiqueta descriptiva de documento legal.
+  - **Hero Editorial**: Título en Serif noble (*"Términos y Condiciones de Uso"*), badge de estado, fecha de última actualización (28 de octubre de 2026) y resumen de aplicación.
+  - **Layout de 2 Columnas**:
+    * **Índice Lateral Sticky (TOC)**: Panel interactivo con las 11 cláusulas numeradas, scroll suave (`scrollIntoView`) e indicador visual de sección activa mediante `IntersectionObserver` con saneamiento (`disconnect`).
+    * **Cuerpo Normativo Estructurado**: 11 secciones con cláusulas detalladas para AyVino (Restricción de edad +18, Consumo responsable, Perfiles de Enófilo y Bodega, Exención orientativa del Sommelier IA, Propiedad Intelectual, Normas Comunitarias, Salud y Alergias, y Ley Aplicable).
+  - **Canal de Contacto y Acciones Rápidas**: Tarjeta con enlace directo al correo oficial (`Ayvinonk@gmail.com`) y botones de acción rápida para regresar a la vista anterior o ingresar al registro (`/register`).
+  - Accesible desde el enlace interactivo en el formulario de registro (`/register`) con apertura segura en nueva pestaña (`target="_blank" rel="noopener noreferrer"`).
 
 ### 2.4 Homepage / Exploración y Bodegas (`DashboardPage.tsx`)
 - Vista principal post-login accesible en `/dashboard` (y alias `/app`):

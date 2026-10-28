@@ -88,7 +88,7 @@ src/frontend/src/
 │   ├── LoginPage.tsx          # Formulario de acceso editorial
 │   ├── PairingPage.tsx        # Recomendaciones gastronómicas y maridaje
 │   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
-│   ├── TermsPage.tsx          # Vista provisional de Términos y Condiciones
+│   ├── TermsPage.tsx          # Vista legal completa de Términos y Condiciones con índice lateral sticky
 │   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
 ├── routes/                    # Configuración de enrutamiento
 │   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
