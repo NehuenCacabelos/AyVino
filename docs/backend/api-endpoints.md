@@ -295,3 +295,34 @@ Permite a los administradores unificar etiquetas de vino duplicadas dentro de un
 7. **Visibilidad pública**: Los vinos con `duplicate_of_wine_id` asignado quedan ocultos de búsquedas, listados públicos y de `GET /api/wines/{id}` para usuarios no administradores (`404 Not Found`). Los administradores continúan visualizándolos con el badge de referencia al original.
 8. **Auditoría**: Se registra automáticamente la acción `WineMerged` (action 18, entityType `Wine`, entityId `targetId`, details `duplicateId`).
 
+---
+
+## 18. Estadísticas del Panel (`/api/admin/stats`)
+
+Proporciona métricas consolidadas y conteos exactos de moderación y catálogos maestros mediante consultas optimizadas `COUNT` en SQL.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/admin/stats` | Admin (`RequireAdmin`) | Conteos exactos de usuarios, bodegas, ciudades, cosechas, vinos y reseñas. | - | `200 OK` (`AdminStatsDto`) |
+
+### Estructura del DTO (`AdminStatsDto`)
+- `users`:
+  - `total` (`int`): Total de usuarios registrados.
+  - `blocked` (`int`): Usuarios bloqueados (`is_active = false`).
+- `wineries`:
+  - `pending` (`int`): Bodegas pendientes de aprobación (`status = 1`).
+  - `approved` (`int`): Bodegas aprobadas (`status = 2`).
+  - `rejected` (`int`): Bodegas rechazadas (`status = 3`).
+- `cities`:
+  - `pending` (`int`): Ciudades pendientes de moderación (`status = 2`).
+- `vintages`:
+  - `pending` (`int`): Cosechas pendientes (`approval_status = 1`).
+  - `approved` (`int`): Cosechas aprobadas (`approval_status = 2`).
+  - `rejected` (`int`): Cosechas rechazadas (`approval_status = 3`).
+- `wines`:
+  - `total` (`int`): Total de etiquetas principales sin contar duplicados (`duplicate_of_wine_id IS NULL`).
+  - `community` (`int`): Vinos comunitarios sin duplicados (`source_type = 1`).
+  - `official` (`int`): Vinos oficiales sin duplicados (`source_type = 2`).
+- `reviews`:
+  - `total` (`int`): Total de reseñas en el sistema.
+

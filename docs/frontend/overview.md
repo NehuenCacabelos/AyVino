@@ -94,7 +94,11 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 - **`getApiErrorMessage.ts`**: Extractor tipado de errores RFC 7807 (Problem Details) priorizando `detail` > `title`.
 
 ### 4.2 Vistas del Panel de Administración
-- **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo al administrador, tres tarjetas KPI independientes con conteo real y soporte para desbordamiento ("100+"), listado directo de los últimos pendientes de moderación (bodegas y ciudades) y accesos rápidos a catálogos maestros.
+- **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo editorial al administrador conectado y panel consolidado impulsado por el endpoint especializado `GET /api/admin/stats` y `GET /api/admin/audit-logs`:
+  - *Cuatro tarjetas KPI con conteos exactos*: Bodegas pendientes (`/admin/bodegas?status=Pending`), Cosechas pendientes (`/admin/cosechas?status=Pending`), Ciudades pendientes (`/admin/ciudades?status=Pending`) y Usuarios bloqueados (`/admin/usuarios`). Indicadores visuales en ámbar ante elementos pendientes y alerta destacada ante cuentas suspendidas.
+  - *Métricas del Ecosistema*: Panel resumen con total de usuarios registrados, bodegas aprobadas, catálogo de vinos (con desglose dinámico de oficiales vs. comunitarios) y total de reseñas comunitarias.
+  - *Widget de Actividad Reciente*: Carga de las últimas 5 operaciones del registro de auditoría (`getAuditLogs({ pageNumber: 1, pageSize: 5 })`) con nombre de administrador, acción formateada en español, tipo/identificador de entidad, timestamp `es-AR` y enlace directo *"Ver todo"* a `/admin/auditoria`.
+  - *Resiliencia desacoplada*: Manejo independiente de fallos de red y botones de reintento dedicados para estadísticas y auditoría sin degradación mutua ni bloqueos de interfaz.
 - **Moderación de Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Filtros por chip según estado de moderación (con sincronización en URL `?status=`), tabla detallada con iniciales/logo, acciones dinámicas de aprobación/rechazo/suspensión (para bodegas aprobadas la acción se denomina Suspender con confirmación explicativa sobre ocultamiento público), modal de detalle institucional con hipervínculo al perfil público y eliminación física con diálogo destructivo.
 - **Moderación de Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Gestión de ciudades sugeridas por la comunidad al registrar bodegas. Filtro por provincia con resolución en memoria de nombres de provincia, y aprobación o rechazo con confirmación.
 - **Moderación de Cosechas (`AdminVintagesPage.tsx` en `/admin/cosechas`)**: Bandeja centralizada de añadas cargadas por usuarios y bodegas. Filtros de estado, tabla con miniaturas, resolución sensorial de varietales (blends), modal de ficha técnica extendida (temperatura de servicio, guarda) y acciones de moderación o baja.
@@ -117,11 +121,11 @@ src/frontend/src/
 ├── constants/                 # Constantes globales compartidas (bannerThemes.ts)
 ├── features/                  # Arquitectura orientada a características
 │   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
-│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi, adminReviewsApi, adminWinesApi
+│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi, adminReviewsApi, adminWinesApi, adminStatsApi
 │   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
 │   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
 │   │   ├── hooks/             # usePagedList
-│   │   ├── types/             # adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines
+│   │   ├── types/             # adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines, adminStats
 │   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
