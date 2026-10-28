@@ -41,6 +41,7 @@ const AdminUsersPage = lazy(() => import('../pages/AdminUsersPage'));
 const AdminGrapesPage = lazy(() => import('../pages/AdminGrapesPage'));
 const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
 const AdminAuditPage = lazy(() => import('../pages/AdminAuditPage'));
+const AdminReviewsPage = lazy(() => import('../pages/AdminReviewsPage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -379,6 +380,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <AdminAuditPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'resenas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminReviewsPage />
               </Suspense>
             ),
           },
