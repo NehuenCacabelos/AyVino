@@ -66,6 +66,13 @@ public static class WineEndpoints
             .WithName("SearchWines")
             .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
 
+        group.MapPost("/{targetId:int}/merge/{duplicateId:int}", async (int targetId, int duplicateId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.MergeWinesAsync(targetId, duplicateId, user.GetActor(), ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .WithName("MergeWines")
+            .WithSummary("Fusiona un vino duplicado dentro del vino principal.")
+            .WithAudit(AuditAction.WineMerged, "Wine", idRouteKey: "targetId", details: (ctx, res) => ctx.HttpContext.Request.RouteValues.TryGetValue("duplicateId", out var dupId) ? dupId?.ToString() : null);
+
         return app;
     }
 }

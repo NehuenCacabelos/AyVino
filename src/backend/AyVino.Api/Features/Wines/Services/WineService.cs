@@ -211,6 +211,37 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
+    public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default)
+    {
+        if (!actor.IsAdmin)
+        {
+            throw new ForbiddenException("Solo un administrador puede fusionar vinos.");
+        }
+
+        if (targetId == duplicateId)
+        {
+            throw new ValidationException("No se puede fusionar un vino consigo mismo.");
+        }
+
+        var target = await wineRepository.GetByIdAsync(targetId, ct)
+            ?? throw new NotFoundException($"El vino destino con ID {targetId} no existe.");
+
+        var duplicate = await wineRepository.GetByIdAsync(duplicateId, ct)
+            ?? throw new NotFoundException($"El vino a fusionar con ID {duplicateId} no existe.");
+
+        if (target.DuplicateOfWineId != null)
+        {
+            throw new ConflictException($"El vino destino (ID {targetId}) ya es un vino duplicado y no puede recibir fusiones.");
+        }
+
+        if (duplicate.DuplicateOfWineId != null)
+        {
+            throw new ConflictException($"El vino origen (ID {duplicateId}) ya fue fusionado anteriormente.");
+        }
+
+        return await wineRepository.MergeWinesAsync(targetId, duplicateId, ct);
+    }
+
     private static List<WineGrape> ToWineGrapes(List<WineGrapeRequestDto>? grapes) =>
         grapes?.Select(g => new WineGrape { GrapeId = g.GrapeId, Percentage = g.Percentage }).ToList() ?? [];
 }
