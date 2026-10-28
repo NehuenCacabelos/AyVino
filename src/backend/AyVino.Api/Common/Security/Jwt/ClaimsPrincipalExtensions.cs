@@ -30,7 +30,9 @@ public static class ClaimsPrincipalExtensions
     public static Actor GetActor(this ClaimsPrincipal principal)
     {
         var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
-        return new Actor(principal.GetUserId(), role);
+        var username = principal.FindFirstValue(JwtRegisteredClaimNames.Name)
+            ?? principal.FindFirstValue(ClaimTypes.Name);
+        return new Actor(principal.GetUserId(), role, username);
     }
 
     public static Actor? GetActorOrNull(this ClaimsPrincipal? principal)
@@ -50,6 +52,8 @@ public static class ClaimsPrincipalExtensions
         }
 
         var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
-        return new Actor(userId, role);
+        var username = principal.FindFirstValue(JwtRegisteredClaimNames.Name)
+            ?? principal.FindFirstValue(ClaimTypes.Name);
+        return new Actor(userId, role, username);
     }
 }

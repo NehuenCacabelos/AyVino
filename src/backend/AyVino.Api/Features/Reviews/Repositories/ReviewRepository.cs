@@ -87,6 +87,54 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
             }, cancellationToken: ct));
     }
 
+    public async Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(
+        int pageNumber,
+        int pageSize,
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        int? rating = null,
+        CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                r.id AS Id,
+                r.rating AS Rating,
+                r.comment AS Comment,
+                r.created_at AS CreatedAt,
+                r.user_id AS UserId,
+                u.username AS Username,
+                r.wine_vintage_id AS WineVintageId,
+                v.wine_id AS WineId,
+                w.name AS WineName,
+                v.year AS Year
+            FROM reviews r
+            JOIN wine_vintages v ON r.wine_vintage_id = v.id
+            JOIN wines w ON v.wine_id = w.id
+            LEFT JOIN users u ON r.user_id = u.id
+            WHERE (@WineId IS NULL OR v.wine_id = @WineId)
+              AND (@WineVintageId IS NULL OR r.wine_vintage_id = @WineVintageId)
+              AND (@UserId IS NULL OR r.user_id = @UserId)
+              AND (@Rating IS NULL OR r.rating = @Rating)
+            ORDER BY r.created_at DESC, r.id DESC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        var offset = (pageNumber - 1) * pageSize;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<AdminReviewListItemDto>(
+            new CommandDefinition(sql, new
+            {
+                WineId = wineId,
+                WineVintageId = wineVintageId,
+                UserId = userId,
+                Rating = rating,
+                Offset = offset,
+                PageSize = pageSize
+            }, cancellationToken: ct));
+    }
+
     public async Task<bool> ExistsForUserAndVintageAsync(int userId, int wineVintageId, CancellationToken ct = default)
     {
         const string sql = """
