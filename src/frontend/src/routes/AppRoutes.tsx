@@ -40,6 +40,7 @@ const AdminVintagesPage = lazy(() => import('../pages/AdminVintagesPage'));
 const AdminUsersPage = lazy(() => import('../pages/AdminUsersPage'));
 const AdminGrapesPage = lazy(() => import('../pages/AdminGrapesPage'));
 const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
+const AdminAuditPage = lazy(() => import('../pages/AdminAuditPage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -370,6 +371,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <AdminPairingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'auditoria',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminAuditPage />
               </Suspense>
             ),
           },

@@ -8,6 +8,7 @@ import {
   Users,
   Grape,
   UtensilsCrossed,
+  History,
   ArrowLeft,
   LogOut,
   Menu,
@@ -26,6 +27,7 @@ const adminNavLinks = [
   { label: 'Usuarios', to: '/admin/usuarios', end: false, icon: Users },
   { label: 'Uvas', to: '/admin/uvas', end: false, icon: Grape },
   { label: 'Maridajes', to: '/admin/maridajes', end: false, icon: UtensilsCrossed },
+  { label: 'Auditoría', to: '/admin/auditoria', end: false, icon: History },
 ];
 
 /**
