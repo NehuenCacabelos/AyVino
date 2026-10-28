@@ -2,14 +2,14 @@ import apiClient from '../../../services/apiClient';
 import type { ImageUploadResponseDto } from '../types';
 
 /**
- * Sube una imagen oficial de bodega o de cosecha a Supabase Storage mediante el backend.
+ * Sube una imagen oficial de bodega, cosecha o banner a Supabase Storage mediante el backend.
  *
  * @param file Archivo binario (JPG, PNG o WEBP, máx 2 MB)
- * @param folder Carpeta de almacenamiento: 'wineries' para logos, 'vintages' para fotos de cosechas
+ * @param folder Carpeta de almacenamiento: 'wineries' para logos, 'vintages' para fotos de cosechas, 'banners' para banners
  */
 export async function uploadImage(
   file: File,
-  folder: 'wineries' | 'vintages',
+  folder: 'wineries' | 'vintages' | 'banners',
 ): Promise<ImageUploadResponseDto> {
   const formData = new FormData();
   formData.append('file', file);

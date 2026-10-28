@@ -66,7 +66,7 @@ describe('WineryKpiRibbon', () => {
     );
 
     expect(screen.getByText('Disponible al aprobarse')).toBeInTheDocument();
-    expect(screen.getByText('Sin notas')).toBeInTheDocument();
+    expect(screen.getByText('Aún sin valoración')).toBeInTheDocument();
     expect(screen.getByText('Aguardando primeras catas')).toBeInTheDocument();
   });
 });

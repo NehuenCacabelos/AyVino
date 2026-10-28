@@ -44,36 +44,45 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
 
 ### 3.1 Jerarquía de Layouts de Bodega
 1. **`WineryPublicLayout` (Rutas Públicas)**:
-   - Envuelve `/para-bodegas` y `/bodegas/:id`.
+   - Envuelve `/para-bodegas`.
    - Renderiza el `Navbar` superior compartido, `<Outlet />` para la vista hija y el footer institucional.
 2. **`WineryLayout` (Panel Protegido `/bodega/*`)**:
    - Reemplaza la antigua sidebar por `WineryNavbar`: barra superior persistente fija con logo "AyVino.", enlaces de navegación (`NavLink` con `isActive`), badge de estado institucional y menú desplegable con avatar/logo de bodega (`WineryLogo`), accesos a configuración, perfil público y cierre de sesión.
    - Provee contexto reactivo memoizado a las vistas hijas vía `WineryProvider` y `Outlet context`.
    - Footer legal persistente `#0c0c0e` con el texto: *"Beber con moderación · Prohibida su venta a menores de 18 años"*.
    - Tratamiento de estados globales: carga (`WineryLoadingState`), error de sincronización (`WineryErrorState`) y 404 para cuentas autenticadas sin bodega asociada.
-3. **`WineryTopBar` (Vistas Inmersivas Contextuales)**:
+3. **`WineryTopBar` (Vistas Inmersivas Contextuales del Productor)**:
    - Utilizado en `/bodega/configuracion` y `/bodega/perfil`.
    - Barra contextual superior fija (`h-14`, backdrop-blur, borde `border-b border-white/10`), marca enlazando a `/bodega/dashboard` y botón *"Volver al panel"*.
+4. **`WineryPublicProfileLayout` (Perfil Público Vidriera `/bodegas/:id`)**:
+   - Layout inmersivo con barra contextual propia `WineryPublicTopBar` (logo redirige a `/` si es anónimo o a `/dashboard` si hay sesión; botón volver).
+   - Cabecera inmersiva con `WineryBanner` (degradado temático determinista a partir del nombre de la bodega con los temas de `constants/bannerThemes.ts` o fotografía oficial panorámica 3:1 con overlay oscuro de contraste, límite de 2 MB), logo circular superpuesto, metadatos, botón Seguir con rollback optimista y redirección de login, copiar enlace y tabs NavLink.
+   - Pestañas anidadas vía `<Outlet />` con contexto compartido memoizado (`useMemo`): *"La bodega"* (`WineryPublicOverviewPage`) y *"Catálogo"* (`WineryPublicCatalogPage` paginado en servidor con `pageNumber`, `pageSize`, `search`, `wineType`, `grapeId`, `year`, `sort` y punto de selección único `onSelectWine`).
+   - Modo vista previa (`isPreview: true` para dueño o admin de bodega en revisión): cartel fijo explicativo y etiquetas marcadas como borrador. Estado 404 amable para bodegas no disponibles.
 
 ### 3.2 Vistas del Área de Bodega
 - **Propuesta de Valor Institucional (`ForWineriesPage.tsx` en `/para-bodegas`)**: Landing de bienvenida para bodegas con beneficios y pasos de certificación.
 - **Registro Unificado de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card inmersivo en 2 pasos con integración de `RegionPicker` y mapa Leaflet.
 - **Panel Principal (`WineryDashboardPage.tsx` en `/bodega/dashboard`)**: Cinta de 4 KPIs (`WineryKpiRibbon`), accesos rápidos (`WineryQuickActions`), checklist interactivo (`WineryChecklistCard`) y últimas etiquetas oficiales (`WineryRecentWines`).
-- **Configuración de la Bodega (`WineryConfigPage.tsx` en `/bodega/configuracion`)**: Clon visual inmersivo de `AccountPage` con sidebar izquierda (logo circular con `ring-4`, botones de subida/eliminación de logo, navegación en `font-mono`) y 4 secciones independientes:
+- **Configuración de la Bodega (`WineryConfigPage.tsx` en `/bodega/configuracion`)**: Clon visual inmersivo de `AccountPage` con sidebar izquierda (logo circular con `ring-4`, botones de subida/eliminación de logo, gestión de banner institucional 3:1 con `WineryBanner` e `ImageUploadField` en carpeta `banners`, navegación en `font-mono`) y 4 secciones independientes:
   1. *Datos de la bodega*: Nombre oficial, año de fundación, sitio web y semblanza histórica (con validaciones y contador).
   2. *Región y terruño*: Selector territorial interactivo con `RegionPicker` (mapa satelital o selección en lista).
   3. *Cuenta del responsable*: Nombre de usuario y correo del titular en modo solo lectura (`getCurrentUserApi`).
   4. *Seguridad y acceso*: Formulario de cambio de contraseña con toggle de visibilidad (`changePasswordApi`).
 - **Ficha Institucional de Bodega (`WineryOverviewPage.tsx` en `/bodega/perfil`)**: Rediseño visual alineado con `ProfilePage`:
-  - Banner vitivinícola degradado determinista calculado con `getBannerThemeByUsername(winery.name)`.
+  - Banner vitivinícola unificado `WineryBanner` (fotografía oficial o degradado determinista por defecto).
   - Logo circular con aro `ring-4` superpuesto sobre el banner.
   - Nombre en Serif grande, badges de estado (`Oficial`, `En revisión`, `Observaciones`), terruño y año de fundación.
   - Botones de acción: *"Editar configuración"* (hacia `/bodega/configuracion`) y *"Ver cómo lo ven los usuarios"* (hacia `/bodegas/:id`, siempre habilitado).
   - Cinta de métricas consolidadas (seguidores, etiquetas oficiales, cosechas y puntaje de la comunidad).
   - Mapa Leaflet de terruño de solo lectura y catálogo resumido.
-- **Gestión de Catálogo y Cosechas (`WineryWinesPage.tsx` en `/bodega/vinos`)**: Grilla con filtros por tipo de vino, buscador en tiempo real, alta de etiqueta oficial (`WineCreateModal`) y administración de cosechas/añadas (`WineVintagesModal`).
+- **"Mi catálogo" de la Bodega (`WineryCatalogPage.tsx` en `/bodega/vinos`)**: Catálogo integral de etiquetas con cinta de métricas (`WineryCatalogRibbon`), barra de búsqueda y filtros reactivos por tipo, uva, año y estado de añada (`WineryCatalogToolbar`), visualización dual grilla/lista (`WineryCatalogCard`), paginación inmutable de 12 etiquetas por página, silueta de botella estilizada propia de bodega (`WineryCatalogBottleSilhouette`), estados vacíos (`WineryCatalogEmptyState`), alta oficial (`WineCreateModal`) y agregado rápido de añadas (`WineVintagesModal`).
+- **Ficha Detallada de Vino (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)**: Ficha técnica completa de la etiqueta con botón "Volver al catálogo", cabecera editorial con origen ("Oficial de tu bodega" / "Agregado por la comunidad"), valoración comunitaria, notas de cata y acciones "Editar etiqueta" (`WineEditModal`) y "Agregar añada" (`WineVintagesModal`). Listado vertical cronológico de cosechas (`WineryVintageCard`) con barra proporcional de corte varietal, alcohol, temperatura, consejo de guarda y estado de moderación. Sección de maridajes recomendados de solo lectura (`WineryWinePairingsList`) y 404 amigable para etiquetas inexistentes o ajenas.
 - **Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)**: Adopción de botellas subidas por aficionados conservando sus reseñas históricas.
-- **Vidriera Pública Universal (`WineryPublicProfilePage.tsx` en `/bodegas/:id`)**: Vidriera accesible sin sesión con seguimiento comunitario, desacoplada 100% de `features/wines` mediante `WineryPublicWineCard` y `WineryPublicWineDetailModal`.
+- **Vidriera Pública Universal (`WineryPublicProfileLayout.tsx` en `/bodegas/:id`)**:
+  - Reemplazo integral de la antigua página monolítica.
+  - Subruta índice *"La bodega"* (`WineryPublicOverviewPage.tsx`): semblanza histórica institucional, terruño, mapa satelital de solo lectura (`WineryReadOnlyMap.tsx`) y totales de producción.
+  - Subruta *"Catálogo"* (`WineryPublicCatalogPage.tsx`): catálogo paginado con filtros server-side reflejados en la URL (`searchParams`: búsqueda, tipo, uva, año, orden), tarjetas `WineryPublicCatalogCard.tsx`, siluetas `WineryCatalogBottleSilhouette` y punto de entrada único (`onSelectWine`) hacia el modal técnico provisorio `WineryPublicWineDetailModal.tsx`.
 
 ---
 
@@ -134,7 +143,7 @@ src/frontend/src/
 │   └── winery/                # Módulo Institucional de Bodegas (100% Desacoplado)
 │       ├── api/               # wineryApi, wineApi, locationApi, grapeApi, imageApi
 │       ├── components/        # WineryNavbar, WineryTopBar, WineryLayout, WineryPublicLayout,
-│       │                      # WineryPublicWineCard, WineryPublicWineDetailModal, WineryLogo,
+│       │                      # WineryPublicCatalogCard, WineryPublicWineDetailModal, WineryLogo,
 │       │                      # WineryStatusBanner, WineryKpiRibbon, WineryQuickActions,
 │       │                      # WineryChecklistCard, WineryRecentWines, RegionPicker,
 │       │                      # WineCreateModal, WineVintagesModal, ImageUploadField, etc.
@@ -158,10 +167,12 @@ src/frontend/src/
 │   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
 │   ├── WineryConfigPage.tsx   # Configuración inmersiva (/bodega/configuracion)
 │   ├── WineryOverviewPage.tsx # Ficha institucional con banner (/bodega/perfil)
-│   ├── WineryProfilePage.tsx  # Reexport limpio hacia WineryOverviewPage
-│   ├── WineryWinesPage.tsx    # Catálogo y cosechas (/bodega/vinos)
+│   ├── WineryCatalogPage.tsx  # Mi catálogo del dueño (/bodega/vinos)
+│   ├── WineryWineDetailPage.tsx # Ficha técnica de vino (/bodega/vinos/:wineId)
 │   ├── WineryClaimPage.tsx    # Reclamo de vinos comunitarios (/bodega/reclamar)
-│   └── WineryPublicProfilePage.tsx # Vidriera pública (/bodegas/:id)
+│   ├── WineryPublicProfileLayout.tsx # Layout del perfil público (/bodegas/:id)
+│   ├── WineryPublicOverviewPage.tsx  # Pestaña "La bodega" (/bodegas/:id)
+│   └── WineryPublicCatalogPage.tsx   # Pestaña "Catálogo" (/bodegas/:id/catalogo)
 ├── routes/                    # Data Router v7
 │   └── AppRoutes.tsx          # Definición centralizada con createBrowserRouter
 └── services/                  # Infraestructura

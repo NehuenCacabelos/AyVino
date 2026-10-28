@@ -27,6 +27,7 @@ export interface WineryResponseDto {
   latitude?: number | null;
   longitude?: number | null;
   logoUrl?: string | null;
+  bannerUrl?: string | null;
   location?: WineryLocationSummaryDto | null;
 }
 
@@ -67,6 +68,7 @@ export interface UpdateWineryRequestDto {
   latitude?: number | null;
   longitude?: number | null;
   logoUrl?: string | null;
+  bannerUrl?: string | null;
   description?: string | null;
   foundationYear?: number | null;
   website?: string | null;
@@ -80,4 +82,3 @@ export interface WineryFollowerDto {
   username: string;
   followedAt: string;
 }
-

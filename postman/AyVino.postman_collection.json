@@ -2,13 +2,13 @@
   "info": {
     "_postman_id": "a1c2e3f4-5678-90ab-cdef-1234567890ab",
     "name": "AyVino API",
-    "description": "Colección exhaustiva de pruebas y endpoints para el backend de AyVino (.NET 10 Minimal APIs). Incluye casos felices de todas las features y casos de error representativos (400, 401, 403, 404, 409).",
+    "description": "Colecci├│n exhaustiva de pruebas y endpoints para el backend de AyVino (.NET 10 Minimal APIs). Incluye casos felices de todas las features y casos de error representativos (400, 401, 403, 404, 409).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "00 - Setup",
-      "description": "### Instrucciones de Setup Inicial y Roles en Base de Datos Local\n\nPara ejecutar pruebas completas con permisos diferenciados (User, Winery Owner, Admin):\n\n1. **Promover un usuario a Administrador (Admin):**\n   Registrá un usuario común mediante `POST /api/users` (ej. con email `admin.ayvino@example.com` y contraseña `Password123!`). Luego, ejecutá en PostgreSQL:\n   ```sql\n   UPDATE users SET role = 'Admin' WHERE email = 'admin.ayvino@example.com';\n   ```\n\n2. **Aprobar una Bodega (Approved):**\n   Las bodegas registradas por la comunidad o nuevos usuarios inician en estado `Pending`. Para dejarlas en `Approved` (`status = 2`):\n   ```sql\n   UPDATE wineries SET status = 2 WHERE id = 1; -- 2 = Approved\n   ```\n   O bien, utilizá el endpoint `PATCH /api/wineries/{id}/status` con el token de Administrador.\n\n3. **Flujo recomendado:**\n   - Ejecutá `Login - Usuario Común`, `Login - Owner Bodega` y `Login - Admin` en la carpeta Auth para poblar automáticamente los tokens en el Environment.",
+      "description": "### Instrucciones de Setup Inicial y Roles en Base de Datos Local\n\nPara ejecutar pruebas completas con permisos diferenciados (User, Winery Owner, Admin):\n\n1. **Promover un usuario a Administrador (Admin):**\n   Registr├í un usuario com├║n mediante `POST /api/users` (ej. con email `admin.ayvino@example.com` y contrase├▒a `Password123!`). Luego, ejecut├í en PostgreSQL:\n   ```sql\n   UPDATE users SET role = 'Admin' WHERE email = 'admin.ayvino@example.com';\n   ```\n\n2. **Aprobar una Bodega (Approved):**\n   Las bodegas registradas por la comunidad o nuevos usuarios inician en estado `Pending`. Para dejarlas en `Approved` (`status = 2`):\n   ```sql\n   UPDATE wineries SET status = 2 WHERE id = 1; -- 2 = Approved\n   ```\n   O bien, utiliz├í el endpoint `PATCH /api/wineries/{id}/status` con el token de Administrador.\n\n3. **Flujo recomendado:**\n   - Ejecut├í `Login - Usuario Com├║n`, `Login - Owner Bodega` y `Login - Admin` en la carpeta Auth para poblar autom├íticamente los tokens en el Environment.",
       "item": []
     },
     {
@@ -18,7 +18,7 @@
           "name": "Auth",
           "item": [
             {
-              "name": "Login - Sommelier / Usuario Común",
+              "name": "Login - Sommelier / Usuario Com├║n",
               "request": {
                 "method": "POST",
                 "header": [
@@ -40,7 +40,7 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesión como aficionado/sommelier común y guarda userToken",
+                "description": "Inicia sesi├│n como aficionado/sommelier com├║n y guarda userToken",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
@@ -70,7 +70,7 @@
               ]
             },
             {
-              "name": "Login - Dueño Bodega (Winery)",
+              "name": "Login - Due├▒o Bodega (Winery)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -92,7 +92,7 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesión como dueño de bodega y guarda ownerToken y wineryToken",
+                "description": "Inicia sesi├│n como due├▒o de bodega y guarda ownerToken y wineryToken",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{ownerPassword}}\"\n}",
@@ -146,7 +146,7 @@
                   ],
                   "query": []
                 },
-                "description": "Inicia sesión como Administrador y guarda adminToken",
+                "description": "Inicia sesi├│n como Administrador y guarda adminToken",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -250,7 +250,7 @@
                   ],
                   "query": []
                 },
-                "description": "Cambia contraseña del usuario conectado",
+                "description": "Cambia contrase├▒a del usuario conectado",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"currentPassword\": \"{{userPassword}}\",\n  \"newPassword\": \"{{userPassword}}\"\n}",
@@ -302,7 +302,7 @@
                   ],
                   "query": []
                 },
-                "description": "Revoca sesión activa",
+                "description": "Revoca sesi├│n activa",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"refreshToken\": \"token_a_revocar_ejemplo\"\n}",
@@ -353,7 +353,7 @@
                   ],
                   "query": []
                 },
-                "description": "Registra un nuevo usuario común",
+                "description": "Registra un nuevo usuario com├║n",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"username\": \"aficionado_{{$timestamp}}\",\n  \"email\": \"aficionado_{{$timestamp}}@example.com\",\n  \"password\": \"Password123!\"\n}",
@@ -450,7 +450,7 @@
                 "description": "Actualiza perfil propio",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"sommelier_comunitario\",\n  \"bio\": \"Apasionado del Malbec y la enología argentina.\",\n  \"photo\": \"https://example.com/avatar.jpg\"\n}",
+                  "raw": "{\n  \"username\": \"sommelier_comunitario\",\n  \"bio\": \"Apasionado del Malbec y la enolog├¡a argentina.\",\n  \"photo\": \"https://example.com/avatar.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -587,7 +587,7 @@
                 "description": "Actualiza perfil de cualquier usuario",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"usuario_edit_{{$timestamp}}\",\n  \"bio\": \"Perfil actualizado por administración\",\n  \"photo\": \"https://example.com/admin_photo.jpg\"\n}",
+                  "raw": "{\n  \"username\": \"usuario_edit_{{$timestamp}}\",\n  \"bio\": \"Perfil actualizado por administraci├│n\",\n  \"photo\": \"https://example.com/admin_photo.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -783,7 +783,7 @@
                 "description": "Onboarding unificado de bodega con JWT",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"bianchi_adm_{{$timestamp}}\",\n  \"email\": \"owner_{{$timestamp}}@bodegabianchi.com\",\n  \"password\": \"Password123!\",\n  \"wineryName\": \"Bodegas Bianchi {{$timestamp}}\",\n  \"locationId\": 1,\n  \"description\": \"Bodega histórica de San Rafael y Valle de Uco.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
+                  "raw": "{\n  \"username\": \"bianchi_adm_{{$timestamp}}\",\n  \"email\": \"owner_{{$timestamp}}@bodegabianchi.com\",\n  \"password\": \"Password123!\",\n  \"wineryName\": \"Bodegas Bianchi {{$timestamp}}\",\n  \"locationId\": 1,\n  \"description\": \"Bodega hist├│rica de San Rafael y Valle de Uco.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -834,7 +834,7 @@
                     }
                   ]
                 },
-                "description": "Listado público de bodegas"
+                "description": "Listado p├║blico de bodegas"
               },
               "response": [],
               "event": [
@@ -866,7 +866,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle público de bodega"
+                "description": "Detalle p├║blico de bodega"
               },
               "response": [],
               "event": [
@@ -960,10 +960,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edición por dueño o administrador",
+                "description": "Edici├│n por due├▒o o administrador",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Bodegas Bianchi Actualizada\",\n  \"locationId\": 1,\n  \"description\": \"Descripción renovada por el propietario.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
+                  "raw": "{\n  \"name\": \"Bodegas Bianchi Actualizada\",\n  \"locationId\": 1,\n  \"description\": \"Descripci├│n renovada por el propietario.\",\n  \"foundationYear\": 1928,\n  \"website\": \"https://www.bodegasbianchi.com.ar\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1103,7 +1103,7 @@
                     "status"
                   ]
                 },
-                "description": "Suspende una bodega activa poniéndola en estado Rejected",
+                "description": "Suspende una bodega activa poni├®ndola en estado Rejected",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"status\": \"Rejected\"\n}",
@@ -1143,7 +1143,7 @@
                     "{{wineryId}}"
                   ]
                 },
-                "description": "Una bodega suspendida (Rejected) o pendiente no es visible para usuarios anónimos ni terceros (404)"
+                "description": "Una bodega suspendida (Rejected) o pendiente no es visible para usuarios an├│nimos ni terceros (404)"
               },
               "response": [],
               "event": [
@@ -1189,6 +1189,147 @@
                   "script": {
                     "exec": [
                       "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Winery Catalog",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/me/catalog",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "me",
+                    "catalog"
+                  ]
+                },
+                "description": "Devuelve el cat├ílogo integral de la bodega del productor autenticado, con todas sus etiquetas, a├▒adas, uvas y m├®tricas de resumen."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Public Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/public",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "public"
+                  ]
+                },
+                "description": "Perfil p├║blico vidriera con conteo de seguidores, estado isFollowedByMe, totales de etiquetas y cosechas, y valoraci├│n ponderada (con >= 5 rese├▒as; null con menos de 5)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Winery Public Catalog",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wineries/{{wineryId}}/catalog?pageNumber=1&pageSize=12",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wineries",
+                    "{{wineryId}}",
+                    "catalog"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "12"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "wineType",
+                      "value": "Red",
+                      "disabled": true
+                    },
+                    {
+                      "key": "grapeId",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "year",
+                      "value": "2021",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "name",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Cat├ílogo p├║blico paginado con filtros de servidor (pageNumber, pageSize, search, wineType, grapeId, year, sort), uvas, a├▒adas y metadatos de filtros."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -1468,7 +1609,7 @@
                   ],
                   "query": []
                 },
-                "description": "Crea ubicación",
+                "description": "Crea ubicaci├│n",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"cityId\": 1\n}",
@@ -1549,7 +1690,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle de ubicación"
+                "description": "Detalle de ubicaci├│n"
               },
               "response": [],
               "event": [
@@ -1613,7 +1754,7 @@
                   ],
                   "query": []
                 },
-                "description": "Detalle de ubicación vitivinícola"
+                "description": "Detalle de ubicaci├│n vitivin├¡cola"
               },
               "response": [],
               "event": [
@@ -1658,7 +1799,7 @@
                     }
                   ]
                 },
-                "description": "Catálogo de cepas"
+                "description": "Cat├ílogo de cepas"
               },
               "response": [],
               "event": [
@@ -1735,7 +1876,7 @@
                 "description": "Alta de uva por admin",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Criolla Grande 217\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"Light\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"Medium\",\n  \"description\": \"Cepa autóctona patrimonial argentina.\"\n}",
+                  "raw": "{\n  \"name\": \"Criolla Grande 217\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"Light\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"Medium\",\n  \"description\": \"Cepa aut├│ctona patrimonial argentina.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1786,10 +1927,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edición de cepa por admin",
+                "description": "Edici├│n de cepa por admin",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Criolla Grande Selección\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"MediumLight\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"MediumHigh\",\n  \"description\": \"Descripción actualizada.\"\n}",
+                  "raw": "{\n  \"name\": \"Criolla Grande Selecci├│n\",\n  \"colorType\": \"Red\",\n  \"typicalBody\": \"MediumLight\",\n  \"typicalTannins\": \"Soft\",\n  \"typicalAcidity\": \"MediumHigh\",\n  \"description\": \"Descripci├│n actualizada.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1865,7 +2006,7 @@
                   ],
                   "query": []
                 },
-                "description": "Elimina una uva del catálogo"
+                "description": "Elimina una uva del cat├ílogo"
               },
               "response": [],
               "event": [
@@ -1915,7 +2056,7 @@
                 "description": "Alta de vino comunitario (SourceType=1)",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Vino Comunitario 766\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Vino cargado por aficionado sin cuenta oficial\",\n  \"firstVintage\": {\n    \"year\": 2021,\n    \"alcoholContent\": 14.2,\n    \"servingTemperature\": 16,\n    \"agingAdvice\": \"Consumir dentro de los 4 años.\",\n    \"imageUrl\": \"https://example.com/botella.jpg\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Vino Comunitario 766\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Vino cargado por aficionado sin cuenta oficial\",\n  \"firstVintage\": {\n    \"year\": 2021,\n    \"alcoholContent\": 14.2,\n    \"servingTemperature\": 16,\n    \"agingAdvice\": \"Consumir dentro de los 4 a├▒os.\",\n    \"imageUrl\": \"https://example.com/botella.jpg\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1965,10 +2106,10 @@
                   ],
                   "query": []
                 },
-                "description": "Alta de vino oficial por dueño de bodega aprobada",
+                "description": "Alta de vino oficial por due├▒o de bodega aprobada",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Enzo Bianchi Gran Corte 218\",\n  \"wineType\": \"Red\",\n  \"wineryId\": 1,\n  \"locationId\": 1,\n  \"description\": \"Ícono de la bodega Bianchi\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"alcoholContent\": 14.5,\n    \"servingTemperature\": 18,\n    \"agingAdvice\": \"Guarda potencial 15 años.\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 70\n      },\n      {\n        \"grapeId\": 2,\n        \"percentage\": 30\n      }\n    ]\n  }\n}",
+                  "raw": "{\n  \"name\": \"Enzo Bianchi Gran Corte 218\",\n  \"wineType\": \"Red\",\n  \"wineryId\": 1,\n  \"locationId\": 1,\n  \"description\": \"├ìcono de la bodega Bianchi\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"alcoholContent\": 14.5,\n    \"servingTemperature\": 18,\n    \"agingAdvice\": \"Guarda potencial 15 a├▒os.\",\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 70\n      },\n      {\n        \"grapeId\": 2,\n        \"percentage\": 30\n      }\n    ]\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2046,7 +2187,7 @@
                   ],
                   "query": []
                 },
-                "description": "Ficha técnica del vino"
+                "description": "Ficha t├®cnica del vino"
               },
               "response": [],
               "event": [
@@ -2091,7 +2232,7 @@
                     }
                   ]
                 },
-                "description": "Búsqueda difusa por trigramas"
+                "description": "B├║squeda difusa por trigramas"
               },
               "response": [],
               "event": [
@@ -2134,10 +2275,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edición de vino",
+                "description": "Edici├│n de vino",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Vino Comunitario Editado\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Descripción editada\"\n}",
+                  "raw": "{\n  \"name\": \"Vino Comunitario Editado\",\n  \"wineType\": \"Red\",\n  \"wineryNameText\": \"Bodegas Bianchi\",\n  \"locationId\": 1,\n  \"description\": \"Descripci├│n editada\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2226,7 +2367,7 @@
                   ],
                   "query": []
                 },
-                "description": "Reclama botellas comunitarias promoviéndolas a Official",
+                "description": "Reclama botellas comunitarias promovi├®ndolas a Official",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"wineIds\": [\n    1\n  ]\n}",
@@ -2444,7 +2585,7 @@
                   ],
                   "query": []
                 },
-                "description": "Lista añadas de una etiqueta"
+                "description": "Lista a├▒adas de una etiqueta"
               },
               "response": [],
               "event": [
@@ -2578,7 +2719,7 @@
                   ],
                   "query": []
                 },
-                "description": "Edición de cosecha",
+                "description": "Edici├│n de cosecha",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"year\": 2021,\n  \"alcoholContent\": 14,\n  \"servingTemperature\": 16,\n  \"agingAdvice\": \"Excelente potencial\",\n  \"grapes\": [\n    {\n      \"grapeId\": 1,\n      \"percentage\": 100\n    }\n  ]\n}",
@@ -2633,7 +2774,7 @@
                   ],
                   "query": []
                 },
-                "description": "Aprobación de la cosecha",
+                "description": "Aprobaci├│n de la cosecha",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"status\": \"Approved\"\n}",
@@ -2732,7 +2873,7 @@
                     }
                   ]
                 },
-                "description": "Bandeja global de cosechas para moderación administrativa (rol Admin)"
+                "description": "Bandeja global de cosechas para moderaci├│n administrativa (rol Admin)"
               },
               "response": [],
               "event": [
@@ -2777,7 +2918,7 @@
                     }
                   ]
                 },
-                "description": "Catálogo de maridajes"
+                "description": "Cat├ílogo de maridajes"
               },
               "response": [],
               "event": [
@@ -2822,7 +2963,7 @@
                 "description": "Alta de maridaje",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Ojo de bife con papas rústicas 012456\",\n  \"category\": \"Meat\"\n}",
+                  "raw": "{\n  \"name\": \"Ojo de bife con papas r├║sticas 012456\",\n  \"category\": \"Meat\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3116,7 +3257,7 @@
                     }
                   ]
                 },
-                "description": "Bandeja global de moderación de reseñas para rol Admin."
+                "description": "Bandeja global de moderaci├│n de rese├▒as para rol Admin."
               },
               "response": [],
               "event": [
@@ -3160,10 +3301,10 @@
                   ],
                   "query": []
                 },
-                "description": "Publica reseña sobre una cosecha puntual",
+                "description": "Publica rese├▒a sobre una cosecha puntual",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"wineVintageId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Un vino excepcional con taninos redondos y gran persistencia aromática.\"\n}",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Un vino excepcional con taninos redondos y gran persistencia arom├ítica.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3214,10 +3355,10 @@
                   ],
                   "query": []
                 },
-                "description": "Edita reseña propia",
+                "description": "Edita rese├▒a propia",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Comentario actualizado tras una segunda degustación.\"\n}",
+                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Comentario actualizado tras una segunda degustaci├│n.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3265,7 +3406,7 @@
                     }
                   ]
                 },
-                "description": "Reseñas de la cosecha"
+                "description": "Rese├▒as de la cosecha"
               },
               "response": [],
               "event": [
@@ -3307,7 +3448,7 @@
                     }
                   ]
                 },
-                "description": "Feed agregado de reseñas de la etiqueta"
+                "description": "Feed agregado de rese├▒as de la etiqueta"
               },
               "response": [],
               "event": [
@@ -3349,7 +3490,7 @@
                     }
                   ]
                 },
-                "description": "Listado de reseñas de una cosecha"
+                "description": "Listado de rese├▒as de una cosecha"
               },
               "response": [],
               "event": [
@@ -3391,7 +3532,7 @@
                     }
                   ]
                 },
-                "description": "Feed de reseñas de una etiqueta"
+                "description": "Feed de rese├▒as de una etiqueta"
               },
               "response": [],
               "event": [
@@ -3429,7 +3570,7 @@
                   ],
                   "query": []
                 },
-                "description": "Elimina reseña propia"
+                "description": "Elimina rese├▒a propia"
               },
               "response": [],
               "event": [
@@ -3466,7 +3607,7 @@
                     "{{reviewId}}"
                   ]
                 },
-                "description": "Elimina una reseña como administrador, recalculando los puntajes y registrando auditoría."
+                "description": "Elimina una rese├▒a como administrador, recalculando los puntajes y registrando auditor├¡a."
               },
               "response": [],
               "event": [
@@ -4706,7 +4847,7 @@
                   ],
                   "query": []
                 },
-                "description": "Guarda botellas de una añada en la cava",
+                "description": "Guarda botellas de una a├▒ada en la cava",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"wineVintageId\": 1,\n  \"quantity\": 4,\n  \"purchaseDate\": \"2024-03-15\",\n  \"notes\": \"Compradas directamente en la bodega.\"\n}",
@@ -4896,7 +5037,7 @@
                   ],
                   "query": []
                 },
-                "description": "Resumen enológico de todas las botellas guardadas"
+                "description": "Resumen enol├│gico de todas las botellas guardadas"
               },
               "response": [],
               "event": [
@@ -4936,7 +5077,7 @@
                   ],
                   "query": []
                 },
-                "description": "Vacía stock de la añada"
+                "description": "Vac├¡a stock de la a├▒ada"
               },
               "response": [],
               "event": [
@@ -4974,7 +5115,7 @@
                   ],
                   "query": []
                 },
-                "description": "Borra la cava (solo si está vacía)"
+                "description": "Borra la cava (solo si est├í vac├¡a)"
               },
               "response": [],
               "event": [
@@ -5274,7 +5415,7 @@
                   ],
                   "query": []
                 },
-                "description": "Credenciales inválidas",
+                "description": "Credenciales inv├ílidas",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"PasswordIncorrecta999!\"\n}",
@@ -5327,7 +5468,7 @@
                     }
                   ]
                 },
-                "description": "Falla por falta de token JWT al consultar bandeja de administración"
+                "description": "Falla por falta de token JWT al consultar bandeja de administraci├│n"
               },
               "response": [],
               "event": [
@@ -5427,7 +5568,7 @@
                   ],
                   "query": []
                 },
-                "description": "Solo el dueño o admin publica vinos oficiales",
+                "description": "Solo el due├▒o o admin publica vinos oficiales",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Vino Fraude\",\n  \"wineType\": \"Red\",\n  \"wineryId\": 1,\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
@@ -5479,7 +5620,7 @@
                   ],
                   "query": []
                 },
-                "description": "No es dueño de la bodega",
+                "description": "No es due├▒o de la bodega",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Bodega Hackeada\",\n  \"locationId\": 1\n}",
@@ -5638,7 +5779,7 @@
                   ],
                   "query": []
                 },
-                "description": "Validación de nombre obligatorio",
+                "description": "Validaci├│n de nombre obligatorio",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"\",\n  \"wineType\": \"Red\",\n  \"firstVintage\": {\n    \"year\": 2020,\n    \"grapes\": [\n      {\n        \"grapeId\": 1,\n        \"percentage\": 100\n      }\n    ]\n  }\n}",
@@ -5744,7 +5885,7 @@
                     }
                   ]
                 },
-                "description": "Paginación inválida"
+                "description": "Paginaci├│n inv├ílida"
               },
               "response": [],
               "event": [
@@ -5783,7 +5924,7 @@
                   ],
                   "query": []
                 },
-                "description": "Usuario no puede seguirse a sí mismo"
+                "description": "Usuario no puede seguirse a s├¡ mismo"
               },
               "response": [],
               "event": [
@@ -5880,7 +6021,7 @@
                   ],
                   "query": []
                 },
-                "description": "Falla por intentar asignar un rol inválido (no permitido)",
+                "description": "Falla por intentar asignar un rol inv├ílido (no permitido)",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"role\": \"SuperAdmin\"\n}",
@@ -5939,7 +6080,7 @@
                     }
                   ]
                 },
-                "description": "Rechazo por parámetro status inválido"
+                "description": "Rechazo por par├ímetro status inv├ílido"
               },
               "response": [],
               "event": [
@@ -6181,7 +6322,7 @@
     },
     {
       "name": "Audit Log",
-      "description": "Endpoints de auditoría administrativa (/api/audit-log)",
+      "description": "Endpoints de auditor├¡a administrativa (/api/audit-log)",
       "item": [
         {
           "name": "Admin: Get Audit Log (Paginated)",
@@ -6214,7 +6355,7 @@
                 }
               ]
             },
-            "description": "Obtiene las entradas de auditoría más recientes ordenadas por created_at DESC"
+            "description": "Obtiene las entradas de auditor├¡a m├ís recientes ordenadas por created_at DESC"
           },
           "response": [],
           "event": [
@@ -6264,7 +6405,7 @@
                 }
               ]
             },
-            "description": "Filtra las entradas de auditoría por tipo de acción"
+            "description": "Filtra las entradas de auditor├¡a por tipo de acci├│n"
           },
           "response": [],
           "event": [
@@ -6352,7 +6493,7 @@
                 "stats"
               ]
             },
-            "description": "Obtiene métricas y conteos exactos de moderación y catálogos para el dashboard de administración (solo Admin)"
+            "description": "Obtiene m├®tricas y conteos exactos de moderaci├│n y cat├ílogos para el dashboard de administraci├│n (solo Admin)"
           },
           "response": [],
           "event": [
@@ -6390,7 +6531,7 @@
                 "stats"
               ]
             },
-            "description": "Intento de obtener estadísticas como usuario común (rechazado con 403 Forbidden)"
+            "description": "Intento de obtener estad├¡sticas como usuario com├║n (rechazado con 403 Forbidden)"
           },
           "response": [],
           "event": [

@@ -3,8 +3,8 @@ using FluentMigrator;
 
 namespace AyVino.Api.Migrations;
 
-[Migration(20261027001)]
-public class M20261027001_CreateAuditLogTable : Migration
+[Migration(20261027002)]
+public class M20261027002_CreateAuditLogTable : Migration
 {
     public override void Up()
     {

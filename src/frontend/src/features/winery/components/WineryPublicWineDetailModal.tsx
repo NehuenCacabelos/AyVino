@@ -114,14 +114,25 @@ export default function WineryPublicWineDetailModal({
             </div>
           </div>
 
-          {wine.averageRating && (
+          {wine.averageRating != null ? (
             <div className="flex items-center justify-between p-3.5 rounded-xl bg-stone-900/50 border border-white/5">
               <span className="text-xs text-neutral-400 font-sans">Puntaje promedio en comunidad</span>
               <div className="flex items-center gap-1.5 text-amber-300 font-mono text-sm font-semibold">
                 <Star className="w-4 h-4 fill-amber-300" />
                 <span>{wine.averageRating.toFixed(1)}</span>
-                <span className="text-xs text-neutral-500 font-normal">({wine.reviewCount ?? 0} notas)</span>
+                <span className="text-xs text-neutral-500 font-normal">
+                  ({wine.reviewCount ?? 0} {(wine.reviewCount ?? 0) === 1 ? 'reseña' : 'reseñas'})
+                </span>
               </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-stone-900/50 border border-white/5">
+              <span className="text-xs text-neutral-400 font-sans">Valoración comunitaria</span>
+              <span className="text-xs text-neutral-500 font-sans">
+                {(wine.reviewCount ?? 0) > 0
+                  ? `${wine.reviewCount} ${(wine.reviewCount ?? 0) === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                  : 'Sin valoraciones'}
+              </span>
             </div>
           )}
         </div>

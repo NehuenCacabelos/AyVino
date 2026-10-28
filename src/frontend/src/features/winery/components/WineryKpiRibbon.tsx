@@ -148,10 +148,12 @@ export default function WineryKpiRibbon({
           ) : (
             <>
               <p className="font-serif text-2xl font-light text-neutral-400 tracking-tight">
-                Sin notas
+                Aún sin valoración
               </p>
               <p className="text-[11px] text-neutral-500 mt-1 font-sans">
-                Aguardando primeras catas
+                {totalReviews > 0
+                  ? `${totalReviews} ${totalReviews === 1 ? 'reseña' : 'reseñas'} registradas`
+                  : 'Aguardando primeras catas'}
               </p>
             </>
           )}

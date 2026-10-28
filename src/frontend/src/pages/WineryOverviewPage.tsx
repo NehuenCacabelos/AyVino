@@ -23,20 +23,19 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import { useWinery } from '../features/winery/context/WineryContext';
+import { useWineryCatalog } from '../features/winery/context/WineryCatalogContext';
 import {
   getWines,
-  getWineVintages,
-  getWineryFollowers,
+  getWineryPublicProfile,
   getLocationById,
 } from '../features/winery/api';
 import {
   WineryLogo,
   WineryTopBar,
   WineryStatusBanner,
+  WineryBanner,
   type WineResponseDto,
 } from '../features/winery';
-import { getBannerThemeByUsername } from '../constants/bannerThemes';
-import { cn } from '../lib/utils';
 
 // Configuración de íconos de Leaflet en Vite
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -58,105 +57,142 @@ L.Icon.Default.mergeOptions({
  */
 export default function WineryOverviewPage() {
   const { winery } = useWinery();
+  const { catalog } = useWineryCatalog();
 
-  const [wines, setWines] = useState<WineResponseDto[]>([]);
-  const [vintagesCount, setVintagesCount] = useState<number>(0);
-  const [followersCount, setFollowersCount] = useState<number | null>(null);
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
-  const [averageRating, setAverageRating] = useState<number | null>(null);
-  const [totalReviews, setTotalReviews] = useState<number>(0);
+  const [winesFallback, setWinesFallback] = useState<WineResponseDto[]>([]);
+  const [asyncLocationLabel, setAsyncLocationLabel] = useState<string | null>(null);
+
+  const locationLabel = winery?.location
+    ? `${winery.location.regionName}, ${winery.location.stateName}`
+    : asyncLocationLabel;
+  const [publicData, setPublicData] = useState<{
+    followersCount: number | null;
+    averageRating: number | null;
+    totalReviews: number;
+    vintagesCount: number;
+  }>({
+    followersCount: null,
+    averageRating: null,
+    totalReviews: 0,
+    vintagesCount: 0,
+  });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(() => Boolean(winery?.id));
-
-  // Banner temático determinista a partir del nombre de la bodega
-  const bannerTheme = getBannerThemeByUsername(winery?.name);
 
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
   const isRejected = winery?.status === 'Rejected';
 
+  // Derivar etiquetas a partir del contexto del catálogo o del fallback
+  const wines: WineResponseDto[] = (catalog?.wines && catalog.wines.length > 0)
+    ? catalog.wines.map((w) => ({
+        id: w.id,
+        name: w.name,
+        wineryId: winery?.id ?? null,
+        wineryNameText: winery?.name ?? null,
+        wineType: w.wineType,
+        sourceType: w.sourceType,
+        description: w.description ?? null,
+        locationId: winery?.locationId ?? null,
+        duplicateOfWineId: null,
+        averageRating: w.averageRating ?? null,
+        reviewCount: w.reviewCount,
+      }))
+    : winesFallback;
+
+  const winesCount = catalog?.totals.labels ?? wines.length;
+  const vintagesCount = catalog?.totals.vintages ?? publicData.vintagesCount;
+  const followersCount = publicData.followersCount;
+  const averageRating = publicData.averageRating;
+  const totalReviews = publicData.totalReviews;
+
+  const wineryId = winery?.id;
+  const locationId = winery?.locationId;
+  const hasEmbeddedLocation = Boolean(winery?.location);
+
+  // 1. Fallback de etiquetas si no están cargadas en el catálogo del contexto
   useEffect(() => {
+    if (catalog) return;
     let isMounted = true;
-    if (!winery?.id) return;
+    if (!wineryId) return;
 
     Promise.resolve().then(async () => {
-      if (!isMounted) return;
-      setIsLoadingMetrics(true);
-
       try {
-        // 1. Resolver Terruño Geográfico
-        if (winery.location) {
-          setLocationLabel(`${winery.location.regionName}, ${winery.location.stateName}`);
-        } else if (winery.locationId) {
-          try {
-            const loc = await getLocationById(winery.locationId);
-            if (isMounted) {
-              setLocationLabel(`${loc.cityName}, ${loc.stateName}`);
-            }
-          } catch {
-            // Ignorar fallo de geolocalización
-          }
-        }
-
-        // 2. Obtener Etiquetas Oficiales
-        let winesList: WineResponseDto[] = [];
-        try {
-          winesList = await getWines({ wineryId: winery.id, pageSize: 100 });
-          if (isMounted) setWines(winesList);
-        } catch {
-          winesList = [];
-        }
-
-        // 3. Consultar Cosechas en Paralelo
-        if (winesList.length > 0) {
-          const vintageResults = await Promise.allSettled(
-            winesList.map((wine) => getWineVintages(wine.id)),
-          );
-
-          let totalVints = 0;
-          let sumRatings = 0;
-          let ratedCount = 0;
-          let sumReviews = 0;
-
-          vintageResults.forEach((res) => {
-            if (res.status === 'fulfilled') {
-              totalVints += res.value.length;
-              res.value.forEach((v) => {
-                if (v.averageRating && v.averageRating > 0) {
-                  sumRatings += v.averageRating;
-                  ratedCount += 1;
-                }
-                if (v.reviewCount) {
-                  sumReviews += v.reviewCount;
-                }
-              });
-            }
-          });
-
-          if (isMounted) {
-            setVintagesCount(totalVints);
-            setAverageRating(ratedCount > 0 ? sumRatings / ratedCount : null);
-            setTotalReviews(sumReviews);
-          }
-        }
-
-        // 4. Consultar Seguidores si la bodega está aprobada
-        if (winery.status === 'Approved') {
-          try {
-            const followers = await getWineryFollowers(winery.id, { pageSize: 1 });
-            if (isMounted) setFollowersCount(followers.length);
-          } catch {
-            if (isMounted) setFollowersCount(0);
-          }
-        }
-      } finally {
-        if (isMounted) setIsLoadingMetrics(false);
+        const list = await getWines({ wineryId, pageSize: 100 });
+        if (isMounted) setWinesFallback(list);
+      } catch {
+        if (isMounted) setWinesFallback([]);
       }
     });
 
     return () => {
       isMounted = false;
     };
-  }, [winery?.id, winery?.status, winery?.location, winery?.locationId]);
+  }, [catalog, wineryId]);
+
+  // 2. Resolver Terruño Geográfico de respaldo si no viene embebido
+  useEffect(() => {
+    if (hasEmbeddedLocation || !locationId) return;
+    let isMounted = true;
+
+    Promise.resolve().then(async () => {
+      try {
+        const loc = await getLocationById(locationId);
+        if (isMounted) {
+          setAsyncLocationLabel(`${loc.cityName}, ${loc.stateName}`);
+        }
+      } catch {
+        // Ignorar fallo de geolocalización
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasEmbeddedLocation, locationId]);
+
+  // 3. Consulta unificada al endpoint público (seguidores, valoración y totales)
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    if (!wineryId) {
+      return;
+    }
+
+    Promise.resolve().then(async () => {
+      if (!isMounted) return;
+      setIsLoadingMetrics(true);
+
+      try {
+        const profile = await getWineryPublicProfile(wineryId, controller.signal);
+        if (!isMounted) return;
+        setPublicData({
+          followersCount: profile.followersCount ?? 0,
+          averageRating: profile.averageRating ?? null,
+          totalReviews: profile.reviewCount ?? 0,
+          vintagesCount: profile.totals?.vintages ?? 0,
+        });
+      } catch {
+        if (!isMounted) return;
+        // Un error en este dato no debe romper el resto de la pantalla
+        setPublicData({
+          followersCount: null,
+          averageRating: null,
+          totalReviews: 0,
+          vintagesCount: 0,
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingMetrics(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [wineryId]);
 
   // Coordenadas para el mapa Leaflet de solo lectura
   const hasCoordinates = Boolean(winery?.latitude != null && winery?.longitude != null);
@@ -186,22 +222,11 @@ export default function WineryOverviewPage() {
 
       {/* 2. Contenedor Principal con offset para TopBar fija (h-14) */}
       <div className="flex-1 flex flex-col pt-14">
-        {/* BANNER DINÁMICO VITIVINÍCOLA DETERMINISTA */}
-        <div
-          className={cn(
-            'relative w-full h-32 sm:h-36 md:h-44 overflow-hidden transition-colors duration-300',
-            bannerTheme.classes,
-          )}
-        >
-          <div
-            className={cn(
-              'absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] via-transparent to-transparent pointer-events-none',
-              bannerTheme.radialOverlayClass,
-            )}
-          />
-          {/* Fade-out degradado inferior para fundir con el fondo inmersivo */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
-        </div>
+        {/* BANNER DE BODEGA UNIFICADO */}
+        <WineryBanner
+          wineryName={winery?.name}
+          bannerUrl={winery?.bannerUrl}
+        />
 
         {/* CABECERA INSTITUCIONAL CON LOGO CIRCULAR SUPERPUESTO */}
         <header className="w-full bg-[#0b0b0e] border-b border-white/10 pb-8">
@@ -325,7 +350,7 @@ export default function WineryOverviewPage() {
                 <div className="bg-[#17151a]/90 border border-white/10 rounded-md px-5 py-2.5 flex items-center gap-5 sm:gap-6 shadow-sm">
                   <div className="text-center sm:text-right">
                     <div className="text-xl sm:text-2xl font-bold text-white font-mono leading-none">
-                      {wines.length}
+                      {winesCount}
                     </div>
                     <div className="text-[11px] font-semibold text-zinc-400 font-sans uppercase tracking-wider mt-1">
                       Etiquetas
@@ -354,10 +379,11 @@ export default function WineryOverviewPage() {
                     </div>
                   </div>
 
-                  {averageRating && averageRating > 0 && (
-                    <>
-                      <div className="h-7 w-px bg-white/10" />
-                      <div className="text-center sm:text-right">
+                  <div className="h-7 w-px bg-white/10" />
+
+                  <div className="text-center sm:text-right">
+                    {averageRating && averageRating > 0 ? (
+                      <>
                         <div className="text-xl sm:text-2xl font-bold text-amber-200 font-mono leading-none flex items-center gap-1 justify-center sm:justify-end">
                           <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
                           <span>{averageRating.toFixed(1)}</span>
@@ -365,9 +391,20 @@ export default function WineryOverviewPage() {
                         <div className="text-[11px] font-semibold text-zinc-400 font-sans uppercase tracking-wider mt-1">
                           Puntaje ({totalReviews})
                         </div>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-xs sm:text-sm font-medium text-zinc-300 font-sans leading-none">
+                          {totalReviews > 0
+                            ? `${totalReviews} ${totalReviews === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                            : 'Aún sin valoración'}
+                        </div>
+                        <div className="text-[11px] font-semibold text-zinc-400 font-sans uppercase tracking-wider mt-1">
+                          Puntaje
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -496,10 +533,18 @@ export default function WineryOverviewPage() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs text-amber-200 font-mono shrink-0">
-                          <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                          <span>{wine.averageRating ? wine.averageRating.toFixed(1) : '—'}</span>
-                        </div>
+                        {wine.averageRating ? (
+                          <div className="flex items-center gap-1 text-xs text-amber-200 font-mono shrink-0">
+                            <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                            <span>{wine.averageRating.toFixed(1)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-zinc-500 font-sans shrink-0">
+                            {wine.reviewCount > 0
+                              ? `${wine.reviewCount} ${wine.reviewCount === 1 ? 'reseña' : 'reseñas'} · Aún sin valoración`
+                              : 'Sin reseñas'}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

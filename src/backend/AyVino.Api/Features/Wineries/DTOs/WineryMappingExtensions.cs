@@ -32,6 +32,7 @@ public static class WineryMappingExtensions
         winery.Latitude,
         winery.Longitude,
         winery.LogoUrl,
+        winery.BannerUrl,
         winery.StateName != null && winery.RegionName != null
             ? new WineryLocationSummaryDto(winery.StateName, winery.RegionName)
             : null);

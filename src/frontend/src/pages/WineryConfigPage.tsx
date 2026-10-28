@@ -31,6 +31,8 @@ import {
   RegionPicker,
   WineryLogo,
   WineryTopBar,
+  WineryBanner,
+  ImageUploadField,
   type UpdateWineryRequestDto,
   type RegionPickerValue,
 } from '../features/winery';
@@ -110,6 +112,11 @@ export default function WineryConfigPage() {
   const [logoErrorMsg, setLogoErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 3.1 Banner Oficial
+  const [isUpdatingBanner, setIsUpdatingBanner] = useState<boolean>(false);
+  const [bannerSuccessMsg, setBannerSuccessMsg] = useState<string | null>(null);
+  const [bannerErrorMsg, setBannerErrorMsg] = useState<string | null>(null);
+
   // 4. Cuenta del Responsable
   const [liveUser, setLiveUser] = useState<UserProfileDto | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(true);
@@ -159,8 +166,8 @@ export default function WineryConfigPage() {
         if (isMounted) {
           setLiveUser(u);
         }
-      } catch (err) {
-        console.warn('No se pudo obtener el usuario en vivo:', err);
+      } catch {
+        // Fallo no crítico: se utiliza el usuario autenticado desde AuthContext (user?.username / user?.email) como respaldo silencioso.
       } finally {
         if (isMounted) {
           setIsLoadingUser(false);
@@ -253,6 +260,31 @@ export default function WineryConfigPage() {
       setLogoErrorMsg(extractErrorMessage(err, 'No se pudo eliminar el logo institucional.'));
     } finally {
       setIsDeletingLogo(false);
+    }
+  };
+
+  // Banner Oficial (cargar / cambiar / quitar)
+  const handleBannerChange = async (url: string) => {
+    if (!winery) return;
+    setIsUpdatingBanner(true);
+    setBannerSuccessMsg(null);
+    setBannerErrorMsg(null);
+
+    try {
+      await updateWinery(winery.id, {
+        name: winery.name,
+        bannerUrl: url,
+      });
+      await reload();
+      setBannerSuccessMsg(
+        url
+          ? '¡Banner institucional actualizado con éxito!'
+          : 'Banner eliminado. Se usará el degradado institucional automático.'
+      );
+    } catch (err: unknown) {
+      setBannerErrorMsg(extractErrorMessage(err, 'No se pudo actualizar el banner institucional.'));
+    } finally {
+      setIsUpdatingBanner(false);
     }
   };
 
@@ -524,6 +556,46 @@ export default function WineryConfigPage() {
               {logoErrorMsg && (
                 <p className="mt-2 text-[11px] text-rose-400 font-sans">{logoErrorMsg}</p>
               )}
+
+              {/* Separador */}
+              <div className="w-full border-t border-white/5 my-4" />
+
+              {/* Gestión de Banner Institucional */}
+              <div className="w-full text-left space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-300 font-medium">
+                    Banner institucional
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-500">Proporción 3:1</span>
+                </div>
+
+                {/* Vista previa 3:1 con WineryBanner */}
+                <div className="w-full aspect-[3/1] rounded-xl overflow-hidden ring-1 ring-white/10 shadow-lg bg-[#121015]">
+                  <WineryBanner
+                    wineryName={winery?.name}
+                    bannerUrl={winery?.bannerUrl}
+                    heightClassName="h-full w-full"
+                  />
+                </div>
+
+                <ImageUploadField
+                  value={winery?.bannerUrl}
+                  onChange={handleBannerChange}
+                  folder="banners"
+                  label=""
+                  helperText="Recomendado: 1500×500 px (3:1). JPG, PNG o WEBP hasta 2 MB."
+                  aspectRatio="banner"
+                  disabled={isUpdatingBanner}
+                  onUploadingChange={setIsUpdatingBanner}
+                />
+
+                {bannerSuccessMsg && (
+                  <p className="text-[11px] text-emerald-400 font-sans">{bannerSuccessMsg}</p>
+                )}
+                {bannerErrorMsg && (
+                  <p className="text-[11px] text-rose-400 font-sans">{bannerErrorMsg}</p>
+                )}
+              </div>
             </div>
 
             {/* Separador */}

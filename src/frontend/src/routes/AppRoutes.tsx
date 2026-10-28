@@ -22,13 +22,16 @@ const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const WineryPublicLayout = lazy(() => import('../features/winery/components/WineryPublicLayout'));
 const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
 const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
-const WineryPublicProfilePage = lazy(() => import('../pages/WineryPublicProfilePage'));
+const WineryPublicProfileLayout = lazy(() => import('../pages/WineryPublicProfileLayout'));
+const WineryPublicOverviewPage = lazy(() => import('../pages/WineryPublicOverviewPage'));
+const WineryPublicCatalogPage = lazy(() => import('../pages/WineryPublicCatalogPage'));
 
 const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryOverviewPage = lazy(() => import('../pages/WineryOverviewPage'));
 const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
-const WineryWinesPage = lazy(() => import('../pages/WineryWinesPage'));
+const WineryCatalogPage = lazy(() => import('../pages/WineryCatalogPage'));
+const WineryWineDetailPage = lazy(() => import('../pages/WineryWineDetailPage'));
 const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
 // Layout y vistas del Panel de Administración
@@ -157,15 +160,7 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: '/bodegas/:id',
-            element: (
-              <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryPublicProfilePage />
-              </Suspense>
-            ),
-          },
-        ],
+          ],
       },
 
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
@@ -241,6 +236,34 @@ export const router = createBrowserRouter([
         ),
       },
 
+      // Rutas de Perfil Público de Bodega (inmersivo con layout propio)
+      {
+        path: '/bodegas/:id',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <WineryPublicProfileLayout />
+          </Suspense>
+        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicOverviewPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'catalogo',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicCatalogPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
       // Rutas Protegidas Exclusivas para Bodegas y Administradores
       {
         path: '/bodega',
@@ -286,7 +309,7 @@ export const router = createBrowserRouter([
             path: 'vinos',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryWinesPage />
+                <WineryCatalogPage />
               </Suspense>
             ),
           },
@@ -294,7 +317,7 @@ export const router = createBrowserRouter([
             path: 'vinos/:wineId',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <WineryWinesPage />
+                <WineryWineDetailPage />
               </Suspense>
             ),
           },
