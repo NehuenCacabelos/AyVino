@@ -255,7 +255,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
 | `POST` | `/api/wines` | Autenticado (Admin o Dueño si incluye `WineryId`; comunitario: cualquier autenticado) | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
 | `PUT` | `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Actualiza los datos de la botella y mantiene consistente `source_type`. Solo Admin cambia de bodega. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
-| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. | - | `204 NoContent` / `409 Conflict` |
 | `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/search` | Público | Búsqueda difusa y avanzada de vinos por nombre, bodega, año o tipo con trigramas PostgreSQL. | Query params: `pageNumber`, `pageSize`, `name?`, `winery?`, `year?`, `wineType?` | `200 OK` (`IEnumerable<WineSearchResponseDto>`) |
@@ -264,7 +264,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
-| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica de la etiqueta. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica (solo si no tiene reseñas ni cava). Devuelve 409 si posee historial, sugiriendo rechazarla para preservarlo. | - | `204 NoContent` / `409 Conflict` |
 | `GET` | `/api/wine-vintages` | Admin (`RequireAdmin`) | Bandeja global de cosechas para moderación administrativa. Filtro opcional por estado (`Pending`, `Approved`, `Rejected`). | Query params: `pageNumber = 1`, `pageSize = 10`, `status?` | `200 OK` (`IEnumerable<AdminWineVintageListItemDto>`) |
 
 #### Ejemplo de Respuesta `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (200 OK)
@@ -461,7 +461,7 @@ Permite a los administradores unificar etiquetas de vino duplicadas dentro de un
 4. **Marcas personales (`user_wines`)**: Se combinan aplicando operador lógico OR a `is_wanted`, `is_tried` y `is_favorite` (`ON CONFLICT DO UPDATE`) y se borran las del duplicado.
 5. **Recálculo de puntajes**: Se actualizan `rating_sum` y `review_count` de las cosechas fusionadas y del vino principal a partir de los datos consolidados reales.
 6. **Marcado del duplicado**: `UPDATE wines SET duplicate_of_wine_id = @targetId, rating_sum = 0, review_count = 0 WHERE id = @duplicateId`. El vino duplicado no se elimina físicamente.
-7. **Visibilidad pública**: Los vinos con `duplicate_of_wine_id` asignado quedan ocultos de búsquedas, listados públicos y de `GET /api/wines/{id}` para usuarios no administradores (`404 Not Found`). Los administradores continúan visualizándolos con el badge de referencia al original.
+7. **Visibilidad pública**: Los vinos con `duplicate_of_wine_id` asignado quedan ocultos de búsquedas, listados públicos, catálogo del productor (`/api/wineries/me/catalog`), catálogo público (`/api/wineries/{id}/catalog`) y de `GET /api/wines/{id}` para usuarios no administradores (`404 Not Found`). Los administradores continúan visualizándolos con el badge de referencia al original.
 8. **Auditoría**: Se registra automáticamente la acción `WineMerged` (action 18, entityType `Wine`, entityId `targetId`, details `duplicateId`).
 
 ---

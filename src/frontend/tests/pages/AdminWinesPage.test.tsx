@@ -192,12 +192,52 @@ describe('AdminWinesPage Component', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/¿eliminar vino\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Si tiene reseñas, marcas o cava no se podrá eliminar: usá Fusionar \(vinos\) o Rechazar \(cosechas\)\./i)).toBeInTheDocument();
 
     const confirmBtn = screen.getByRole('button', { name: 'Eliminar' });
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(adminWinesApi.deleteWine).toHaveBeenCalledWith(10);
+    });
+  });
+
+  it('eliminar vino con conflicto 409 muestra el mensaje retornado por el servidor', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    const serverMessage = 'No se puede eliminar el vino porque tiene historial de usuarios (reseñas: 3, marcas: 5, cava: 1). Si es un duplicado, usá la fusión.';
+    const conflictError = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          detail: serverMessage,
+          title: 'Conflicto',
+          status: 409,
+        },
+      },
+    };
+    vi.mocked(adminWinesApi.deleteWine).mockRejectedValue(conflictError);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
+    });
+
+    const deleteBtns = screen.getAllByTitle(/eliminar vino/i);
+    fireEvent.click(deleteBtns[0]);
+
+    const confirmBtn = screen.getByRole('button', { name: 'Eliminar' });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(serverMessage)).toBeInTheDocument();
     });
   });
 

@@ -180,7 +180,7 @@ export default function AdminVintagesPage() {
     setConfirmDialog({
       open: true,
       title: '¿Eliminar cosecha?',
-      message: 'Esta acción es irreversible.',
+      message: 'Esta acción es irreversible. Si tiene reseñas, marcas o cava no se podrá eliminar: usá Fusionar (vinos) o Rechazar (cosechas).',
       confirmLabel: 'Eliminar',
       tone: 'danger',
       onConfirm: async () => {

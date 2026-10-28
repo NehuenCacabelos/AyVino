@@ -104,6 +104,29 @@ public class WineService(
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        var exists = await wineRepository.ExistsByIdAsync(id, ct);
+        if (!exists)
+            throw new NotFoundException($"Wine with ID {id} not found.");
+
+        var usage = await wineRepository.GetUsageCountsAsync(id, ct);
+        if (usage.HasBlockingUsage)
+        {
+            if (usage.HasUserHistory && usage.HasDuplicates)
+            {
+                throw new ConflictException(
+                    $"No se puede eliminar el vino porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, marcas: {usage.UserWineCount}, cava: {usage.CellarItemCount}) y vinos duplicados asociados ({usage.DuplicateWinesCount}). Si es un duplicado, usá la fusión.");
+            }
+
+            if (usage.HasUserHistory)
+            {
+                throw new ConflictException(
+                    $"No se puede eliminar el vino porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, marcas: {usage.UserWineCount}, cava: {usage.CellarItemCount}). Si es un duplicado, usá la fusión.");
+            }
+
+            throw new ConflictException(
+                $"No se puede eliminar el vino porque tiene vinos duplicados apuntándole ({usage.DuplicateWinesCount}). Si es un duplicado, usá la fusión.");
+        }
+
         var deleted = await wineRepository.DeleteAsync(id, ct);
         if (!deleted) throw new NotFoundException($"Wine with ID {id} not found.");
     }

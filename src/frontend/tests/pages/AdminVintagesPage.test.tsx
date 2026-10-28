@@ -138,7 +138,7 @@ describe('AdminVintagesPage Component', () => {
 
     // El diálogo modal debe aparecer
     expect(screen.getByText('¿Eliminar cosecha?')).toBeInTheDocument();
-    expect(screen.getByText('Esta acción es irreversible.')).toBeInTheDocument();
+    expect(screen.getByText(/Si tiene reseñas, marcas o cava no se podrá eliminar: usá Fusionar \(vinos\) o Rechazar \(cosechas\)\./i)).toBeInTheDocument();
     expect(adminVintagesApi.deleteVintage).not.toHaveBeenCalled();
 
     // Confirmar en el diálogo
@@ -148,6 +148,43 @@ describe('AdminVintagesPage Component', () => {
     await waitFor(() => {
       expect(adminVintagesApi.deleteVintage).toHaveBeenCalledWith(42, 101);
       expect(mockToast.success).toHaveBeenCalledWith('Cosecha eliminada del catálogo.');
+    });
+  });
+
+  it('eliminar cosecha con conflicto 409 muestra el mensaje retornado por el servidor en toast', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    const serverMessage = 'No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: 2, cava: 1). Podés rechazarla en lugar de eliminarla para preservar el historial.';
+    const conflictError = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          detail: serverMessage,
+          title: 'Conflicto',
+          status: 409,
+        },
+      },
+    };
+    vi.mocked(adminVintagesApi.deleteVintage).mockRejectedValue(conflictError);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Malbec Reserva')).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByTitle('Eliminar cosecha');
+    fireEvent.click(deleteButtons[0]);
+
+    const confirmButton = screen.getByRole('button', { name: 'Eliminar' });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(mockToast.error).toHaveBeenCalledWith(serverMessage);
     });
   });
 });

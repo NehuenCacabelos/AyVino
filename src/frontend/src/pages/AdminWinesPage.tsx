@@ -946,7 +946,7 @@ export default function AdminWinesPage() {
         open={Boolean(deletingWine)}
         tone="danger"
         title="¿Eliminar vino?"
-        message={`¿Estás seguro de que deseás eliminar el vino "${deletingWine?.name}"? Esta acción borrará todas sus cosechas y reseñas asociadas.`}
+        message={`¿Estás seguro de que deseás eliminar el vino "${deletingWine?.name}"? Si tiene reseñas, marcas o cava no se podrá eliminar: usá Fusionar (vinos) o Rechazar (cosechas).`}
         confirmLabel="Eliminar"
         isLoading={isDeleting}
         onConfirm={() => void handleConfirmDelete()}

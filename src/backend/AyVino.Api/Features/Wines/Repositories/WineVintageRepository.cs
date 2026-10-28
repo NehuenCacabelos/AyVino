@@ -219,6 +219,18 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    public async Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemCount;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleAsync<WineVintageUsageCounts>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
     public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default)
     {
         const string sql = """

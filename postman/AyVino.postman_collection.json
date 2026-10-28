@@ -6317,6 +6317,68 @@
               ]
             }
           ]
+        },
+        {
+          "name": "DELETE Vino con historial o duplicados (409 Conflict)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wines/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wines",
+                "1"
+              ]
+            },
+            "description": "Intento de eliminar un vino con historial de usuarios o duplicados asociados. Debe retornar HTTP 409 Conflict con detalle explicativo y sugerencia de fusión."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Cosecha con historial (409 Conflict)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wines/1/vintages/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wines",
+                "1",
+                "vintages",
+                "1"
+              ]
+            },
+            "description": "Intento de eliminar una cosecha con reseñas o botellas en cavas. Debe retornar HTTP 409 Conflict sugiriendo rechazarla para preservar el historial."
+          },
+          "response": []
         }
       ]
     },

@@ -19,6 +19,7 @@ public interface IWineVintageRepository
     Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
+    Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
         Task.FromResult(Enumerable.Empty<AdminWineVintageListRow>());
 }

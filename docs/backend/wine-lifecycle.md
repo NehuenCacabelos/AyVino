@@ -121,3 +121,25 @@ Valores numéricos e identificadores sincronizados con el código backend:
 - **`TypicalBody`**: `Light = 10`, `MediumLight = 20`, `Medium = 30`, `MediumFull = 40`, `Full = 50`
 - **`TypicalTannins`**: `Soft = 10`, `MediumSoft = 20`, `Medium = 30`, `MediumAstringent = 40`, `Astringent = 50`
 - **`TypicalAcidity`**: `Low = 10`, `MediumLow = 20`, `Medium = 30`, `MediumHigh = 40`, `High = 50`
+
+---
+
+## 8. Protección del Historial de Usuarios en la Eliminación (Vinos y Cosechas)
+
+Para salvaguardar la integridad de las experiencias y registros de los usuarios (reseñas, marcas personales en `user_wines` e inventario en cavas personales), la eliminación física de vinos y cosechas implementa validaciones estrictas previas a nivel de servicio y repositorio:
+
+1. **Eliminación de Vinos (`DELETE /api/wines/{id}`)**:
+   - Requiere rol Administrador (`RequireAdmin`).
+   - El backend ejecuta una consulta optimizada única (`COUNT`) para evaluar el uso del vino antes de intentar el borrado.
+   - Devuelve HTTP `409 Conflict` (`ConflictException`) con un mensaje claro y legible que incluye los conteos exactos si el vino:
+     - Posee historial de usuarios: reseñas en alguna de sus cosechas, marcas en `user_wines` o botellas registradas en cavas personales (`cellar_items`). Formato: *"No se puede eliminar el vino porque tiene historial de usuarios (reseñas: X, marcas: Y, cava: Z). Si es un duplicado, usá la fusión."*
+     - Posee otros vinos duplicados que fueron fusionados dentro de él (`wines.duplicate_of_wine_id = id`). Formato: *"No se puede eliminar el vino porque tiene vinos duplicados apuntándole (X). Si es un duplicado, usá la fusión."*
+   - Si no posee historial ni vinos duplicados asociados, se elimina físicamente con código HTTP `204 NoContent`.
+   - Un vino marcado como duplicado (`duplicate_of_wine_id IS NOT NULL`) que no posee historial propio sí puede ser eliminado físicamente.
+
+2. **Eliminación de Cosechas (`DELETE /api/wines/{wineId}/vintages/{vintageId}`)**:
+   - Requiere rol Administrador (`RequireAdmin`).
+   - Devuelve HTTP `409 Conflict` (`ConflictException`) si la cosecha posee reseñas o botellas en cavas personales.
+   - Mensaje: *"No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: X, cava: Y). Podés rechazarla en lugar de eliminarla para preservar el historial."*
+   - Si la cosecha no posee historial de usuarios, se elimina físicamente con código HTTP `204 NoContent`.
+

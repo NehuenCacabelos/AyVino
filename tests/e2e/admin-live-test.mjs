@@ -1106,7 +1106,7 @@ async function run() {
       body: JSON.stringify({ wineVintageId: h6VintageInCellarId, quantity: 3 }),
     });
 
-    // Borrar la cosecha en cava (fk_cellar_items_wine_vintage tiene OnDelete Cascade)
+    // Borrar la cosecha en cava (protegida contra destrucción de historial)
     const h6bDelete = await request(`/wines/${h6WineId}/vintages/${h6VintageInCellarId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${adminToken}` },
@@ -1114,21 +1114,35 @@ async function run() {
 
     const h6Ok =
       h6aDelete.status === 409 &&
-      (h6bDelete.status === 204 || (h6bDelete.status >= 400 && h6bDelete.status < 500)) &&
+      h6bDelete.status === 409 &&
       h6aDelete.status !== 500 &&
       h6bDelete.status !== 500 &&
       hasNoDbLeak(h6aDelete.data) &&
       hasNoDbLeak(h6bDelete.data);
 
     record(
-      'H.6 DELETE cosecha con reseñas (409) y cosecha en cava (204)',
-      'Con reseñas: 409 Conflict | En cava: 204 NoContent (nunca 500)',
+      'H.6 DELETE cosecha con reseñas (409) y cosecha en cava (409)',
+      'Con reseñas: 409 Conflict | En cava: 409 Conflict (protección de historial)',
       `Con reseñas: HTTP ${h6aDelete.status} | En cava: HTTP ${h6bDelete.status}`,
       h6Ok,
       `Detail reseñas: "${getDetail(h6aDelete.data)}" | Detail cava: "${getDetail(h6bDelete.data)}"`,
     );
 
-    // H.7: DELETE de un vino con cosechas.
+    // H.7a: DELETE de un vino con historial de usuarios (h6WineId) -> 409
+    const h7aDelete = await request(`/wines/${h6WineId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const h7aOk = h7aDelete.status === 409 && hasNoDbLeak(h7aDelete.data);
+    record(
+      'H.7a DELETE de un vino con historial de usuarios (409)',
+      '409 Conflict con detalle explicativo y sugerencia de fusión',
+      `HTTP ${h7aDelete.status}`,
+      h7aOk,
+      `Detail: ${getDetail(h7aDelete.data)}`,
+    );
+
+    // H.7b: DELETE de un vino sin historial de usuarios (limpio) -> 204
     const h7WineRes = await request('/wines', {
       method: 'POST',
       headers: { Authorization: `Bearer ${userToken}` },
@@ -1156,8 +1170,8 @@ async function run() {
     const h7Ok = h7Delete.status === 204 && h7GetAfter.status === 404;
 
     record(
-      'H.7 DELETE de un vino con cosechas (cascade)',
-      'DELETE 204 y GET posterior 404 (nunca 500)',
+      'H.7b DELETE de un vino sin historial (204)',
+      'DELETE 204 y GET posterior 404 (vino eliminado)',
       `DELETE: HTTP ${h7Delete.status}, GET posterior: HTTP ${h7GetAfter.status}`,
       h7Ok,
       `Detail: ${getDetail(h7Delete.data)}`,

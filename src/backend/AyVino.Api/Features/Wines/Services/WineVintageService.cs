@@ -200,6 +200,12 @@ public class WineVintageService(
     public async Task DeleteAsync(int wineId, int vintageId, CancellationToken ct = default)
     {
         await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+        var usage = await vintageRepository.GetUsageCountsAsync(vintageId, ct);
+        if (usage.HasUserHistory)
+        {
+            throw new ConflictException(
+                $"No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, cava: {usage.CellarItemCount}). Podés rechazarla en lugar de eliminarla para preservar el historial.");
+        }
         await vintageRepository.DeleteAsync(vintageId, ct);
     }
 

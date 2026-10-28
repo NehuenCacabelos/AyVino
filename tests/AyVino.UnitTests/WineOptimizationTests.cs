@@ -225,6 +225,7 @@ public class WineOptimizationTests
 
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(Vintages.Any(v => v.Id == id));
+        public Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) => Task.FromResult(new WineVintageUsageCounts(0, 0));
     }
 
     private sealed class FakeWineRepo : IWineRepository
@@ -266,6 +267,7 @@ public class WineOptimizationTests
 
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWineId == id || WinesById.ContainsKey(id));
+        public Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) => Task.FromResult(new WineUsageCounts(0, 0, 0, 0));
 
         public Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Wine>>([]);

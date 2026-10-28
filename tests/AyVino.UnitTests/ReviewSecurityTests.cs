@@ -202,6 +202,9 @@ public class ReviewSecurityTests
 
         public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
             throw new NotImplementedException();
+
+        public Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(new WineVintageUsageCounts(0, 0));
     }
 }
 

@@ -221,6 +221,20 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    public async Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
+                (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
+                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleAsync<WineUsageCounts>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
     public async Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default)
     {
         const string sql = """
