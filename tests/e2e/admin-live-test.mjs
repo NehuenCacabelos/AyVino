@@ -1241,6 +1241,84 @@ async function run() {
       `Detail anónimo: ${getDetail(anonDetail.data)}, dueño status: ${ownerDetail.data?.status}`
     );
 
+    // -------------------------------------------------------------------------
+    // SECCIÓN J: AUDITORÍA DE ACCIONES DE ADMINISTRACIÓN (BLOQUE 18)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECCIÓN J: AUDITORÍA DE ACCIONES DE ADMINISTRACIÓN ---');
+
+    // J.1 GET /api/audit-log sin token -> 401
+    const auditNoToken = await request('/audit-log');
+    record(
+      'J.1 GET /api/audit-log sin token',
+      'HTTP 401 Unauthorized',
+      `HTTP ${auditNoToken.status}`,
+      auditNoToken.status === 401,
+      `Detail: ${getDetail(auditNoToken.data)}`
+    );
+
+    // J.2 GET /api/audit-log con token de usuario común -> 403
+    const auditUserToken = await request('/audit-log', {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    record(
+      'J.2 GET /api/audit-log con token de usuario común',
+      'HTTP 403 Forbidden',
+      `HTTP ${auditUserToken.status}`,
+      auditUserToken.status === 403,
+      `Detail: ${getDetail(auditUserToken.data)}`
+    );
+
+    // J.3 GET /api/audit-log con token de admin -> 200 array
+    const auditAdminRes = await request('/audit-log?pageNumber=1&pageSize=50', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const j3Ok = auditAdminRes.status === 200 && Array.isArray(auditAdminRes.data);
+    record(
+      'J.3 GET /api/audit-log con token de admin',
+      'HTTP 200 con array de entradas de auditoría',
+      `HTTP ${auditAdminRes.status}, isArray: ${Array.isArray(auditAdminRes.data)}, count: ${auditAdminRes.data?.length ?? 0}`,
+      j3Ok,
+      `Total entries returned: ${auditAdminRes.data?.length ?? 0}`
+    );
+
+    // J.4 Validación de filtro inválido action -> 400
+    const auditInvalidAction = await request('/audit-log?pageNumber=1&pageSize=10&action=NonExistentAction', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record(
+      'J.4 GET /api/audit-log con acción inválida',
+      'HTTP 400 Bad Request',
+      `HTTP ${auditInvalidAction.status}`,
+      auditInvalidAction.status === 400,
+      `Detail: ${getDetail(auditInvalidAction.data)}`
+    );
+
+    // J.5 Filtro de acción WineryStatusChanged devuelve solo entradas de esa acción
+    const auditActionFiltered = await request('/audit-log?pageNumber=1&pageSize=50&action=WineryStatusChanged', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const j5Ok = auditActionFiltered.status === 200 &&
+      Array.isArray(auditActionFiltered.data) &&
+      auditActionFiltered.data.every(e => e.action === 'WineryStatusChanged');
+    record(
+      'J.5 GET /api/audit-log con filtro de acción WineryStatusChanged',
+      'HTTP 200 y todas las entradas devueltas tienen action = WineryStatusChanged',
+      `HTTP ${auditActionFiltered.status}, all match: ${j5Ok}`,
+      j5Ok,
+      `Entries returned: ${auditActionFiltered.data?.length ?? 0}`
+    );
+
+    // J.6 Registro correcto de auditoría tras acción admin (WineryStatusChanged registrada en I.2)
+    const wineryEntry = auditActionFiltered.data?.find(e => e.entityType === 'Winery' && e.entityId === iWineryId);
+    const j6Ok = wineryEntry != null && wineryEntry.action === 'WineryStatusChanged';
+    record(
+      'J.6 Registro automático de auditoría para WineryStatusChanged',
+      `Entrada existente para Winery #${iWineryId} con acción WineryStatusChanged`,
+      `Encontrado: ${Boolean(wineryEntry)}, Usuario: ${wineryEntry?.username}, Detalle: ${wineryEntry?.details}`,
+      j6Ok,
+      `Detalles de la entrada: ${JSON.stringify(wineryEntry)}`
+    );
+
   } catch (err) {
     console.error('\n💥 ERROR FATAL DURANTE LA EJECUCIÓN:', err);
     failed++;
@@ -1252,6 +1330,7 @@ async function run() {
     console.log('\n🧹 Limpiando datos de prueba creados durante la suite (prefijo e2e_)...');
     try {
       executeSql(`
+        DELETE FROM audit_log WHERE username LIKE '%e2e_%';
         DELETE FROM reviews WHERE comment LIKE '%e2e_%' OR user_id IN (SELECT id FROM users WHERE username LIKE '%e2e_%' OR email LIKE '%e2e_%');
         DELETE FROM cellar_items WHERE cellar_id IN (SELECT id FROM cellars WHERE name LIKE '%e2e_%');
         DELETE FROM cellars WHERE name LIKE '%e2e_%' OR user_id IN (SELECT id FROM users WHERE username LIKE '%e2e_%' OR email LIKE '%e2e_%');
