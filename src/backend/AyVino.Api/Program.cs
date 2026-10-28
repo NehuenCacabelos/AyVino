@@ -49,6 +49,9 @@ using AyVino.Api.Features.Cellars.Services;
 using AyVino.Api.Features.WineCare.Endpoints;
 using AyVino.Api.Features.WineCare.Repositories;
 using AyVino.Api.Features.WineCare.Services;
+using AyVino.Api.Features.AdminStats.Endpoints;
+using AyVino.Api.Features.AdminStats.Repositories;
+using AyVino.Api.Features.AdminStats.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -259,6 +262,8 @@ builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
 builder.Services.AddScoped<IWineCareService, WineCareService>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAdminStatsRepository, AdminStatsRepository>();
+builder.Services.AddScoped<IAdminStatsService, AdminStatsService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -361,6 +366,7 @@ app.MapCellarCareEndpoints();
 app.MapWineCareEndpoints();
 app.MapImageEndpoints();
 app.MapAuditEndpoints();
+app.MapAdminStatsEndpoints();
 
 
 
