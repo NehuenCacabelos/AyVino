@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminWinesPage from '@/pages/AdminWinesPage';
 import * as adminWinesApi from '@/features/admin/api/adminWinesApi';
@@ -14,6 +14,7 @@ vi.mock('@/features/admin/api/adminWinesApi', () => ({
   getAdminWines: vi.fn(),
   updateWine: vi.fn(),
   deleteWine: vi.fn(),
+  mergeWines: vi.fn(),
 }));
 
 vi.mock('@/features/winery/api/wineApi', () => ({
@@ -231,6 +232,225 @@ describe('AdminWinesPage Component', () => {
       expect(wineApi.getWineVintages).toHaveBeenCalledWith(10);
       expect(screen.getByText('Año: 2020')).toBeInTheDocument();
       expect(screen.getByText('Graduación: 14.5%')).toBeInTheDocument();
+    });
+  });
+
+  it('un vino duplicado no muestra el botón de fusionar', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
+      expect(screen.getByText('Torrontés Riojano')).toBeInTheDocument();
+    });
+
+    const mergeBtns = screen.getAllByTitle(/fusionar vino/i);
+    // Solo Gran Malbec Reserva (#10, duplicateOfWineId = null) muestra la acción
+    expect(mergeBtns).toHaveLength(1);
+  });
+
+  it('flujo de fusión modal: paso 1 busca candidato (sin sí mismo ni duplicados), paso 2 exige checkbox y llama a mergeWines en orden correcto', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
+      if (params?.name === 'Cabernet') {
+        return [
+          {
+            id: 10, // Mismo vino a fusionar
+            name: 'Gran Malbec Reserva',
+            wineType: 'Red',
+            duplicateOfWineId: null,
+            sourceType: 'Official',
+            reviewCount: 0,
+            wineryId: 1,
+            wineryNameText: null,
+            description: null,
+            locationId: null,
+            averageRating: null,
+          },
+          {
+            id: 20, // Ya es un duplicado
+            name: 'Torrontés Riojano',
+            wineType: 'White',
+            duplicateOfWineId: 12,
+            sourceType: 'Community',
+            reviewCount: 0,
+            wineryId: null,
+            wineryNameText: null,
+            description: null,
+            locationId: null,
+            averageRating: null,
+          },
+          {
+            id: 30, // Candidato canónico válido
+            name: 'Cabernet Sauvignon Gran Reserva',
+            wineType: 'Red',
+            duplicateOfWineId: null,
+            sourceType: 'Official',
+            reviewCount: 5,
+            wineryId: 1,
+            wineryNameText: null,
+            description: null,
+            locationId: null,
+            averageRating: 4.5,
+          },
+        ];
+      }
+      return mockWines;
+    });
+
+    vi.mocked(adminWinesApi.mergeWines).mockResolvedValue({
+      targetId: 30,
+      duplicateId: 10,
+      movedVintages: 1,
+      mergedVintages: 1,
+      movedReviews: 2,
+      discardedReviews: 1,
+      movedCellarItems: 1,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
+    });
+
+    // Abrir modal de fusión para Gran Malbec Reserva (#10)
+    const mergeBtn = screen.getByTitle(/fusionar vino/i);
+    fireEvent.click(mergeBtn);
+
+    // Modal de paso 1 visible
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText(/fusionar vino duplicado/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/paso 1 de 2/i)).toBeInTheDocument();
+
+    // El botón siguiente está deshabilitado sin candidato
+    const nextBtn = within(dialog).getByRole('button', { name: /siguiente/i });
+    expect(nextBtn).toBeDisabled();
+
+    // Buscar candidato por nombre
+    const searchInput = within(dialog).getByPlaceholderText(/escribí el nombre del vino/i);
+    fireEvent.change(searchInput, { target: { value: 'Cabernet' } });
+
+    const searchSubmit = within(dialog).getByRole('button', { name: /^buscar$/i });
+    fireEvent.click(searchSubmit);
+
+    // En los resultados solo debe aparecer el candidato válido (#30),
+    // no el mismo vino (#10) ni el que ya es duplicado (#20)
+    await waitFor(() => {
+      expect(within(dialog).getByText('Cabernet Sauvignon Gran Reserva')).toBeInTheDocument();
+      expect(within(dialog).getByText('#30')).toBeInTheDocument();
+      expect(within(dialog).queryByText('#10')).not.toBeInTheDocument();
+    });
+
+    // Seleccionar candidato #30
+    const candidateItem = within(dialog).getByText('Cabernet Sauvignon Gran Reserva');
+    fireEvent.click(candidateItem);
+
+    // Siguiente se habilita
+    expect(nextBtn).not.toBeDisabled();
+    fireEvent.click(nextBtn);
+
+    // Paso 2: Resumen y confirmación
+    await waitFor(() => {
+      expect(within(dialog).getByText(/paso 2 de 2: confirmar fusión/i)).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(/«Gran Malbec Reserva» \(#10\) se fusionará dentro de «Cabernet Sauvignon Gran Reserva» \(#30\)/i)
+      ).toBeInTheDocument();
+    });
+
+    // Botón fusionar deshabilitado sin checkbox
+    const mergeSubmitBtn = within(dialog).getByRole('button', { name: /^fusionar$/i });
+    expect(mergeSubmitBtn).toBeDisabled();
+
+    // Marcar checkbox
+    const undoCheckbox = within(dialog).getByLabelText(/entiendo que no se puede deshacer/i);
+    fireEvent.click(undoCheckbox);
+    expect(mergeSubmitBtn).not.toBeDisabled();
+
+    // Ejecutar fusión
+    fireEvent.click(mergeSubmitBtn);
+
+    await waitFor(() => {
+      // Verifica llamada con targetId=30, duplicateId=10 (orden estricto)
+      expect(adminWinesApi.mergeWines).toHaveBeenCalledWith(30, 10);
+      // El modal se cierra tras el éxito
+      expect(screen.queryByText(/paso 2 de 2/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it('muestra mensaje de error del servidor en el modal si la fusión falla (400/404/409)', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
+      if (params?.name === 'Cabernet') {
+        return [
+          {
+            id: 30,
+            name: 'Cabernet Sauvignon Gran Reserva',
+            wineType: 'Red',
+            duplicateOfWineId: null,
+            sourceType: 'Official',
+            reviewCount: 0,
+            wineryId: null,
+            wineryNameText: null,
+            description: null,
+            locationId: null,
+            averageRating: null,
+          },
+        ];
+      }
+      return mockWines;
+    });
+
+    vi.mocked(adminWinesApi.mergeWines).mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { detail: 'El vino origen ya fue fusionado anteriormente.' } },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle(/fusionar vino/i));
+
+    const dialog = screen.getByRole('dialog');
+
+    fireEvent.change(within(dialog).getByPlaceholderText(/escribí el nombre del vino/i), { target: { value: 'Cabernet' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^buscar$/i }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByText('Cabernet Sauvignon Gran Reserva')).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(dialog).getByText('Cabernet Sauvignon Gran Reserva'));
+    fireEvent.click(within(dialog).getByRole('button', { name: /siguiente/i }));
+
+    fireEvent.click(within(dialog).getByLabelText(/entiendo que no se puede deshacer/i));
+    fireEvent.click(within(dialog).getByRole('button', { name: /^fusionar$/i }));
+
+    await waitFor(() => {
+      expect(within(dialog).getByText('El vino origen ya fue fusionado anteriormente.')).toBeInTheDocument();
+      // El modal permanece abierto para que el admin pueda leer el error o corregir
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 });
