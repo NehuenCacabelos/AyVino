@@ -312,6 +312,9 @@ public class WineServiceTests
             Task.FromResult(wineIds.Count());
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
+
+        public Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
+            Task.FromResult(new MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));
     }
 
     private sealed class FakeWineryRepository : IWineryRepository

@@ -1394,6 +1394,305 @@ async function run() {
       `Encontrada: ${Boolean(k8Entry)}, Admin: ${k8Entry?.username}, Detalles: ${k8Entry?.details}`,
       k8Entry != null && k8Entry.action === 'ReviewDeletedByAdmin'
     );
+
+    // -------------------------------------------------------------------------
+    // SECCIÓN L: FUSIÓN DE VINOS DUPLICADOS (BLOQUE 23)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECCIÓN L: FUSIÓN DE VINOS DUPLICADOS ---');
+
+    // L.1 POST /api/wines/{targetId}/merge/{duplicateId} sin token -> 401
+    const l1 = await request('/wines/1/merge/2', { method: 'POST' });
+    record('L.1 POST /api/wines/1/merge/2 sin token', 'HTTP 401', `HTTP ${l1.status}`, l1.status === 401);
+
+    // L.2 POST con usuario común -> 403
+    const l2 = await request('/wines/1/merge/2', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    record('L.2 POST /api/wines/1/merge/2 con usuario común', 'HTTP 403', `HTTP ${l2.status}`, l2.status === 403);
+
+    // L.3 Mismo target y duplicate -> 400
+    const l3 = await request('/wines/1/merge/1', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record('L.3 POST /api/wines/1/merge/1 mismo ID', 'HTTP 400 ValidationException', `HTTP ${l3.status}`, l3.status === 400);
+
+    // L.4 Target no existente -> 404
+    const l4 = await request('/wines/999999/merge/999998', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record('L.4 POST /api/wines/{id}/merge/{id} target inexistente', 'HTTP 404 NotFoundException', `HTTP ${l4.status}`, l4.status === 404);
+
+    // L.5 Setup para fusión:
+    // Crear dos vinos con cosechas, reseñas, cava y user_wines
+    const lTargetRes = await request('/wines', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        name: `e2e_Wine_Target_${timestamp}`,
+        description: 'Vino destino para merge',
+        wineType: 'Red',
+        firstVintage: {
+          year: 2020,
+          alcoholContent: 14,
+          servingTemperature: 16,
+          agingAdvice: 'Beber ahora',
+          grapes: [{ grapeId: grapeId, percentage: 100 }],
+        },
+      }),
+    });
+    const lTargetId = lTargetRes.data?.id;
+
+    // Crear segunda cosecha 2021 en Target
+    await request(`/wines/${lTargetId}/vintages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        year: 2021,
+        alcoholContent: 13.5,
+        servingTemperature: 16,
+        agingAdvice: 'Guardar 3 años',
+        grapes: [{ grapeId: grapeId, percentage: 100 }],
+      }),
+    });
+
+    // Obtener cosechas de Target
+    const lTargetVintages = await request(`/wines/${lTargetId}/vintages`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const lTargetV2020 = lTargetVintages.data?.find(v => v.year === 2020);
+    const lTargetV2020Id = lTargetV2020?.id;
+
+    // Aprobar cosechas de Target para visibilidad
+    await request(`/wine-vintages/${lTargetV2020Id}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Approved' }),
+    });
+
+    // Reseña del usuario común en Target 2020 (rating = 5)
+    await request('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        wineVintageId: lTargetV2020Id,
+        rating: 5,
+        comment: `e2e_target_rev_${timestamp}`,
+      }),
+    });
+
+    // Crear cava para usuario común y agregar Target 2020 con quantity = 3
+    const lCellarRes = await request('/cellars', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ name: `e2e_Cellar_Merge_${timestamp}` }),
+    });
+    const lCellarId = lCellarRes.data?.id;
+    await request(`/cellars/${lCellarId}/items`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ wineVintageId: lTargetV2020Id, quantity: 3 }),
+    });
+
+    // UserWine flag en Target
+    await request(`/user-wines/${lTargetId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ isWanted: true, isTried: false, isFavorite: false }),
+    });
+
+    // Crear vino Duplicado
+    const lDupRes = await request('/wines', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        name: `e2e_Wine_Dup_${timestamp}`,
+        description: 'Vino duplicado a fusionar',
+        wineType: 'Red',
+        firstVintage: {
+          year: 2020, // Choca con 2020 de target
+          alcoholContent: 14,
+          servingTemperature: 16,
+          agingAdvice: 'Beber ahora',
+          grapes: [{ grapeId: grapeId, percentage: 100 }],
+        },
+      }),
+    });
+    const lDupId = lDupRes.data?.id;
+
+    // Cosecha 2022 en Duplicate (año diferente, no choca)
+    await request(`/wines/${lDupId}/vintages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        year: 2022,
+        alcoholContent: 14.5,
+        servingTemperature: 16,
+        agingAdvice: 'Guardar 5 años',
+        grapes: [{ grapeId: grapeId, percentage: 100 }],
+      }),
+    });
+
+    const lDupVintages = await request(`/wines/${lDupId}/vintages`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const lDupV2020 = lDupVintages.data?.find(v => v.year === 2020);
+    const lDupV2022 = lDupVintages.data?.find(v => v.year === 2022);
+    const lDupV2020Id = lDupV2020?.id;
+    const lDupV2022Id = lDupV2022?.id;
+
+    // Aprobar cosechas de Duplicate
+    await request(`/wine-vintages/${lDupV2020Id}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Approved' }),
+    });
+    await request(`/wine-vintages/${lDupV2022Id}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ status: 'Approved' }),
+    });
+
+    // Reseña del mismo usuario en Dup 2020 (choca, debe ser descartada)
+    await request('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        wineVintageId: lDupV2020Id,
+        rating: 2,
+        comment: `e2e_dup_rev_conflict_${timestamp}`,
+      }),
+    });
+
+    // Reseña del mismo usuario en Dup 2022 (no choca, debe ser movida)
+    await request('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        wineVintageId: lDupV2022Id,
+        rating: 4,
+        comment: `e2e_dup_rev_moved_${timestamp}`,
+      }),
+    });
+
+    // Item de cava en Dup 2020 (choca en lCellarId con 4 botellas -> suma 3+4=7)
+    await request(`/cellars/${lCellarId}/items`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ wineVintageId: lDupV2020Id, quantity: 4 }),
+    });
+
+    // UserWine flag en Duplicate: isFavorite: true, isTried: true
+    await request(`/user-wines/${lDupId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({ isWanted: false, isTried: true, isFavorite: true }),
+    });
+
+    record(
+      'L.5 Setup de vinos para prueba de fusión',
+      'Target y Duplicate creados con cosechas, reseñas y cavas',
+      `Target: #${lTargetId}, Dup: #${lDupId}`,
+      lTargetId != null && lDupId != null
+    );
+
+    // L.6 POST /api/wines/{targetId}/merge/{duplicateId} exitoso -> 200 con conteos
+    const l6MergeRes = await request(`/wines/${lTargetId}/merge/${lDupId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const mergeData = l6MergeRes.data;
+    const l6Valid = l6MergeRes.status === 200 &&
+      mergeData?.targetId === lTargetId &&
+      mergeData?.duplicateId === lDupId &&
+      mergeData?.movedVintages === 1 &&
+      mergeData?.mergedVintages === 1 &&
+      mergeData?.movedReviews === 1 &&
+      mergeData?.discardedReviews === 1 &&
+      mergeData?.movedCellarItems === 1;
+
+    record(
+      'L.6 POST /api/wines/{targetId}/merge/{duplicateId} fusión exitosa',
+      'HTTP 200 con MergeWinesResultDto exacto (1 movida, 1 fusionada, 1 review movida, 1 descartada, 1 cava movida)',
+      `HTTP ${l6MergeRes.status}, data: ${JSON.stringify(mergeData)}`,
+      l6Valid
+    );
+
+    // L.7 Verificación de efectos en BD
+    // Cava: item en lTargetV2020Id debe tener quantity = 7
+    const lCellarItemsRes = await request(`/cellars/${lCellarId}/items`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    const lTargetCellarItem = lCellarItemsRes.data?.find(i => i.wineVintageId === lTargetV2020Id);
+    const lDupCellarItem = lCellarItemsRes.data?.find(i => i.wineVintageId === lDupV2020Id);
+
+    // UserWine: flags combinados en Target (isWanted: true, isTried: true, isFavorite: true)
+    const lUserWineRes = await request(`/user-wines/${lTargetId}`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    const lUserWine = lUserWineRes.data;
+    const lUserWineValid = lUserWine?.isWanted === true && lUserWine?.isTried === true && lUserWine?.isFavorite === true;
+
+    // Reseñas en Target 2020: la del usuario debe conservar rating 5
+    const lTarget2020Reviews = await request(`/reviews?wineVintageId=${lTargetV2020Id}&userId=${commonUserId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const lRetainedReview = lTarget2020Reviews.data?.find(r => r.userId === commonUserId);
+
+    record(
+      'L.7 Efectos de fusión verificados en BD',
+      'Cava sumada (7), Dup vintage borrado de cava, UserWine combinado (OR), Reseña destino conservada (rating=5)',
+      `Cava Qty: ${lTargetCellarItem?.quantity}, Dup in cellar: ${Boolean(lDupCellarItem)}, Flags: ${JSON.stringify(lUserWine)}, Retained rating: ${lRetainedReview?.rating}`,
+      lTargetCellarItem?.quantity === 7 && !lDupCellarItem && lUserWineValid && lRetainedReview?.rating === 5
+    );
+
+    // L.8 Visibilidad de vino duplicado
+    // Anónimo GET /wines/{duplicateId} -> 404
+    const l8AnonGet = await request(`/wines/${lDupId}`);
+    // Admin GET /wines/{duplicateId} -> 200 con duplicateOfWineId = targetId
+    const l8AdminGet = await request(`/wines/${lDupId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    // Anónimo GET /wines/search no lo lista
+    const l8SearchAnon = await request(`/wines/search?name=e2e_Wine_Dup_${timestamp}&pageNumber=1&pageSize=10`);
+    const l8FoundInSearch = Array.isArray(l8SearchAnon.data) && l8SearchAnon.data.some(w => w.id === lDupId);
+
+    record(
+      'L.8 Visibilidad: Duplicado oculto a público y visible a admin',
+      'Anónimo 404 en GetById y oculto en búsqueda; Admin 200 con duplicateOfWineId seteado',
+      `Anon Get: ${l8AnonGet.status}, Admin Get: ${l8AdminGet.status} (dupOf: ${l8AdminGet.data?.duplicateOfWineId}), Found in Search: ${l8FoundInSearch}`,
+      l8AnonGet.status === 404 && l8AdminGet.status === 200 && l8AdminGet.data?.duplicateOfWineId === lTargetId && !l8FoundInSearch
+    );
+
+    // L.9 Conflicto al intentar fusionar un duplicado nuevamente
+    const l9Repeat = await request(`/wines/${lTargetId}/merge/${lDupId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const l9TargetIsDup = await request(`/wines/${lDupId}/merge/${lTargetId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record(
+      'L.9 ConflictException (409) al repetir o fusionar vinos ya duplicados',
+      'HTTP 409 Conflict en ambos intentos',
+      `Repeat: ${l9Repeat.status}, DupAsTarget: ${l9TargetIsDup.status}`,
+      l9Repeat.status === 409 && l9TargetIsDup.status === 409
+    );
+
+    // L.10 Auditoría WineMerged
+    const l10Audit = await request('/audit-log?action=WineMerged', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const l10Entry = Array.isArray(l10Audit.data) && l10Audit.data.find(e => e.entityType === 'Wine' && e.entityId === lTargetId);
+    record(
+      'L.10 Auditoría WineMerged registrada correctamente',
+      'Entrada en audit_log con entityType Wine, entityId = targetId, details = duplicateId',
+      `Encontrada: ${Boolean(l10Entry)}, EntityId: ${l10Entry?.entityId}, Details: ${l10Entry?.details}`,
+      l10Entry != null && l10Entry.action === 'WineMerged' && l10Entry.details === lDupId.toString()
+    );
 } catch (err) {
     console.error('\n💥 ERROR FATAL DURANTE LA EJECUCIÓN:', err);
     failed++;
@@ -1412,6 +1711,7 @@ async function run() {
         DELETE FROM wine_grapes WHERE wine_vintage_id IN (SELECT id FROM wine_vintages WHERE wine_id IN (SELECT id FROM wines WHERE name LIKE '%e2e_%') OR uploaded_by_user_id IN (SELECT id FROM users WHERE username LIKE '%e2e_%' OR email LIKE '%e2e_%'));
         DELETE FROM wine_pairings WHERE pairing_id IN (SELECT id FROM pairings WHERE name LIKE '%e2e_%') OR wine_id IN (SELECT id FROM wines WHERE name LIKE '%e2e_%');
         DELETE FROM wine_vintages WHERE wine_id IN (SELECT id FROM wines WHERE name LIKE '%e2e_%') OR uploaded_by_user_id IN (SELECT id FROM users WHERE username LIKE '%e2e_%' OR email LIKE '%e2e_%');
+        DELETE FROM user_wines WHERE wine_id IN (SELECT id FROM wines WHERE name LIKE '%e2e_%');
         DELETE FROM wines WHERE name LIKE '%e2e_%';
         DELETE FROM wineries WHERE name LIKE '%e2e_%' OR user_id IN (SELECT id FROM users WHERE username LIKE '%e2e_%' OR email LIKE '%e2e_%');
         DELETE FROM cities WHERE name LIKE '%e2e_%';
