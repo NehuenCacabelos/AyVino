@@ -39,7 +39,7 @@ public class AdminStatsServiceTests
         var adminActor = new Actor(1, AppRoles.Admin, "admin_user");
         var expectedStats = new AdminStatsDto(
             Users: new UserStatsDto(150, 3),
-            Wineries: new WineryStatsDto(Pending: 4, Approved: 25, Rejected: 2),
+            Wineries: new WineryStatsDto(Total: 31, Pending: 4, Approved: 25, Rejected: 2),
             Cities: new CityStatsDto(Pending: 5),
             Vintages: new VintageStatsDto(Pending: 8, Approved: 80, Rejected: 1),
             Wines: new WineStatsDto(Total: 45, Community: 15, Official: 30),
@@ -56,8 +56,10 @@ public class AdminStatsServiceTests
         Assert.Equal(expectedStats, result);
         Assert.Equal(150, result.Users.Total);
         Assert.Equal(3, result.Users.Blocked);
+        Assert.Equal(31, result.Wineries.Total);
         Assert.Equal(4, result.Wineries.Pending);
         Assert.Equal(25, result.Wineries.Approved);
+        Assert.Equal(2, result.Wineries.Rejected);
         Assert.Equal(5, result.Cities.Pending);
         Assert.Equal(8, result.Vintages.Pending);
         Assert.Equal(45, result.Wines.Total);

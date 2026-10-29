@@ -33,7 +33,7 @@ vi.mock('@/features/auth', async (importOriginal) => {
 describe('AdminDashboardPage Component', () => {
   const mockStats: AdminStatsDto = {
     users: { total: 150, blocked: 3 },
-    wineries: { pending: 4, approved: 25, rejected: 2 },
+    wineries: { total: 31, pending: 4, approved: 25, rejected: 2 },
     cities: { pending: 5 },
     vintages: { pending: 8, approved: 80, rejected: 1 },
     wines: { total: 45, community: 15, official: 30 },
@@ -93,7 +93,8 @@ describe('AdminDashboardPage Component', () => {
 
       // Resumen del ecosistema
       expect(screen.getByText('150')).toBeInTheDocument(); // Total usuarios
-      expect(screen.getByText('25')).toBeInTheDocument(); // Bodegas aprobadas
+      expect(screen.getByText('31')).toBeInTheDocument(); // Total bodegas
+      expect(screen.getByText(/25 aprobadas · 4 pend\./i)).toBeInTheDocument(); // Desglose bodegas
       expect(screen.getByText(/30 oficiales · 15 com\./i)).toBeInTheDocument(); // Desglose vinos
       expect(screen.getByText('320')).toBeInTheDocument(); // Total reseñas
 

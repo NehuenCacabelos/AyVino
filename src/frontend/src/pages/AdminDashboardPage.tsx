@@ -6,7 +6,6 @@ import {
   Wine,
   UserX,
   Users,
-  Award,
   Star,
   Grape,
   UtensilsCrossed,
@@ -375,14 +374,19 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Bodegas aprobadas */}
+          {/* Total bodegas */}
           <div className="p-4 rounded-2xl border border-white/10 bg-[#121015] flex items-center gap-3.5">
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-neutral-300">
-              <Award className="w-5 h-5 text-emerald-400" />
+              <Building2 className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Bodegas Aprobadas</p>
-              <p className="text-xl font-bold text-zinc-100">{stats?.wineries.approved ?? (statsState.isLoading ? '—' : 0)}</p>
+              <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Total Bodegas</p>
+              <p className="text-xl font-bold text-zinc-100">
+                {stats?.wineries.total ?? (statsState.isLoading ? '—' : 0)}{' '}
+                <span className="text-xs font-normal text-neutral-400">
+                  ({stats?.wineries.approved ?? 0} aprobadas · {stats?.wineries.pending ?? 0} pend.)
+                </span>
+              </p>
             </div>
           </div>
 

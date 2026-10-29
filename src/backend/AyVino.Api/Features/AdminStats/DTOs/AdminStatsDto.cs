@@ -2,7 +2,13 @@ namespace AyVino.Api.Features.AdminStats.DTOs;
 
 public record UserStatsDto(int Total, int Blocked);
 
-public record WineryStatsDto(int Pending, int Approved, int Rejected);
+public record WineryStatsDto(int Total, int Pending, int Approved, int Rejected)
+{
+    public WineryStatsDto(int pending, int approved, int rejected)
+        : this(pending + approved + rejected, pending, approved, rejected)
+    {
+    }
+}
 
 public record CityStatsDto(int Pending);
 

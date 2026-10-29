@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.AdminStats.DTOs;
 using AyVino.Api.Features.Locations.Enums;
@@ -13,6 +14,7 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
     {
         public long TotalUsers { get; set; }
         public long BlockedUsers { get; set; }
+        public long TotalWineries { get; set; }
         public long PendingWineries { get; set; }
         public long ApprovedWineries { get; set; }
         public long RejectedWineries { get; set; }
@@ -30,8 +32,9 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
     {
         const string sql = """
             SELECT
-                (SELECT COUNT(*) FROM users) AS TotalUsers,
+                (SELECT COUNT(*) FROM users WHERE LOWER(role) = LOWER(@UserRole)) AS TotalUsers,
                 (SELECT COUNT(*) FROM users WHERE is_active = FALSE) AS BlockedUsers,
+                (SELECT COUNT(*) FROM wineries) AS TotalWineries,
                 (SELECT COUNT(*) FROM wineries WHERE status = @PendingWinery) AS PendingWineries,
                 (SELECT COUNT(*) FROM wineries WHERE status = @ApprovedWinery) AS ApprovedWineries,
                 (SELECT COUNT(*) FROM wineries WHERE status = @RejectedWinery) AS RejectedWineries,
@@ -48,6 +51,7 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var row = await connection.QuerySingleAsync<RawStatsRow>(new CommandDefinition(sql, new
         {
+            UserRole = AppRoles.User,
             PendingWinery = (short)WineryStatus.Pending,
             ApprovedWinery = (short)WineryStatus.Approved,
             RejectedWinery = (short)WineryStatus.Rejected,
@@ -61,7 +65,7 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
 
         return new AdminStatsDto(
             Users: new UserStatsDto((int)row.TotalUsers, (int)row.BlockedUsers),
-            Wineries: new WineryStatsDto((int)row.PendingWineries, (int)row.ApprovedWineries, (int)row.RejectedWineries),
+            Wineries: new WineryStatsDto((int)row.TotalWineries, (int)row.PendingWineries, (int)row.ApprovedWineries, (int)row.RejectedWineries),
             Cities: new CityStatsDto((int)row.PendingCities),
             Vintages: new VintageStatsDto((int)row.PendingVintages, (int)row.ApprovedVintages, (int)row.RejectedVintages),
             Wines: new WineStatsDto((int)row.TotalWines, (int)row.CommunityWines, (int)row.OfficialWines),

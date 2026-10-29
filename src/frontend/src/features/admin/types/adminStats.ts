@@ -4,6 +4,7 @@ export interface UserStats {
 }
 
 export interface WineryStats {
+  total: number;
   pending: number;
   approved: number;
   rejected: number;

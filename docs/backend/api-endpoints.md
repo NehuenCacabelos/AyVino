@@ -476,9 +476,10 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 
 ### Estructura del DTO (`AdminStatsDto`)
 - `users`:
-  - `total` (`int`): Total de usuarios registrados.
+  - `total` (`int`): Total de usuarios enófilos registrados con rol estándar (`role = 'User'`).
   - `blocked` (`int`): Usuarios bloqueados (`is_active = false`).
 - `wineries`:
+  - `total` (`int`): Total de bodegas registradas en el ecosistema vitivinícola.
   - `pending` (`int`): Bodegas pendientes de aprobación (`status = 1`).
   - `approved` (`int`): Bodegas aprobadas (`status = 2`).
   - `rejected` (`int`): Bodegas rechazadas (`status = 3`).
