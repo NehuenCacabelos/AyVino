@@ -29,14 +29,21 @@
   --color-gold: #b48c36;
   --color-gold-hover: #967024;
   --color-gold-light: #fef9ed;
+  --color-cava-gold: #fbbf24;
+  --color-cava-champagne: #fde68a;
 
   --color-dark-bg: #0f0f11;
   --color-dark-surface: #121214;
   --color-dark-card: #161619;
+  --color-dark-lowest: #0a0a0c;
+  --color-dark-low: #0f0f11;
+  --color-dark-container: #121216;
+  --color-dark-high: #16161c;
+  --color-dark-highest: #201f25;
 
-  --font-serif: "Cormorant Garamond", "Fraunces", "Playfair Display", Georgia, serif;
+  --font-serif: "EB Garamond", "Cormorant Garamond", "Fraunces", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 body {
