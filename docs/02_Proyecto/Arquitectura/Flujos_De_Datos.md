@@ -1,3 +1,14 @@
+---
+title: "Flujos de Datos y Secuencia del Sistema"
+tipo: "arquitectura"
+tags:
+  - arquitectura
+  - flujos
+  - diagramas
+  - secuencia
+  - rfc7807
+---
+
 # Flujos de Datos y Secuencia del Sistema - AyVino
 
 Este documento detalla los flujos de datos críticos de AyVino, ilustrando las interacciones entre el cliente SPA, la capa de endpoints, los servicios de dominio, la base de datos PostgreSQL y los componentes transversales.
@@ -68,7 +79,7 @@ sequenceDiagram
 
 ## 2. Flujo de Ciclo de Vida y Reclamo de Vinos (Claim Process)
 
-Este flujo materializa los requisitos funcionales **RF-1.1**, **RF-1.3**, **RF-1.4** y **RF-1.5** ([`spec.md`](../requirements/spec.md)), permitiendo que la comunidad suba botellas y que las bodegas oficiales las adopten formalmente.
+Este flujo materializa los requisitos funcionales **RF-1.1**, **RF-1.3**, **RF-1.4** y **RF-1.5** ([[Especificacion_Requerimientos|spec.md]]), permitiendo que la comunidad suba botellas y que las bodegas oficiales las adopten formalmente.
 
 ```mermaid
 sequenceDiagram
@@ -106,7 +117,7 @@ sequenceDiagram
 
 ## 3. Flujo de Asociación Vino-Maridaje
 
-El módulo de maridajes ([`Pairings`](../backend/overview.md)) utiliza una relación N:M mediante la tabla intermedia `wine_pairings` con integridad referencial en cascada.
+El módulo de maridajes ([[Backend_Overview|Pairings]]) utiliza una relación N:M mediante la tabla intermedia `wine_pairings` con integridad referencial en cascada.
 
 ```mermaid
 sequenceDiagram
@@ -158,4 +169,12 @@ sequenceDiagram
         Handler->>Client: 500 ProblemDetails ("Error interno del servidor", TraceId)
     end
 ```
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Arquitectura_Overview]]: Visión global y matriz tecnológica.
+- [[Seguridad_Y_Autenticacion]]: Protocolos criptográficos y tokens.
+- [[Ciclo_Vida_Vino]]: Estados de moderación y claiming.
+- [[Catalogo_Endpoints_API]]: Catálogo de endpoints HTTP.
 

@@ -1,3 +1,15 @@
+---
+title: "Catálogo Exhaustivo de Endpoints API"
+tipo: "arquitectura"
+tags:
+  - backend
+  - api
+  - endpoints
+  - rest
+  - minimal-apis
+  - rfc7807
+---
+
 # Catálogo de Endpoints API - AyVino.Api
 
 Este documento detalla exhaustivamente las rutas HTTP expuestas por el backend de AyVino mediante **Minimal APIs** en .NET 10. Cada endpoint se encuentra estructurado bajo su correspondiente **Vertical Slice**.
@@ -172,7 +184,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 
 ## 3. Bodegas (`/api/wineries`)
 
-Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/spec.md), [RF-1.4](../requirements/spec.md)).
+Gestión integral de bodegas oficiales y comunitarias ([[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.1]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.4]]).
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -238,7 +250,7 @@ Catálogo maestro de cepas (Malbec, Cabernet Sauvignon, Torrontés, Bonarda, etc
 
 ## 8. Vinos y Catálogo General (`/api/wines`)
 
-Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje verificado, moderación de estados y proceso de reclamo oficial ([RF-1.1](../requirements/spec.md), [RF-1.2](../requirements/spec.md), [RF-1.3](../requirements/spec.md), [RF-1.5](../requirements/spec.md), [RF-1.6](../requirements/spec.md)).
+Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje verificado, moderación de estados y proceso de reclamo oficial ([[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.1]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.2]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.3]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.5]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.6]]).
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -350,4 +362,12 @@ Cálculo de temperatura óptima de servicio, tiempo y conveniencia de decantaci�
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wines/{wineId}/vintages/{vintageId}/care-recommendations` | Público | Retorna consejos enológicos basados en datos declarados por la bodega o heurísticas del motor. | - | `200 OK` (`WineCareResponseDto`) |
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Backend_Overview]]: Vertical slices, repositorios y servicios.
+- [[Seguridad_Y_Autenticacion]]: Flujo de tokens, claims y políticas de acceso.
+- [[Ciclo_Vida_Vino]]: Proceso de reclamo oficial y moderación de estados.
+- [[Especificacion_Requerimientos]]: Requerimientos funcionales EARS.
 

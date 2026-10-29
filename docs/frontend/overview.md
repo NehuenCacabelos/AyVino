@@ -70,7 +70,12 @@ src/frontend/src/
 │   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
-│   ├── dashboard/             # Módulo del Dashboard / Mi Cava Personal
+│   ├── cava/                  # Módulo de Bóveda y Mi Cava Personal (Experiencia Coleccionista Stitch)
+│   │   ├── components/        # Componentes de la bóveda (VaultHeader, VaultVitals, VaultTabs, VaultWineCard, etc.)
+│   │   ├── data/              # Conjunto inicial curado de etiquetas icónicas y telemetría (defaultVaultData.ts)
+│   │   ├── types.ts           # Modelos de dominio tipados (CellarWine, CellarVitals, CellarTelemetry, etc.)
+│   │   └── index.ts           # Barrel export del módulo cava
+│   ├── dashboard/             # Módulo del Dashboard Principal
 │   │   ├── components/        # Componentes del dominio (QuickActions, Metrics, StockCarousel, UncorkDialog, etc.)
 │   │   └── index.ts           # Barrel export público del feature dashboard
 │   └── wines/                 # Módulo de Vinos y Catálogo
@@ -78,6 +83,13 @@ src/frontend/src/
 │       ├── data/              # Mock curado con assets reales vinculados (curatedWines.ts)
 │       ├── utils/             # Adaptadores de dominio y mapeadores (wineMapper.ts)
 │       └── index.ts           # Barrel export del módulo wines
+│   ├── pairings/              # Dominio de maridajes y afinidad enogastronómica
+│   │   ├── components/
+│   │   │   ├── PairingInteractiveHub.tsx # Switcher bidireccional y navegación de categorías
+│   │   │   └── PairingDetailView.tsx    # Ficha técnica sommelier, servicio y etiquetas
+│   │   └── index.ts           # Barrel export del módulo pairings
+├── data/                      # Datos estáticos curados y taxonomías cerradas
+│   └── pairingsData.ts        # Matriz enogastronómica bidireccional tipada y notas sommelier
 ├── lib/                       # Utilidades transversales
 │   └── utils.ts               # Función cn con clsx y tailwind-merge
 ├── pages/                     # Páginas y vistas principales (*Page.tsx)
@@ -187,4 +199,38 @@ npm run dev
    npm run build  # Compilación estricta TypeScript (0 errores)
    npm run lint   # Validación de reglas ESLint (0 advertencias)
    ```
+
+---
+
+## 8. Hub Interactivo de Maridaje Enogastronómico Argentino (`/maridaje`)
+
+La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país.
+
+### 8.1 Arquitectura Visual y Componentes
+- **Segmented Control Flotante (`PairingInteractiveHub.tsx`)**:
+  - Control de selección superior con estética flotante (`bg-[#141418]`, `border-neutral-700/60`, sombra profunda y desenfoque `backdrop-blur-md`).
+  - Bloque activo con tinte vinícola sutil (`bg-[#722F37]/25`), borde iluminado (`border-rose-500/80`), anillo exterior (`ring-1 ring-rose-400/40`) y micro-icono temático (`UtensilsCrossed` y `Wine`).
+- **Contraste de Secciones y Ritmo Visual (`PairingDetailView.tsx`)**:
+  - Para evitar bloques oscuros planos, la zona de lectura de resultados (*"Por qué funciona"*, *"Cepas recomendadas"* y *"Platos sugeridos"*) se presenta sobre tarjetas en gris grafito elevado (`bg-[#16161c]/95 backdrop-blur-md border border-neutral-700/60 shadow-2xl`).
+- **Microinteracciones e Indicadores Sensoriales**:
+  - Tarjetas de cepa con indicador textual minimalista en una sola línea que se ilumina en dorado cava (`group-hover:text-amber-200/90`) al posar el cursor, indicando *Cuerpo*, *Acidez* y *Taninos*.
+  - Matriz Sensorial de la Cepa con medidores visuales en escala de 10 puntos (Taninos, Acidez, Cuerpo) e indicadores de potencial de guarda y cristalería.
+  - Halos ambientales de cava (`bg-rose-950/20 blur-[100px]` y `bg-amber-500/5 blur-[90px]`) inspirados en el diseño de Google Stitch.
+  - Botón de guardado rápido *"Guardar en Mi Cava"* con feedback visual reactivo de 3 segundos.
+  - *Smooth scroll* inteligente condicional hacia `#maridaje-detalle`: ejecuta desplazamiento suave solo cuando la zona de lectura no se encuentra completamente visible en el viewport del usuario.
+
+### 8.2 Taxonomía Gastronómica Argentina (7 Categorías)
+1. **Asado & Fuegos**: Asado de tira, vacío a la llama, entraña jugosa, matambre a la pizza, achuras / mollejas.
+2. **Empanadas & Cocina Regional**: Empanadas salteñas de corte a cuchillo, humita en chala, locro criollo, tamales.
+3. **Pastas Caseras & Salsas Robustas**: Ñoquis de la abuela con estofado, sorrentinos de jamón y mozzarella con fileto, tuco casero.
+4. **Picadas, Picoteo & Quesos**: Picada de fiambres artesanales, quesos duros de Tandil, jamón crudo, aceitunas y frutos secos.
+5. **Pescados de Río & Mar**: Surubí a la parrilla, pacú al limón, rabas, trucha patagónica.
+6. **Cocina Urbana & Gourmet**: Ojo de bife con papas rústicas, cordero patagónico al disco, pollo al verdeo.
+7. **Dulces & Postres Criollos**: Flan casero con dulce de leche, vigilante de queso y batata, alfajores artesanales, postre borracho.
+
+### 8.3 Catálogo de 29 Cepas Enológicas Argentinas
+Estructurado en 3 grupos con filtros rápidos y contadores en tiempo real:
+- **Tintos (13)**: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Merlot, Pinot Noir, Tannat, Garnacha, Tempranillo, Petit Verdot, Aspirant Bouschet, Ancellotta.
+- **Blancos (9)**: Torrontés, Chardonnay, Sauvignon Blanc, Pinot Gris, Viognier, Albariño, Semillón, Chenin, Ugni Blanc.
+- **Criollas / Rosados / Otros (7)**: Criolla Chica, Moscatel Rosado, Moscatel de Alejandría, Pedro Giménez, Cereza, Rosado Seco, Espumante Dulce / Charmat.
 

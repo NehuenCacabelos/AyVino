@@ -1,6 +1,17 @@
+---
+title: "Migraciones de Base de Datos y Modelo ERD"
+tipo: "arquitectura"
+tags:
+  - base-de-datos
+  - migraciones
+  - postgresql
+  - fluentmigrator
+  - erd
+---
+
 # Migraciones de Base de Datos - FluentMigrator
 
-En cumplimiento de la constitución del proyecto ([`AGENTS.md`](../../AGENTS.md)):
+En cumplimiento de la constitución del proyecto ([[AGENTS.md]]):
 > **Base de Datos**: Cambios de esquema estructurados únicamente mediante `FluentMigrator`.
 
 ---
@@ -238,3 +249,12 @@ using (var scope = app.Services.CreateScope())
 1. **Nunca alterar migraciones ya aplicadas**: Si se requiere un cambio sobre una tabla existente, crear una nueva clase de migración con versión incremental.
 2. **Reversibilidad total**: Todo método `Up()` debe tener su contraparte exacta en `Down()` eliminando foreign keys, índices y constraints antes de borrar tablas.
 3. **Restricciones e Índices Explícitos**: Agregar siempre índices sobre columnas utilizadas en cláusulas `WHERE` o `JOIN` (ej: `winery_id`, `location_id`, `winery_name_text`).
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Arquitectura_Overview]]: Principios rectores y tecnologías.
+- [[Backend_Overview]]: Repositorios Dapper e inyección de dependencias.
+- [[Ciclo_Vida_Vino]]: Enums de persistencia y estructura de cosechas.
+- [[Catalogo_Endpoints_API]]: Mapeo de tablas a endpoints REST.
+
