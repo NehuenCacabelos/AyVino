@@ -490,3 +490,10 @@ $RECYCLE.BIN/
 **/wwwroot/uploads/**
 !**/wwwroot/uploads/**/.gitkeep
 
+# Obsidian Vault (local state and cache)
+**/.obsidian/workspace*.json
+**/.obsidian/cache/
+**/.obsidian/graph.json
+**/.trash/
+
+

@@ -1,3 +1,14 @@
+---
+title: "Ciclo de Vida del Vino, Cortes y Reclamo Oficial"
+tipo: "arquitectura"
+tags:
+  - backend
+  - dominio
+  - vino
+  - blends
+  - reclamo
+---
+
 # Ciclo de Vida del Vino, Cortes y Reclamo Oficial - AyVino.Api
 
 Este documento describe las reglas de negocio del dominio vitivinícola en AyVino: procedencia de botellas, estados de moderación, formulación de cortes de uva (blends) y el protocolo de adopción o reclamo de vinos por bodegas oficiales.
@@ -50,7 +61,7 @@ AyVino modela la enología real permitiendo tanto varietales puros (100% de una 
 
 ## 4. El Proceso de Reclamo Oficial (Wine Claim Flow)
 
-Para resolver el problema del contenido generado por usuarios antes de que una bodega se sume a la plataforma, se implementa el flujo de reclamo ([RF-1.5](../requirements/spec.md)):
+Para resolver el problema del contenido generado por usuarios antes de que una bodega se sume a la plataforma, se implementa el flujo de reclamo ([[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.5]]):
 
 ```mermaid
 graph TD
@@ -114,4 +125,11 @@ Valores numéricos e identificadores sincronizados con el código backend:
 - **`DrinkingStatus`**: `TooYoung = 10`, `InWindow = 20`, `DrinkSoon = 30`, `PastPeak = 40`
 - **`AdviceSource`**: `Declared = 1`, `Inferred = 2`
 
+---
+
+## 🔗 Referencias Relacionadas
+- [[Especificacion_Requerimientos]]: Requerimientos RF-1.1 al RF-1.6.
+- [[Catalogo_Endpoints_API]]: Endpoints `/api/wines` y `/api/grapes`.
+- [[Base_De_Datos_Migraciones]]: Tablas `wines`, `wine_vintages` y `wine_grapes`.
+- [[Flujos_De_Datos]]: Diagrama de secuencia del flujo de adopción de vinos.
 

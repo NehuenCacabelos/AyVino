@@ -320,19 +320,21 @@ AyVino/
 
 ---
 
-## 📚 Centro de Documentación Viva (`docs/`)
+## 📚 Centro de Documentación Viva y Vault de Obsidian (`docs/`)
 
-Para profundizar en cualquier aspecto técnico o de negocio, consulta los documentos especializados:
+Para profundizar en cualquier aspecto técnico o de negocio, consulta los documentos especializados en el Vault de Obsidian:
 
-- 📑 [**Índice General de Documentación (`docs/README.md`)**](docs/README.md)
-- 🏗️ [**Arquitectura Global del Sistema (`docs/architecture/overview.md`)**](docs/architecture/overview.md)
-- 🔄 [**Flujos de Datos y Decisiones Técnicas (`docs/architecture/data-flow.md`)**](docs/architecture/data-flow.md)
-- ⚙️ [**Diseño Backend y Vertical Slices (`docs/backend/overview.md`)**](docs/backend/overview.md)
-- 🔌 [**Catálogo Exhaustivo de Endpoints API (`docs/backend/api-endpoints.md`)**](docs/backend/api-endpoints.md)
-- 🗄️ [**Esquema de Base de Datos y Migraciones (`docs/backend/database-migrations.md`)**](docs/backend/database-migrations.md)
-- 🔐 [**Seguridad, JWT y Autenticación (`docs/backend/security-and-auth.md`)**](docs/backend/security-and-auth.md)
-- 🍇 [**Ciclo de Vida del Vino y Reclamo Oficial (`docs/backend/wine-lifecycle.md`)**](docs/backend/wine-lifecycle.md)
-- 🎨 [**Diseño y Arquitectura Frontend (`docs/frontend/overview.md`)**](docs/frontend/overview.md)
-- 🗺️ [**Mapa de Navegación y UX Frontend (`docs/frontend/navigation-flow.md`)**](docs/frontend/navigation-flow.md)
-- 🚀 [**Guía de Inicio Rápido (`docs/guides/getting-started.md`)**](docs/guides/getting-started.md)
-- 📋 [**Especificación Funcional EARS (`docs/requirements/spec.md`)**](docs/requirements/spec.md)
+- 📑 [**Índice General del Vault (`docs/README.md`)**](docs/README.md)
+- 🏗️ [**Arquitectura Global del Sistema (`docs/02_Proyecto/Arquitectura/Arquitectura_Overview.md`)**](docs/02_Proyecto/Arquitectura/Arquitectura_Overview.md)
+- 🔄 [**Flujos de Datos y Decisiones Técnicas (`docs/02_Proyecto/Arquitectura/Flujos_De_Datos.md`)**](docs/02_Proyecto/Arquitectura/Flujos_De_Datos.md)
+- ⚙️ [**Diseño Backend y Vertical Slices (`docs/02_Proyecto/Arquitectura/Backend_Overview.md`)**](docs/02_Proyecto/Arquitectura/Backend_Overview.md)
+- 🔌 [**Catálogo Exhaustivo de Endpoints API (`docs/02_Proyecto/Arquitectura/Catalogo_Endpoints_API.md`)**](docs/02_Proyecto/Arquitectura/Catalogo_Endpoints_API.md)
+- 🗄️ [**Esquema de Base de Datos y Migraciones (`docs/02_Proyecto/Arquitectura/Base_De_Datos_Migraciones.md`)**](docs/02_Proyecto/Arquitectura/Base_De_Datos_Migraciones.md)
+- 🔐 [**Seguridad, JWT y Autenticación (`docs/02_Proyecto/Arquitectura/Seguridad_Y_Autenticacion.md`)**](docs/02_Proyecto/Arquitectura/Seguridad_Y_Autenticacion.md)
+- 🍇 [**Ciclo de Vida del Vino y Reclamo Oficial (`docs/02_Proyecto/Arquitectura/Ciclo_Vida_Vino.md`)**](docs/02_Proyecto/Arquitectura/Ciclo_Vida_Vino.md)
+- 🎨 [**Diseño y Arquitectura Frontend (`docs/02_Proyecto/Arquitectura/Frontend_Overview.md`)**](docs/02_Proyecto/Arquitectura/Frontend_Overview.md)
+- 🗺️ [**Mapa de Navegación y UX Frontend (`docs/02_Proyecto/Arquitectura/Frontend_Navegacion_Flujo.md`)**](docs/02_Proyecto/Arquitectura/Frontend_Navegacion_Flujo.md)
+- 🚀 [**Guía de Inicio Rápido (`docs/02_Proyecto/Guias_Dev/Getting_Started.md`)**](docs/02_Proyecto/Guias_Dev/Getting_Started.md)
+- 📋 [**Especificación Funcional EARS (`docs/02_Proyecto/MDE_Requerimientos/Especificacion_Requerimientos.md`)**](docs/02_Proyecto/MDE_Requerimientos/Especificacion_Requerimientos.md)
+- 🗺️ [**Roadmap del Proyecto (`docs/02_Proyecto/Roadmap.md`)**](docs/02_Proyecto/Roadmap.md)
+- 📐 [**Guía de Estilo del Vault (`docs/00_Meta/Styleguide.md`)**](docs/00_Meta/Styleguide.md)

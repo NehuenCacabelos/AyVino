@@ -1,71 +1,112 @@
-# 📚 Centro de Documentación Técnica y de Producto - AyVino
+---
+title: "Centro de Documentación y Vault de Conocimiento - AyVino"
+tipo: "meta"
+tags:
+  - vault
+  - obsidian
+  - indice
+  - arquitectura
+  - documentacion
+---
 
-Bienvenido al centro neurálgico de documentación oficial de **AyVino**. Este espacio organiza de manera modular y exhaustiva todos los aspectos del sistema: desde los requerimientos de negocio y arquitectura global, hasta los catálogos de endpoints, modelos de datos, protocolos de seguridad y convenciones de desarrollo.
+# 📚 Centro de Documentación y Vault de Conocimiento - AyVino
+
+Bienvenido al centro neurálgico de documentación técnica, gestión de producto y conocimiento de dominio enogastronómico de **AyVino**. Este espacio opera como un **Vault de Obsidian** integrado directamente con el ciclo de vida de desarrollo del proyecto.
 
 ---
 
-## 🗺️ Mapa de Navegación de Documentación
+## 🗺️ Estructura del Vault
 
 ```text
 docs/
-├── README.md                          # Este índice maestro
+├── README.md                          # Este índice maestro y brújula de navegación
 │
-├── requirements/                      # Requerimientos de producto y negocio
-│   └── spec.md                        # Especificación funcional formal en sintaxis EARS
+├── 00_Meta/                           # Metadocumentación, estándares y plantillas
+│   ├── Templates/                     # Plantillas estandarizadas con YAML frontmatter
+│   │   ├── tpl_cepa.md                # Plantilla para varietales y cepas
+│   │   ├── tpl_maridaje.md            # Plantilla para platos y afinidades enogastronómicas
+│   │   └── tpl_idea.md                # Plantilla para propuestas y notas de backlog
+│   └── Styleguide.md                  # Convenciones de notas, tags en minúsculas y wikilinks
 │
-├── architecture/                      # Arquitectura y diseño del sistema
-│   ├── overview.md                    # Visión global, principios rectores y C4
-│   └── data-flow.md                   # Flujos de datos, secuencia de procesos y decisiones técnicas
+├── 01_Dominio/                        # Base de conocimiento de enología y gastronomía
+│   ├── Cepas/                         # Fichas organolépticas de uvas y varietales
+│   ├── Regiones/                      # Terruños, valles y regiones vitivinícolas
+│   ├── Maridajes/                     # Afinidades y contrastes enogastronómicos
+│   ├── Platos/                        # Platos culinarios de la gastronomía argentina
+│   └── Glosario/                      # Términos enológicos y conceptos sommelier
 │
-├── backend/                           # Documentación del backend (.NET 10 Minimal APIs)
-│   ├── overview.md                    # Vertical Slice Architecture, Dapper e infraestructura transversal
-│   ├── api-endpoints.md               # Catálogo exhaustivo de endpoints HTTP, parámetros y DTOs
-│   ├── database-migrations.md         # Catálogo de 11 migraciones FluentMigrator y modelo ERD
-│   ├── security-and-auth.md           # Criptografía, rotación de refresh tokens y rate limiting
-│   └── wine-lifecycle.md              # Ciclo de vida del vino, cortes (blends) y reclamo oficial
+├── 02_Proyecto/                       # Ingeniería de software, diseño y producto
+│   ├── Arquitectura/                  # Decisiones de diseño técnico, diagramas y especificaciones
+│   │   ├── Arquitectura_Overview.md   # Visión global del sistema, C4 y matriz tecnológica
+│   │   ├── Flujos_De_Datos.md         # Diagramas de secuencia y flujos críticos
+│   │   ├── Backend_Overview.md        # Vertical Slice Architecture, Dapper e infraestructura
+│   │   ├── Catalogo_Endpoints_API.md  # Catálogo exhaustivo de endpoints Minimal APIs y DTOs
+│   │   ├── Base_De_Datos_Migraciones.md # 11 migraciones FluentMigrator y modelo ERD
+│   │   ├── Seguridad_Y_Autenticacion.md # Criptografía PBKDF2, JWT y Refresh Tokens
+│   │   ├── Ciclo_Vida_Vino.md         # Origen oficial vs comunitario, blends y claiming
+│   │   ├── Frontend_Overview.md       # React 19, Vite, Tailwind CSS v4 y estética editorial
+│   │   └── Frontend_Navegacion_Flujo.md # Mapa de pantallas, UX y rutas protegidas
+│   ├── MDE_Requerimientos/            # Requerimientos de producto y casos de uso
+│   │   └── Especificacion_Requerimientos.md # Requisitos formales en sintaxis EARS
+│   ├── Guias_Dev/                     # Puesta en marcha y manuales de desarrollo
+│   │   └── Getting_Started.md         # Guía de inicio rápido (Docker, .NET, Vite, Tests)
+│   └── Roadmap.md                     # Índice de hitos completados y pendientes
 │
-├── frontend/                          # Documentación del frontend (React 19 + TypeScript + Vite)
-│   ├── overview.md                    # Stack técnico, Tailwind CSS v4, tipado y diseño editorial
-│   └── navigation-flow.md             # Mapa de navegación, UX, rutas protegidas y pantallas
+├── 03_Inbox_Ideas/                    # Bandeja de entrada rápida para notas sin procesar
+│   └── README.md                      # Instructivo de uso y ciclo de maduración
 │
-└── guides/                            # Guías prácticas para el equipo de desarrollo
-    └── getting-started.md             # Puesta en marcha paso a paso (Docker, Backend, Frontend, Tests)
+└── 04_Assets/                         # Imágenes, infografías y diagramas estáticos
 ```
 
 ---
 
 ## 📑 Directorio Rápido de Documentos
 
-### 1. Requerimientos de Negocio
-- 📄 [**Especificación Funcional (`requirements/spec.md`)**](requirements/spec.md): Definición detallada de requisitos RF-1.1 a RF-3.1 en sintaxis EARS (catálogo dual, corte de uvas, bodegas oficiales, adopción de vinos comunitarios y colecciones).
+### 🛠️ 00_Meta & Gobernanza
+- [[00_Meta/Styleguide|Guía de Estilo y Convenciones]]: Reglas de nomenclatura atómica, frontmatter YAML y etiquetas en minúsculas.
+- [[00_Meta/Templates/tpl_cepa|Plantilla de Cepa]]: Estructura para catalogar varietales.
+- [[00_Meta/Templates/tpl_maridaje|Plantilla de Maridaje]]: Estructura para registrar armonizaciones culinarias.
+- [[00_Meta/Templates/tpl_idea|Plantilla de Idea]]: Ficha para registrar propuestas de producto o backlog técnico.
 
-### 2. Arquitectura General del Sistema
-- 📄 [**Visión Global y C4 (`architecture/overview.md`)**](architecture/overview.md): Modelo cliente-servidor desacoplado, diagrama C4 de contenedores, justificación de la matriz tecnológica y cumplimiento de la constitución ([`AGENTS.md`](../AGENTS.md)).
-- 📄 [**Flujos de Datos y Decisiones Técnicas (`architecture/data-flow.md`)**](architecture/data-flow.md): Diagramas de secuencia para autenticación, mitigación de robo de tokens, adopción de vinos de la comunidad y manejo estandarizado de excepciones (RFC 7807).
+### 🍇 01_Dominio Enogastronómico
+- [[01_Dominio/Cepas/|Directorio de Cepas]]: Varietales de uva tintas, blancas y criollas de Argentina.
+- [[01_Dominio/Regiones/|Directorio de Regiones]]: Valles y terruños vitivinícolas (Mendoza, San Juan, Salta, Patagonia, etc.).
+- [[01_Dominio/Maridajes/|Directorio de Maridajes]]: Fichas sommelier de interacciones enogastronómicas.
+- [[01_Dominio/Platos/|Directorio de Platos]]: Guía culinaria tradicional y contemporánea.
+- [[01_Dominio/Glosario/|Glosario Sommelier]]: Definición de términos organolépticos y técnicos.
 
-### 3. Backend (.NET 10 Minimal APIs + Dapper)
-- 📄 [**Arquitectura Vertical Slice (`backend/overview.md`)**](backend/overview.md): Estructura por slices dentro de `Features/`, abstracciones compartidas en `Common/` y acceso a datos sin Entity Framework mediante Dapper.
-- 📄 [**Catálogo de Endpoints API (`backend/api-endpoints.md`)**](backend/api-endpoints.md): Especificación de todas las rutas HTTP para Auth, Users, Wineries, States, Cities, Locations, Grapes, Wines y Pairings.
-- 📄 [**Migraciones de Base de Datos (`backend/database-migrations.md`)**](backend/database-migrations.md): Catálogo completo de las 11 migraciones de `FluentMigrator`, claves foráneas, índices de rendimiento y diagrama Entidad-Relación.
-- 📄 [**Seguridad y Autenticación (`backend/security-and-auth.md`)**](backend/security-and-auth.md): Algoritmos PBKDF2, mitigación de timing attacks, rotación estricta de tokens de refresco y políticas de autorización por rol.
-- 📄 [**Ciclo de Vida del Vino (`backend/wine-lifecycle.md`)**](backend/wine-lifecycle.md): Origen oficial vs comunitario, composición de cortes de uva (blends), estados de moderación y proceso de reclamo formal (`claim-wines`).
+### 🏗️ 02_Proyecto & Ingeniería
 
-### 4. Frontend (React 19 + TypeScript + Vite)
-- 📄 [**Diseño y Arquitectura Frontend (`frontend/overview.md`)**](frontend/overview.md): Stack tecnológico, Tailwind CSS v4, identidad editorial vinícola y tipado estricto sin `any`.
-- 📄 [**Flujo de Navegación y Experiencia de Usuario (`frontend/navigation-flow.md`)**](frontend/navigation-flow.md): Arquitectura de vistas, páginas dedicadas de autenticación, modales contextuales y flujos de usuario.
+#### Arquitectura
+- [[Arquitectura_Overview]]: Modelo cliente-servidor desacoplado, diagrama C4 de contenedores y matriz tecnológica.
+- [[Flujos_De_Datos]]: Diagramas de secuencia de autenticación, deduplicación/reclamo de vinos y manejo RFC 7807.
+- [[Backend_Overview]]: Vertical Slice Architecture en `Features/`, abstracciones de `Common/` y acceso a datos con Dapper.
+- [[Catalogo_Endpoints_API]]: Especificación exhaustiva de todas las rutas HTTP y validación de DTOs.
+- [[Base_De_Datos_Migraciones]]: Catálogo de las 11 migraciones FluentMigrator y diagrama Entidad-Relación (ERD).
+- [[Seguridad_Y_Autenticacion]]: PBKDF2 con DummyHash, doble token JWT rotativo y rate limiting.
+- [[Ciclo_Vida_Vino]]: Procedencia `Community` vs `Official`, porcentajes en cortes de uva y proceso `claim-wines`.
+- [[Frontend_Overview]]: Stack tecnológico (React 19 + TypeScript + Vite + Tailwind v4) e identidad visual.
+- [[Frontend_Navegacion_Flujo]]: Árbol de navegación, guardias de ruta por rol y componentes interactivos.
 
-### 5. Guías de Ingeniería
-- 📄 [**Guía de Inicio Rápido (`guides/getting-started.md`)**](guides/getting-started.md): Instrucciones completas para levantar PostgreSQL en Docker, ejecutar la API con migraciones automáticas, iniciar la SPA en Vite y correr las suites de pruebas.
+#### Requerimientos y Gestión
+- [[Especificacion_Requerimientos]]: Requisitos funcionales formales EARS (RF-1.1 al RF-3.1).
+- [[Roadmap]]: Checklist vivo de los hitos alcanzados y próximas funcionalidades por implementar.
+
+#### Guías de Ingeniería
+- [[Getting_Started]]: Puesta en marcha paso a paso en entorno local (Docker PostgreSQL, Backend y Frontend).
+
+### 📥 03_Inbox & Captura Rápida
+- [[03_Inbox_Ideas/README|Bandeja de Entrada]]: Buzón rápido para volcar ideas, enlaces, dudas de arquitectura y notas de cata preliminares.
 
 ---
 
-## 🏛️ Principios Rectores (Constitución de Ingeniería)
+## 🏛️ Constitución del Proyecto
 
-Toda contribución al repositorio debe alinearse estrictamente con los 7 principios de la [**Constitución de AyVino (`AGENTS.md`)**](../AGENTS.md):
-1. **Stack Desacoplado**: Backend independiente en .NET y Frontend en `src/frontend`.
-2. **Base de Datos Estructurada**: Cambios de esquema gobernados exclusivamente mediante `FluentMigrator`.
-3. **Calidad Absoluta**: Cero advertencias de compilador, tipado estricto y manejo centralizado de excepciones.
-4. **Límites de Dominio**: La API no expone entidades de persistencia; utiliza DTOs tipados.
-5. **Cobertura de Pruebas**: Cada nueva funcionalidad debe incorporar sus respectivos tests en `tests/`.
-6. **Desarrollo Guiado**: Cumplimiento de convenciones y habilidades en `.agents/skills/`.
-7. **Documentación Viva**: Todo cambio de esquema, endpoint o pantalla debe documentarse en `docs/` como parte de la Definición de Terminado (DoD).
+Toda contribución técnica o documental debe respetar la [[AGENTS.md|Constitución de AyVino (AGENTS.md)]]:
+1. **Stack**: Backend en .NET Core (C#) y Frontend desacoplado en `src/frontend`.
+2. **Base de Datos**: Cambios de esquema estructurados únicamente mediante `FluentMigrator`.
+3. **Calidad**: Cero advertencias de compilador, tipado estricto y manejo global de excepciones.
+4. **Límites**: Desacoplamiento estricto; la capa API no expone entidades de dominio, usa DTOs.
+5. **Tests**: Cada nueva funcionalidad debe incluir sus respectivos tests en el directorio `tests`.
+6. **Agente**: Reglas de desarrollo en `AGENTS.md` y flujos complejos en `.agents/skills/`.
+7. **Documentación Viva**: Toda nueva funcionalidad, endpoint, cambio de esquema o vista debe reflejarse y documentarse automáticamente en su carpeta correspondiente dentro de `docs/` como parte de la definición de terminado (DoD).

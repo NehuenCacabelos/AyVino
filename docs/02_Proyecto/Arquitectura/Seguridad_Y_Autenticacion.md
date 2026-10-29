@@ -1,3 +1,15 @@
+---
+title: "Protocolos de Seguridad y Autenticación"
+tipo: "arquitectura"
+tags:
+  - backend
+  - seguridad
+  - jwt
+  - pbkdf2
+  - rate-limiting
+  - lockout
+---
+
 # Protocolos de Seguridad y Autenticación - AyVino.Api
 
 Este documento detalla los mecanismos criptográficos, esquemas de autorización, mitigación de vectores de ataque y políticas de rate limiting implementadas en el backend de AyVino.
@@ -151,4 +163,11 @@ En servidores de despliegue, Docker o plataformas en la nube, se configuran medi
 - `Jwt__SecretKey`: Clave criptográfica HMAC-SHA256 de alta entropía.
 - `ConnectionStrings__DefaultConnection`: Cadena de conexión hacia PostgreSQL.
 
+---
+
+## 🔗 Referencias Relacionadas
+- [[Flujos_De_Datos]]: Secuencia detallada del flujo de login y rotación de tokens.
+- [[Backend_Overview]]: Middleware de excepciones e infraestructura de seguridad.
+- [[Base_De_Datos_Migraciones]]: Tablas `users`, `user_credentials` y `refresh_tokens`.
+- [[Catalogo_Endpoints_API]]: Rutas `/api/auth` y códigos de estado devueltos.
 

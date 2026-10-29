@@ -1,3 +1,14 @@
+---
+title: "Mapa de Navegación y Flujo de Usuario"
+tipo: "arquitectura"
+tags:
+  - frontend
+  - ux
+  - navegacion
+  - rutas
+  - componentes
+---
+
 # Mapa de Navegación y Flujo de Usuario - AyVino Frontend
 
 Este documento detalla la arquitectura de información, las vistas de la aplicación, el sistema de rutas protegidas y la experiencia interactiva (UX) del usuario en la SPA de AyVino.
@@ -237,3 +248,11 @@ flowchart TD
 | `/catalogo` | `CatalogPage.tsx` | Autenticado (`User`, `Winery`, `Admin`) | Redirige a `/login` pasando `{ from: location }` |
 | `/bodega/dashboard` | `WineryDashboardPage.tsx` | Exclusivo `Winery` o `Admin` | Si no está autenticado: `/login` (`state.from`). Si no tiene rol: `/dashboard` |
 | `*` | Redirección 404 | N/A | Redirige automáticamente a `/` |
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Frontend_Overview]]: Stack tecnológico, Tailwind v4 y estilos.
+- [[Catalogo_Endpoints_API]]: Especificación de endpoints que consumen estas pantallas.
+- [[Especificacion_Requerimientos]]: Requerimientos funcionales de cada vista.
+
