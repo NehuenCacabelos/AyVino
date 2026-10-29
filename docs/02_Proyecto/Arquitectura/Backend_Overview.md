@@ -1,3 +1,14 @@
+---
+title: "Arquitectura y Diseño Backend - Vertical Slices"
+tipo: "arquitectura"
+tags:
+  - backend
+  - dotnet
+  - csharp
+  - vertical-slice
+  - dapper
+---
+
 # Arquitectura y Diseño Backend - AyVino.Api
 
 El backend de AyVino está diseñado bajo el patrón **Vertical Slice Architecture (Diseño por Features)** dentro del proyecto [`src/backend/AyVino.Api`](../../src/backend/AyVino.Api).
@@ -295,3 +306,12 @@ $env:JWT_SECRET = (dotnet user-secrets get Jwt:SecretKey --project src/backend/A
 
 node src/frontend/tests/e2e/e2e-live-test.mjs
 ```
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Arquitectura_Overview]]: Fundamentos globales y decisiones técnicas.
+- [[Catalogo_Endpoints_API]]: Detalle exhaustivo de rutas y contratos HTTP.
+- [[Base_De_Datos_Migraciones]]: Modelo ERD y tablas PostgreSQL.
+- [[Seguridad_Y_Autenticacion]]: Esquema de tokens y autorización `Actor`.
+- [[Ciclo_Vida_Vino]]: Lógica de dominación, cortes y claiming.

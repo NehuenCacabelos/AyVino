@@ -1,3 +1,14 @@
+---
+title: "Arquitectura Global del Sistema"
+tipo: "arquitectura"
+tags:
+  - arquitectura
+  - backend
+  - frontend
+  - c4
+  - adr
+---
+
 # Arquitectura Global del Sistema - AyVino
 
 ## 1. Visión General
@@ -39,7 +50,7 @@ graph TD
 
 ## 2. Principios Constitucionales de Arquitectura
 
-En concordancia con la constitución del proyecto ([`AGENTS.md`](../../AGENTS.md)):
+En concordancia con la constitución del proyecto ([[AGENTS.md]]):
 
 1. **Stack Desacoplado**: El backend en .NET Core (C#) y el frontend en [`src/frontend/`](../../src/frontend) mantienen ciclos de vida, dependencias y despliegues completamente independientes.
 2. **Base de Datos Estructurada**: Los cambios de esquema están gobernados exclusivamente por migraciones versionadas y bidireccionales (`Up`/`Down`) en `FluentMigrator`. Queda prohibido cualquier DDL manual sin versionar.
@@ -118,7 +129,7 @@ En concordancia con la constitución del proyecto ([`AGENTS.md`](../../AGENTS.md
 AyVino/
 ├── AyVino.slnx                    # Archivo de solución moderna para .NET
 ├── compose.yml                    # Contenedor de PostgreSQL 16 local
-├── docs/                          # Documentación viva y centralizada del proyecto
+├── docs/                          # Vault de documentación viva y conocimiento
 ├── src/
 │   ├── backend/
 │   │   └── AyVino.Api/            # Proyecto Web API principal (Vertical Slices)
@@ -126,3 +137,14 @@ AyVino/
 └── tests/
     └── AyVino.UnitTests/          # Pruebas unitarias de servicios y validaciones
 ```
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Flujos_De_Datos]]: Diagramas de secuencia y flujos de negocio.
+- [[Backend_Overview]]: Vertical Slice Architecture y persistencia.
+- [[Base_De_Datos_Migraciones]]: Modelo ERD y migraciones FluentMigrator.
+- [[Catalogo_Endpoints_API]]: Rutas y contratos de transporte HTTP.
+- [[Frontend_Overview]]: Diseño y arquitectura del frontend SPA.
+- [[Roadmap]]: Próximos hitos de desarrollo.
+

@@ -1,3 +1,14 @@
+---
+title: "Especificación de Requerimientos Funcionales (EARS)"
+tipo: "requerimientos"
+tags:
+  - requerimientos
+  - ears
+  - producto
+  - alcance
+  - especificaciones
+---
+
 # Especificación de Requerimientos - AyVino
 
 Este documento detalla el alcance funcional, el valor de negocio (El porqué) y los criterios de aceptación para la plataforma AyVino, una red social para catalogar, reseñar y organizar vinos.
@@ -49,4 +60,11 @@ Este documento detalla el alcance funcional, el valor de negocio (El porqué) y 
 1. **Catálogo Operativo**: Capacidad de registrar bodegas oficiales, subir sus catálogos, y permitir a los usuarios comunes cargar botellas inexistentes.
 2. **Migración de Reseñas**: El proceso de deduplicación y traspaso de reseñas de vinos comunitarios a vinos oficiales funciona de manera consistente y sin pérdida de datos.
 3. **Organización del Usuario**: Los usuarios pueden guardar vinos en sus listas fijas y calificarlos numéricamente.
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Ciclo_Vida_Vino]]: Implementación en backend de los estados, orígenes y reclamos.
+- [[Catalogo_Endpoints_API]]: Mapeo de requerimientos RF a endpoints de API.
+- [[Roadmap]]: Hitos de desarrollo y progreso de los requerimientos.
 

@@ -8,4 +8,16 @@ export { default as WineBottleSilhouette } from './components/WineBottleSilhouet
 export { default as WineBottleMock } from './components/WineBottleMock';
 export { mapApiWineToCuratedWine } from './utils/wineMapper';
 export { CURATED_WINES } from './data/curatedWines';
+export {
+  getEditorialWine,
+  normalizeWineSlug,
+  generateEditorialFallback,
+  type EditorialWine,
+  type WineVintageDetail,
+  type WineGrapeRatio,
+  type WineReviewItem,
+  type WinePairingItem,
+  type WineWineryInfo,
+} from './data/editorialWines';
+
 

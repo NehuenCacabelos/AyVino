@@ -1,3 +1,15 @@
+---
+title: "Catálogo Exhaustivo de Endpoints API"
+tipo: "arquitectura"
+tags:
+  - backend
+  - api
+  - endpoints
+  - rest
+  - minimal-apis
+  - rfc7807
+---
+
 # Catálogo de Endpoints API - AyVino.Api
 
 Este documento detalla exhaustivamente las rutas HTTP expuestas por el backend de AyVino mediante **Minimal APIs** en .NET 10. Cada endpoint se encuentra estructurado bajo su correspondiente **Vertical Slice**.
@@ -496,4 +508,10 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 - `reviews`:
   - `total` (`int`): Total de reseñas en el sistema.
 
+---
 
+## 🔗 Referencias Relacionadas
+- [[Backend_Overview]]: Vertical slices, repositorios y servicios.
+- [[Seguridad_Y_Autenticacion]]: Flujo de tokens, claims y políticas de acceso.
+- [[Ciclo_Vida_Vino]]: Proceso de reclamo oficial y moderación de estados.
+- [[Especificacion_Requerimientos]]: Requerimientos funcionales EARS.

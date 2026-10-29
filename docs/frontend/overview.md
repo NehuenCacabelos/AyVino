@@ -139,6 +139,7 @@ src/frontend/src/
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
+│   ├── pairings/              # Módulo de Maridajes Enogastronómicos
 │   ├── wines/                 # Módulo de Vinos de Usuario
 │   └── winery/                # Módulo Institucional de Bodegas (100% Desacoplado)
 │       ├── api/               # wineryApi, wineApi, locationApi, grapeApi, imageApi
@@ -204,3 +205,94 @@ npm run build   # Compilación estricta TypeScript (tsc -b && vite build)
 dotnet test     # Tests unitarios pasando en verde
 dotnet build    # Cero errores de compilador
 ```
+
+---
+
+## 8. Hub Interactivo de Maridaje Enogastronómico Argentino (`/maridaje`)
+
+La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país.
+
+### 8.1 Arquitectura Visual y Componentes
+- **Segmented Control Flotante (`PairingInteractiveHub.tsx`)**:
+  - Control de selección superior con estética flotante (`bg-[#141418]`, `border-neutral-700/60`, sombra profunda y desenfoque `backdrop-blur-md`).
+  - Bloque activo con tinte vinícola sutil (`bg-[#722F37]/25`), borde iluminado (`border-rose-500/80`), anillo exterior (`ring-1 ring-rose-400/40`) y micro-icono temático (`UtensilsCrossed` y `Wine`).
+- **Contraste de Secciones y Ritmo Visual (`PairingDetailView.tsx`)**:
+  - Para evitar bloques oscuros planos, la zona de lectura de resultados (*"Por qué funciona"*, *"Cepas recomendadas"* y *"Platos sugeridos"*) se presenta sobre tarjetas en gris grafito elevado (`bg-[#16161c]/95 backdrop-blur-md border border-neutral-700/60 shadow-2xl`).
+- **Microinteracciones e Indicadores Sensoriales**:
+  - Tarjetas de cepa con indicador textual minimalista en una sola línea que se ilumina en dorado cava (`group-hover:text-amber-200/90`) al posar el cursor, indicando *Cuerpo*, *Acidez* y *Taninos*.
+  - Matriz Sensorial de la Cepa con medidores visuales en escala de 10 puntos (Taninos, Acidez, Cuerpo) e indicadores de potencial de guarda y cristalería.
+  - Halos ambientales de cava (`bg-rose-950/20 blur-[100px]` y `bg-amber-500/5 blur-[90px]`) inspirados en el diseño de Google Stitch.
+  - Botón de guardado rápido *"Guardar en Mi Cava"* con feedback visual reactivo de 3 segundos.
+  - *Smooth scroll* inteligente condicional hacia `#maridaje-detalle`: ejecuta desplazamiento suave solo cuando la zona de lectura no se encuentra completamente visible en el viewport del usuario.
+
+### 8.2 Taxonomía Gastronómica Argentina (7 Categorías)
+1. **Asado & Fuegos**: Asado de tira, vacío a la llama, entraña jugosa, matambre a la pizza, achuras / mollejas.
+2. **Empanadas & Cocina Regional**: Empanadas salteñas de corte a cuchillo, humita en chala, locro criollo, tamales.
+3. **Pastas Caseras & Salsas Robustas**: Ñoquis de la abuela con estofado, sorrentinos de jamón y mozzarella con fileto, tuco casero.
+4. **Picadas, Picoteo & Quesos**: Picada de fiambres artesanales, quesos duros de Tandil, jamón crudo, aceitunas y frutos secos.
+5. **Pescados de Río & Mar**: Surubí a la parrilla, pacú al limón, rabas, trucha patagónica.
+6. **Cocina Urbana & Gourmet**: Ojo de bife con papas rústicas, cordero patagónico al disco, pollo al verdeo.
+7. **Dulces & Postres Criollos**: Flan casero con dulce de leche, vigilante de queso y batata, alfajores artesanales, postre borracho.
+
+### 8.3 Catálogo de 29 Cepas Enológicas Argentinas
+Estructurado en 3 grupos con filtros rápidos y contadores en tiempo real:
+- **Tintos (13)**: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Merlot, Pinot Noir, Tannat, Garnacha, Tempranillo, Petit Verdot, Aspirant Bouschet, Ancellotta.
+- **Blancos (9)**: Torrontés, Chardonnay, Sauvignon Blanc, Pinot Gris, Viognier, Albariño, Semillón, Chenin, Ugni Blanc.
+- **Criollas / Rosados / Otros (7)**: Criolla Chica, Moscatel Rosado, Moscatel de Alejandría, Pedro Giménez, Cereza, Rosado Seco, Espumante Dulce / Charmat.
+
+---
+
+## 9. Ficha Editorial Individual de Vino (`/vinos/:id`)
+
+Implementa la vista individual e inmersiva de cata y ficha técnica para cada vino del catálogo (`src/frontend/src/pages/WineDetailPage.tsx`).
+
+### 9.1 Principios de Diseño y Geometría
+- **Navegación de Retorno Minimalista**: Enlace simple y directo al explorador (`← Volver a explorar`), eliminando breadcrumbs redundantes, cajas y fondos.
+- **Tira de Especificaciones Técnicas Abierta**: Reemplazo del cajón de KPIs por una tira horizontal limpia y abierta (`border-y border-neutral-800/80`), con etiquetas en `text-[10px] uppercase tracking-widest` y valores `text-sm font-medium` (`whitespace-nowrap`), sintetizando el tiempo de guarda (ej. `8 a 15 años`).
+- **Composición Varietal Despojada**: Se eliminan textos secundarios redundantes, conservando el encabezado, la barra de proporciones y la lista de uvas con porcentajes.
+- **Geometría Sobria y Sin Píldoras**: Supresión de bordes `rounded-full` en botones en favor de esquinas rectas y sobrias (`rounded-sm`), siguiendo una dirección de arte minimalista inspirada en la tipografía editorial y sellos de cata.
+- **Selector de Añadas Horizontal Despojado**: Se elimina el cajón/tarjeta envolvente alrededor de las cosechas disponibles, reemplazándolo por una botonera plana horizontal (`rounded-sm px-3 py-1.5 text-xs font-mono`).
+- **Tarjeta de Botella y Botones de Acción**:
+  - Contenedor de la botella con esquinas suavizadas (`rounded-lg bg-neutral-900/30 border border-neutral-800/80`) y halo burdeos sutil.
+  - Botón primario *"Guardar en cava"* con acento burdeos sobrio (`bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50`).
+  - Botones secundarios *"Escribir reseña"* y *"Compartir ficha"* con borde neutro transparente (`border border-neutral-700/60 hover:bg-neutral-800/40 text-neutral-300`).
+- **Rebalance Superior y Maridajes Integrados**: Inclusión de "Maridajes Sugeridos" en la columna derecha (`lg:col-span-7`) para equilibrar visualmente la altura de la botella y la bodega.
+- **Bitácora de la Comunidad y Perfil Sensorial (7 y 5)**:
+  - Grid inferior balanceado (`col-span-12 lg:col-span-7` para reseñas y `col-span-12 lg:col-span-5` para el radar sensorial).
+  - Reseñas individuales en tarjetas limpias (`bg-neutral-900/40 border border-neutral-800/80 rounded-lg p-4 space-y-3`), tipografía de lectura clara sin comillas ni itálicas excesivas, y estrellas con puntuación alineadas a la derecha.
+  - Perfil Sensorial con métricas homogéneas `text-xs font-mono text-neutral-300` y barras de 4px de altura.
+  - Formulario de cata interactivo con calificación decimal continua y autor implícito vía `useAuth()`.
+
+---
+
+## 10. Sistema de Superficies y Elevación ("Dark Editorial / Sommelier Premium")
+
+Unifica las superficies, fondos y elevación visual en toda la aplicación, eliminando inconsistencias críticas (como imágenes de fondo de corchos completas o patrones de pantalla completa invasivos).
+
+### 10.1 Jerarquía de Capas y Elevación
+- **Nivel 0 (Fondo Base Global)**: `#0d0d0f` (`--color-surface-0`). Configurado a nivel global en el `body`, `RootLayout` y `AppLayout`. Proporciona un lienzo consistente, mate y sin distracciones.
+- **Hero Glow (Resplandor Sommelier Opcional)**: Gradiente radial superior suave en tono vino (`bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,20,40,0.15),rgba(255,255,255,0))]`) aplicado a los encabezados principales (Dashboard y Maridaje).
+- **Nivel 1 (Tarjetas, Paneles y Contenedores)**: `bg-[#141417]/80` (`--color-surface-1`) con borde sutil `border border-white/[0.08]` y esquinas `rounded-xl` o `rounded-2xl` con `backdrop-blur-md` o `backdrop-blur-xl`.
+- **Nivel 2 (Modales, Selectores y Elementos Activos)**: `bg-[#1c1c22]` (`--color-surface-2`) con borde `border border-white/[0.12]` (o acento vino en selección).
+
+### 10.2 Adaptación en Vistas Clave
+- **Catálogo / Dashboard (`DashboardPage.tsx`)**:
+  - Retiro definitivo de la imagen escenográfica de corchos fijos (`corchos-vinos.webp`).
+  - Fondo global `#0d0d0f` con el gradiente radial sutil en el hero de filtros.
+  - Tarjetas de botellas (`WineryBlock.tsx`) homologadas con Nivel 1 (`bg-[#141417]/80`, `border-white/[0.08]`) y hover a Nivel 2 (`hover:bg-[#1c1c22]`).
+- **Maridajes (`PairingPage.tsx` y `PairingInteractiveHub.tsx`)**:
+  - Supresión del fondo SVG repetitivo a pantalla completa.
+  - Eliminación de la `Navbar` y `footer` duplicados en `PairingPage`, delegando la persistencia a `AppLayout`.
+  - Eliminación de la sección inferior redundante de pautas de cava (`PromoBlocks` y "Guía Complementaria de Guarda"), focalizando la vista 100% en el Hub de Maridajes y sus fichas interactivas.
+  - Título y descripción tipográfica limpios directamente sobre el lienzo, con margen superior despegado (`pt-28 sm:pt-36`) para no solaparse con el navbar fixed.
+  - Tarjetas de interacción ("¿Qué vas a comer?", "¿Qué vas a tomar?", categorías y fichas) tratadas bajo Nivel 1 con estados activos en Nivel 2.
+
+### 10.3 Profundidad, Relieve y Spotlight de Botellas en Catálogo
+- **Ambient Glow en Cabecera de Catálogo**: Contenedor envolvente de "Explorá por Bodegas" y filtros con gradiente radial sutil en tono vino: `bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(160,20,50,0.12),transparent)]`.
+- **Relieve Tridimensional en Tarjetas de Vinos (`WineryBlock.tsx`)**:
+  - Elevación Nivel 1 refinada: `bg-[#131316]` con borde fino `border border-white/[0.07]`.
+  - Microinteracción de elevación física en hover: `hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300`.
+- **Spotlight Dedicado para Botellas**: Contenedor interno en gradiente vertical tenue que despega la silueta o fotografía de la botella respecto a la tarjeta: `bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center`.
+- **Píldoras de Filtros con Contraste Editorial (`FilterChips.tsx`)**:
+  - Activo ("TODOS"): `bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm`.
+  - Inactivo: `border border-white/[0.08] hover:border-white/[0.16] text-neutral-400 hover:text-neutral-200`.

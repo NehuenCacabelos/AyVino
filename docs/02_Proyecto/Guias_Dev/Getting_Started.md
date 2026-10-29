@@ -1,3 +1,14 @@
+---
+title: "Guía de Inicio Rápido (Getting Started)"
+tipo: "guia"
+tags:
+  - setup
+  - desarrollo
+  - docker
+  - backend
+  - frontend
+---
+
 # Guía de Inicio Rápido (Getting Started) - AyVino
 
 Esta guía describe los pasos necesarios para configurar y poner en marcha el entorno de desarrollo local de AyVino (Base de datos PostgreSQL, Backend Web API y Frontend SPA).
@@ -104,7 +115,7 @@ La consola indicará la dirección local de Vite, habitualmente:
 
 ## 4. Ejecución de Pruebas y Control de Calidad (DoD)
 
-De acuerdo con la [Constitución de AyVino (`AGENTS.md`)](../../AGENTS.md), toda contribución debe mantener **cero errores y cero advertencias**:
+De acuerdo con la [[AGENTS.md|Constitución de AyVino (AGENTS.md)]], toda contribución debe mantener **cero errores y cero advertencias**:
 
 ### 4.1 Pruebas de Backend (.NET)
 Ejecuta la suite de pruebas unitarias en xUnit:
@@ -137,3 +148,12 @@ Ambos comandos deben culminar con código de salida `0` sin advertencias.
   Asegúrate de incluir la cabecera `Authorization: Bearer <token>` con un token emitido para un usuario cuyo claim `role` sea `Admin`.
 - **Fallo al compilar el frontend (`tsc not found`)**:
   Asegúrate de haber corrido `npm install` dentro del directorio `src/frontend` antes de iniciar el servidor de desarrollo.
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Arquitectura_Overview]]: Arquitectura técnica general del sistema.
+- [[Base_De_Datos_Migraciones]]: Catálogo de migraciones y modelos relacionales.
+- [[Catalogo_Endpoints_API]]: Especificación completa de endpoints.
+- [[Styleguide]]: Convenciones de documentación del Vault.
+

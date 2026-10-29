@@ -9,7 +9,6 @@ import {
   WineryBlock,
   UncorkDialog,
 } from '../features/dashboard';
-import corksBackground from '../assets/corchos-vinos.webp';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 import type { AppOutletContext } from '../components/layout/AppLayout';
@@ -397,28 +396,13 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="relative min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
-      {/* Capa Fija Escenográfica de Corchos: Fondo infinito que se revela en el catálogo */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      >
-        <img
-          src={corksBackground}
-          alt=""
-          className="h-full w-full object-cover object-center filter blur-[2px] sm:blur-[3px] scale-105 opacity-50"
-        />
-        {/* Overlay de penumbra y contraste para mantener legibilidad editorial */}
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f11]/85 via-transparent to-[#0c0c0e]/85" />
-      </div>
-
+    <div className="relative min-h-screen bg-[#0d0d0f] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
       {/* Toast de Notificación Flotante */}
       {notification && (
         <aside
           role="status"
           aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-neutral-800 bg-[#161619] text-neutral-100 px-5 py-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-white/[0.12] bg-[#1c1c22] text-neutral-100 px-5 py-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
         >
           <CheckCircle2 className="h-5 w-5 text-amber-400 shrink-0" />
           <p className="text-xs font-medium font-sans">{notification}</p>
@@ -429,9 +413,9 @@ export default function DashboardPage() {
       <section
         id="hero-section"
         aria-labelledby="welcome-title"
-        className="relative z-20 text-neutral-200 h-[100dvh] min-h-[560px] flex flex-col justify-between pt-16 sm:pt-18 pb-2 sm:pb-3 transition-colors duration-150"
+        className="relative z-20 text-neutral-200 h-[100dvh] min-h-[560px] flex flex-col justify-between pt-16 sm:pt-18 pb-2 sm:pb-3 transition-colors duration-150 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,20,40,0.15),rgba(255,255,255,0))]"
         style={{
-          backgroundColor: `rgba(15, 15, 17, ${Math.max(0, 1 - heroScrollProgress * 0.95)})`,
+          backgroundColor: `rgba(13, 13, 15, ${Math.max(0, 1 - heroScrollProgress * 0.95)})`,
         }}
       >
         {/* Textura de lienzo técnica (Dot Pattern sutil con máscara elíptica estilo Landing) */}
@@ -503,7 +487,8 @@ export default function DashboardPage() {
         <main className="relative z-20 mx-auto flex w-full max-w-7xl flex-col gap-12 sm:gap-16 px-4 sm:px-6 lg:px-8 pb-24 pt-24 sm:pt-32">
           {/* Sección de Catálogo Oficial por Bodegas */}
           <section id="catalogo" aria-labelledby="catalog-title" className="scroll-mt-28 flex flex-col gap-12 sm:gap-16">
-            <div className="flex flex-col items-center gap-6 text-center">
+            {/* Contenedor superior con Ambient Glow en tono vino */}
+            <div className="relative flex flex-col items-center gap-6 text-center py-8 sm:py-12 px-4 rounded-3xl overflow-hidden bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(160,20,50,0.12),transparent)]">
               <SectionHeading
                 id="catalog-title"
                 align="center"
@@ -581,7 +566,7 @@ export default function DashboardPage() {
                 filteredZuccardi.length === 0 &&
                 filteredElEnemigo.length === 0 &&
                 filteredColome.length === 0 && (
-                  <div className="rounded-2xl border border-white/10 bg-[#121215]/85 backdrop-blur-md p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xl shadow-black/40">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#141417]/80 backdrop-blur-md p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xl shadow-black/40">
                     <Wine className="h-8 w-8 text-neutral-400" />
                     <h4 className="font-serif text-xl font-semibold text-neutral-100">
                       No se encontraron etiquetas
@@ -601,7 +586,7 @@ export default function DashboardPage() {
                           winery: 'Todas',
                         });
                       }}
-                      className="mt-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white cursor-pointer transition-all"
+                      className="mt-2 rounded-xl border border-white/[0.08] bg-[#1c1c22] hover:bg-white/[0.08] hover:border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white cursor-pointer transition-all"
                     >
                       Restablecer filtros
                     </button>
@@ -612,7 +597,7 @@ export default function DashboardPage() {
         </main>
 
         {/* Fundido suave de salida hacia el Footer */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0c0c0e] via-[#0c0c0e]/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0d0d0f] via-[#0d0d0f]/80 to-transparent z-10" />
       </div>
 
       {/* Modal Profesional de Descorche y Ficha Técnica */}

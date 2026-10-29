@@ -1,3 +1,14 @@
+---
+title: "Ciclo de Vida del Vino, Cortes y Reclamo Oficial"
+tipo: "arquitectura"
+tags:
+  - backend
+  - dominio
+  - vino
+  - blends
+  - reclamo
+---
+
 # Ciclo de Vida del Vino, Cortes, Reglas de Bodega y Reclamo Oficial - AyVino.Api
 
 Este documento describe las reglas de negocio del dominio vitivinícola en AyVino: procedencia de botellas, estados de moderación, formulación de cortes de uva (blends), permisos para bodegas pendientes y el protocolo de adopción o reclamo de vinos por bodegas oficiales.
@@ -143,3 +154,10 @@ Para salvaguardar la integridad de las experiencias y registros de los usuarios 
    - Mensaje: *"No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: X, cava: Y). Podés rechazarla en lugar de eliminarla para preservar el historial."*
    - Si la cosecha no posee historial de usuarios, se elimina físicamente con código HTTP `204 NoContent`.
 
+---
+
+## 🔗 Referencias Relacionadas
+- [[Especificacion_Requerimientos]]: Requerimientos RF-1.1 al RF-1.6.
+- [[Catalogo_Endpoints_API]]: Endpoints `/api/wines` y `/api/grapes`.
+- [[Base_De_Datos_Migraciones]]: Tablas `wines`, `wine_vintages` y `wine_grapes`.
+- [[Flujos_De_Datos]]: Diagrama de secuencia del flujo de adopción de vinos.
