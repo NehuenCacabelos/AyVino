@@ -55,9 +55,16 @@ AyVino implementa una estética de **revista editorial de vinos**: cálida, nobl
 - **Ficha Editorial de Vino Individual — Diseño Despojado & Fluido (`WineDetailPage.tsx` en `/vinos/:id`)**:
   - Réplica fiel de alta costura de la vista Stitch *"AyVino — Ficha Editorial de Vino (Diseño Despojado & Fluido)"*.
   - Activada exclusivamente desde las tarjetas del explorador de vinos en el Dashboard (`WineryBlock.tsx`), manteniendo Landing y Cava con sus modales de cata especializados.
-  - **Disposición Asimétrica de 2 Columnas (Cero Cards Contenedoras)**:
-    - *Columna Izquierda*: Calificación en línea de 1 a 5 estrellas con hover interactivo y feedback sonoro visual; botella flotante libre con halo degradado radial difuso (`bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#722f37]/25 via-[#722f37]/5 to-transparent blur-2xl`) y sombra `drop-shadow-[0_28px_45px_rgba(0,0,0,0.95)]`; selector de cosechas planas segmented (`selectedVintageYear`); bloque de Bodega y Terruño con región, año de fundación, sello de trazabilidad verificada y enlace externo oficial; acciones de "Guardar en mi cava" (con persistencia en `localStorage.ayvino_vault_wines`, incremento del stock global en `AppOutletContext` y toast con atajo a `/cava`), "Compartir" con portapapeles y "Escribir reseña".
-    - *Columna Derecha*: Encabezado con insignia de varietal (`TINTO NOBLE`, `BLANCO & MINERAL`, `ROSADO & CRIOLLA`) y gran titular en serif imponente (`font-serif text-4xl sm:text-6xl`); franja continua de datos con divisores verticales suaves (Calificación, Graduación ABV, Servicio °C, Guarda en cava); composición varietal con barra tricolor proporcional y leyenda; descripción enológica fluida sin recuadros; maridajes sugeridos con etiquetas redondeadas e iconografía Lucide (`Flame`, `Utensils`, `Sparkles`, `Soup`); bitácora comunitaria con filtro por estrellas, formulario interactivo desplegable para registrar catas y paginación minimalista.
+  - **Disposición Asimétrica de 2 Columnas Balanceada (`max-w-7xl mx-auto px-6 py-8`, `gap-10`)**:
+    - *Columna Izquierda (`lg:col-span-5`)*: Tarjeta contenedora de botella esmerilada (`bg-neutral-900/60 border border-neutral-800 rounded-2xl shadow-xl`) con halo radial orgánico (`blur-2xl`) y sombra de contacto profunda; selector plano de añadas en píldoras con feedback de graduación; botones de acción primarios ("Guardar en cava", "Escribir reseña" destacado y "Compartir ficha"); tarjeta espaciosa de Bodega & Terruño con región, año de fundación, sello de trazabilidad verificada en acento ámbar (sin verde discordante) y enlace directo listo para la vista de perfil de bodega; sello fino de estiba y trazabilidad al pie.
+    - *Columna Derecha (`lg:col-span-7`)*: Header con tipografía pura y sobria sin cápsulas/píldoras (`text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100`, con eyebrow mono `TINTO NOBLE · COSECHA 2019`); barra integrada de métricas clave (KPIs en `grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-900/40 border border-neutral-800/80` con valores en `text-xl lg:text-2xl font-mono font-semibold` sin saltos partidos); composición varietal con barra tricolor proporcional; descripción sensorial fluida con tipografía abierta.
+  - **Sección Transversal de Comunidad & Gráfico Sensorial (3/4 + 1/4)**:
+    - *Bloque 3/4 (`lg:col-span-8`)*: Catas & Bitácora de la Comunidad con filtro por estrellas y paginación; formulario interactivo con calificación organoléptica decimal continua (1.0 a 5.0 con slider de paso 0.1 y visualizador de estrellas fraccionales continuas), con autoría implícita del usuario autenticado (sin campo manual redundante).
+    - *Bloque 1/4 (`lg:col-span-4`)*: Perfil Sensorial Enológico con gráfico SVG de radar/telaraña sobre 6 ejes sommelier (Cuerpo, Taninos, Acidez, Fruta, Crianza y Persistencia) con barras de progreso y dictamen enológico.
+  - **Cierre Enogastronómico (Maridajes Sugeridos)**:
+    - Grilla editorial limpia de 4 columnas sin píldoras ni cápsulas, exhibiendo cada maridaje con icono sommelier, tipografía serif destacada y nota de armonía sensorial.
+
+
 
 
 ---
@@ -241,4 +248,28 @@ Estructurado en 3 grupos con filtros rápidos y contadores en tiempo real:
 - **Tintos (13)**: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Merlot, Pinot Noir, Tannat, Garnacha, Tempranillo, Petit Verdot, Aspirant Bouschet, Ancellotta.
 - **Blancos (9)**: Torrontés, Chardonnay, Sauvignon Blanc, Pinot Gris, Viognier, Albariño, Semillón, Chenin, Ugni Blanc.
 - **Criollas / Rosados / Otros (7)**: Criolla Chica, Moscatel Rosado, Moscatel de Alejandría, Pedro Giménez, Cereza, Rosado Seco, Espumante Dulce / Charmat.
+
+---
+
+## 9. Ficha Editorial Individual de Vino (`/vinos/:id`)
+
+Implementa la vista individual e inmersiva de cata y ficha técnica para cada vino del catálogo (`src/frontend/src/pages/WineDetailPage.tsx`).
+
+### 9.1 Principios de Diseño y Geometría
+- **Navegación de Retorno Minimalista**: Enlace simple y directo al explorador (`← Volver a explorar`), eliminando breadcrumbs redundantes, cajas y fondos.
+- **Tira de Especificaciones Técnicas Abierta**: Reemplazo del cajón de KPIs por una tira horizontal limpia y abierta (`border-y border-neutral-800/80`), con etiquetas en `text-[10px] uppercase tracking-widest` y valores `text-sm font-medium` (`whitespace-nowrap`), sintetizando el tiempo de guarda (ej. `8 a 15 años`).
+- **Composición Varietal Despojada**: Se eliminan textos secundarios redundantes, conservando el encabezado, la barra de proporciones y la lista de uvas con porcentajes.
+- **Geometría Sobria y Sin Píldoras**: Supresión de bordes `rounded-full` en botones en favor de esquinas rectas y sobrias (`rounded-sm`), siguiendo una dirección de arte minimalista inspirada en la tipografía editorial y sellos de cata.
+- **Selector de Añadas Horizontal Despojado**: Se elimina el cajón/tarjeta envolvente alrededor de las cosechas disponibles, reemplazándolo por una botonera plana horizontal (`rounded-sm px-3 py-1.5 text-xs font-mono`).
+- **Tarjeta de Botella y Botones de Acción**:
+  - Contenedor de la botella con esquinas suavizadas (`rounded-lg bg-neutral-900/30 border border-neutral-800/80`) y halo burdeos sutil.
+  - Botón primario *"Guardar en cava"* con acento burdeos sobrio (`bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50`).
+  - Botones secundarios *"Escribir reseña"* y *"Compartir ficha"* con borde neutro transparente (`border border-neutral-700/60 hover:bg-neutral-800/40 text-neutral-300`).
+- **Rebalance Superior y Maridajes Integrados**: Inclusión de "Maridajes Sugeridos" en la columna derecha (`lg:col-span-7`) para equilibrar visualmente la altura de la botella y la bodega.
+- **Bitácora de la Comunidad y Perfil Sensorial (7 y 5)**:
+  - Grid inferior balanceado (`col-span-12 lg:col-span-7` para reseñas y `col-span-12 lg:col-span-5` para el radar sensorial).
+  - Reseñas individuales en tarjetas limpias (`bg-neutral-900/40 border border-neutral-800/80 rounded-lg p-4 space-y-3`), tipografía de lectura clara sin comillas ni itálicas excesivas, y estrellas con puntuación alineadas a la derecha.
+  - Perfil Sensorial con métricas homogéneas `text-xs font-mono text-neutral-300` y barras de 4px de altura.
+  - Formulario de cata interactivo con calificación decimal continua y autor implícito vía `useAuth()`.
+
 
