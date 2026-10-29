@@ -56,6 +56,7 @@ export default function WineryPublicProfileLayout() {
   const [followersCount, setFollowersCount] = useState<number>(0);
   const [isFollowingPending, setIsFollowingPending] = useState<boolean>(false);
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
+  const [ownerToast, setOwnerToast] = useState<boolean>(false);
 
   const loadProfile = useCallback(
     async (signal?: AbortSignal) => {
@@ -68,7 +69,7 @@ export default function WineryPublicProfileLayout() {
       try {
         const data = await getWineryPublicProfile(wineryId, signal);
         setProfile(data);
-        setIsFollowing(Boolean(data.isFollowedByMe));
+        setIsFollowing(Boolean(data.isFollowedByMe) && !data.isOwner);
         setFollowersCount(data.followersCount);
         setError(null);
         setIsNotFound(false);
@@ -121,6 +122,12 @@ export default function WineryPublicProfileLayout() {
 
     if (!user) {
       navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+
+    if (profile.isOwner) {
+      setOwnerToast(true);
+      window.setTimeout(() => setOwnerToast(false), 2500);
       return;
     }
 
@@ -399,27 +406,44 @@ export default function WineryPublicProfileLayout() {
 
               {/* Bloque Derecho: Acciones (Seguir / Siguiendo y Copiar Enlace) */}
               <div className="flex items-center gap-2.5 pt-2 sm:pt-4 self-stretch sm:self-auto">
-                <button
-                  type="button"
-                  onClick={handleToggleFollow}
-                  disabled={isFollowingPending}
-                  className={cn(
-                    'flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider font-semibold transition-all cursor-pointer shadow-md flex items-center justify-center gap-2 disabled:opacity-60',
-                    isFollowing
-                      ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10'
-                      : 'bg-[#6e1a24] hover:bg-[#85222e] text-white shadow-rose-950/50',
+                <div className="relative flex-1 sm:flex-initial">
+                  <button
+                    type="button"
+                    onClick={handleToggleFollow}
+                    disabled={isFollowingPending}
+                    className={cn(
+                      'w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider font-semibold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-60',
+                      profile.isOwner
+                        ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 border border-white/10 cursor-not-allowed opacity-90'
+                        : isFollowing
+                          ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10 cursor-pointer'
+                          : 'bg-[#6e1a24] hover:bg-[#85222e] text-white shadow-rose-950/50 cursor-pointer',
+                    )}
+                    aria-label={
+                      profile.isOwner
+                        ? 'No podés seguir a tu propia bodega'
+                        : isFollowing
+                          ? 'Dejar de seguir bodega'
+                          : 'Seguir bodega'
+                    }
+                    title={profile.isOwner ? 'No podés seguir a tu propia bodega (vista previa)' : undefined}
+                  >
+                    {isFollowing ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Siguiendo</span>
+                      </>
+                    ) : (
+                      <span>Seguir bodega</span>
+                    )}
+                  </button>
+
+                  {ownerToast && (
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-amber-500/30 text-[10px] font-mono text-amber-300 px-2.5 py-0.5 rounded shadow-lg whitespace-nowrap z-20">
+                      No podés seguir a tu propia bodega
+                    </span>
                   )}
-                  aria-label={isFollowing ? 'Dejar de seguir bodega' : 'Seguir bodega'}
-                >
-                  {isFollowing ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span>Siguiendo</span>
-                    </>
-                  ) : (
-                    <span>Seguir bodega</span>
-                  )}
-                </button>
+                </div>
 
                 <button
                   type="button"

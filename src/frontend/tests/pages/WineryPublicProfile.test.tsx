@@ -247,6 +247,41 @@ describe('WineryPublicProfile Integration Flow', () => {
     });
   });
 
+  it('cuando el usuario es dueño de la bodega (isOwner), hacer clic en seguir no suma seguidor ni llama a la API', async () => {
+    mockCurrentUser = { id: 5, username: 'bodegas_lopez', role: 'Winery' };
+    mockGetWineryPublicProfile.mockResolvedValueOnce({
+      ...sampleApprovedProfile,
+      isOwner: true,
+      followersCount: 120,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega Catena Zapata')).toBeInTheDocument();
+    });
+
+    const followBtn = screen.getByRole('button', { name: /no podés seguir a tu propia bodega/i });
+    expect(followBtn).toBeInTheDocument();
+
+    fireEvent.click(followBtn);
+
+    // No llama a la API de seguimiento
+    expect(mockFollowWinery).not.toHaveBeenCalled();
+    // Toast de advertencia visible
+    expect(screen.getByText(/no podés seguir a tu propia bodega/i)).toBeInTheDocument();
+    // Contador de seguidores inalterado
+    expect(screen.getByText('120')).toBeInTheDocument();
+  });
+
   it('pestaña catálogo renderiza tarjetas y abre modal provisorio con punto de entrada único', async () => {
     render(
       <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>

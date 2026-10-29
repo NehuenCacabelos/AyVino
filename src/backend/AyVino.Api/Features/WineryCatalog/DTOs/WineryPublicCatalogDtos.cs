@@ -26,7 +26,8 @@ public record WineryPublicProfileResponseDto(
     WineryPublicTotalsDto Totals,
     decimal? AverageRating,
     int ReviewCount,
-    bool IsPreview);
+    bool IsPreview,
+    bool IsOwner = false);
 
 public record WineryPublicGrapeFilterDto(
     int Id,

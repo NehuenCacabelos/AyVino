@@ -68,6 +68,29 @@ public class WineryPublicCatalogTests
         Assert.NotNull(result.Location);
         Assert.Equal("Mendoza", result.Location!.StateName);
         Assert.Equal("Luján de Cuyo", result.Location!.RegionName);
+        Assert.False(result.IsOwner);
+    }
+
+    [Fact]
+    public async Task GetPublicProfileAsync_ApprovedWinery_WhenActorIsOwner_ReturnsIsOwnerTrueAndIsFollowedByMeFalse()
+    {
+        // Arrange
+        var winery = CreateWineryRow(1, WineryStatus.Approved, userId: 10);
+        _repository.GetWineryPublicProfileRowAsync(1, Arg.Any<CancellationToken>()).Returns(winery);
+        _repository.GetFollowersCountAsync(1, Arg.Any<CancellationToken>()).Returns(15);
+        _repository.GetPublicRatingsAndTotalsAsync(1, false, Arg.Any<CancellationToken>())
+            .Returns(new WineryPublicRatingsAndTotalsRow(Labels: 4, Vintages: 8, RatingSum: 45, ReviewCount: 10));
+
+        var ownerActor = new Actor(10, AppRoles.Winery, "bodega_test");
+
+        // Act
+        var result = await _service.GetPublicProfileAsync(1, actor: ownerActor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.IsOwner);
+        Assert.False(result.IsFollowedByMe);
+        await _repository.DidNotReceive().IsFollowedByUserAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -108,8 +108,10 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             throw new NotFoundException("Esta bodega no está disponible.");
         }
 
+        var isOwner = actor != null && winery.UserId.HasValue && actor.UserId == winery.UserId.Value;
+
         var followersCount = await repository.GetFollowersCountAsync(wineryId, ct);
-        bool? isFollowedByMe = actor == null ? null : await repository.IsFollowedByUserAsync(wineryId, actor.UserId, ct);
+        bool? isFollowedByMe = actor == null ? null : (isOwner ? false : await repository.IsFollowedByUserAsync(wineryId, actor.UserId, ct));
 
         var ratingsAndTotals = await repository.GetPublicRatingsAndTotalsAsync(wineryId, isPreview, ct);
         decimal? averageRating = ratingsAndTotals.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage
@@ -142,7 +144,8 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             Totals: totalsDto,
             AverageRating: averageRating,
             ReviewCount: ratingsAndTotals.ReviewCount,
-            IsPreview: isPreview);
+            IsPreview: isPreview,
+            IsOwner: isOwner);
     }
 
     public async Task<WineryPublicCatalogResponseDto> GetPublicCatalogAsync(

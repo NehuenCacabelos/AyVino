@@ -125,7 +125,12 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
 
     public async Task<int> GetFollowersCountAsync(int wineryId, CancellationToken ct = default)
     {
-        const string sql = "SELECT COUNT(*) FROM winery_follows WHERE winery_id = @WineryId;";
+        const string sql = """
+            SELECT COUNT(*)
+            FROM winery_follows wf
+            INNER JOIN wineries w ON w.id = wf.winery_id
+            WHERE wf.winery_id = @WineryId AND (w.user_id IS NULL OR wf.follower_id != w.user_id);
+            """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(sql, new { WineryId = wineryId }, cancellationToken: ct));

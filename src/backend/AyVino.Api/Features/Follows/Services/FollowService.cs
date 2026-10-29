@@ -48,7 +48,10 @@ public class FollowService(
 
     public async Task FollowWineryAsync(int followerId, int wineryId, CancellationToken ct = default)
     {
-        await EnsureWineryApprovedAsync(wineryId, ct);
+        var winery = await EnsureWineryApprovedAsync(wineryId, ct);
+
+        if (winery.UserId.HasValue && winery.UserId.Value == followerId)
+            throw new ValidationException("No podés seguir a tu propia bodega.");
 
         var added = await followRepository.AddWineryFollowAsync(followerId, wineryId, ct);
         if (!added)
@@ -85,11 +88,12 @@ public class FollowService(
     }
 
     // Una bodega no aprobada no es pública: se responde 404 igual que si no existiera
-    private async Task EnsureWineryApprovedAsync(int wineryId, CancellationToken ct)
+    private async Task<AyVino.Api.Features.Wineries.Models.Winery> EnsureWineryApprovedAsync(int wineryId, CancellationToken ct)
     {
         var winery = wineryId > 0 ? await wineryRepository.GetByIdAsync(wineryId, ct) : null;
         if (winery is null || winery.Status != WineryStatus.Approved)
             throw new NotFoundException($"Bodega con ID {wineryId} no encontrada.");
+        return winery;
     }
 
     private static void ValidatePaging(int pageNumber, int pageSize)

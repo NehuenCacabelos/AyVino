@@ -27,6 +27,7 @@ export interface WineryPublicProfileResponseDto {
   averageRating?: number | null;
   reviewCount: number;
   isPreview: boolean;
+  isOwner?: boolean;
 }
 
 export interface WineryPublicGrapeFilterDto {
