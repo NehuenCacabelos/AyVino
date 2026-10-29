@@ -1,10 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WineryChecklistCard from '@/features/winery/components/WineryChecklistCard';
 import type { WineryResponseDto } from '@/features/winery/components/../types';
 
 describe('WineryChecklistCard', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   const baseWinery: WineryResponseDto = {
     id: 1,
     name: 'Bodega Test',
@@ -58,5 +62,62 @@ describe('WineryChecklistCard', () => {
     expect(screen.queryByText('Completar')).not.toBeInTheDocument();
     expect(screen.queryByText('Agregar')).not.toBeInTheDocument();
     expect(screen.queryByText('Cargar vino')).not.toBeInTheDocument();
+  });
+
+  it('allows dismissing an incomplete checklist and persists the choice in localStorage', () => {
+    const onDismiss = vi.fn();
+    render(
+      <MemoryRouter>
+        <WineryChecklistCard winery={baseWinery} winesCount={0} onDismiss={onDismiss} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Guía de puesta a punto de tu bodega')).toBeInTheDocument();
+
+    const closeButton = screen.getByRole('button', { name: /quitar guía de puesta a punto/i });
+    fireEvent.click(closeButton);
+
+    expect(screen.queryByText('Guía de puesta a punto de tu bodega')).not.toBeInTheDocument();
+    expect(localStorage.getItem('ayvino_winery_checklist_dismissed_1')).toBe('true');
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows dismissing a 100% completed checklist via "Entendido, no volver a mostrar" and persists it', () => {
+    const completeWinery: WineryResponseDto = {
+      ...baseWinery,
+      logoUrl: 'https://example.com/logo.png',
+      foundationYear: 1950,
+      description: 'Una semblanza enológica completa y detallada de más de diez caracteres.',
+      website: 'https://bodegatest.com',
+    };
+    const onDismiss = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <WineryChecklistCard winery={completeWinery} winesCount={3} onDismiss={onDismiss} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('¡Puesta a punto completa!')).toBeInTheDocument();
+
+    const ackButton = screen.getByRole('button', { name: /entendido, no volver a mostrar/i });
+    fireEvent.click(ackButton);
+
+    expect(screen.queryByText('¡Puesta a punto completa!')).not.toBeInTheDocument();
+    expect(localStorage.getItem('ayvino_winery_checklist_dismissed_1')).toBe('true');
+    expect(localStorage.getItem('ayvino_winery_checklist_completed_ack_1')).toBe('true');
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render if the winery had previously dismissed the card', () => {
+    localStorage.setItem('ayvino_winery_checklist_dismissed_1', 'true');
+
+    const { container } = render(
+      <MemoryRouter>
+        <WineryChecklistCard winery={baseWinery} winesCount={0} />
+      </MemoryRouter>
+    );
+
+    expect(container.firstChild).toBeNull();
   });
 });

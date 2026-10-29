@@ -63,7 +63,7 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
 ### 3.2 Vistas del Área de Bodega
 - **Propuesta de Valor Institucional (`ForWineriesPage.tsx` en `/para-bodegas`)**: Landing de bienvenida para bodegas con beneficios y pasos de certificación.
 - **Registro Unificado de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card inmersivo en 2 pasos con integración de `RegionPicker` y mapa Leaflet.
-- **Panel Principal (`WineryDashboardPage.tsx` en `/bodega/dashboard`)**: Cinta de 4 KPIs (`WineryKpiRibbon`), accesos rápidos (`WineryQuickActions`), checklist interactivo (`WineryChecklistCard`) y últimas etiquetas oficiales (`WineryRecentWines`).
+- **Panel Principal (`WineryDashboardPage.tsx` en `/bodega/dashboard`)**: Cinta de 4 KPIs (`WineryKpiRibbon`), accesos rápidos (`WineryQuickActions`), checklist interactivo de puesta a punto institucional (`WineryChecklistCard`, con persistencia en `localStorage` por bodega, botón para descartar en cualquier momento y cartel celebratorio que se oculta permanentemente al alcanzar el 100% de progreso) y últimas etiquetas oficiales (`WineryRecentWines`).
 - **Configuración de la Bodega (`WineryConfigPage.tsx` en `/bodega/configuracion`)**: Clon visual inmersivo de `AccountPage` con sidebar izquierda (logo circular con `ring-4`, botones de subida/eliminación de logo, gestión de banner institucional 3:1 con `WineryBanner` e `ImageUploadField` en carpeta `banners`, navegación en `font-mono`) y 4 secciones independientes:
   1. *Datos de la bodega*: Nombre oficial, año de fundación, sitio web y semblanza histórica (con validaciones y contador).
   2. *Región y terruño*: Selector territorial interactivo con `RegionPicker` (mapa satelital o selección en lista).
