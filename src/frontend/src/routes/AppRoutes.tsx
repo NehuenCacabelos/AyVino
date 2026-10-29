@@ -15,6 +15,7 @@ const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const CavaPage = lazy(() => import('../pages/CavaPage'));
 const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
+const WineDetailPage = lazy(() => import('../pages/WineDetailPage'));
 const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const AccountPage = lazy(() => import('../pages/AccountPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
@@ -138,6 +139,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <CatalogPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/vinos/:id',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineDetailPage />
               </Suspense>
             ),
           },

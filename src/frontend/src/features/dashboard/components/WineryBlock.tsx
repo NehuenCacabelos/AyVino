@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Heart, Plus, Star } from 'lucide-react';
 import BottleVector from './BottleVector';
 import type { DashboardWine } from '../../../types/wine';
+import { normalizeWineSlug } from '../../wines';
 
 export interface WineryBlockProps {
   name: string;
@@ -73,17 +74,24 @@ export default function WineryBlock({
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {wines.map((wine) => {
           const isFav = !!favorites[wine.name];
+          const wineSlug = wine.id || normalizeWineSlug(wine.name);
 
           return (
             <li key={wine.id ?? `${wine.winery}-${wine.name}-${wine.vintage}`} className="flex">
-              <article className="group relative w-full flex flex-col justify-between rounded-2xl bg-stone-950/40 backdrop-blur-xl p-5 hover:bg-stone-900/55 hover:shadow-2xl hover:shadow-black/70 transition-all duration-300 shadow-xl shadow-black/50">
-                
+              <Link
+                to={`/vinos/${wineSlug}`}
+                className="group relative w-full flex flex-col justify-between rounded-2xl bg-stone-950/40 backdrop-blur-xl p-5 hover:bg-stone-900/55 hover:shadow-2xl hover:shadow-black/70 transition-all duration-300 shadow-xl shadow-black/50 cursor-pointer block text-left"
+              >
                 {/* Botón de Favorito Flotante Esmerilado */}
                 <button
                   type="button"
                   aria-label={isFav ? `Quitar ${wine.name} de deseados` : `Añadir ${wine.name} a deseados`}
-                  onClick={() => toggleFav(wine.name, wine)}
-                  className={`absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/40 backdrop-blur-xl transition-all cursor-pointer ${
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFav(wine.name, wine);
+                  }}
+                  className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/40 backdrop-blur-xl transition-all cursor-pointer ${
                     isFav
                       ? 'text-rose-400 bg-rose-950/60'
                       : 'text-neutral-400 hover:text-white hover:bg-stone-900/80'
@@ -104,7 +112,7 @@ export default function WineryBlock({
                   ) : (
                     <BottleVector
                       kind={wine.bottle}
-                      className="h-44 w-auto max-h-full"
+                      className="h-44 w-auto max-h-full transition-transform duration-300 group-hover:scale-105"
                       alt={wine.name}
                     />
                   )}
@@ -151,10 +159,14 @@ export default function WineryBlock({
                 </div>
 
                 {/* Botón de Acción Añadir a Cava Esmerilado */}
-                <div className="mt-4 pt-1">
+                <div className="mt-4 pt-1 relative z-20">
                   <button
                     type="button"
-                    onClick={() => onAddToCellar?.(wine)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAddToCellar?.(wine);
+                    }}
                     className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.07] hover:bg-[#722F37] hover:text-white text-xs font-semibold uppercase tracking-wider text-neutral-200 transition-all cursor-pointer backdrop-blur-md"
                   >
                     <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -162,7 +174,7 @@ export default function WineryBlock({
                   </button>
                 </div>
 
-              </article>
+              </Link>
             </li>
           );
         })}
