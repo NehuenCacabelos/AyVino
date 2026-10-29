@@ -163,12 +163,28 @@ flowchart TD
 
 ### 2.5 Página de Mi Cava Personal (`CavaPage.tsx`)
 - Vista post-login dedicada accesible en `/cava` (vinculada desde el menú desplegable del Avatar de usuario):
-  - Encabezado con navegación contextual unificada (`DashboardNavbar.tsx`).
-  - **Inventario y Gestión Personal de Cava (`DashboardSection.tsx`)**:
-    - Control de demostración interactivo para conmutar entre estado *"Con stock registrado"* y *"Usuario nuevo (cava vacía)"*.
-    - **Carrusel de Consumo Óptimo (`StockCarousel.tsx`)**: botellas listas para descorchar, navegación horizontal y tarjetas con badges de ventana de consumo recomendada.
-    - **Diálogo Modal de Descorche (`UncorkDialog.tsx`)**: calificación interactiva en estrellas (1-5), ocasión de consumo y notas de cata personales con guardado de descorche.
-  - Pie de página editorial integrado consistente con la plataforma.
+  - **Identidad de Bóveda & Custodia Enológica (`VaultHeader.tsx`)**:
+    - Saludo personalizado dinámico (*"Bóveda Personal de [Usuario]"*) y bajada editorial.
+    - Botón primario de acción con resplandor borravino: **"+ Ingresar Lote / Botella"**, que dispara el modal de carga rápida (`QuickAddBottleModal.tsx`).
+  - **Matriz de Métricas Enológicas Vitales (`VaultVitals.tsx`)**:
+    - Disposición en 3 tarjetas horizontales adaptativas:
+      * *Total en Cava*: Total de botellas y desglose en tiempo real por varietal (Tintos, Blancos, Espumantes).
+      * *Varietal Dominante*: Identificación de la cepa predominante con porcentaje y barra estética tri-color.
+      * *Añada Más Antigua*: Año de la cosecha más añeja y años de estiba.
+  - **Sección de Vinos y Control de Ordenamiento (`VaultTabs.tsx`)**:
+    - Encabezado *"Tus botellas"* con descripción de la cava como espacio de guarda y organización personal.
+    - Botón primario de listado integral *"Todas las botellas (N)"*.
+    - Controles de ordenamiento ágil por cosecha (*"Más recientes"* y *"Más antiguas"*).
+  - **Fichas Cinemáticas de Vino (`VaultWineCard.tsx`)**:
+    - Atmósfera nocturna de cava, resplandor radial vinícola, tag de ubicación de estante (`A1 · ESTANTE SUP.`), badge de puntuación crítica (`RP 99`, `WA 100`, etc.), indicador de temperatura constante y estado de madurez.
+    - **Modal de Ficha Técnica (`TechnicalSheetModal.tsx`)**: Detalle enológico completo (altitud, composición del suelo, régimen de crianza en barricas y notas sensoriales de vista, nariz, boca y maridaje sugerido).
+    - **Diálogo Modal de Descorche (`UncorkDialog.tsx`)**: Calificación en estrellas, ocasión de consumo y notas privadas, sincronizado con la bitácora y el decremento de stock.
+  - **Historial de Descorches y Última Reseña (`VaultLogbookModule.tsx`)**:
+    - Ubicado inmediatamente después del catálogo de botellas guardadas.
+    - Exhibe la última reseña registrada (etiqueta, fecha de descorche, puntaje en cata privada, notas sensoriales y tiempo de guarda).
+    - Botón para explorar la bitácora completa en un modal emergente.
+  - **Modal de Ingreso Rápido (`QuickAddBottleModal.tsx`)**: Formulario para sumar botellas a la cava con atajo directo al Catálogo oficial (`/catalogo`).
+  - **Estrategia de Datos Resiliente**: Conexión a la API REST de cavas (`/api/cellars`) con fallback y persistencia local (`localStorage`) para soporte offline.
 
 ### 2.6 El Arte del Maridaje (`PairingPage.tsx`)
 - Vista post-login dedicada accesible en `/maridaje` (vinculada desde el enlace *"Maridaje"* del Navbar central):

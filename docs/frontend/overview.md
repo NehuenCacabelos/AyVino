@@ -70,7 +70,12 @@ src/frontend/src/
 │   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
 │   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
 │   │   └── index.ts           # Barrel export público del módulo auth
-│   ├── dashboard/             # Módulo del Dashboard / Mi Cava Personal
+│   ├── cava/                  # Módulo de Bóveda y Mi Cava Personal (Experiencia Coleccionista Stitch)
+│   │   ├── components/        # Componentes de la bóveda (VaultHeader, VaultVitals, VaultTabs, VaultWineCard, etc.)
+│   │   ├── data/              # Conjunto inicial curado de etiquetas icónicas y telemetría (defaultVaultData.ts)
+│   │   ├── types.ts           # Modelos de dominio tipados (CellarWine, CellarVitals, CellarTelemetry, etc.)
+│   │   └── index.ts           # Barrel export del módulo cava
+│   ├── dashboard/             # Módulo del Dashboard Principal
 │   │   ├── components/        # Componentes del dominio (QuickActions, Metrics, StockCarousel, UncorkDialog, etc.)
 │   │   └── index.ts           # Barrel export público del feature dashboard
 │   └── wines/                 # Módulo de Vinos y Catálogo
