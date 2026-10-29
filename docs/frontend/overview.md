@@ -272,4 +272,38 @@ Implementa la vista individual e inmersiva de cata y ficha técnica para cada vi
   - Perfil Sensorial con métricas homogéneas `text-xs font-mono text-neutral-300` y barras de 4px de altura.
   - Formulario de cata interactivo con calificación decimal continua y autor implícito vía `useAuth()`.
 
+---
+
+## 10. Sistema de Superficies y Elevación ("Dark Editorial / Sommelier Premium")
+
+Unifica las superficies, fondos y elevación visual en toda la aplicación, eliminando inconsistencias críticas (como imágenes de fondo de corchos completas o patrones de pantalla completa invasivos).
+
+### 10.1 Jerarquía de Capas y Elevación
+- **Nivel 0 (Fondo Base Global)**: `#0d0d0f` (`--color-surface-0`). Configurado a nivel global en el `body`, `RootLayout` y `AppLayout`. Proporciona un lienzo consistente, mate y sin distracciones.
+- **Hero Glow (Resplandor Sommelier Opcional)**: Gradiente radial superior suave en tono vino (`bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,20,40,0.15),rgba(255,255,255,0))]`) aplicado a los encabezados principales (Dashboard y Maridaje).
+- **Nivel 1 (Tarjetas, Paneles y Contenedores)**: `bg-[#141417]/80` (`--color-surface-1`) con borde sutil `border border-white/[0.08]` y esquinas `rounded-xl` o `rounded-2xl` con `backdrop-blur-md` o `backdrop-blur-xl`.
+- **Nivel 2 (Modales, Selectores y Elementos Activos)**: `bg-[#1c1c22]` (`--color-surface-2`) con borde `border border-white/[0.12]` (o acento vino en selección).
+
+### 10.2 Adaptación en Vistas Clave
+- **Catálogo / Dashboard (`DashboardPage.tsx`)**:
+  - Retiro definitivo de la imagen escenográfica de corchos fijos (`corchos-vinos.webp`).
+  - Fondo global `#0d0d0f` con el gradiente radial sutil en el hero de filtros.
+  - Tarjetas de botellas (`WineryBlock.tsx`) homologadas con Nivel 1 (`bg-[#141417]/80`, `border-white/[0.08]`) y hover a Nivel 2 (`hover:bg-[#1c1c22]`).
+- **Maridajes (`PairingPage.tsx` y `PairingInteractiveHub.tsx`)**:
+  - Supresión del fondo SVG repetitivo a pantalla completa.
+  - Eliminación de la `Navbar` y `footer` duplicados en `PairingPage`, delegando la persistencia a `AppLayout`.
+  - Eliminación de la sección inferior redundante de pautas de cava (`PromoBlocks` y "Guía Complementaria de Guarda"), focalizando la vista 100% en el Hub de Maridajes y sus fichas interactivas.
+  - Título y descripción tipográfica limpios directamente sobre el lienzo, con margen superior despegado (`pt-28 sm:pt-36`) para no solaparse con el navbar fixed.
+  - Tarjetas de interacción ("¿Qué vas a comer?", "¿Qué vas a tomar?", categorías y fichas) tratadas bajo Nivel 1 con estados activos en Nivel 2.
+
+### 10.3 Profundidad, Relieve y Spotlight de Botellas en Catálogo
+- **Ambient Glow en Cabecera de Catálogo**: Contenedor envolvente de "Explorá por Bodegas" y filtros con gradiente radial sutil en tono vino: `bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(160,20,50,0.12),transparent)]`.
+- **Relieve Tridimensional en Tarjetas de Vinos (`WineryBlock.tsx`)**:
+  - Elevación Nivel 1 refinada: `bg-[#131316]` con borde fino `border border-white/[0.07]`.
+  - Microinteracción de elevación física en hover: `hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300`.
+- **Spotlight Dedicado para Botellas**: Contenedor interno en gradiente vertical tenue que despega la silueta o fotografía de la botella respecto a la tarjeta: `bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center`.
+- **Píldoras de Filtros con Contraste Editorial (`FilterChips.tsx`)**:
+  - Activo ("TODOS"): `bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm`.
+  - Inactivo: `border border-white/[0.08] hover:border-white/[0.16] text-neutral-400 hover:text-neutral-200`.
+
 

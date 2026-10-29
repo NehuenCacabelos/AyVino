@@ -42,10 +42,10 @@ export default function WineryBlock({
     <section aria-labelledby={headingId} className="flex flex-col gap-6">
       
       {/* Cabecera de Bodega */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-5">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/[0.08] pb-5">
         <div className="flex items-center gap-4">
           <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-stone-900/60 backdrop-blur-md font-serif text-lg font-semibold text-neutral-200 shadow-sm"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-[#141417]/80 backdrop-blur-md font-serif text-lg font-semibold text-neutral-200 shadow-sm"
             aria-hidden="true"
           >
             {initials}
@@ -80,7 +80,7 @@ export default function WineryBlock({
             <li key={wine.id ?? `${wine.winery}-${wine.name}-${wine.vintage}`} className="flex">
               <Link
                 to={`/vinos/${wineSlug}`}
-                className="group relative w-full flex flex-col justify-between rounded-2xl bg-stone-950/40 backdrop-blur-xl p-5 hover:bg-stone-900/55 hover:shadow-2xl hover:shadow-black/70 transition-all duration-300 shadow-xl shadow-black/50 cursor-pointer block text-left"
+                className="group relative w-full flex flex-col justify-between rounded-2xl bg-[#131316] border border-white/[0.07] backdrop-blur-xl p-5 hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300 shadow-xl shadow-black/50 cursor-pointer block text-left"
               >
                 {/* Botón de Favorito Flotante Esmerilado */}
                 <button
@@ -91,22 +91,22 @@ export default function WineryBlock({
                     e.stopPropagation();
                     toggleFav(wine.name, wine);
                   }}
-                  className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/40 backdrop-blur-xl transition-all cursor-pointer ${
+                  className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c1c22]/80 border border-white/[0.08] backdrop-blur-xl transition-all cursor-pointer ${
                     isFav
-                      ? 'text-rose-400 bg-rose-950/60'
-                      : 'text-neutral-400 hover:text-white hover:bg-stone-900/80'
+                      ? 'text-rose-400 bg-rose-950/60 border-rose-500/30'
+                      : 'text-neutral-400 hover:text-white hover:bg-[#1c1c22]'
                   }`}
                 >
                   <Heart className={`h-4 w-4 ${isFav ? 'fill-rose-400' : ''}`} />
                 </button>
 
-                {/* Escaparate Central de Botella Flotante (Limpio, sin marcos ni recuadros) */}
-                <div className="relative mb-3 flex h-52 w-full items-center justify-center p-2 overflow-hidden">
+                {/* Spotlight dedicado para la botella */}
+                <div className="relative bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center overflow-hidden mb-3">
                   {wine.imageUrl ? (
                     <img
                       src={wine.imageUrl}
                       alt={wine.name}
-                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      className="h-44 w-auto max-h-full object-contain transition-transform duration-300 group-hover:scale-105"
                       loading="lazy"
                     />
                   ) : (

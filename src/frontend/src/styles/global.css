@@ -32,13 +32,20 @@
   --color-cava-gold: #fbbf24;
   --color-cava-champagne: #fde68a;
 
-  --color-dark-bg: #0f0f11;
-  --color-dark-surface: #121214;
-  --color-dark-card: #161619;
+  /* Sistema de Elevación Dark Editorial / Sommelier Premium */
+  --color-surface-0: #0d0d0f;
+  --color-surface-1: rgb(20 20 23 / 0.8);
+  --color-surface-2: #1c1c22;
+  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-surface-border-active: rgba(255, 255, 255, 0.12);
+
+  --color-dark-bg: #0d0d0f;
+  --color-dark-surface: #141417;
+  --color-dark-card: #141417;
   --color-dark-lowest: #0a0a0c;
-  --color-dark-low: #0f0f11;
-  --color-dark-container: #121216;
-  --color-dark-high: #16161c;
+  --color-dark-low: #0d0d0f;
+  --color-dark-container: #141417;
+  --color-dark-high: #1c1c22;
   --color-dark-highest: #201f25;
 
   --font-serif: "EB Garamond", "Cormorant Garamond", "Fraunces", Georgia, serif;
@@ -47,7 +54,7 @@
 }
 
 body {
-  background-color: #0f0f11;
+  background-color: var(--color-surface-0, #0d0d0f);
   color: #e5e5e5;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

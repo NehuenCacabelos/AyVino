@@ -3,7 +3,6 @@ import {
   UtensilsCrossed,
   Wine,
   Check,
-  Sparkles,
   Flame,
   Grape,
 } from 'lucide-react';
@@ -92,12 +91,6 @@ export default function PairingInteractiveHub({
     <div className="flex flex-col gap-10">
       {/* Cabecera Principal */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-[0.25em] text-rose-400 font-medium flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            SOMMELIER VIRTUAL AYVINO
-          </span>
-        </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-neutral-100 leading-tight">
           El Arte del Maridaje
         </h1>
@@ -107,23 +100,23 @@ export default function PairingInteractiveHub({
         </p>
       </div>
 
-      {/* 1. Switcher de Modo: Segmented Control Flotante */}
-      <div className="relative p-1.5 rounded-2xl bg-[#141418] border border-neutral-700/60 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-md">
+      {/* 1. Switcher de Modo: Segmented Control Flotante (Nivel 1 de Elevación) */}
+      <div className="relative p-1.5 rounded-2xl bg-[#141417]/80 border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-md">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => handleModeChange('food')}
             className={`group relative flex items-center gap-4 p-4 sm:p-5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${
               mode === 'food'
-                ? 'bg-[#722F37]/25 border-rose-500/80 shadow-[0_4px_20px_rgba(114,47,55,0.35)] text-white ring-1 ring-rose-400/40'
-                : 'bg-[#101014]/60 border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-[#18181f]/70'
+                ? 'bg-[#1c1c22] border-rose-500/80 shadow-[0_4px_20px_rgba(114,47,55,0.35)] text-white ring-1 ring-rose-400/40'
+                : 'bg-[#141417]/40 border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-[#1c1c22]/60'
             }`}
           >
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition-all duration-300 ${
                 mode === 'food'
                   ? 'bg-[#722F37] text-white shadow-md shadow-rose-950/60 scale-105'
-                  : 'bg-neutral-900 border border-neutral-800 text-neutral-400 group-hover:text-neutral-200 group-hover:border-neutral-700'
+                  : 'bg-[#1c1c22] border border-white/[0.08] text-neutral-400 group-hover:text-neutral-200 group-hover:border-white/[0.15]'
               }`}
             >
               <UtensilsCrossed className="h-6 w-6" />
@@ -151,15 +144,15 @@ export default function PairingInteractiveHub({
             onClick={() => handleModeChange('wine')}
             className={`group relative flex items-center gap-4 p-4 sm:p-5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${
               mode === 'wine'
-                ? 'bg-[#722F37]/25 border-rose-500/80 shadow-[0_4px_20px_rgba(114,47,55,0.35)] text-white ring-1 ring-rose-400/40'
-                : 'bg-[#101014]/60 border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-[#18181f]/70'
+                ? 'bg-[#1c1c22] border-rose-500/80 shadow-[0_4px_20px_rgba(114,47,55,0.35)] text-white ring-1 ring-rose-400/40'
+                : 'bg-[#141417]/40 border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-[#1c1c22]/60'
             }`}
           >
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition-all duration-300 ${
                 mode === 'wine'
                   ? 'bg-[#722F37] text-white shadow-md shadow-rose-950/60 scale-105'
-                  : 'bg-neutral-900 border border-neutral-800 text-neutral-400 group-hover:text-neutral-200 group-hover:border-neutral-700'
+                  : 'bg-[#1c1c22] border border-white/[0.08] text-neutral-400 group-hover:text-neutral-200 group-hover:border-white/[0.15]'
               }`}
             >
               <Wine className="h-6 w-6" />
@@ -184,7 +177,7 @@ export default function PairingInteractiveHub({
         </div>
       </div>
 
-      {/* 2. Zona de Interacción Superior: Selector de Comidas o Cepas */}
+      {/* 2. Zona de Interacción Superior: Selector de Comidas o Cepas (Nivel 1 de Elevación) */}
       {mode === 'food' ? (
         <section aria-label="Categorías Gastronómicas Argentinas" className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -208,8 +201,8 @@ export default function PairingInteractiveHub({
                   onClick={() => handleSelectFood(item.id)}
                   className={`flex flex-col justify-between p-3.5 sm:p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer min-h-[96px] group relative ${
                     isSelected
-                      ? 'bg-[#722F37]/25 border-rose-500/80 shadow-md shadow-rose-950/40 ring-1 ring-rose-500/40'
-                      : 'bg-[#121216] border-neutral-800 hover:border-neutral-700 hover:bg-[#18181e]'
+                      ? 'bg-[#1c1c22] border-rose-500/80 shadow-md shadow-rose-950/40 ring-1 ring-rose-500/40'
+                      : 'bg-[#141417]/80 border-white/[0.08] hover:border-white/[0.15] hover:bg-[#1c1c22]'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -263,8 +256,8 @@ export default function PairingInteractiveHub({
                   onClick={() => setVarietyFilter(tab.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all cursor-pointer shrink-0 ${
                     varietyFilter === tab.value
-                      ? 'bg-neutral-800 text-white border border-neutral-700 shadow-sm'
-                      : 'bg-[#121216] text-neutral-400 hover:text-neutral-200 border border-neutral-800/80 hover:bg-[#18181f]'
+                      ? 'bg-[#1c1c22] text-white border border-white/[0.15] shadow-sm'
+                      : 'bg-[#141417]/80 text-neutral-400 hover:text-neutral-200 border border-white/[0.08] hover:bg-[#1c1c22]'
                   }`}
                 >
                   {tab.label}
@@ -285,12 +278,12 @@ export default function PairingInteractiveHub({
                   onClick={() => handleSelectWine(item.id)}
                   className={`flex flex-col justify-between p-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer min-h-[96px] group relative ${
                     isSelected
-                      ? 'bg-[#722F37]/25 border-rose-500/80 shadow-md shadow-rose-950/40 ring-1 ring-rose-500/40'
-                      : 'bg-[#121216] border-neutral-800 hover:border-neutral-700 hover:bg-[#18181e]'
+                      ? 'bg-[#1c1c22] border-rose-500/80 shadow-md shadow-rose-950/40 ring-1 ring-rose-500/40'
+                      : 'bg-[#141417]/80 border-white/[0.08] hover:border-white/[0.15] hover:bg-[#1c1c22]'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 uppercase">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0d0d0f] border border-white/[0.08] text-neutral-400 uppercase">
                       {item.wineType}
                     </span>
                     {isSelected && (

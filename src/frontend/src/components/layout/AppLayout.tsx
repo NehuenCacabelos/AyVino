@@ -19,7 +19,7 @@ export default function AppLayout() {
   const [stockCount, setStockCount] = useState(24);
 
   return (
-    <div className="min-h-screen bg-[#0f0f11] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0d0d0f] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
       {/* Navbar Superior Persistente */}
       <DashboardNavbar stockCount={stockCount} />
 
@@ -29,7 +29,7 @@ export default function AppLayout() {
       </div>
 
       {/* Footer Editorial Persistente */}
-      <footer className="border-t border-neutral-800 bg-[#0c0c0e] transition-colors">
+      <footer className="border-t border-white/[0.08] bg-[#0d0d0f] transition-colors">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-8 text-xs text-neutral-500">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold tracking-tight text-zinc-100">

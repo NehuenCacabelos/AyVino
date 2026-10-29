@@ -31,10 +31,10 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
   return (
     <article
       onClick={() => onSelect?.(wine)}
-      className="group relative bg-[#121214] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl"
+      className="group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl"
     >
       {/* Columna Izquierda: Espacio para botella con imagen real */}
-      <div className="w-full sm:w-40 h-52 sm:h-auto bg-[#0a0a0c] sm:border-r border-b sm:border-b-0 border-white/5 flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#0c0c0e] relative overflow-hidden">
+      <div className="w-full sm:w-40 h-52 sm:h-auto bg-[#0d0d0f] sm:border-r border-b sm:border-b-0 border-white/[0.08] flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#141417] relative overflow-hidden">
         {imageUrl ? (
           <img
             src={imageUrl}

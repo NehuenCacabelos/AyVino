@@ -60,8 +60,8 @@ export default function PairingDetailView({
 
     return (
       <div className="flex flex-col gap-8 animate-fadeIn">
-        {/* Panel Editorial Principal - Diseño traído de Stitch con Halos y Alta Jerarquía */}
-        <div className="relative rounded-2xl bg-[#16161C]/95 backdrop-blur-2xl border border-neutral-700/60 p-6 sm:p-10 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.85),0_0_32px_rgba(114,47,55,0.2)] overflow-hidden">
+        {/* Panel Editorial Principal - Elevación Nivel 1 */}
+        <div className="relative rounded-2xl bg-[#141417]/80 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-10 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.85),0_0_32px_rgba(114,47,55,0.2)] overflow-hidden">
           {/* Halos Ambientales de Cava */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-rose-950/20 blur-[100px] pointer-events-none rounded-full" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/5 blur-[90px] pointer-events-none rounded-full" />
@@ -86,17 +86,17 @@ export default function PairingDetailView({
                 </p>
               </div>
 
-              {/* Quick Sommelier Metric Badges */}
+              {/* Quick Sommelier Metric Badges (Nivel 2) */}
               <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
-                <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+                <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                   <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Principio</span>
                   <span className="font-serif text-sm font-semibold text-neutral-100 truncate">{food.principle}</span>
                 </div>
-                <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+                <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                   <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Copa Ideal</span>
                   <span className="font-serif text-sm font-semibold text-amber-200 truncate">{food.glassware.split(' ')[0]} {food.glassware.split(' ')[1] || ''}</span>
                 </div>
-                <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+                <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                   <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Temperatura</span>
                   <span className="font-serif text-sm font-semibold text-rose-300">{food.servingTemperature}</span>
                 </div>
@@ -121,7 +121,7 @@ export default function PairingDetailView({
                 {food.dishes.map((dish, idx) => (
                   <div
                     key={dish}
-                    className="group relative rounded-xl bg-neutral-900/70 border border-neutral-800/80 p-4 flex flex-col justify-between hover:bg-neutral-900 hover:border-neutral-700 transition-all duration-300 shadow-sm"
+                    className="group relative rounded-xl bg-[#141417]/90 border border-white/[0.08] p-4 flex flex-col justify-between hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-300 shadow-sm"
                   >
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
@@ -140,7 +140,7 @@ export default function PairingDetailView({
                       </p>
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-neutral-800/80 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                    <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
                       <span>{food.badge.split('&')[0] || 'Criollo'}</span>
                       <span className="text-rose-400 flex items-center gap-1">
                         Corte ideal <ArrowRight className="w-3 h-3" />
@@ -154,7 +154,7 @@ export default function PairingDetailView({
             {/* Matriz Sensorial & Cristalería + Llamado de Acción */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
               {/* Cepas Recomendadas */}
-              <div className="lg:col-span-7 rounded-xl bg-neutral-900/60 border border-neutral-800 p-6 flex flex-col justify-between gap-6 shadow-sm">
+              <div className="lg:col-span-7 rounded-xl bg-[#141417]/90 border border-white/[0.08] p-6 flex flex-col justify-between gap-6 shadow-sm">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-amber-400" />
@@ -328,8 +328,8 @@ export default function PairingDetailView({
 
   return (
     <div className="flex flex-col gap-8 animate-fadeIn">
-      {/* Panel Editorial Principal - Diseño traído de Stitch con Halos y Matriz Sensorial */}
-      <div className="relative rounded-2xl bg-[#16161C]/95 backdrop-blur-2xl border border-neutral-700/60 p-6 sm:p-10 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.85),0_0_32px_rgba(114,47,55,0.2)] overflow-hidden">
+      {/* Panel Editorial Principal - Elevación Nivel 1 */}
+      <div className="relative rounded-2xl bg-[#141417]/80 backdrop-blur-2xl border border-white/[0.08] p-6 sm:p-10 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.85),0_0_32px_rgba(114,47,55,0.2)] overflow-hidden">
         {/* Halos Ambientales de Cava */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-rose-950/20 blur-[100px] pointer-events-none rounded-full" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/5 blur-[90px] pointer-events-none rounded-full" />
@@ -354,17 +354,17 @@ export default function PairingDetailView({
               </p>
             </div>
 
-            {/* Quick Sommelier Metric Badges */}
+            {/* Quick Sommelier Metric Badges (Nivel 2) */}
             <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
-              <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+              <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                 <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Cuerpo</span>
                 <span className="font-serif text-sm font-semibold text-neutral-100">{wine.body}</span>
               </div>
-              <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+              <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                 <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Acidez</span>
                 <span className="font-serif text-sm font-semibold text-amber-200">{wine.acidity}</span>
               </div>
-              <div className="px-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 flex flex-col gap-1 min-w-[110px] shadow-sm">
+              <div className="px-4 py-3 rounded-xl bg-[#1c1c22] border border-white/[0.08] flex flex-col gap-1 min-w-[110px] shadow-sm">
                 <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">Temperatura</span>
                 <span className="font-serif text-sm font-semibold text-rose-300">{wine.servingTemperature}</span>
               </div>

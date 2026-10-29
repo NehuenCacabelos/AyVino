@@ -47,8 +47,8 @@ export default function FilterChips({
               onClick={() => onSelectChip?.(chip)}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-[#722F37] text-neutral-100 shadow-sm border border-[#722F37]'
-                  : 'border border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-100'
+                  ? 'bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm'
+                  : 'border border-white/[0.08] hover:border-white/[0.16] text-neutral-400 hover:text-neutral-200'
               }`}
             >
               {chip}
