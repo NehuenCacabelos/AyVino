@@ -219,20 +219,27 @@ npm run dev
 
 ## 8. Hub Interactivo de Maridaje Enogastronómico Argentino (`/maridaje`)
 
-La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país.
+La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país. Fue refactorizada íntegramente bajo un lenguaje de **Dossier Técnico de Sommelier**, erradicando el anidamiento excesivo de tarjetas (*card-nesting hell*) y optimizando el espacio vertical y el flujo cognitivo.
 
-### 8.1 Arquitectura Visual y Componentes
-- **Segmented Control Flotante (`PairingInteractiveHub.tsx`)**:
-  - Control de selección superior con estética flotante (`bg-[#141418]`, `border-neutral-700/60`, sombra profunda y desenfoque `backdrop-blur-md`).
-  - Bloque activo con tinte vinícola sutil (`bg-[#722F37]/25`), borde iluminado (`border-rose-500/80`), anillo exterior (`ring-1 ring-rose-400/40`) y micro-icono temático (`UtensilsCrossed` y `Wine`).
-- **Contraste de Secciones y Ritmo Visual (`PairingDetailView.tsx`)**:
-  - Para evitar bloques oscuros planos, la zona de lectura de resultados (*"Por qué funciona"*, *"Cepas recomendadas"* y *"Platos sugeridos"*) se presenta sobre tarjetas en gris grafito elevado (`bg-[#16161c]/95 backdrop-blur-md border border-neutral-700/60 shadow-2xl`).
-- **Microinteracciones e Indicadores Sensoriales**:
-  - Tarjetas de cepa con indicador textual minimalista en una sola línea que se ilumina en dorado cava (`group-hover:text-amber-200/90`) al posar el cursor, indicando *Cuerpo*, *Acidez* y *Taninos*.
-  - Matriz Sensorial de la Cepa con medidores visuales en escala de 10 puntos (Taninos, Acidez, Cuerpo) e indicadores de potencial de guarda y cristalería.
-  - Halos ambientales de cava (`bg-rose-950/20 blur-[100px]` y `bg-amber-500/5 blur-[90px]`) inspirados en el diseño de Google Stitch.
-  - Botón de guardado rápido *"Guardar en Mi Cava"* con feedback visual reactivo de 3 segundos.
-  - *Smooth scroll* inteligente condicional hacia `#maridaje-detalle`: ejecuta desplazamiento suave solo cuando la zona de lectura no se encuentra completamente visible en el viewport del usuario.
+### 8.1 Arquitectura de Estado y Navegación Reactiva
+- **Sincronización en URL SearchParams (`usePairingParams.ts`)**:
+  - Parámetros persistentes: `?mode=food&food=asado-fuegos` o `?mode=wine&wine=malbec`.
+  - Actualización atómica con `{ replace: true }`: habilita enlaces compartibles directamente, historial del navegador y retorno exacto.
+  - Contexto bidireccional fluido: al transicionar de un plato a una cepa recomendada, inyecta `from=...` para desplegar un badge contextual técnico con enlace de retorno.
+  - Validación estricta y fallback determinista contra los identificadores de dominio de `pairingsData.ts`.
+
+### 8.2 Componentes Modulares y Desacoplamiento
+La vista se descompone en microcomponentes semánticos bajo `src/features/pairings/components/`:
+1. **`PairingModeSelector.tsx`**: Segmented control con botones de radio sutil (`rounded-lg` / `rounded-md`) y estilo unificado oficial de AyVino (idéntico al botón de *Iniciar sesión* de la app: fondo borgoña noble `bg-[#4f131f] hover:bg-[#5e1725]`, borde `border-rose-400/30` y texto `text-rose-100`) para alternar limpiamente entre *Tengo un plato* y *Tengo un vino*, con roles ARIA `tablist`/`tab` accesibles.
+2. **`PairingFoodSelector.tsx`**: Chips sutilmente redondeados (`rounded-lg px-3.5 py-2`) con la estética unificada de *Iniciar sesión* (`bg-[#4f131f]`, borde sutil y badge `bg-[#6e1a24]`) para las 7 categorías gastronómicas argentinas.
+3. **`PairingWineSelector.tsx`**: Selector enológico híbrido con filtro por defecto **"Principales"** (que exhibe las 8 cepas insignia de entrada: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Chardonnay, Torrontés, Pinot Noir), buscador reactivo instantáneo y pestañas complementarias (`Todas`, `Tintos`, `Blancos`, `Rosados / Criollas`) en botones con radio `rounded-lg`.
+4. **`PairingDossierHeader.tsx`**: Cabecera tipográfica editorial sobre el fondo base oscuro liso (`#0d0d0f`) con badge `Dossier del Sommelier` en acento rosa viejo / borgoña (`text-rose-300`), acompañada por una barra de métricas de servicio transparente y horizontal (temperatura de servicio, copa ideal, principio organoléptico y acidez/cuerpo) separada por divisores verticales sutiles (`divide-zinc-800/80`).
+5. **Flujo de Respuesta Sommelier Invertido**:
+   - **1°: Cepas enológicas sugeridas (`PairingAffinities.tsx` con `section="suggested"`)**: Despliega en primer lugar el perfil y las variedades afines ideales para la comida seleccionada.
+   - **2°: Botellas recomendadas en catálogo (`PairingBottleHero.tsx`)**: Exhibe las etiquetas comerciales curadas concretas para explorar o comprar inmediatamente basadas en las cepas sugeridas.
+   - **3°: Platos representativos afines (`PairingAffinities.tsx` con `section="secondary"`)**: Muestra recetas tradicionales con badges técnicos de afinidad (`98% AFINIDAD`) en chips `rounded-lg` con fondo `bg-[#4f131f]`.
+   - **4°: Consejo de servicio y Guardado (`PairingCavaAction.tsx`)**: Franja técnica con consejos de cata y botón de catálogo homologado al botón de *Iniciar sesión* (`bg-[#4f131f] hover:bg-[#5e1725]`).
+6. **`PairingInteractiveHub.tsx`**: Orquestador principal desacoplado (< 140 líneas) libre de cajas contenedoras artificiales, con subtítulo ampliado (`text-base sm:text-lg text-zinc-300`) y balanceado con el H1.
 
 ### 8.2 Taxonomía Gastronómica Argentina (7 Categorías)
 1. **Asado & Fuegos**: Asado de tira, vacío a la llama, entraña jugosa, matambre a la pizza, achuras / mollejas.

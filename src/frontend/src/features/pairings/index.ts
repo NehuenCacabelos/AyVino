@@ -1,5 +1,12 @@
 export { default as PairingInteractiveHub } from './components/PairingInteractiveHub';
 export { default as PairingDetailView } from './components/PairingDetailView';
 export { default as PairingWallpaper } from './components/PairingWallpaper';
+export { default as PairingModeSelector } from './components/PairingModeSelector';
+export { default as PairingFoodSelector } from './components/PairingFoodSelector';
+export { default as PairingWineSelector } from './components/PairingWineSelector';
+export { default as PairingDossierHeader } from './components/PairingDossierHeader';
+export { default as PairingBottleHero } from './components/PairingBottleHero';
+export { default as PairingAffinities } from './components/PairingAffinities';
+export { default as PairingCavaAction } from './components/PairingCavaAction';
+export { usePairingParams } from './hooks/usePairingParams';
 export * from '../../data/pairingsData';
-
