@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>3b6fab02-3ce8-4f23-a34b-20a45741784c</UserSecretsId>
     <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+    <NoWarn>$(NoWarn);NETSDK1188;NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,13 +21,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.OpenApi" Version="2.0.1" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
-
   </ItemGroup>
-
-
 
 </Project>
