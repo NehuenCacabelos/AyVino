@@ -8,6 +8,7 @@ using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Wines.Services;
@@ -18,20 +19,22 @@ public class WineService(
     ILocationRepository locationRepository,
     IGrapeRepository grapeRepository) : IWineService
 {
-    public async Task<WineResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
-        var wine = await wineRepository.GetByIdAsync(id, ct) ?? throw new NotFoundException($"Wine with ID {id} not found.");
+        var wine = await wineRepository.GetVisibleByIdAsync(id, actor?.UserId, actor?.IsAdmin == true, ct)
+            ?? throw new NotFoundException($"Wine with ID {id} not found.");
+
         return wine.ToResponseDto();
     }
 
-    public async Task<IEnumerable<WineResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, CancellationToken ct = default)
+    public async Task<IEnumerable<WineResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
         if (yearFrom.HasValue && yearTo.HasValue && yearFrom > yearTo)
             throw new ValidationException("'yearFrom' cannot be greater than 'yearTo'.");
 
-        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, ct);
+        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, actor?.IsAdmin == true, ct);
         return wines.Select(w => w.ToResponseDto());
     }
 
@@ -47,9 +50,10 @@ public class WineService(
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("Solo el dueño de la bodega puede publicar vinos oficiales a su nombre.");
 
-            if (winery.Status != WineryStatus.Approved)
-                throw new ForbiddenException("La bodega debe estar aprobada para publicar vinos oficiales.");
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
         }
+
 
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);
@@ -76,6 +80,9 @@ public class WineService(
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("No tenés permiso para editar este vino.");
 
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para editar vinos.");
+
             if (dto.WineryId != existing.WineryId)
                 throw new ForbiddenException("Solo un administrador puede cambiar la bodega de un vino.");
         }
@@ -86,11 +93,34 @@ public class WineService(
         var updated = await wineRepository.UpdateAsync(wineEntity, ct);
         if (!updated) throw new NotFoundException($"Wine with ID {id} not found.");
 
-        return await GetByIdAsync(id, ct);
+        return await GetByIdAsync(id, actor, ct);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        var exists = await wineRepository.ExistsByIdAsync(id, ct);
+        if (!exists)
+            throw new NotFoundException($"Wine with ID {id} not found.");
+
+        var usage = await wineRepository.GetUsageCountsAsync(id, ct);
+        if (usage.HasBlockingUsage)
+        {
+            if (usage.HasUserHistory && usage.HasDuplicates)
+            {
+                throw new ConflictException(
+                    $"No se puede eliminar el vino porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, marcas: {usage.UserWineCount}, cava: {usage.CellarItemCount}) y vinos duplicados asociados ({usage.DuplicateWinesCount}). Si es un duplicado, usá la fusión.");
+            }
+
+            if (usage.HasUserHistory)
+            {
+                throw new ConflictException(
+                    $"No se puede eliminar el vino porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, marcas: {usage.UserWineCount}, cava: {usage.CellarItemCount}). Si es un duplicado, usá la fusión.");
+            }
+
+            throw new ConflictException(
+                $"No se puede eliminar el vino porque tiene vinos duplicados apuntándole ({usage.DuplicateWinesCount}). Si es un duplicado, usá la fusión.");
+        }
+
         var deleted = await wineRepository.DeleteAsync(id, ct);
         if (!deleted) throw new NotFoundException($"Wine with ID {id} not found.");
     }
@@ -104,7 +134,7 @@ public class WineService(
         {
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("Solo el dueño de la bodega puede reclamar vinos.");
-            if (winery.Status != WineryStatus.Approved)
+            if (!WineryAccessRules.CanClaim(winery, actor))
                 throw new ForbiddenException("La bodega debe estar aprobada para reclamar vinos.");
         }
 
@@ -121,7 +151,7 @@ public class WineService(
         {
             if (!WineryAccessRules.IsOwner(winery, actor))
                 throw new ForbiddenException("Solo el dueño de la bodega puede reclamar vinos.");
-            if (winery.Status != WineryStatus.Approved)
+            if (!WineryAccessRules.CanClaim(winery, actor))
                 throw new ForbiddenException("La bodega debe estar aprobada para reclamar vinos.");
         }
 
@@ -159,9 +189,6 @@ public class WineService(
         return parsedType;
     }
 
-    // Duplicado a propósito con WineVintageService.ValidateGrapesAsync (mismas ~10 líneas):
-    // es la única validación de uvas que necesita este service, no vale la pena acoplar
-    // los dos services por esto. Si crece, se extrae a un helper compartido.
     private async Task ValidateGrapesAsync(List<WineGrapeRequestDto>? grapes, CancellationToken ct)
     {
         if (grapes is not { Count: > 0 }) return;
@@ -182,7 +209,7 @@ public class WineService(
             throw new ValidationException("The sum of the grape percentages cannot exceed 100%.");
     }
 
-    public async Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, CancellationToken ct = default)
+    public async Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
@@ -197,12 +224,41 @@ public class WineService(
             parsedType = parsed;
         }
 
-        var wines = await wineRepository.SearchAsync(name, winery, year, parsedType, pageNumber, pageSize, ct);
+        var wines = await wineRepository.SearchAsync(name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
         return wines.Select(w => w.ToResponseDto());
+    }
+
+    public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default)
+    {
+        if (!actor.IsAdmin)
+        {
+            throw new ForbiddenException("Solo un administrador puede fusionar vinos.");
+        }
+
+        if (targetId == duplicateId)
+        {
+            throw new ValidationException("No se puede fusionar un vino consigo mismo.");
+        }
+
+        var target = await wineRepository.GetByIdAsync(targetId, ct)
+            ?? throw new NotFoundException($"El vino destino con ID {targetId} no existe.");
+
+        var duplicate = await wineRepository.GetByIdAsync(duplicateId, ct)
+            ?? throw new NotFoundException($"El vino a fusionar con ID {duplicateId} no existe.");
+
+        if (target.DuplicateOfWineId != null)
+        {
+            throw new ConflictException($"El vino destino (ID {targetId}) ya es un vino duplicado y no puede recibir fusiones.");
+        }
+
+        if (duplicate.DuplicateOfWineId != null)
+        {
+            throw new ConflictException($"El vino origen (ID {duplicateId}) ya fue fusionado anteriormente.");
+        }
+
+        return await wineRepository.MergeWinesAsync(targetId, duplicateId, ct);
     }
 
     private static List<WineGrape> ToWineGrapes(List<WineGrapeRequestDto>? grapes) =>
         grapes?.Select(g => new WineGrape { GrapeId = g.GrapeId, Percentage = g.Percentage }).ToList() ?? [];
-
-        
 }

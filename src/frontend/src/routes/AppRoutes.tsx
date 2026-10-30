@@ -16,9 +16,37 @@ const CavaPage = lazy(() => import('../pages/CavaPage'));
 const PairingPage = lazy(() => import('../pages/PairingPage'));
 const CatalogPage = lazy(() => import('../pages/CatalogPage'));
 const WineDetailPage = lazy(() => import('../pages/WineDetailPage'));
-const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const AccountPage = lazy(() => import('../pages/AccountPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
+
+// Layouts y vistas del área de Bodega
+const WineryPublicLayout = lazy(() => import('../features/winery/components/WineryPublicLayout'));
+const ForWineriesPage = lazy(() => import('../pages/ForWineriesPage'));
+const WineryRegisterPage = lazy(() => import('../pages/WineryRegisterPage'));
+const WineryPublicProfileLayout = lazy(() => import('../pages/WineryPublicProfileLayout'));
+const WineryPublicOverviewPage = lazy(() => import('../pages/WineryPublicOverviewPage'));
+const WineryPublicCatalogPage = lazy(() => import('../pages/WineryPublicCatalogPage'));
+
+const WineryLayout = lazy(() => import('../features/winery/components/WineryLayout'));
+const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
+const WineryOverviewPage = lazy(() => import('../pages/WineryOverviewPage'));
+const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
+const WineryCatalogPage = lazy(() => import('../pages/WineryCatalogPage'));
+const WineryWineDetailPage = lazy(() => import('../pages/WineryWineDetailPage'));
+const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
+
+// Layout y vistas del Panel de Administración
+const AdminLayout = lazy(() => import('../features/admin/components/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage'));
+const AdminWineriesPage = lazy(() => import('../pages/AdminWineriesPage'));
+const AdminCitiesPage = lazy(() => import('../pages/AdminCitiesPage'));
+const AdminVintagesPage = lazy(() => import('../pages/AdminVintagesPage'));
+const AdminUsersPage = lazy(() => import('../pages/AdminUsersPage'));
+const AdminGrapesPage = lazy(() => import('../pages/AdminGrapesPage'));
+const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
+const AdminAuditPage = lazy(() => import('../pages/AdminAuditPage'));
+const AdminReviewsPage = lazy(() => import('../pages/AdminReviewsPage'));
+const AdminWinesPage = lazy(() => import('../pages/AdminWinesPage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -42,7 +70,12 @@ function RouteFallbackLoader() {
  */
 function RootIndexRoute() {
   const { isAuthenticated, user } = useAuth();
-  const homePath = user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard';
+  const homePath =
+    user?.role === 'Admin'
+      ? '/admin'
+      : user?.role === 'Winery'
+        ? '/bodega/dashboard'
+        : '/dashboard';
   return isAuthenticated ? <Navigate to={homePath} replace /> : <Landing />;
 }
 
@@ -64,6 +97,19 @@ function ProfileRedirectRoute() {
  * Integra jerarquía de Layouts compartidos con <Outlet />, contención con errorElement,
  * code-splitting lazy y guardias de autenticación desacopladas.
  */
+
+/**
+ * Componente de resolución para /dashboard:
+ * Redirige a las Bodegas directamente a /bodega/dashboard para garantizar su espacio operativo.
+ */
+function DashboardRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'Winery') {
+    return <Navigate to="/bodega/dashboard" replace />;
+  }
+  return <DashboardPage />;
+}
+
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
@@ -102,6 +148,35 @@ export const router = createBrowserRouter([
         ),
       },
 
+      // Registro institucional de Bodega (pantalla inmersiva split-card sin navbar global)
+      {
+        path: '/bodega/registro',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <WineryRegisterPage />
+          </Suspense>
+        ),
+      },
+
+      // Vistas Públicas Institucionales de Bodega bajo Layout compartido (WineryPublicLayout)
+      {
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <WineryPublicLayout />
+          </Suspense>
+        ),
+        children: [
+          {
+            path: '/para-bodegas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <ForWineriesPage />
+              </Suspense>
+            ),
+          },
+          ],
+      },
+
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
       {
         element: (
@@ -114,7 +189,7 @@ export const router = createBrowserRouter([
             path: '/dashboard',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
-                <DashboardPage />
+                <DashboardRoute />
               </Suspense>
             ),
           },
@@ -183,16 +258,194 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // Ruta de Bodega / Administración
+      // Rutas de Perfil Público de Bodega (inmersivo con layout propio)
       {
-        path: '/bodega/dashboard',
+        path: '/bodegas/:id',
+        element: (
+          <Suspense fallback={<RouteFallbackLoader />}>
+            <WineryPublicProfileLayout />
+          </Suspense>
+        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicOverviewPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'catalogo',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryPublicCatalogPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // Rutas Protegidas Exclusivas para Bodegas y Administradores
+      {
+        path: '/bodega',
         element: (
           <ProtectedRoute allowedRoles={['Winery', 'Admin']}>
+            <WineryLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/bodega/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryDashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'perfil',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryOverviewPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'perfil/editar',
+            element: <Navigate to="/bodega/configuracion" replace />,
+          },
+          {
+            path: 'configuracion',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryConfigPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryCatalogPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos/:wineId',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryWineDetailPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'reclamar',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryClaimPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // Rutas Protegidas Exclusivas para Administradores
+      {
+        path: '/admin',
+        element: (
+          <ProtectedRoute allowedRoles={['Admin']}>
             <Suspense fallback={<RouteFallbackLoader />}>
-              <WineryDashboardPage />
+              <AdminLayout />
             </Suspense>
           </ProtectedRoute>
         ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminDashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'bodegas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminWineriesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'ciudades',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminCitiesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'cosechas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminVintagesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'usuarios',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminUsersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'uvas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminGrapesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'maridajes',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminPairingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'auditoria',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminAuditPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'resenas',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminReviewsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminWinesPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
       // Fallback 404

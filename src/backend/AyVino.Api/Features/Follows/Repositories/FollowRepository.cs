@@ -108,6 +108,7 @@ public class FollowRepository(IDbConnectionFactory connectionFactory) : IFollowR
             FROM winery_follows wf
             JOIN wineries w ON w.id = wf.winery_id
             WHERE wf.follower_id = @FollowerId
+              AND w.status = 2
             ORDER BY wf.created_at DESC, w.id
             OFFSET @Offset LIMIT @PageSize;
             """;

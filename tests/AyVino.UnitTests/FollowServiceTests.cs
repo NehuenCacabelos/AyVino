@@ -211,6 +211,26 @@ public class FollowServiceTests
     }
 
     [Fact]
+    public async Task FollowWineryAsync_OwnerFollowingOwnWinery_ThrowsValidationException()
+    {
+        // Arrange
+        var approvedWinery = new Winery
+        {
+            Id = 10,
+            Name = "Bodegas Lopez",
+            Status = WineryStatus.Approved,
+            UserId = 5
+        };
+        _wineryRepository.GetByIdAsync(10, Arg.Any<CancellationToken>())
+            .Returns(approvedWinery);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => _followService.FollowWineryAsync(5, 10));
+        Assert.Contains("propia bodega", ex.Message, StringComparison.OrdinalIgnoreCase);
+        await _followRepository.DidNotReceive().AddWineryFollowAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UnfollowWineryAsync_NotFollowing_ThrowsNotFoundException()
     {
         // Arrange

@@ -18,6 +18,7 @@ import {
   type TastingLogEntry,
 } from '../features/cava';
 import { apiClient } from '../services/apiClient';
+import { imageUrl } from '../lib/image';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 /**
@@ -112,7 +113,7 @@ export default function CavaPage() {
               agingStatusLabel: item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
               isJewel: (item.averageRating && Number(item.averageRating) >= 4.5) || false,
               bottle: item.wineType === 'White' ? 'white' : 'red-burgundy',
-              imageUrl: item.imageUrl || undefined,
+              imageUrl: (item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl) || undefined,
             }));
             setWines(mapped);
           }

@@ -1,13 +1,15 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Cellars.Services;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using AyVino.Api.Common.Constants;
 
 namespace AyVino.Api.Features.Users.Endpoints;
 
@@ -69,36 +71,22 @@ public static class UserEndpoints
         .WithName("UpdateMyProfile")
         .WithSummary("Actualiza el perfil del usuario autenticado actual");
 
-        authenticatedGroup.MapPost("/me/avatar", async (IFormFile file, ClaimsPrincipal claimsPrincipal, IUserService userService, IAvatarStorageService avatarStorageService, CancellationToken ct) =>
+        authenticatedGroup.MapPut("/me/avatar", async (IFormFile file, ClaimsPrincipal claimsPrincipal, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
         {
             var userId = claimsPrincipal.GetUserId();
-            var currentUser = await userService.GetByIdAsync(userId, ct);
-
-            if (!string.IsNullOrWhiteSpace(currentUser.Photo))
-            {
-                await avatarStorageService.DeleteAvatarAsync(currentUser.Photo, ct);
-            }
-
-            var relativeUrl = await avatarStorageService.SaveAvatarAsync(userId, file, ct);
-            var updatedUser = await userService.UpdateAvatarAsync(userId, relativeUrl, ct);
-            return Results.Ok(updatedUser);
+            var imageId = await imageOrchestrator.UploadAvatarAsync(userId, file, ct);
+            return Results.Ok(new { imageId });
         })
         .DisableAntiforgery()
         .WithName("UploadMyAvatar")
         .WithSummary("Sube una foto de perfil personalizada para el usuario autenticado");
 
-        authenticatedGroup.MapDelete("/me/avatar", async (ClaimsPrincipal claimsPrincipal, IUserService userService, IAvatarStorageService avatarStorageService, CancellationToken ct) =>
+
+        authenticatedGroup.MapDelete("/me/avatar", async (ClaimsPrincipal claimsPrincipal, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
         {
             var userId = claimsPrincipal.GetUserId();
-            var currentUser = await userService.GetByIdAsync(userId, ct);
-
-            if (!string.IsNullOrWhiteSpace(currentUser.Photo))
-            {
-                await avatarStorageService.DeleteAvatarAsync(currentUser.Photo, ct);
-            }
-
-            var updatedUser = await userService.UpdateAvatarAsync(userId, null, ct);
-            return Results.Ok(updatedUser);
+            await imageOrchestrator.DeleteAvatarAsync(userId, ct);
+            return Results.NoContent();
         })
         .WithName("DeleteMyAvatar")
         .WithSummary("Elimina la foto de perfil personalizada del usuario autenticado");
@@ -138,7 +126,17 @@ public static class UserEndpoints
             return Results.NoContent();
         })
         .WithName("ChangeUserStatus")
-        .WithSummary("Activa o desactiva la cuenta de un usuario");
+        .WithSummary("Activa o desactiva la cuenta de un usuario")
+        .WithAudit(AuditAction.UserStatusChanged, "User", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<ChangeUserStatusRequestDto>().FirstOrDefault()?.IsActive == true ? "isActive=true" : "isActive=false");
+
+        adminGroup.MapPatch("/{id:int}/role", async (int id, ChangeUserRoleRequestDto request, ClaimsPrincipal user, IUserService userService, CancellationToken ct) =>
+        {
+            await userService.ChangeRoleAsync(user.GetUserId(), id, request.Role, ct);
+            return Results.NoContent();
+        })
+        .WithName("ChangeUserRole")
+        .WithSummary("Cambia el rol de un usuario (solo Admin y User)")
+        .WithAudit(AuditAction.UserRoleChanged, "User", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<ChangeUserRoleRequestDto>().FirstOrDefault()?.Role);
 
         adminGroup.MapDelete("/{id:int}", async (int id, IUserService userService, CancellationToken ct) =>
         {
@@ -146,7 +144,8 @@ public static class UserEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteUser")
-        .WithSummary("Elimina un usuario y sus credenciales asociadas");
+        .WithSummary("Elimina un usuario y sus credenciales asociadas")
+        .WithAudit(AuditAction.UserDeleted, "User", idRouteKey: "id");
 
         return app;
     }

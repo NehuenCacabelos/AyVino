@@ -30,7 +30,30 @@ public static class ClaimsPrincipalExtensions
     public static Actor GetActor(this ClaimsPrincipal principal)
     {
         var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
-        return new Actor(principal.GetUserId(), role);
+        var username = principal.FindFirstValue(JwtRegisteredClaimNames.Name)
+            ?? principal.FindFirstValue(ClaimTypes.Name);
+        return new Actor(principal.GetUserId(), role, username);
+    }
+
+    public static Actor? GetActorOrNull(this ClaimsPrincipal? principal)
+    {
+        if (principal?.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        var userIdClaim = principal.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? principal.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? principal.FindFirstValue("sub");
+
+        if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return null;
+        }
+
+        var role = principal.FindFirstValue(ClaimTypes.Role) ?? AppRoles.User;
+        var username = principal.FindFirstValue(JwtRegisteredClaimNames.Name)
+            ?? principal.FindFirstValue(ClaimTypes.Name);
+        return new Actor(userId, role, username);
     }
 }
-

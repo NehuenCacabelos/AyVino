@@ -33,7 +33,22 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
 
         if (await userRepository.ExistsByUsernameAsync(normalizedUsername, ct))
         {
-            throw new ConflictException($"El nombre de usuario '{dto.Username}' ya está en uso.");
+            if (string.Equals(dto.Role, AppRoles.Winery, StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = 2;
+                var candidate = $"{normalizedUsername} {suffix}";
+                while (await userRepository.ExistsByUsernameAsync(candidate, ct))
+                {
+                    suffix++;
+                    candidate = $"{normalizedUsername} {suffix}";
+                }
+                normalizedUsername = candidate;
+                dto = dto with { Username = normalizedUsername };
+            }
+            else
+            {
+                throw new ConflictException($"El nombre de usuario '{dto.Username}' ya está en uso.");
+            }
         }
 
         var userEntity = dto.ToEntity();
@@ -118,7 +133,6 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             id,
             normalizedUsername,
             dto.Bio?.Trim(),
-            dto.Photo?.Trim(),
             ct);
 
         if (!updated)
@@ -129,40 +143,7 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         var updatedUser = existingUser with
         {
             Username = normalizedUsername,
-            Bio = dto.Bio?.Trim(),
-            Photo = dto.Photo?.Trim()
-        };
-
-        return updatedUser.ToResponseDto();
-    }
-
-    public async Task<UserResponseDto> UpdateAvatarAsync(int id, string? photoUrl, CancellationToken ct = default)
-    {
-        if (id <= 0)
-        {
-            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-        }
-
-        var existingUser = await userRepository.GetByIdAsync(id, ct)
-            ?? throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-
-        var normalizedPhoto = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl.Trim();
-
-        var updated = await userRepository.UpdateProfileAsync(
-            id,
-            existingUser.Username,
-            existingUser.Bio,
-            normalizedPhoto,
-            ct);
-
-        if (!updated)
-        {
-            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-        }
-
-        var updatedUser = existingUser with
-        {
-            Photo = normalizedPhoto
+            Bio = dto.Bio?.Trim()
         };
 
         return updatedUser.ToResponseDto();
@@ -182,6 +163,52 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         if (!updated)
         {
             throw new NotFoundException($"Usuario con ID {id} no encontrado.");
+        }
+    }
+
+    public async Task ChangeRoleAsync(int actorId, int targetId, string role, CancellationToken ct = default)
+    {
+        if (targetId <= 0)
+        {
+            throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
+        }
+
+        var targetUser = await userRepository.GetByIdAsync(targetId, ct)
+            ?? throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
+
+        string canonicalRole;
+        if (string.Equals(role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            canonicalRole = AppRoles.Admin;
+        }
+        else if (string.Equals(role, AppRoles.User, StringComparison.OrdinalIgnoreCase))
+        {
+            canonicalRole = AppRoles.User;
+        }
+        else
+        {
+            throw new ValidationException($"Rol inválido: '{role}'. Valores permitidos: Admin, User.");
+        }
+
+        if (targetId == actorId)
+        {
+            throw new ForbiddenException("No se puede modificar el rol de la propia cuenta.");
+        }
+
+        if (string.Equals(targetUser.Role, AppRoles.Winery, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictException("El rol Winery se asigna al registrar una bodega y no puede modificarse manualmente.");
+        }
+
+        if (string.Equals(targetUser.Role, canonicalRole, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var updated = await userRepository.SetRoleAsync(targetId, canonicalRole, ct);
+        if (!updated)
+        {
+            throw new NotFoundException($"Usuario con ID {targetId} no encontrado.");
         }
     }
 

@@ -16,7 +16,7 @@ export interface AuthContextType {
   user: UserProfileDto | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginRequestDto) => Promise<void>;
+  login: (credentials: LoginRequestDto) => Promise<UserProfileDto>;
   register: (data: RegisterRequestDto) => Promise<void>;
   loginDemo: (customUser?: Partial<UserProfileDto>) => void;
   logout: () => Promise<void>;
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [navigate]);
 
-  const login = useCallback(async (credentials: LoginRequestDto): Promise<void> => {
+  const login = useCallback(async (credentials: LoginRequestDto): Promise<UserProfileDto> => {
     setIsLoading(true);
     try {
       const response = await loginApi(credentials);
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
       setUser(response.user);
+      return response.user;
     } finally {
       setIsLoading(false);
     }

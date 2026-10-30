@@ -1,3 +1,7 @@
+using NSubstitute;
+using AyVino.Api.Features.Locations.Services;
+using AyVino.Api.Features.Users.Services;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -140,7 +144,7 @@ public class WineOptimizationTests
     {
         // Arrange
         var fakeWineryRepo = new FakeWineryRepo();
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), null!, null!);
+        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>());
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
@@ -164,7 +168,7 @@ public class WineOptimizationTests
                 RegisterDate = DateTime.UtcNow
             }
         };
-        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), null!, null!);
+        var service = new WineryService(fakeWineryRepo, new FakeLocationRepo(), Substitute.For<ICityRepository>(), Substitute.For<IGeorefClient>(), Substitute.For<IUserService>(), Substitute.For<IJwtTokenGenerator>());
 
         // Act
         var result = await service.ChangeStatusAsync(5, new ChangeWineryStatusRequestDto("Approved"));
@@ -221,6 +225,7 @@ public class WineOptimizationTests
 
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(Vintages.Any(v => v.Id == id));
+        public Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) => Task.FromResult(new WineVintageUsageCounts(0, 0));
     }
 
     private sealed class FakeWineRepo : IWineRepository
@@ -237,6 +242,9 @@ public class WineOptimizationTests
             if (ExistingWineId == id) return Task.FromResult<Wine?>(new Wine { Id = id, Name = "Test Wine" });
             return Task.FromResult<Wine?>(null);
         }
+
+        public Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+            GetByIdAsync(id, ct);
 
         public Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
         {
@@ -259,6 +267,7 @@ public class WineOptimizationTests
 
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWineId == id || WinesById.ContainsKey(id));
+        public Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) => Task.FromResult(new WineUsageCounts(0, 0, 0, 0));
 
         public Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Wine>>([]);
@@ -267,6 +276,9 @@ public class WineOptimizationTests
             Task.FromResult(wineIds.Count());
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
+
+        public Task<AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
+            Task.FromResult(new AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));
     }
 
     private sealed class FakeWineryRepo : IWineryRepository
@@ -275,6 +287,9 @@ public class WineOptimizationTests
 
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWinery?.Id == id ? ExistingWinery : null);
+
+        public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
+            Task.FromResult(ExistingWinery?.UserId == userId ? ExistingWinery : null);
 
         public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Winery>>([]);
@@ -315,6 +330,7 @@ public class WineOptimizationTests
     private sealed class FakeLocationRepo : ILocationRepository
     {
         public Task<Location?> GetByIdAsync(int id, CancellationToken ct = default) => Task.FromResult<Location?>(null);
+        public Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default) => Task.FromResult<Location?>(null);
         public Task<int> CreateAsync(Location location, CancellationToken ct = default) => Task.FromResult(1);
         public Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default) => Task.FromResult(true);
         public Task<IEnumerable<Location>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Location>>([]);

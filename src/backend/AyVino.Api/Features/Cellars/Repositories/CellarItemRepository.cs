@@ -11,7 +11,7 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
         SELECT ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
                w.name AS Name, w.wine_type AS WineType,
                w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
-               wv.year AS Year, wv.image_url AS ImageUrl,
+               wv.year AS Year, wv.image_id AS ImageId,
                wv.rating_sum AS RatingSum, wv.review_count AS ReviewCount,
                ci.quantity AS Quantity, ci.purchase_date AS PurchaseDate, ci.notes AS Notes,
                COALESCE(ci.updated_at, ci.created_at) AS LastChangeAt
@@ -72,7 +72,7 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
                    ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
                    w.name AS Name, w.wine_type AS WineType,
                    w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
-                   wv.year AS Year, wv.image_url AS ImageUrl,
+                   wv.year AS Year, wv.image_id AS ImageId,
                    wv.rating_sum AS RatingSum, wv.review_count AS ReviewCount,
                    ci.quantity AS Quantity, ci.purchase_date AS PurchaseDate, ci.notes AS Notes,
                    COALESCE(ci.updated_at, ci.created_at) AS LastChangeAt

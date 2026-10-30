@@ -23,6 +23,7 @@ import { getEditorialWine, type WineReviewItem } from '../features/wines';
 import { useAuth } from '../features/auth';
 import type { AppOutletContext } from '../components/layout/AppLayout';
 import type { CellarWine } from '../features/cava';
+import { imageUrl } from '../lib/image';
 
 interface ToastState {
   message: string;
@@ -361,7 +362,7 @@ export default function WineDetailPage() {
         agingStatusLabel: `Guarda recomendada: ${activeVintage.agingAdvice.split('.')[0]}`,
         isJewel: false,
         bottle: 'red-black',
-        imageUrl: activeVintage.imageUrl || undefined,
+        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle') : activeVintage.imageUrl) || undefined,
         alcoholContent: activeVintage.alcoholContent,
       };
 
@@ -448,9 +449,9 @@ export default function WineDetailPage() {
 
               {/* Escaparate de la botella */}
               <div className="w-full h-84 sm:h-96 flex items-center justify-center relative z-10 py-6">
-                {activeVintage.imageUrl ? (
+                {activeVintage.imageId || activeVintage.imageUrl ? (
                   <img
-                    src={activeVintage.imageUrl}
+                    src={activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle')! : activeVintage.imageUrl!}
                     alt={`${wine.name} Cosecha ${activeVintage.year}`}
                     className="max-h-full object-contain filter drop-shadow-[0_28px_45px_rgba(0,0,0,0.95)] transition-transform duration-700 hover:scale-[1.03]"
                   />

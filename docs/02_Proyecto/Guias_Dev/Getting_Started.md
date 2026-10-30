@@ -34,10 +34,32 @@ El archivo `compose.yml` en la raíz utiliza variables de entorno para inicializ
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=ayvino_db
-POSTGRES_PORT=5433
+POSTGRES_PORT=5432
 ```
 
-> **¿Por qué puerto 5433?** Se utiliza el puerto `5433` por defecto en lugar de `5432` para evitar colisiones con instancias nativas de PostgreSQL que el desarrollador pudiera tener activas en su máquina local.
+> **Puerto 5432 por defecto**: El contenedor mapea y expone la base de datos en el puerto estándar `5432`. Si ya contás con una instancia nativa de PostgreSQL corriendo localmente que ocupe ese puerto, podés configurar `POSTGRES_PORT=5433` como alternativa tanto en tu `.env` como en la cadena de conexión (`Port=5433`) para evitar colisiones.
+
+### 2.2 Almacenamiento de Imágenes (Cloudinary)
+AyVino utiliza Cloudinary como único proveedor para el almacenamiento, optimización y entrega de imágenes (logos, banners, fotos de botellas/cosechas y avatares de usuario).
+
+**Importante:** Por seguridad, las credenciales nunca deben versionarse en `appsettings.json`. En desarrollo local se configuran mediante **.NET User Secrets**:
+
+```bash
+cd src/backend/AyVino.Api
+dotnet user-secrets set "Cloudinary:CloudName" "<tu-cloud-name>"
+dotnet user-secrets set "Cloudinary:ApiKey" "<tu-api-key>"
+dotnet user-secrets set "Cloudinary:ApiSecret" "<tu-api-secret>"
+dotnet user-secrets set "Cloudinary:Environment" "dev"
+```
+
+En entornos de producción, staging o CI/CD, se proveen como variables de entorno estándar de ASP.NET Core:
+- `Cloudinary__CloudName`
+- `Cloudinary__ApiKey`
+- `Cloudinary__ApiSecret`
+- `Cloudinary__Environment` (debe ser `dev` o `prod`)
+
+> **Degradación Elegante:** Si estas claves no están configuradas en el entorno local, la aplicación inicia y opera con normalidad para todas sus funcionalidades; únicamente las operaciones de subida de imágenes responderán con código `503 Service Unavailable` informando que el servicio de almacenamiento no se encuentra configurado. La lectura pública `GET /api/images/{id}` continúa resolviendo identificadores persistidos sin requerir credenciales locales.
+
 
 ---
 
@@ -68,13 +90,13 @@ dotnet run
 Al iniciar:
 1. `Program.cs` se conectará a PostgreSQL y ejecutará automáticamente el runner de **FluentMigrator**.
 2. Todas las 11 migraciones pendientes se aplicarán de forma transaccional, creando las tablas e insertando los datos iniciales de provincias (`SeedStates`).
-3. El servidor HTTP escuchará por defecto en `http://localhost:5000` (y HTTPS en `https://localhost:5001`).
+3. El servidor HTTP escuchará por defecto en `http://localhost:5230` (y HTTPS en `https://localhost:7128`).
 
 ### Paso 3: Acceder a la Documentación Interactiva de la API
 
 Con el backend en ejecución, abre tu navegador:
-- **Scalar API Reference**: [http://localhost:5000/scalar/v1](http://localhost:5000/scalar/v1)
-- **Especificación OpenAPI (JSON)**: [http://localhost:5000/openapi/v1.json](http://localhost:5000/openapi/v1.json)
+- **Scalar API Reference**: [http://localhost:5230/scalar/v1](http://localhost:5230/scalar/v1)
+- **Especificación OpenAPI (JSON)**: [http://localhost:5230/openapi/v1.json](http://localhost:5230/openapi/v1.json)
 
 > **Nota**: AyVino utiliza Scalar y la especificación nativa de ASP.NET Core (`Microsoft.AspNetCore.OpenApi`). La ruta clásica `/swagger` no está en uso.
 
@@ -123,7 +145,7 @@ Ambos comandos deben culminar con código de salida `0` sin advertencias.
 ## 5. Resolución de Problemas Frecuentes (Troubleshooting)
 
 - **Error de conexión a PostgreSQL (`Npgsql.NpgsqlException`)**:
-  Verifica que el contenedor de Docker esté corriendo con `docker compose ps` y que el puerto en `ConnectionStrings:DefaultConnection` de `appsettings.json` coincida con `POSTGRES_PORT` (por defecto `5433`).
+  Verifica que el contenedor de Docker esté corriendo con `docker compose ps` y que el puerto en `ConnectionStrings:DefaultConnection` (definido en User Secrets o variables de entorno) coincida con `POSTGRES_PORT` (por defecto `5432`, o `5433` si optaste por la alternativa).
 - **Error `401 Unauthorized` al invocar endpoints de administración**:
   Asegúrate de incluir la cabecera `Authorization: Bearer <token>` con un token emitido para un usuario cuyo claim `role` sea `Admin`.
 - **Fallo al compilar el frontend (`tsc not found`)**:

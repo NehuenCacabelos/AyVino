@@ -20,17 +20,31 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
 
     public async Task<IEnumerable<Grape>> GetAllAsync(int pageNumber, int pageSize, int? colorType = null, CancellationToken ct = default)
     {
-        const string sql = """
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (colorType.HasValue)
+        {
+            conditions.Add("color_type = @ColorType");
+            parameters.Add("ColorType", colorType.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
             SELECT id, name, color_type, typical_body, typical_tannins, typical_acidity, description
             FROM grapes
-            WHERE (@ColorType IS NULL OR color_type = @ColorType)
+            {whereClause}
             ORDER BY name
             OFFSET @Offset LIMIT @PageSize;
             """;
-        var offset = (pageNumber - 1) * pageSize;
+
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Grape>(
-            new CommandDefinition(sql, new { ColorType = colorType, Offset = offset, PageSize = pageSize }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
     public async Task<int> CreateAsync(Grape grape, CancellationToken ct = default)

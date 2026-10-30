@@ -1,11 +1,18 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Security;
+using AyVino.Api.Features.Audit.Enums;
+using AyVino.Api.Features.Audit.Services;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Repositories;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Reviews.Services;
 
-public class ReviewService(IReviewRepository reviewRepository, IWineVintageRepository wineVintageRepository) : IReviewService
+public class ReviewService(
+    IReviewRepository reviewRepository,
+    IWineVintageRepository wineVintageRepository,
+    IAuditService? auditService = null) : IReviewService
 {
     public async Task<ReviewResponseDto> CreateAsync(CreateReviewRequestDto request, int userId, CancellationToken ct = default)
     {
@@ -47,16 +54,44 @@ public class ReviewService(IReviewRepository reviewRepository, IWineVintageRepos
             ?? throw new NotFoundException($"Review con ID {id} no encontrada.");
     }
 
-    public async Task DeleteAsync(int id, int userId, CancellationToken ct = default)
+    public async Task DeleteAsync(int id, Actor actor, CancellationToken ct = default)
     {
         var existing = await reviewRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Review con ID {id} no encontrada.");
 
-        if (existing.UserId != userId)
+        if (existing.UserId != actor.UserId && !actor.IsAdmin)
             throw new ForbiddenException("No podés borrar la reseña de otro usuario.");
 
         var success = await reviewRepository.DeleteAsync(id, ct);
         if (!success) throw new NotFoundException($"Review con ID {id} no encontrada.");
+
+        if (actor.IsAdmin && existing.UserId != actor.UserId && auditService != null)
+        {
+            var username = actor.Username ?? $"User#{actor.UserId}";
+            var details = $"Autor ID: {existing.UserId}, Puntaje: {existing.Rating}";
+            await auditService.RecordAsync(actor.UserId, username, AuditAction.ReviewDeletedByAdmin, "Review", id, details, ct);
+        }
+    }
+
+    public Task DeleteAsync(int id, int userId, CancellationToken ct = default)
+        => DeleteAsync(id, new Actor(userId, AppRoles.User), ct);
+
+    public async Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(
+        int pageNumber,
+        int pageSize,
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        int? rating = null,
+        CancellationToken ct = default)
+    {
+        ValidatePagination(pageNumber, pageSize);
+        if (rating.HasValue)
+        {
+            ValidateRating(rating.Value);
+        }
+
+        return await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
     }
 
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default)

@@ -12,10 +12,10 @@ public static class UserMappingExtensions
             Email: dto.Email,
             Password: dto.Password,
             Role: AppRoles.User,
-            Bio: dto.Bio,
-            Photo: dto.Photo
+            Bio: dto.Bio
         );
     }
+
     public static User ToEntity(this CreateUserRequestDto dto)
     {
         return new User
@@ -25,7 +25,6 @@ public static class UserMappingExtensions
             Role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim(),
             RegisterDate = DateTime.UtcNow,
             IsActive = true,
-            Photo = dto.Photo?.Trim(),
             Bio = dto.Bio?.Trim()
         };
     }
@@ -39,7 +38,7 @@ public static class UserMappingExtensions
             Role: user.Role,
             RegisterDate: user.RegisterDate,
             IsActive: user.IsActive,
-            Photo: user.Photo,
+            AvatarImageId: user.AvatarImageId,
             Bio: user.Bio
         );
     }
@@ -61,4 +60,3 @@ public static class UserMappingExtensions
         };
     }
 }
-

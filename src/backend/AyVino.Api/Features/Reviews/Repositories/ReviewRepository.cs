@@ -87,6 +87,73 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
             }, cancellationToken: ct));
     }
 
+    public async Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(
+        int pageNumber,
+        int pageSize,
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        int? rating = null,
+        CancellationToken ct = default)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (wineId.HasValue)
+        {
+            conditions.Add("v.wine_id = @WineId");
+            parameters.Add("WineId", wineId.Value);
+        }
+
+        if (wineVintageId.HasValue)
+        {
+            conditions.Add("r.wine_vintage_id = @WineVintageId");
+            parameters.Add("WineVintageId", wineVintageId.Value);
+        }
+
+        if (userId.HasValue)
+        {
+            conditions.Add("r.user_id = @UserId");
+            parameters.Add("UserId", userId.Value);
+        }
+
+        if (rating.HasValue)
+        {
+            conditions.Add("r.rating = @Rating");
+            parameters.Add("Rating", rating.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT
+                r.id AS Id,
+                r.rating AS Rating,
+                r.comment AS Comment,
+                r.created_at AS CreatedAt,
+                r.user_id AS UserId,
+                u.username AS Username,
+                r.wine_vintage_id AS WineVintageId,
+                v.wine_id AS WineId,
+                w.name AS WineName,
+                v.year AS Year
+            FROM reviews r
+            JOIN wine_vintages v ON r.wine_vintage_id = v.id
+            JOIN wines w ON v.wine_id = w.id
+            LEFT JOIN users u ON r.user_id = u.id
+            {whereClause}
+            ORDER BY r.created_at DESC, r.id DESC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<AdminReviewListItemDto>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
     public async Task<bool> ExistsForUserAndVintageAsync(int userId, int wineVintageId, CancellationToken ct = default)
     {
         const string sql = """

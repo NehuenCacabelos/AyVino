@@ -6,19 +6,29 @@ namespace AyVino.Api.Features.Locations.Repositories;
 
 public class LocationRepository(IDbConnectionFactory connectionFactory) : ILocationRepository
 {
+    private const string SelectColumns = """
+        l.Id, l.city_id AS CityId, c.Name AS CityName, c.state_id AS StateId, s.Name AS StateName
+        FROM Locations l
+        INNER JOIN Cities c ON c.Id = l.city_id
+        INNER JOIN States s ON s.Id = c.state_id
+        """;
+
     public async Task<Location?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT l.Id, l.city_id AS CityId, c.Name AS CityName, c.state_id AS StateId, s.Name AS StateName
-            FROM Locations l
-            INNER JOIN Cities c ON c.Id = l.city_id
-            INNER JOIN States s ON s.Id = c.state_id
-            WHERE l.Id = @Id;
-            """;
+        var sql = $"SELECT {SelectColumns} WHERE l.Id = @Id;";
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleOrDefaultAsync<Location>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default)
+    {
+        var sql = $"SELECT {SelectColumns} WHERE l.city_id = @CityId;";
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Location>(
+            new CommandDefinition(sql, new { CityId = cityId }, cancellationToken: ct));
     }
 
     public async Task<int> CreateAsync(Location location, CancellationToken ct = default)
@@ -47,11 +57,8 @@ public class LocationRepository(IDbConnectionFactory connectionFactory) : ILocat
 
     public async Task<IEnumerable<Location>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT l.Id, l.city_id AS CityId, c.Name AS CityName, c.state_id AS StateId, s.Name AS StateName
-            FROM Locations l
-            INNER JOIN Cities c ON c.Id = l.city_id
-            INNER JOIN States s ON s.Id = c.state_id
+        var sql = $"""
+            SELECT {SelectColumns}
             ORDER BY l.Id ASC
             OFFSET @Offset LIMIT @PageSize;
             """;

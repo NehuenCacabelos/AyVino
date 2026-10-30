@@ -1,6 +1,7 @@
 export interface PublicUserProfileDto {
   id: number;
   username: string;
+  avatarImageId?: string | null;
   photo?: string | null;
   bio?: string | null;
   registerDate: string;
@@ -17,6 +18,7 @@ export interface PublicCellarItemDto {
   wineryId?: number | null;
   wineryNameText?: string | null;
   year?: number | null;
+  imageId?: string | null;
   imageUrl?: string | null;
   averageRating?: number | null;
   reviewCount: number;
@@ -52,6 +54,7 @@ export interface CellarItemDto {
   wineryId?: number | null;
   wineryNameText?: string | null;
   year?: number | null;
+  imageId?: string | null;
   imageUrl?: string | null;
   averageRating?: number | null;
   reviewCount: number;

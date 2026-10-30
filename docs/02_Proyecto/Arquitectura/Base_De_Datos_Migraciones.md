@@ -43,6 +43,13 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
 | `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
 | `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
+| `20261022001` | `AddGeorefIdToStatesAndCities.cs` | `states`, `cities` | Códigos Georef oficiales para las 24 provincias argentinas e índice único para `georef_id` en departamentos. |
+| `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
+| `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
+| `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
+| `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
+| `20261029001` | `CreateImagesTable.cs` | `images` | Tabla relacional para metadatos de imágenes en Cloudinary (`id` UUID, `provider`, `external_id`, `mime_type`, `size_bytes`, `width`, `height`, `created_at`) con índice único sobre `external_id`. |
+| `20261029002` | `AddImageReferencesToEntities.cs` | `users`, `wineries`, `wine_vintages` | Claves foráneas UUID hacia `images`: `users.avatar_image_id` (`ON DELETE SET NULL`), `wineries.logo_image_id` (`ON DELETE RESTRICT`), `wineries.banner_image_id` (`ON DELETE RESTRICT`), `wine_vintages.image_id` (`ON DELETE RESTRICT`). |
 
 ---
 
@@ -123,6 +130,10 @@ erDiagram
         string website_url
         string email
         string phone
+        uuid logo_image_id FK "nullable"
+        uuid banner_image_id FK "nullable"
+        decimal latitude "nullable"
+        decimal longitude "nullable"
         int status "Pending/Approved/Rejected"
     }
 
@@ -147,7 +158,7 @@ erDiagram
         decimal alcohol_content "nullable"
         int serving_temperature "nullable"
         string aging_advice
-        string image_url
+        uuid image_id FK "nullable"
         int approval_status
         int uploaded_by_user_id FK
         datetime register_date
@@ -220,7 +231,48 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
+
+    IMAGES {
+        uuid id PK
+        string provider
+        string external_id UK
+        string mime_type
+        bigint size_bytes
+        int width
+        int height
+        datetime created_at
+    }
 ```
+
+### Tabla `images` y Reglas de Integridad Referencial
+
+La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los metadatos de archivos subidos al proveedor Cloudinary:
+- `id` (`UUID PK`): Identificador único expuesto hacia el frontend (`/api/images/{id}`).
+- `provider` (`varchar(50)`): Proveedor de almacenamiento (fijo `"cloudinary"`).
+- `external_id` (`varchar(300) UK`): Public ID asignado en Cloudinary (ej: `ayvino/wineries/logos/abc123_400x400`). Cuenta con índice único `ix_images_external_id`.
+- `mime_type` (`varchar(100)`): Tipo MIME validado por magic bytes (`image/jpeg`, `image/png`, `image/webp`).
+- `size_bytes` (`bigint`): Peso del archivo en bytes (límite máximo 5 MB).
+- `width` (`int`) y `height` (`int`): Dimensiones de la imagen en píxeles informadas por Cloudinary.
+- `created_at` (`timestamptz`): Fecha y hora UTC de subida.
+
+**Reglas de Claves Foráneas hacia `images`**:
+Todas las referencias foráneas hacia `images` están configuradas con `ON DELETE SET NULL` en la migración `M20261029002_AddImageReferencesToEntities` y en el esquema relacional:
+- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si el registro de la imagen es eliminado, el usuario pasa a `null`, reactivando transparentemente el avatar determinista de DiceBear.
+- `wineries.logo_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con logo `null`, mostrando su placeholder inicial.
+- `wineries.banner_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con banner `null`, aplicando el gradiente temático de respaldo.
+- `wine_vintages.image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la cosecha queda con `null`, mostrando la silueta estándar de botella.
+
+**Justificación de `ON DELETE SET NULL` y Orden Transaccional**:
+Garantiza el desacoplamiento total entre el ciclo de vida de los archivos multimedia y las entidades principales de negocio. La eliminación de una imagen nunca bloquea ni destruye en cascada a la bodega, vino o usuario. Adicionalmente, el orquestador (`ImageTransactionRunner`) ejecuta el orden estricto de dos pasos: primero actualiza a `null` (o al nuevo ID) la referencia en la entidad padre, y recién después elimina la fila en la tabla `images`.
+
+### Eliminación de Columnas Legacy (Migración `M20261029003`)
+Tras migrar el almacenamiento al modelo unificado de identificadores de imagen referenciales, la migración `M20261029003_RemoveLegacyImageColumns` elimina de forma definitiva en `Up()` las columnas obsoletas de tipo string/URL:
+- `users.photo`
+- `wineries.logo_url`
+- `wineries.banner_url`
+- `wine_vintages.image_url`
+
+El método `Down()` las reconstituye con sus tipos originales (`string/varchar`, nullable) garantizando reversibilidad total.
 
 ---
 

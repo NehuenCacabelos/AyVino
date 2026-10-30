@@ -83,86 +83,10 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task UpdateAvatarAsync_ValidIdAndPhoto_UpdatesAndReturnsDto()
-    {
-        // Arrange
-        var user = new User
-        {
-            Id = 5,
-            Username = "lucasvino",
-            Email = "lucas@example.com",
-            Role = "User",
-            Bio = "Sommelier en formación",
-            Photo = null
-        };
-
-        _userRepository.GetByIdAsync(5, Arg.Any<CancellationToken>())
-            .Returns(user);
-        _userRepository.UpdateProfileAsync(5, "lucasvino", "Sommelier en formación", "/uploads/avatars/5_photo.webp", Arg.Any<CancellationToken>())
-            .Returns(true);
-
-        // Act
-        var result = await _userService.UpdateAvatarAsync(5, " /uploads/avatars/5_photo.webp ");
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.Id);
-        Assert.Equal("/uploads/avatars/5_photo.webp", result.Photo);
-        await _userRepository.Received(1).UpdateProfileAsync(5, "lucasvino", "Sommelier en formación", "/uploads/avatars/5_photo.webp", Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task UpdateAvatarAsync_EmptyOrWhitespacePhoto_SetsPhotoToNull()
-    {
-        // Arrange
-        var user = new User
-        {
-            Id = 5,
-            Username = "lucasvino",
-            Email = "lucas@example.com",
-            Photo = "/uploads/avatars/old.webp"
-        };
-
-        _userRepository.GetByIdAsync(5, Arg.Any<CancellationToken>())
-            .Returns(user);
-        _userRepository.UpdateProfileAsync(5, "lucasvino", null, null, Arg.Any<CancellationToken>())
-            .Returns(true);
-
-        // Act
-        var result = await _userService.UpdateAvatarAsync(5, "   ");
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.Photo);
-        await _userRepository.Received(1).UpdateProfileAsync(5, "lucasvino", null, null, Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task UpdateAvatarAsync_UserNotFound_ThrowsNotFoundException()
-    {
-        // Arrange
-        _userRepository.GetByIdAsync(999, Arg.Any<CancellationToken>())
-            .Returns((User?)null);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => _userService.UpdateAvatarAsync(999, "/uploads/photo.jpg"));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task UpdateAvatarAsync_InvalidId_ThrowsNotFoundException(int id)
-    {
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => _userService.UpdateAvatarAsync(id, "/uploads/photo.jpg"));
-        await _userRepository.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task GetPublicProfileByUsernameAsync_ExistingUser_ReturnsPublicUserProfileDto()
     {
         // Arrange
-        var profile = new PublicUserProfileDto(1, "sommelier_pro", "/uploads/avatar.webp", "Amante del buen vino", DateTime.UtcNow, 15, 42, 10);
+        var profile = new PublicUserProfileDto(1, "sommelier_pro", Guid.NewGuid(), "Amante del buen vino", DateTime.UtcNow, 15, 42, 10);
         _userRepository.GetPublicProfileByUsernameAsync("sommelier_pro", Arg.Any<CancellationToken>())
             .Returns(profile);
 

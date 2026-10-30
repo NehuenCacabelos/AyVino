@@ -12,6 +12,13 @@ public static class LocationEndpoints
     {
         var group = app.MapGroup("/api/locations").WithTags("Locations");
 
+        group.MapGet("/resolve", async (decimal lat, decimal lon, ILocationService locationService, CancellationToken ct) =>
+            Results.Ok(await locationService.ResolveCoordinatesAsync(lat, lon, ct)))
+            .AllowAnonymous()
+            .RequireRateLimiting("MapResolveLimit")
+            .WithName("ResolveLocationByCoordinates")
+            .WithSummary("Resolves geographic coordinates (lat/lon) into official Argentine Province, Department and Location.");
+
         group.MapPost("/", async (CreateLocationRequestDto request, ILocationService locationService, CancellationToken ct) =>
         {
             var created = await locationService.CreateAsync(request, ct);

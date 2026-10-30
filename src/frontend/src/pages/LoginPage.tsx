@@ -11,9 +11,25 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
  * Inputs directos sin labels externas (solo placeholder amplio interior).
  * Botón primario y campos con curvas uniformes (rounded-xl h-12).
  * Columna derecha: Foto vertical con degradado hacia la columna izquierda.
+ * Redirige a /bodega/dashboard si el usuario autenticado tiene rol Winery.
  */
+// Resolución de ruta de inicio garantizando que Bodegas y Administradores vayan a su panel operativo
+function resolveTargetRoute(role?: string, customRedirectPath?: string | null): string {
+  if (role === 'Admin') {
+    return customRedirectPath && customRedirectPath !== '/dashboard' && customRedirectPath !== '/'
+      ? customRedirectPath
+      : '/admin';
+  }
+  if (role === 'Winery') {
+    return customRedirectPath && customRedirectPath !== '/dashboard' && customRedirectPath !== '/'
+      ? customRedirectPath
+      : '/bodega/dashboard';
+  }
+  return customRedirectPath ?? '/dashboard';
+}
+
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,23 +42,26 @@ export default function LoginPage() {
 
   // Validación segura de la ruta de redirección desde el state de navegación
   const locationState = location.state as Record<string, unknown> | null;
-  const redirectPath =
+  const customRedirectPath =
     locationState &&
     typeof locationState === 'object' &&
     'from' in locationState &&
-    locationState.from &&
-    typeof locationState.from === 'object' &&
-    'pathname' in (locationState.from as Record<string, unknown>) &&
-    typeof (locationState.from as Record<string, unknown>).pathname === 'string'
-      ? ((locationState.from as Record<string, unknown>).pathname as string)
-      : '/dashboard';
+    locationState.from
+      ? typeof locationState.from === 'string'
+        ? locationState.from
+        : typeof locationState.from === 'object' &&
+          'pathname' in (locationState.from as Record<string, unknown>) &&
+          typeof (locationState.from as Record<string, unknown>).pathname === 'string'
+        ? ((locationState.from as Record<string, unknown>).pathname as string)
+        : null
+      : null;
 
-  // Redirigir a la ruta original o al Dashboard si ya tiene sesión activa
+  // Redirigir al Dashboard correspondiente si ya tiene sesión activa
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(redirectPath, { replace: true });
+      navigate(resolveTargetRoute(user?.role, customRedirectPath), { replace: true });
     }
-  }, [isAuthenticated, navigate, redirectPath]);
+  }, [isAuthenticated, user?.role, customRedirectPath, navigate]);
 
   const clearError = (field: string) => {
     if (errors[field]) {
@@ -75,12 +94,16 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login({ email: email.trim(), password });
-      navigate(redirectPath, { replace: true });
+      const loggedUser = await login({ email: email.trim(), password });
+      navigate(resolveTargetRoute(loggedUser?.role, customRedirectPath), { replace: true });
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
-        detail = err.response?.data?.detail ?? err.response?.data?.title;
+        if (!err.response) {
+          detail = 'No se pudo conectar con el servidor backend. Verificá que la API esté iniciada en http://localhost:5230.';
+        } else {
+          detail = err.response?.data?.detail ?? err.response?.data?.title;
+        }
       }
       setErrorMessage(
         detail ??
@@ -130,7 +153,7 @@ export default function LoginPage() {
                 Bienvenido de nuevo
               </h1>
               <p className="text-sm text-zinc-400 mt-2 font-sans font-light">
-                Ingresá a tu cava personal y gestioná tus etiquetas.
+                Ingresá a tu cava personal o panel de bodega y gestioná tus etiquetas.
               </p>
             </div>
 
@@ -236,14 +259,23 @@ export default function LoginPage() {
           </div>
 
           {/* Footer Inferior Fijo */}
-          <div className="text-center text-xs text-zinc-400">
+          <div className="text-center text-xs text-zinc-400 space-y-1.5">
             <p>
               ¿Todavía no tenés tu perfil?{' '}
               <Link
                 to="/register"
                 className="text-zinc-200 hover:text-white font-medium underline transition-colors"
               >
-                Crear cuenta acá
+                Creá tu cuenta acá
+              </Link>
+            </p>
+            <p className="text-[11px] text-zinc-500">
+              ¿Sos productor vitivinícola?{' '}
+              <Link
+                to="/bodega/registro"
+                className="text-rose-300/80 hover:text-rose-200 underline transition-colors"
+              >
+                Registrá tu bodega acá
               </Link>
             </p>
           </div>

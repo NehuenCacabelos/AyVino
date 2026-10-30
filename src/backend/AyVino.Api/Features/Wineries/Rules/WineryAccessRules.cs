@@ -14,8 +14,11 @@ public static class WineryAccessRules
     public static bool CanManage(Winery? winery, Actor actor)
         => actor.IsAdmin || IsOwner(winery, actor);
 
-    // Puede publicar/reclamar vinos oficiales a nombre de la bodega: Admin, o dueño con la bodega Approved.
+    // Puede publicar vinos oficiales a nombre de la bodega: Admin, o dueño con bodega Approved o Pending (Rejected bloqueada).
     public static bool CanPublish(Winery? winery, Actor actor)
-        => actor.IsAdmin || (IsOwner(winery, actor) && winery!.Status == WineryStatus.Approved);
-}
+        => actor.IsAdmin || (IsOwner(winery, actor) && winery?.Status != WineryStatus.Rejected);
 
+    // Puede reclamar vinos comunitarios: Admin, o dueño con la bodega estrictamente Approved.
+    public static bool CanClaim(Winery? winery, Actor actor)
+        => actor.IsAdmin || (IsOwner(winery, actor) && winery?.Status == WineryStatus.Approved);
+}

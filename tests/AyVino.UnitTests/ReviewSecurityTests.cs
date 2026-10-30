@@ -139,6 +139,16 @@ public class ReviewSecurityTests
         public Task<IEnumerable<ReviewResponseDto>> GetAllByWineAsync(int wineId, int pageNumber, int pageSize, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<ReviewResponseDto>>([]);
 
+        public Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(
+            int pageNumber,
+            int pageSize,
+            int? wineId = null,
+            int? wineVintageId = null,
+            int? userId = null,
+            int? rating = null,
+            CancellationToken ct = default) =>
+            Task.FromResult<IEnumerable<AdminReviewListItemDto>>([]);
+
         public Task<bool> ExistsForUserAndVintageAsync(int userId, int wineVintageId, CancellationToken ct = default) =>
             Task.FromResult(false);
 
@@ -192,6 +202,9 @@ public class ReviewSecurityTests
 
         public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
             throw new NotImplementedException();
+
+        public Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(new WineVintageUsageCounts(0, 0));
     }
 }
 

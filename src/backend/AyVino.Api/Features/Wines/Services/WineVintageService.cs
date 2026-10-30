@@ -1,11 +1,15 @@
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Wineries.Enums;
+using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Wines.Services;
@@ -16,19 +20,77 @@ public class WineVintageService(
     IGrapeRepository grapeRepository,
     IWineryRepository wineryRepository) : IWineVintageService
 {
-    public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, CancellationToken ct = default)
+    public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, Actor? actor = null, CancellationToken ct = default)
     {
         var vintage = await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+
+        var wine = await wineRepository.GetByIdAsync(wineId, ct);
+        Winery? winery = null;
+        if (wine?.WineryId is int wid && wineryRepository != null)
+        {
+            winery = await wineryRepository.GetByIdAsync(wid, ct);
+            if (winery != null && winery.Status != WineryStatus.Approved)
+            {
+                var isOwnerOrAdmin = actor?.IsAdmin == true || (actor != null && WineryAccessRules.IsOwner(winery, actor));
+                if (!isOwnerOrAdmin)
+                    throw new NotFoundException($"Wine with ID {wineId} not found.");
+            }
+        }
+
+        // Regla de visibilidad:
+        // Una añada Pending/Rejected solo la ven el dueño, el uploader y los admin.
+        if (vintage.ApprovalStatus != ApprovalStatus.Approved)
+        {
+            var isUploader = actor != null && vintage.UploadedByUserId == actor.UserId;
+            var isAdmin = actor?.IsAdmin == true;
+            var isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
+
+            if (!isAdmin && !isUploader && !isWineryOwner)
+            {
+                throw new NotFoundException($"Vintage with ID {vintageId} not found for wine {wineId}.");
+            }
+        }
+
         var grapes = await vintageRepository.GetGrapesByVintageIdAsync(vintageId, ct);
         return vintage.ToResponseDto(grapes);
     }
 
-    public async Task<IEnumerable<WineVintageResponseDto>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default)
+    public async Task<IEnumerable<WineVintageResponseDto>> GetAllByWineIdAsync(int wineId, Actor? actor = null, CancellationToken ct = default)
     {
-        if (!await wineRepository.ExistsByIdAsync(wineId, ct))
+        var wine = await wineRepository.GetByIdAsync(wineId, ct);
+        if (wine is null)
             throw new NotFoundException($"Wine with ID {wineId} not found.");
 
+        Winery? winery = null;
+        if (wine.WineryId is int wid && wineryRepository != null)
+        {
+            winery = await wineryRepository.GetByIdAsync(wid, ct);
+            if (winery != null && winery.Status != WineryStatus.Approved)
+            {
+                var isOwnerOrAdmin = actor?.IsAdmin == true || (actor != null && WineryAccessRules.IsOwner(winery, actor));
+                if (!isOwnerOrAdmin)
+                    throw new NotFoundException($"Wine with ID {wineId} not found.");
+            }
+        }
+
         var vintages = (await vintageRepository.GetAllByWineIdAsync(wineId, ct)).ToList();
+        if (vintages.Count == 0)
+        {
+            return [];
+        }
+
+        // Filtrar visibilidad de las cosechas:
+        // Una cosecha Pending/Rejected solo la ven el dueño de la bodega, el uploader y los admin.
+        var isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
+        var isAdmin = actor?.IsAdmin == true;
+
+        vintages = vintages.Where(v =>
+            v.ApprovalStatus == ApprovalStatus.Approved
+            || isAdmin
+            || isWineryOwner
+            || (actor != null && v.UploadedByUserId == actor.UserId)
+        ).ToList();
+
         if (vintages.Count == 0)
         {
             return [];
@@ -41,18 +103,35 @@ public class WineVintageService(
         return vintages.Select(v => v.ToResponseDto(grapesByVintageId[v.Id]));
     }
 
-    public async Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, int userId, CancellationToken ct = default)
+    public async Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, Actor actor, CancellationToken ct = default)
     {
-        if (!await wineRepository.ExistsByIdAsync(wineId, ct))
+        var wine = await wineRepository.GetByIdAsync(wineId, ct);
+        if (wine is null)
             throw new NotFoundException($"Wine with ID {wineId} not found.");
+
+        if (wine.WineryId is int wineryId && !actor.IsAdmin)
+        {
+            var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
+                ?? throw new ValidationException($"Winery with ID {wineryId} does not exist.");
+
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("Solo el dueño de la bodega puede crear cosechas a su nombre.");
+
+            if (!WineryAccessRules.CanPublish(winery, actor))
+                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para crear cosechas.");
+        }
+
 
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var vintageEntity = dto.ToEntity(userId, wineId);
+        var vintageEntity = dto.ToEntity(actor.UserId, wineId);
         var vintage = await vintageRepository.CreateAsync(vintageEntity, grapes, ct);
         return vintage.ToResponseDto(grapes);
     }
+
+    public Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, int userId, CancellationToken ct = default) =>
+        CreateAsync(wineId, dto, new Actor(userId, AppRoles.User), ct);
 
     public async Task<WineVintageResponseDto> UpdateAsync(int wineId, int vintageId, UpdateWineVintageRequestDto dto, Actor actor, CancellationToken ct = default)
     {
@@ -74,8 +153,12 @@ public class WineVintageService(
                     throw new ForbiddenException(isUploader
                         ? "No podés editar una cosecha que ya fue moderada."
                         : "No tenés permiso para editar esta cosecha.");
+
+                if (!WineryAccessRules.CanPublish(winery, actor))
+                    throw new ForbiddenException("La bodega debe estar aprobada o pendiente para editar cosechas.");
             }
         }
+
 
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
@@ -84,7 +167,7 @@ public class WineVintageService(
         var updated = await vintageRepository.UpdateAsync(vintageEntity, grapes, ct);
         if (!updated) throw new NotFoundException($"Vintage with ID {vintageId} not found.");
 
-        return await GetByIdAsync(wineId, vintageId, ct);
+        return await GetByIdAsync(wineId, vintageId, actor, ct);
     }
 
     public async Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, ChangeWineVintageStatusRequestDto dto, CancellationToken ct = default)
@@ -97,13 +180,41 @@ public class WineVintageService(
         var updated = await vintageRepository.UpdateStatusAsync(vintageId, (int)parsedStatus, ct);
         if (!updated) throw new NotFoundException($"Vintage with ID {vintageId} not found.");
 
-        return await GetByIdAsync(wineId, vintageId, ct);
+        var vintage = await vintageRepository.GetByIdAsync(vintageId, ct)
+            ?? throw new NotFoundException($"Vintage with ID {vintageId} not found.");
+        var grapes = await vintageRepository.GetGrapesByVintageIdAsync(vintageId, ct);
+        return vintage.ToResponseDto(grapes);
     }
 
     public async Task DeleteAsync(int wineId, int vintageId, CancellationToken ct = default)
     {
         await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+        var usage = await vintageRepository.GetUsageCountsAsync(vintageId, ct);
+        if (usage.HasUserHistory)
+        {
+            throw new ConflictException(
+                $"No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, cava: {usage.CellarItemCount}). Podés rechazarla en lugar de eliminarla para preservar el historial.");
+        }
         await vintageRepository.DeleteAsync(vintageId, ct);
+    }
+
+    public async Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
+    {
+        if (pageNumber <= 0)
+            throw new ValidationException("pageNumber debe ser mayor a 0.");
+        if (pageSize is < 1 or > 100)
+            throw new ValidationException("pageSize debe estar entre 1 y 100.");
+
+        int? statusValue = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+                throw new ValidationException($"Invalid status: '{status}'.");
+            statusValue = (int)parsedStatus;
+        }
+
+        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        return rows.ToListItemDtoList();
     }
 
     // El "ownership check" (wineId de la URL vs. wine_id real del vintage) evita que alguien

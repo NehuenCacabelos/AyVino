@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
 
@@ -11,13 +13,13 @@ public static class WineEndpoints
     {
         var group = app.MapGroup("/api/wines").WithTags("Wines");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, ct)))
+        group.MapGet("/", async (int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, user.GetActorOrNull(), ct)))
             .WithName("GetAllWines")
             .WithSummary("Lists wine labels, paginated. Year/grape filters match against any of the label's vintages.");
 
-        group.MapGet("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.GetByIdAsync(id, ct)))
+        group.MapGet("/{id:int}", async (int id, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetByIdAsync(id, user.GetActorOrNull(), ct)))
             .WithName("GetWineById")
             .WithSummary("Gets a wine label with its overall rating. See /vintages for the per-year breakdown.");
 
@@ -34,7 +36,8 @@ public static class WineEndpoints
             Results.Ok(await service.UpdateAsync(id, request, user.GetActor(), ct)))
             .RequireAuthorization()
             .WithName("UpdateWine")
-            .WithSummary("Updates a wine label's data (name, type, winery, location, description).");
+            .WithSummary("Updates a wine label's data (name, type, winery, location, description).")
+            .WithAudit(AuditAction.WineUpdatedByAdmin, "Wine", idRouteKey: "id", adminOnly: true, details: (ctx, res) => ctx.Arguments.OfType<UpdateWineRequestDto>().FirstOrDefault()?.Name);
 
         group.MapDelete("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
         {
@@ -43,7 +46,8 @@ public static class WineEndpoints
         })
             .RequireAuthorization(AppPolicies.RequireAdmin)
             .WithName("DeleteWine")
-            .WithSummary("Deletes a wine label and all of its vintages (cascade).");
+            .WithSummary("Deletes a wine label and all of its vintages (cascade).")
+            .WithAudit(AuditAction.WineDeleted, "Wine", idRouteKey: "id");
 
         group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.GetClaimCandidatesAsync(wineryId, user.GetActor(), ct)))
@@ -57,12 +61,17 @@ public static class WineEndpoints
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
 
-        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, ct)))
+        group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, user.GetActorOrNull(), ct)))
             .WithName("SearchWines")
             .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
 
-        
+        group.MapPost("/{targetId:int}/merge/{duplicateId:int}", async (int targetId, int duplicateId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.MergeWinesAsync(targetId, duplicateId, user.GetActor(), ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .WithName("MergeWines")
+            .WithSummary("Fusiona un vino duplicado dentro del vino principal.")
+            .WithAudit(AuditAction.WineMerged, "Wine", idRouteKey: "targetId", details: (ctx, res) => ctx.HttpContext.Request.RouteValues.TryGetValue("duplicateId", out var dupId) ? dupId?.ToString() : null);
 
         return app;
     }

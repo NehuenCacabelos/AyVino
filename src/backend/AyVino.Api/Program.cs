@@ -6,6 +6,9 @@ using AyVino.Api.Common.Middleware;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Security.Jwt;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Repositories;
+using AyVino.Api.Features.Audit.Services;
 using AyVino.Api.Features.Auth.Endpoints;
 using AyVino.Api.Features.Auth.Services;
 using AyVino.Api.Features.Auth.Repositories;
@@ -38,12 +41,23 @@ using AyVino.Api.Features.Follows.Services;
 using AyVino.Api.Features.UserWines.Endpoints;
 using AyVino.Api.Features.UserWines.Repositories;
 using AyVino.Api.Features.UserWines.Services;
+using AyVino.Api.Features.Images.Endpoints;
+using AyVino.Api.Features.Images.Services;
+using AyVino.Api.Features.Images.Configuration;
+using AyVino.Api.Features.Images.Repositories;
+using CloudinaryDotNet;
 using AyVino.Api.Features.Cellars.Endpoints;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Cellars.Services;
+using AyVino.Api.Features.WineryCatalog.Endpoints;
+using AyVino.Api.Features.WineryCatalog.Repositories;
+using AyVino.Api.Features.WineryCatalog.Services;
 using AyVino.Api.Features.WineCare.Endpoints;
 using AyVino.Api.Features.WineCare.Repositories;
 using AyVino.Api.Features.WineCare.Services;
+using AyVino.Api.Features.AdminStats.Endpoints;
+using AyVino.Api.Features.AdminStats.Repositories;
+using AyVino.Api.Features.AdminStats.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -69,7 +83,7 @@ builder.Services.ConfigureJsonOptions();
 // CORS configuration
 const string frontendCorsPolicy = "FrontendPolicy";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:5173", "http://localhost:3000"];
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:3000", "http://127.0.0.1:3000"];
 
 builder.Services.AddCors(options =>
 {
@@ -100,6 +114,20 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 15,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
+            });
+    });
+
+    options.AddPolicy("MapResolveLimit", context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ipAddress,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 2
             });
     });
 });
@@ -189,15 +217,39 @@ builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlConnectionFactory>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
+// Georef Client (HttpClient tipado con BaseAddress)
+builder.Services.AddHttpClient<IGeorefClient, GeorefClient>(client =>
+{
+    client.BaseAddress = new Uri("https://apis.datos.gob.ar/georef/api/v2.0/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+
+// Cloudinary Configuration
+var cloudinaryOptions = builder.Configuration.GetSection(CloudinaryOptions.SectionName).Get<CloudinaryOptions>() ?? new CloudinaryOptions();
+cloudinaryOptions.Validate();
+
+builder.Services.AddSingleton(cloudinaryOptions);
+builder.Services.AddSingleton(new Cloudinary(new Account(
+    cloudinaryOptions.CloudName,
+    cloudinaryOptions.ApiKey,
+    cloudinaryOptions.ApiSecret
+)));
+builder.Services.AddSingleton<ICloudinaryClient, CloudinaryClientWrapper>();
+builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
+builder.Services.AddScoped<IImageRepository, ImageRepository>();
+builder.Services.AddScoped<IImageTransactionRunner, ImageTransactionRunner>();
+builder.Services.AddScoped<IImageOrchestrator, ImageOrchestrator>();
+
 // Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHostedService<TokenCleanupBackgroundService>();
 builder.Services.AddScoped<IWineryRepository, WineryRepository>();
 builder.Services.AddScoped<IWineryService, WineryService>();
+builder.Services.AddScoped<IWineryCatalogRepository, WineryCatalogRepository>();
+builder.Services.AddScoped<IWineryCatalogService, WineryCatalogService>();
 builder.Services.AddScoped<IStateRepository, StateRepository>();
 builder.Services.AddScoped<IStateService, StateService>();
 builder.Services.AddScoped<ICityRepository, CityRepository>();
@@ -225,6 +277,10 @@ builder.Services.AddScoped<ICellarItemService, CellarItemService>();
 builder.Services.AddScoped<ICellarCareService, CellarCareService>();
 builder.Services.AddScoped<IWineCareRepository, WineCareRepository>();
 builder.Services.AddScoped<IWineCareService, WineCareService>();
+builder.Services.AddScoped<IAuditRepository, AuditRepository>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAdminStatsRepository, AdminStatsRepository>();
+builder.Services.AddScoped<IAdminStatsService, AdminStatsService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -311,6 +367,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapWineryEndpoints();
+app.MapWineryCatalogEndpoints();
 app.MapStateEndpoints();
 app.MapCityEndpoints();
 app.MapLocationEndpoints();
@@ -325,6 +382,9 @@ app.MapCellarEndpoints();
 app.MapCellarItemEndpoints();
 app.MapCellarCareEndpoints();
 app.MapWineCareEndpoints();
+app.MapImageEndpoints();
+app.MapAuditEndpoints();
+app.MapAdminStatsEndpoints();
 
 
 

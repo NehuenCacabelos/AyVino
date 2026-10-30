@@ -10,7 +10,7 @@ public record WineVintage
     public decimal? AlcoholContent { get; init; }
     public int? ServingTemperature { get; init; }
     public string? AgingAdvice { get; init; }
-    public string? ImageUrl { get; init; }
+    public Guid? ImageId { get; init; }
     public ApprovalStatus ApprovalStatus { get; init; }
     public int UploadedByUserId { get; init; }
     public DateTime RegisterDate { get; init; }

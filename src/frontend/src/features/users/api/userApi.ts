@@ -115,20 +115,20 @@ export async function uploadAvatarApi(file: File): Promise<UserProfileDto> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await apiClient.post<UserProfileDto>('/users/me/avatar', formData, {
+  await apiClient.put<{ imageId: string }>('/users/me/avatar', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+  return await getCurrentUserApi();
 }
 
 /**
  * Elimina la foto de perfil personalizada del usuario autenticado.
  */
 export async function deleteAvatarApi(): Promise<UserProfileDto> {
-  const response = await apiClient.delete<UserProfileDto>('/users/me/avatar');
-  return response.data;
+  await apiClient.delete('/users/me/avatar');
+  return await getCurrentUserApi();
 }
 
 /**

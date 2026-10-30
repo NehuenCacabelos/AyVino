@@ -73,10 +73,13 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `Bio`, `Photo` | `[StringLength(1000)]`, `[StringLength(100)]` | "La biografía no puede superar los 1000 caracteres." / "La foto no puede superar los 100 caracteres." |
 | | `ChangeUserStatusRequestDto` | `IsActive` | Tipo `bool` primitivo (sin anotaciones requeridas). | - |
 | **Wineries** | `CreateWineryRequestDto` / `UpdateWineryRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la bodega es obligatorio." / "El nombre de la bodega no puede superar los 100 caracteres." |
+| | | `Latitude` / `Longitude` | Coordenadas decimales opcionales | Mutuamente excluyente con `LocationId`. Se resuelven con Georef. |
 | | | `LocationId` | `[Range(1, int.MaxValue)]` | "El id de la ubicación debe ser mayor a 0." |
 | | | `Description` | `[StringLength(1000)]` | "La descripción no puede superar los 1000 caracteres." |
 | | | `FoundationYear` | `[Range(1000, 2100)]` | "El año de fundación debe estar entre 1000 y 2100." |
 | | | `Website` | `[Url]`, `[StringLength(200)]` | "El sitio web debe ser una URL válida." / "El sitio web no puede superar los 200 caracteres." |
+| | | `LogoUrl` | `[Url]`, `[StringLength(500)]` | "La URL del logo no puede superar los 500 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. |
+| | | `BannerUrl` | `[StringLength(500)]` | "La URL del banner no puede superar los 500 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. Null conserva el existente, cadena vacía lo elimina. |
 | | `RegisterWineryRequestDto` | Campos de usuario (`Username`, `Email`, `Password`) + campos de bodega (`WineryName`, `LocationId`, etc.). | | |
 | | `ChangeWineryStatusRequestDto` | `Status` | `[Required]`, `[StringLength(20)]` | "El estado es obligatorio." / "El estado no puede superar los 20 caracteres." |
 | **Locations**| `CreateCityRequestDto` | `Name` | `[Required]`, `[StringLength(100)]` | "El nombre de la ciudad es obligatorio." / "El nombre de la ciudad no puede superar los 100 caracteres." |
@@ -101,7 +104,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `AlcoholContent` | `[Range(0.0, 99.99)]` | "El contenido de alcohol debe estar entre 0 y 99.99." |
 | | | `ServingTemperature`| `[Range(0, 30)]` | "La temperatura de servicio debe estar entre 0 y 30 °C." |
 | | | `AgingAdvice` | `[StringLength(500)]` | "El consejo de guarda no puede superar los 500 caracteres." |
-| | | `ImageUrl` | `[Url]`, `[StringLength(300)]` | "La imagen debe ser una URL válida." / "La URL de la imagen no puede superar los 300 caracteres." |
+| | | `ImageUrl` | `[Url]`, `[StringLength(300)]` | "La imagen debe ser una URL válida." / "La URL de la imagen no puede superar los 300 caracteres." Si se proporciona y Supabase Storage está activo, debe pertenecer al bucket oficial. |
 | | | `Grapes` | `[MaxLength(20)]` (valida items recursivos) | "Una cosecha no puede tener más de 20 uvas." |
 | | `WineGrapeRequestDto` | `GrapeId` | `[Range(1, int.MaxValue)]` | "El id de la uva debe ser mayor a 0." |
 | | | `Percentage` | `[Range(0.01, 100.0)]` | "El porcentaje debe estar entre 0.01 y 100." |
@@ -172,24 +175,29 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `GET` | `/api/users/{username}/cellar-items` | Público | Lista los vinos en cava de un usuario para visualización pública en modo solo lectura. | Query params: `pageNumber = 1`, `pageSize = 20` | `200 OK` (`IReadOnlyList<PublicCellarItemResponseDto>`) |
 | `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
-| `POST` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`UserResponseDto`) |
+| `PUT` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/users/me/avatar` | Autenticado | Elimina la foto de perfil física y restaura el avatar por defecto. | - | `200 OK` (`UserResponseDto`) |
 | `GET` | `/api/users` | Admin (`RequireAdmin`) | Lista paginada de todos los usuarios registrados en el sistema. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UserResponseDto>`) |
 | `GET` | `/api/users/{id}` | Admin (`RequireAdmin`) | Obtiene los detalles de cualquier usuario por ID. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/{id}/profile`| Admin (`RequireAdmin`) | Modifica el perfil de un usuario específico. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
 | `PATCH`| `/api/users/{id}/status` | Admin (`RequireAdmin`) | Activa o desactiva la cuenta de un usuario. | `ChangeUserStatusRequestDto` | `204 NoContent` |
+| `PATCH`| `/api/users/{id}/role` | Admin (`RequireAdmin`) | Cambia el rol de un usuario (`Admin` o `User`). Respuestas: `204 NoContent`, `400 Validation` (rol inválido), `403 Forbidden` (propia cuenta), `404 NotFound`, `409 Conflict` (rol Winery). | `ChangeUserRoleRequestDto` | `204 NoContent` |
 | `DELETE`| `/api/users/{id}` | Admin (`RequireAdmin`) | Elimina un usuario y sus credenciales de acceso. | - | `204 NoContent` |
 
 ---
 
 ## 3. Bodegas (`/api/wineries`)
 
-Gestión integral de bodegas oficiales y comunitarias ([[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.1]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.4]]).
+Gestión integral de bodegas oficiales y comunitarias ([RF-1.1](../requirements/spec.md), [RF-1.4](../requirements/spec.md)).
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/wineries` | Público | Listado paginado con filtros opcionales de estado (`status`) y región (`locationId`). | Query params: `pageNumber`, `pageSize`, `status?`, `locationId?` | `200 OK` (`IEnumerable<WineryResponseDto>`) |
-| `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil público de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
+| `GET` | `/api/wineries/me` | Autenticado | Obtiene la bodega asociada al usuario autenticado (fuente de verdad del panel). | - | `200 OK` (`WineryResponseDto`) / `404 Not Found` |
+| `GET` | `/api/wineries/me/catalog` | Autenticado (`RequireWinery`) | Catálogo integral del productor: todas sus etiquetas y añadas con uvas y métricas de resumen (promedio de valoración con >= 5 reseñas). | - | `200 OK` (`WineryCatalogResponseDto`) / `404 Not Found` |
+| `GET` | `/api/wineries/{id}` | Público | Obtiene el perfil institucional básico de una bodega por su ID. | - | `200 OK` (`WineryResponseDto`) |
+| `GET` | `/api/wineries/{id}/public` | Público (Auth opcional) | Perfil público vidriera con conteo de seguidores, estado de seguimiento (`isFollowedByMe`), totales visibles (`labels`, `vintages`), valoración ponderada (`averageRating` con >= 5 reseñas; null con menos de 5), preview si es dueño/admin y flag `isOwner` si el usuario autenticado es titular de la bodega. | - | `200 OK` (`WineryPublicProfileResponseDto`) / `404 Not Found` |
+| `GET` | `/api/wineries/{id}/catalog` | Público (Auth opcional) | Catálogo público paginado con filtros de servidor (`search`, `wineType`, `grapeId`, `year`, `sort`), uvas, añadas y metadatos de filtros calculados sobre el catálogo visible (promedio de valoración con >= 5 reseñas; null con menos de 5). | Query params: `pageNumber=1`, `pageSize=12` (máx 50), `search?`, `wineType?`, `grapeId?`, `year?`, `sort?('name'|'rating'|'year')` | `200 OK` (`WineryPublicCatalogResponseDto`) / `404 Not Found` |
 | `POST` | `/api/wineries` | Autenticado | Crea una bodega de la comunidad sin propietario asignado (inicia en `Pending`). | `CreateWineryRequestDto` | `201 Created` (`WineryResponseDto`) |
 | `POST` | `/api/wineries/register` | Público | Onboarding unificado: crea usuario con rol `Winery` y entidad bodega en una transacción, devolviendo JWT. | `RegisterWineryRequestDto` | `201 Created` (`RegisterWineryResponseDto`) |
 | `PUT` | `/api/wineries/{id}` | Autenticado (Admin o Dueño) | Actualiza los datos informativos y de contacto de una bodega. | `UpdateWineryRequestDto` | `200 OK` (`WineryResponseDto`) |
@@ -216,7 +224,7 @@ Gestión de municipios y ciudades vitivinícolas con patrón `GetOrCreate`.
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/cities` | Autenticado | Retorna una ciudad existente o la crea con estado `Pending` si no se encuentra. | `CreateCityRequestDto` | `201 Created` (`CityResponseDto`) |
-| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). | Query params: `pageNumber = 1`, `pageSize = 10`, `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
+| `GET` | `/api/cities` | Público | Lista paginada de ciudades con filtros por provincia (`stateId`) y estado (`status`). Soporta `pageSize` de hasta 250. | Query params: `pageNumber = 1`, `pageSize = 10` (máx 250), `stateId?`, `status?` | `200 OK` (`IEnumerable<CityResponseDto>`) |
 | `GET` | `/api/cities/{id}` | Público | Detalle de una ciudad por su ID. | - | `200 OK` (`CityResponseDto`) |
 | `PATCH`| `/api/cities/{id}/status` | Admin (`RequireAdmin`) | Aprueba o rechaza una ciudad creada por la comunidad. | `UpdateCityStatusRequestDto` | `200 OK` (`CityResponseDto`) |
 
@@ -231,6 +239,7 @@ Modelado de regiones vitivinícolas y valles (ej: Valle de Uco, Cafayate, San Pa
 | `POST` | `/api/locations` | Autenticado | Da de alta una nueva ubicación vinculada a una `CityId` existente. | `CreateLocationRequestDto` | `201 Created` (`LocationResponseDto`) |
 | `GET` | `/api/locations/{id}` | Público | Obtiene la ubicación con los nombres resueltos de su ciudad y provincia. | - | `200 OK` (`LocationResponseDto`) |
 | `GET` | `/api/locations` | Público | Listado paginado de ubicaciones con nombres geográficos resueltos. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<LocationResponseDto>`) |
+| `GET` | `/api/locations/resolve` | Público (`MapResolveLimit`: 60 req/min) | Resuelve coordenadas geográficas (lat, lon) argentinas mediante la API oficial Georef vinculando provincia y departamento. | Query params: `lat`, `lon` | `200 OK` (`ResolvedLocationResponseDto`) |
 
 ---
 
@@ -250,7 +259,7 @@ Catálogo maestro de cepas (Malbec, Cabernet Sauvignon, Torrontés, Bonarda, etc
 
 ## 8. Vinos y Catálogo General (`/api/wines`)
 
-Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje verificado, moderación de estados y proceso de reclamo oficial ([[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.1]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.2]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.3]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.5]], [[Especificacion_Requerimientos#1-gestión-del-catálogo-de-vinos-y-bodegas|RF-1.6]]).
+Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje verificado, moderación de estados y proceso de reclamo oficial ([RF-1.1](../requirements/spec.md), [RF-1.2](../requirements/spec.md), [RF-1.3](../requirements/spec.md), [RF-1.5](../requirements/spec.md), [RF-1.6](../requirements/spec.md)).
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -258,7 +267,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
 | `POST` | `/api/wines` | Autenticado (Admin o Dueño si incluye `WineryId`; comunitario: cualquier autenticado) | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
 | `PUT` | `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Actualiza los datos de la botella y mantiene consistente `source_type`. Solo Admin cambia de bodega. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
-| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino y sus asociaciones de uvas en cascada. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. | - | `204 NoContent` / `409 Conflict` |
 | `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/search` | Público | Búsqueda difusa y avanzada de vinos por nombre, bodega, año o tipo con trigramas PostgreSQL. | Query params: `pageNumber`, `pageSize`, `name?`, `winery?`, `year?`, `wineType?` | `200 OK` (`IEnumerable<WineSearchResponseDto>`) |
@@ -267,7 +276,30 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
-| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica de la etiqueta. | - | `204 NoContent` |
+| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica (solo si no tiene reseñas ni cava). Devuelve 409 si posee historial, sugiriendo rechazarla para preservarlo. | - | `204 NoContent` / `409 Conflict` |
+| `GET` | `/api/wine-vintages` | Admin (`RequireAdmin`) | Bandeja global de cosechas para moderación administrativa. Filtro opcional por estado (`Pending`, `Approved`, `Rejected`). | Query params: `pageNumber = 1`, `pageSize = 10`, `status?` | `200 OK` (`IEnumerable<AdminWineVintageListItemDto>`) |
+
+#### Ejemplo de Respuesta `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (200 OK)
+
+```json
+[
+  {
+    "vintageId": 101,
+    "wineId": 42,
+    "wineName": "Malbec Reserva",
+    "wineType": "Red",
+    "wineryId": 7,
+    "wineryName": "Bodega del Fin del Mundo",
+    "year": 2022,
+    "alcoholContent": 14.2,
+    "imageUrl": "https://example.com/vintage.jpg",
+    "approvalStatus": "Pending",
+    "uploadedByUserId": 3,
+    "uploadedByUsername": "sommelier_juan",
+    "registerDate": "2026-01-15T12:00:00Z"
+  }
+]
+```
 
 ---
 
@@ -312,7 +344,7 @@ Seguimiento unidireccional entre usuarios y hacia bodegas aprobadas. Protegido c
 | `DELETE`| `/api/users/{id}/follow` | Autenticado | Deja de seguir a un usuario. | - | `204 NoContent` |
 | `GET` | `/api/users/{id}/followers` | Autenticado | Lista paginada de seguidores de un usuario. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
 | `GET` | `/api/users/me/following` | Autenticado | Lista paginada de usuarios a los que sigue el usuario actual. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
-| `POST` | `/api/wineries/{id}/follow` | Autenticado | Sigue a una bodega oficial aprobada (404 si es pendiente o inexistente). | - | `204 NoContent` |
+| `POST` | `/api/wineries/{id}/follow` | Autenticado | Sigue a una bodega oficial aprobada (400 Bad Request si el usuario intenta seguir a su propia bodega, 404 si es pendiente o inexistente). | - | `204 NoContent` |
 | `DELETE`| `/api/wineries/{id}/follow` | Autenticado | Deja de seguir a una bodega. | - | `204 NoContent` |
 | `GET` | `/api/wineries/{id}/followers` | Autenticado | Lista paginada de usuarios seguidores de una bodega aprobada. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
 | `GET` | `/api/users/me/following-wineries` | Autenticado | Lista paginada de bodegas que sigue el usuario actual. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowWineryResponseDto>`) |
@@ -365,9 +397,148 @@ Cálculo de temperatura óptima de servicio, tiempo y conveniencia de decantaci�
 
 ---
 
+## 15. Almacenamiento de Imágenes (`/api/images`)
+
+Subida y validación estricta de imágenes para logotipos, banners institucionales de bodegas y fotografías de botellas/cosechas en Supabase Storage.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/images` | Autenticado | Sube una imagen a Supabase Storage (`multipart/form-data`) validando folder, tamaño (máx 2 MB) y magic bytes (JPEG, PNG, WebP). | Form: `file` (`IFormFile`), `folder` (`wineries` \| `vintages` \| `banners`) | `201 Created` (`ImageUploadResponseDto`: `{ "url": "..." }`) |
+
+### Reglas y Restricciones de `/api/images`
+- **Carpetas admitidas (`folder`)**: Únicamente `wineries`, `vintages` o `banners`. Cualquier otro valor es rechazado con `400 Bad Request`.
+- **Límite de tamaño**: 2 MB (2,097,152 bytes). Archivos mayores devuelven `413 Payload Too Large`.
+- **Formatos y Magic Bytes**: Se validan los primeros bytes reales del stream (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF....WEBP`). Archivos con magic bytes inválidos o extensiones no soportadas devuelven `415 Unsupported Media Type`.
+- **Nombres de archivo**: Se asigna un GUID único para evitar colisiones y sobreescrituras accidentales.
+- **Disponibilidad de Supabase**: Si la API no tiene configuradas las credenciales del bucket (`Supabase:Url`, `Supabase:ServiceRoleKey` o `Supabase:Bucket`), el endpoint responde de manera segura con `503 Service Unavailable`.
+
+---
+
+## 16. Auditoría de Administración (`/api/audit-log`)
+
+Registro inmutable de acciones administrativas y de moderación sobre entidades del sistema. Se registra automáticamente mediante el endpoint filter `.WithAudit(...)` tras respuestas exitosas (2xx).
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/audit-log` | Admin (`RequireAdmin`) | Listado paginado de entradas de auditoría con filtros opcionales. | Query params: `pageNumber`, `pageSize`, `action?`, `entityType?`, `userId?`, `from?`, `to?` | `200 OK` (`IEnumerable<AuditLogEntryDto>`) |
+
+### Reglas de Auditoría
+- **Filtros admitidos**:
+  - `action`: Nombre del enum `AuditAction` (ej: `WineryStatusChanged`, `UserStatusChanged`). Se valida contra el enum; valores desconocidos devuelven `400 Bad Request`.
+  - `entityType`: Tipo de entidad auditada (`Winery`, `City`, `Vintage`, `User`, `Grape`, `Pairing`, `Wine`, `Review`).
+  - `userId`: Identificador del usuario administrador que ejecutó la acción.
+  - `from` y `to`: Rango de fechas ISO 8601.
+- **Acciones registradas automáticamente**:
+  - Cambio de estado y borrado de bodegas (`WineryStatusChanged`, `WineryDeleted`).
+  - Cambio de estado de ciudades (`CityStatusChanged`).
+  - Cambio de estado y borrado de cosechas (`VintageStatusChanged`, `VintageDeleted`).
+  - Bloqueo/desbloqueo, borrado y cambio de rol de usuarios (`UserStatusChanged`, `UserDeleted`, `UserRoleChanged`).
+  - Alta, edición y baja de variedades de uva y maridajes (`GrapeCreated`, `GrapeUpdated`, `GrapeDeleted`, `PairingCreated`, `PairingUpdated`, `PairingDeleted`).
+  - Edición por administrador y borrado de vinos (`WineUpdatedByAdmin`, `WineDeleted`).
+- **Resiliencia**: Si el guardado de auditoría falla, se captura y registra el error con `ILogger` sin interrumpir ni fallar la operación principal solicitada por el usuario.
+
+---
+
+## 17. Fusión de Vinos Duplicados (`/api/wines/{targetId}/merge/{duplicateId}`)
+
+Permite a los administradores unificar etiquetas de vino duplicadas dentro de una etiqueta principal canónica de manera transaccional y atómica, consolidando cosechas, reseñas, inventario de cavas y marcas personales.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/wines/{targetId}/merge/{duplicateId}` | Admin (`RequireAdmin`) | Fusiona el vino duplicado dentro del vino destino. | Route params: `targetId`, `duplicateId` | `200 OK` (`MergeWinesResultDto`) |
+
+### DTO de Respuesta (`MergeWinesResultDto`)
+- `targetId` (`int`): ID del vino principal conservado.
+- `duplicateId` (`int`): ID del vino duplicado absorbido.
+- `movedVintages` (`int`): Cosechas del duplicado cuyo año no existía en el principal y fueron reasignadas directamente.
+- `mergedVintages` (`int`): Cosechas del duplicado fusionadas con una del mismo año en el principal.
+- `movedReviews` (`int`): Reseñas de cosechas fusionadas que fueron trasladadas al vino principal.
+- `discardedReviews` (`int`): Reseñas del duplicado descartadas porque el mismo usuario ya había reseñado la cosecha principal homónima.
+- `movedCellarItems` (`int`): Elementos de cava del duplicado trasladados o consolidados (sumando cantidades) en la cosecha principal.
+
+### Validaciones Previas
+- **Permisos**: Requiere rol `Admin` (`403 Forbidden` si no es admin).
+- **Distintos**: `targetId` y `duplicateId` deben ser distintos (`400 ValidationException`).
+- **Existencia**: Ambos vinos deben existir en la base de datos (`404 NotFoundException`).
+- **No duplicados**: Ni el destino ni el origen pueden tener `duplicate_of_wine_id` no nulo (`409 ConflictException`).
+
+### Reglas de la Transacción Atómica
+1. **Cosechas sin conflicto de año**: Se reasignan al principal (`UPDATE wine_vintages SET wine_id = @targetId`).
+2. **Cosechas con año homónimo (`NULL = NULL`)**: Se fusionan en la del principal:
+   - **Reseñas**: Se mueven a la cosecha destino; si el usuario ya tiene reseña en la cosecha destino, se conserva la del principal y se descarta la del duplicado.
+   - **Cavas**: Se trasladan; si la cava ya posee la cosecha destino, se suman las cantidades (`LEAST(999, quantity + dupQuantity)`).
+   - **Uvas (`wine_grapes`)**: Se conservan las de la cosecha principal y se descartan las del duplicado.
+   - Se elimina la cosecha duplicada sobrante.
+3. **Maridajes (`wine_pairings`)**: Se copian al principal los maridajes que falten (`ON CONFLICT DO NOTHING`) y se borran los del duplicado.
+4. **Marcas personales (`user_wines`)**: Se combinan aplicando operador lógico OR a `is_wanted`, `is_tried` y `is_favorite` (`ON CONFLICT DO UPDATE`) y se borran las del duplicado.
+5. **Recálculo de puntajes**: Se actualizan `rating_sum` y `review_count` de las cosechas fusionadas y del vino principal a partir de los datos consolidados reales.
+6. **Marcado del duplicado**: `UPDATE wines SET duplicate_of_wine_id = @targetId, rating_sum = 0, review_count = 0 WHERE id = @duplicateId`. El vino duplicado no se elimina físicamente.
+7. **Visibilidad pública**: Los vinos con `duplicate_of_wine_id` asignado quedan ocultos de búsquedas, listados públicos, catálogo del productor (`/api/wineries/me/catalog`), catálogo público (`/api/wineries/{id}/catalog`) y de `GET /api/wines/{id}` para usuarios no administradores (`404 Not Found`). Los administradores continúan visualizándolos con el badge de referencia al original.
+8. **Auditoría**: Se registra automáticamente la acción `WineMerged` (action 18, entityType `Wine`, entityId `targetId`, details `duplicateId`).
+
+---
+
+## 18. Estadísticas del Panel (`/api/admin/stats`)
+
+Proporciona métricas consolidadas y conteos exactos de moderación y catálogos maestros mediante consultas optimizadas `COUNT` en SQL.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/admin/stats` | Admin (`RequireAdmin`) | Conteos exactos de usuarios, bodegas, ciudades, cosechas, vinos y reseñas. | - | `200 OK` (`AdminStatsDto`) |
+
+### Estructura del DTO (`AdminStatsDto`)
+- `users`:
+  - `total` (`int`): Total de usuarios enófilos registrados con rol estándar (`role = 'User'`).
+  - `blocked` (`int`): Usuarios bloqueados (`is_active = false`).
+- `wineries`:
+  - `total` (`int`): Total de bodegas registradas en el ecosistema vitivinícola.
+  - `pending` (`int`): Bodegas pendientes de aprobación (`status = 1`).
+  - `approved` (`int`): Bodegas aprobadas (`status = 2`).
+  - `rejected` (`int`): Bodegas rechazadas (`status = 3`).
+- `cities`:
+  - `pending` (`int`): Ciudades pendientes de moderación (`status = 2`).
+- `vintages`:
+  - `pending` (`int`): Cosechas pendientes (`approval_status = 1`).
+  - `approved` (`int`): Cosechas aprobadas (`approval_status = 2`).
+  - `rejected` (`int`): Cosechas rechazadas (`approval_status = 3`).
+- `wines`:
+  - `total` (`int`): Total de etiquetas principales sin contar duplicados (`duplicate_of_wine_id IS NULL`).
+  - `community` (`int`): Vinos comunitarios sin duplicados (`source_type = 1`).
+  - `official` (`int`): Vinos oficiales sin duplicados (`source_type = 2`).
+- `reviews`:
+  - `total` (`int`): Total de reseñas en el sistema.
+
+---
+
+## 19. Almacenamiento y Entrega Unificada de Imágenes (`/api/images`)
+
+El subsistema de imágenes gestiona la carga, validación, almacenamiento en Cloudinary y entrega centralizada mediante identificadores UUID almacenados en la tabla relacional `images`.
+
+### Resumen de Endpoints
+
+| Método | Ruta | Acceso | Descripción | Entrada | Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/images/{id}` | Público (`AllowAnonymous`) | Resuelve y redirige a la URL optimizada en Cloudinary con header de caché de 7 días. Soporta query param opcional `?variant=avatar\|logo\|banner\|bottle`. | Query param opcional `variant` | `302 Found` (header `Location` y `Cache-Control: public, max-age=604800`) / `404 Not Found` / `400 Bad Request` |
+| `PUT` | `/api/wineries/{id}/logo` | Autenticado (Dueño / Admin) | Sube y asocia el logo oficial de la bodega. Elimina la imagen previa si existía. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wineries/{id}/logo` | Autenticado (Dueño / Admin) | Quita el logo oficial de la bodega y elimina el archivo físico. Idempotente. | - | `204 No Content` |
+| `PUT` | `/api/wineries/{id}/banner` | Autenticado (Dueño / Admin) | Sube y asocia el banner oficial de la bodega (proporción 3:1). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wineries/{id}/banner` | Autenticado (Dueño / Admin) | Quita el banner oficial de la bodega y elimina el archivo físico. | - | `204 No Content` |
+| `PUT` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Sube y asocia la fotografía oficial de la botella para una cosecha. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Quita la fotografía de la botella y elimina el archivo físico. | - | `204 No Content` |
+| `PUT` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Sube y asocia la foto de perfil del usuario autenticado. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Quita el avatar personalizado y reactiva el fallback dinámico DiceBear. | - | `204 No Content` |
+
+### Especificación de Transformaciones por Variante
+- `avatar`: `c_fill,g_face,w_256,h_256,q_auto,f_auto`
+- `logo`: `c_fit,w_400,h_400,q_auto,f_auto`
+- `banner`: `c_fill,g_center,w_1500,h_500,q_auto,f_auto`
+- `bottle`: `c_fit,w_800,h_1200,q_auto,f_auto`
+- Sin variante: entrega la imagen original con optimización automática (`q_auto,f_auto`).
+
+---
+
 ## 🔗 Referencias Relacionadas
 - [[Backend_Overview]]: Vertical slices, repositorios y servicios.
 - [[Seguridad_Y_Autenticacion]]: Flujo de tokens, claims y políticas de acceso.
 - [[Ciclo_Vida_Vino]]: Proceso de reclamo oficial y moderación de estados.
 - [[Especificacion_Requerimientos]]: Requerimientos funcionales EARS.
-

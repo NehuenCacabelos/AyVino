@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
@@ -7,10 +8,15 @@ namespace AyVino.Api.Features.Users.Repositories;
 
 public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
 {
+    private const string SelectUserColumns = """
+        id, username, email, role, register_date AS RegisterDate, is_active AS IsActive,
+        avatar_image_id AS AvatarImageId, bio
+        """;
+
     public async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, username, email, role, register_date, is_active, photo, bio
+        const string sql = $"""
+            SELECT {SelectUserColumns}
             FROM users
             WHERE id = @Id;
             """;
@@ -22,8 +28,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, username, email, role, register_date, is_active, photo, bio
+        const string sql = $"""
+            SELECT {SelectUserColumns}
             FROM users
             WHERE LOWER(email) = LOWER(@Email);
             """;
@@ -35,8 +41,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, username, email, role, register_date, is_active, photo, bio
+        const string sql = $"""
+            SELECT {SelectUserColumns}
             FROM users
             WHERE LOWER(username) = LOWER(@Username);
             """;
@@ -51,7 +57,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         const string sql = """
             SELECT u.id AS Id,
                    u.username AS Username,
-                   u.photo AS Photo,
+                   u.avatar_image_id AS AvatarImageId,
                    u.bio AS Bio,
                    u.register_date AS RegisterDate,
                    COALESCE((
@@ -81,8 +87,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
     public async Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT id, username, email, role, register_date, is_active, photo, bio
+        const string sql = $"""
+            SELECT {SelectUserColumns}
             FROM users
             ORDER BY id ASC
             OFFSET @Offset LIMIT @PageSize;
@@ -100,7 +106,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT u.id, u.username, u.email, u.role, u.register_date, u.is_active, u.photo, u.bio,
+            SELECT u.id, u.username, u.email, u.role, u.register_date AS RegisterDate, u.is_active AS IsActive,
+                   u.avatar_image_id AS AvatarImageId, u.bio,
                    c.user_id, c.password_hash, c.last_password_change, c.failed_login_attempts, c.blocked_until
             FROM users u
             LEFT JOIN user_credentials c ON u.id = c.user_id
@@ -124,8 +131,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         try
         {
             const string insertUserSql = """
-                INSERT INTO users (username, email, role, register_date, is_active, photo, bio)
-                VALUES (@Username, @Email, @Role, @RegisterDate, @IsActive, @Photo, @Bio)
+                INSERT INTO users (username, email, role, register_date, is_active, avatar_image_id, bio)
+                VALUES (@Username, @Email, @Role, @RegisterDate, @IsActive, @AvatarImageId, @Bio)
                 RETURNING id;
                 """;
 
@@ -141,6 +148,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             await connection.ExecuteAsync(
                 new CommandDefinition(insertCredentialSql, credentialWithId, transaction: transaction, cancellationToken: ct));
 
+            const string insertCellarSql = """
+                INSERT INTO cellars (user_id, name)
+                VALUES (@UserId, 'Mi Cava');
+                """;
+            await connection.ExecuteAsync(
+                new CommandDefinition(insertCellarSql, new { UserId = userId }, transaction: transaction, cancellationToken: ct));
+
             await transaction.CommitAsync(ct);
             return userId;
         }
@@ -151,21 +165,40 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         }
     }
 
-    public async Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default)
+    public async Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default)
     {
         const string sql = """
             UPDATE users
             SET username = @Username,
-                bio = @Bio,
-                photo = @Photo
+                bio = @Bio
             WHERE id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, Username = username, Bio = bio, Photo = photo }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, Username = username, Bio = bio }, cancellationToken: ct));
 
         return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateAvatarImageIdAsync(int userId, Guid? avatarImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE users
+            SET avatar_image_id = @AvatarImageId
+            WHERE id = @UserId;
+            """;
+
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { UserId = userId, AvatarImageId = avatarImageId }, transaction: transaction, cancellationToken: ct));
+
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateAvatarImageIdAsync(int userId, Guid? avatarImageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await UpdateAvatarImageIdAsync(userId, avatarImageId, connection, null, ct);
     }
 
     public async Task<bool> SetIsActiveAsync(int id, bool isActive, CancellationToken ct = default)
@@ -179,6 +212,21 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
             new CommandDefinition(sql, new { Id = id, IsActive = isActive }, cancellationToken: ct));
+
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> SetRoleAsync(int id, string role, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE users
+            SET role = @Role
+            WHERE id = @Id;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id, Role = role }, cancellationToken: ct));
 
         return rowsAffected > 0;
     }

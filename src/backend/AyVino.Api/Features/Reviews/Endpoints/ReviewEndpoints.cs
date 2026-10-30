@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Services;
 
@@ -9,6 +10,23 @@ public static class ReviewEndpoints
     public static IEndpointRouteBuilder MapReviewEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/reviews").WithTags("Reviews");
+
+        group.MapGet("/", async (
+            IReviewService service,
+            CancellationToken ct,
+            int pageNumber = 1,
+            int pageSize = 10,
+            int? wineId = null,
+            int? wineVintageId = null,
+            int? userId = null,
+            int? rating = null) =>
+        {
+            var reviews = await service.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
+            return Results.Ok(reviews);
+        })
+        .RequireAuthorization(AppPolicies.RequireAdmin)
+        .WithName("GetReviewsForAdmin")
+        .WithSummary("Lista reseñas globalmente para moderación por administradores.");
 
         group.MapPost("/", async (CreateReviewRequestDto request, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
         {
@@ -30,12 +48,12 @@ public static class ReviewEndpoints
 
         group.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
         {
-            var userId = user.GetUserId();
-            await service.DeleteAsync(id, userId, ct);
+            var actor = user.GetActor();
+            await service.DeleteAsync(id, actor, ct);
             return Results.NoContent();
         }).RequireAuthorization()
           .WithName("DeleteReview")
-          .WithSummary("Borra una reseña propia.");
+          .WithSummary("Borra una reseña propia (usuario) o modera cualquier reseña (administrador).");
 
         app.MapGroup("/api/wine-vintages/{vintageId:int}/reviews")
            .WithTags("Reviews")

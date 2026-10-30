@@ -108,12 +108,20 @@ Features/
 │   ├── Repositories/  # ICellarRepository, CellarRepository, ICellarItemRepository, CellarItemRepository
 │   └── Services/      # ICellarService, CellarService, ICellarItemService, CellarItemService, CellarCareService
 │
-└── WineCare/          # Consejos enológicos: temperaturas óptimas, decantado y ventanas de consumo
-    ├── DTOs/          # WineCareResponseDto, ServingTemperatureDto, DecantingDto, DrinkingWindowDto
-    ├── Endpoints/     # WineCareEndpoints.cs
-    ├── Enums/         # DrinkingStatus, AdviceSource
-    ├── Repositories/  # IWineCareRepository.cs y WineCareRepository.cs
-    └── Services/      # IWineCareService.cs y WineCareService.cs
+├── WineCare/          # Consejos enológicos: temperaturas óptimas, decantado y ventanas de consumo
+│   ├── DTOs/          # WineCareResponseDto, ServingTemperatureDto, DecantingDto, DrinkingWindowDto
+│   ├── Endpoints/     # WineCareEndpoints.cs
+│   ├── Enums/         # DrinkingStatus, AdviceSource
+│   ├── Repositories/  # IWineCareRepository.cs y WineCareRepository.cs
+│   └── Services/      # IWineCareService.cs y WineCareService.cs
+│
+└── Images/            # Almacenamiento, entrega y optimización de imágenes en Cloudinary
+    ├── DTOs/          # ImageResponseDto, ImageUploadResultDto
+    ├── Endpoints/     # ImageEndpoints.cs
+    ├── Enums/         # ImageVariant (Thumbnail, Medium, Large, Original)
+    ├── Models/        # StoredImage (Image)
+    ├── Repositories/  # IImageRepository.cs y ImageRepository.cs
+    └── Services/      # IImageStorage, CloudinaryImageStorage, IImageOrchestrator, ImageOrchestrator, IImageTransactionRunner, ImageTransactionRunner, ImageValidator
 ```
 
 ---
@@ -125,6 +133,20 @@ Aquellos aspectos técnicos requeridos transversalmente por múltiples slices se
 ### Acceso a Base de Datos ([`Common/Data/`](../../src/backend/AyVino.Api/Common/Data))
 - **`IDbConnectionFactory`**: Interfaz asíncrona y síncrona para obtener conexiones físicas a PostgreSQL.
 - **`NpgsqlConnectionFactory`**: Implementación basada en `NpgsqlConnection` que inyecta la cadena de conexión provista mediante User Secrets en desarrollo o variables de entorno en producción.
+
+### Almacenamiento Unificado de Imágenes con Cloudinary ([`Features/Images/`](../../src/backend/AyVino.Api/Features/Images))
+- **Único Proveedor Multimedia**: Cloudinary es el proveedor exclusivo para la carga, transformación y entrega de imágenes. Supabase Storage y el almacenamiento local de avatares fueron eliminados.
+- **Abstracción `IImageStorage` y `CloudinaryImageStorage`**: Encapsula el cliente oficial de Cloudinary (`CloudinaryDotNet`), realizando cargas (`UploadAsync`), borrados físicos (`DeleteAsync`) y generación de URLs optimizadas con variantes dinámicas (`BuildDeliveryUrl`).
+- **Orquestación y Compensación Transaccional (`IImageOrchestrator`, `IImageTransactionRunner`)**:
+  Para garantizar consistencia atómica entre el almacenamiento en la nube y PostgreSQL, las altas y bajas de imágenes implementan un flujo de compensación:
+  1. Validación en memoria de formato (JPEG, PNG, WebP) mediante números mágicos y tamaño (máx. 5 MB) con `ImageValidator`.
+  2. Subida física del archivo a Cloudinary en carpetas de dominio (`ayvino/{folder}`).
+  3. Ejecución transaccional en PostgreSQL vía `IImageTransactionRunner`: inserción en la tabla `images` y actualización de la clave foránea (`logo_image_id`, `banner_image_id`, `image_id`, `avatar_image_id`).
+  4. En caso de fallo en la base de datos, se activa inmediatamente la compensación eliminando el asset recién subido de Cloudinary (`RollbackCloudinaryUploadAsync`).
+  5. En caso de éxito con reemplazo de imagen existente, la imagen anterior se elimina de PostgreSQL y se purga en Cloudinary.
+- **Entrega con Redirección y Caché (`GET /api/images/{id}`)**:
+  - Redirección HTTP 302 hacia el CDN de Cloudinary aplicando auto-formato (`f_auto`) y auto-calidad (`q_auto`).
+  - Cabecera `Cache-Control: public, max-age=604800` (7 días) para maximizar la velocidad de carga en el frontend.
 
 ### Manejo Global de Excepciones ([`Common/Middleware/`](../../src/backend/AyVino.Api/Common/Middleware))
 - **`GlobalExceptionHandler`**: Interceptor que traduce cualquier excepción de negocio o fallo no controlado al formato estándar RFC 7807 (`ProblemDetails`).
@@ -226,10 +248,92 @@ Cumpliendo con la **Regla 5 de la Constitución de AyVino**, cada servicio y opt
 
 ---
 
+## 8. Cómo correr el e2e
+
+El proyecto cuenta con baterías de pruebas integrales de extremo a extremo (E2E) que se ejecutan directamente contra el backend en funcionamiento (.NET 10 Minimal APIs) y una base de datos PostgreSQL real:
+
+- `tests/e2e/admin-live-test.mjs`: Valida el ciclo completo de administración (moderación de bodegas, cosechas, ciudades, varietales, maridajes, usuarios, métricas de ecosistema y auditoría).
+- `src/frontend/tests/e2e/e2e-live-test.mjs`: Valida el flujo institucional de bodegas (registro, aprobación, publicación de etiquetas oficiales y cosechas).
+
+### Variables de Entorno Requeridas
+
+Por motivos de seguridad y portabilidad, los scripts no contienen valores sensibles ni cadenas de conexión hardcodeadas en el código fuente. Se configuran mediante variables de entorno:
+
+| Variable | Tipo | Requerida | Descripción |
+| :--- | :--- | :---: | :--- |
+| `API_BASE` | URL | Opcional | URL base de la API. Valor por defecto: `http://localhost:5230/api`. |
+| `JWT_SECRET` | String | **Sí** | Clave secreta simétrica para firmar y validar tokens JWT. Debe coincidir con `Jwt:SecretKey` del backend. |
+| `E2E_DB_CONNECTION` | String | **Sí** (en admin) | Cadena de conexión a PostgreSQL utilizada por `tests/e2e/db-util` para sembrar y limpiar datos de prueba. |
+| `ADMIN_EMAIL` | String | Opcional | Email del administrador para la prueba. Si se omite, se genera uno efímero con prefijo `e2e_`. |
+| `ADMIN_PASSWORD` | String | Opcional | Contraseña del administrador para la prueba. Si se omite, se utiliza `Password123!`. |
+| `E2E_ALLOW_REMOTE` | Booleano | Opcional | Guarda de seguridad. Si es distinto de `true`, el script aborta inmediatamente si `API_BASE` no apunta a `localhost` o `127.0.0.1`. |
+
+> [!NOTE]
+> Podés extraer de forma segura los valores de desarrollo configurados en los User Secrets del backend:
+> ```bash
+> dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api
+> dotnet user-secrets get ConnectionStrings:DefaultConnection --project src/backend/AyVino.Api
+> ```
+
+### Herramienta Auxiliar `tests/e2e/db-util`
+
+Para ejecutar sentencias de preparación y saneamiento directo en la base de datos sin requerir dependencias pesadas ni modificar la API, se incluye un proyecto mínimo de consola en .NET (`tests/e2e/db-util/`):
+- Lee la conexión exclusivamente desde la variable de entorno `E2E_DB_CONNECTION`.
+- Recibe la consulta SQL como argumento y ejecuta de forma segura `ExecuteReader` o `ExecuteNonQuery`.
+- Nunca imprime credenciales ni secretos en stdout o stderr.
+- Se mantiene excluido de `AyVino.slnx` para no interferir con `dotnet test`.
+
+### Comandos de Ejecución
+
+#### 1. Iniciar la API Backend
+En una terminal:
+```bash
+dotnet run --project src/backend/AyVino.Api
+```
+
+#### 2. Ejecutar la Batería E2E del Panel de Administración
+
+**En Linux / macOS (Bash):**
+```bash
+export API_BASE="http://localhost:5230/api"
+export JWT_SECRET="$(dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api)"
+export E2E_DB_CONNECTION="$(dotnet user-secrets get ConnectionStrings:DefaultConnection --project src/backend/AyVino.Api)"
+
+node tests/e2e/admin-live-test.mjs
+```
+
+**En Windows (PowerShell):**
+```powershell
+$env:API_BASE = "http://localhost:5230/api"
+$env:JWT_SECRET = (dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api)
+$env:E2E_DB_CONNECTION = (dotnet user-secrets get ConnectionStrings:DefaultConnection --project src/backend/AyVino.Api)
+
+node tests/e2e/admin-live-test.mjs
+```
+
+#### 3. Ejecutar la Batería E2E de Bodega
+
+**En Linux / macOS (Bash):**
+```bash
+export API_BASE="http://localhost:5230/api"
+export JWT_SECRET="$(dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api)"
+
+node src/frontend/tests/e2e/e2e-live-test.mjs
+```
+
+**En Windows (PowerShell):**
+```powershell
+$env:API_BASE = "http://localhost:5230/api"
+$env:JWT_SECRET = (dotnet user-secrets get Jwt:SecretKey --project src/backend/AyVino.Api)
+
+node src/frontend/tests/e2e/e2e-live-test.mjs
+```
+
+---
+
 ## 🔗 Referencias Relacionadas
 - [[Arquitectura_Overview]]: Fundamentos globales y decisiones técnicas.
 - [[Catalogo_Endpoints_API]]: Detalle exhaustivo de rutas y contratos HTTP.
 - [[Base_De_Datos_Migraciones]]: Modelo ERD y tablas PostgreSQL.
 - [[Seguridad_Y_Autenticacion]]: Esquema de tokens y autorización `Actor`.
 - [[Ciclo_Vida_Vino]]: Lógica de dominación, cortes y claiming.
-

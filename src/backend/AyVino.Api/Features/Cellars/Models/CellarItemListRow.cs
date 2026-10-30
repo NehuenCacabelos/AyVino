@@ -11,7 +11,7 @@ public record CellarItemListRow
     public int? WineryId { get; init; }
     public string? WineryNameText { get; init; }
     public int? Year { get; init; }
-    public string? ImageUrl { get; init; }
+    public Guid? ImageId { get; init; }
     public int RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public int Quantity { get; init; }

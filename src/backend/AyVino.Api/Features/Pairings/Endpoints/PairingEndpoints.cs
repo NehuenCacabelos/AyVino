@@ -1,7 +1,10 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Pairings.DTOs;
 using AyVino.Api.Features.Pairings.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace AyVino.Api.Features.Pairings.Endpoints;
 
@@ -18,7 +21,8 @@ public static class PairingEndpoints
         })
         .RequireAuthorization(AppPolicies.RequireAdmin)
         .WithName("CreatePairing")
-        .WithSummary("Creates a new pairing catalog entry.");
+        .WithSummary("Creates a new pairing catalog entry.")
+        .WithAudit(AuditAction.PairingCreated, "Pairing", entityIdResolver: (ctx, res) => (res as Created<PairingResponseDto>)?.Value?.Id, details: (ctx, res) => ctx.Arguments.OfType<CreatePairingRequestDto>().FirstOrDefault()?.Name);
 
         group.MapGet("/", async (int pageNumber, int pageSize, string? category, IPairingService service, CancellationToken ct) =>
             Results.Ok(await service.GetAllAsync(pageNumber, pageSize, category, ct))
@@ -33,7 +37,8 @@ public static class PairingEndpoints
         )
         .RequireAuthorization(AppPolicies.RequireAdmin)
         .WithName("UpdatePairing")
-        .WithSummary("Updates an existing pairing.");
+        .WithSummary("Updates an existing pairing.")
+        .WithAudit(AuditAction.PairingUpdated, "Pairing", idRouteKey: "id", details: (ctx, res) => ctx.Arguments.OfType<UpdatePairingRequestDto>().FirstOrDefault()?.Name);
 
         group.MapDelete("/{id:int}", async (int id, IPairingService service, CancellationToken ct) =>
         {
@@ -42,7 +47,8 @@ public static class PairingEndpoints
         })
         .RequireAuthorization(AppPolicies.RequireAdmin)
         .WithName("DeletePairing")
-        .WithSummary("Deletes a pairing.");
+        .WithSummary("Deletes a pairing.")
+        .WithAudit(AuditAction.PairingDeleted, "Pairing", idRouteKey: "id");
 
         // Sub-recurso: asociación entre un vino y sus maridajes.
         var wineGroup = app.MapGroup("/api/wines/{wineId:int}/pairings").WithTags("Pairings");

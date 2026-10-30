@@ -13,207 +13,198 @@ El frontend de AyVino es una Single Page Application (SPA) desarrollada en **Rea
 | **Vite** | 8.x | Servidor de desarrollo con Hot Module Replacement (HMR) instantáneo y compilador optimizado. |
 | **Tailwind CSS** | v4 (`@tailwindcss/vite`) | Motor de utilidades moderno de última generación integrado directamente con Vite. |
 | **Lucide React** | ^1.46 | Iconografía vectorial consistente y liviana para acciones de usuario y navegación. |
-| **React Router DOM** | v7.x | Enrutamiento declarativo del lado del cliente. |
+| **Leaflet & React-Leaflet** | ^1.9 / ^5.0 | Mapas interactivos para geolocalización de bodegas y resolución territorial con Georef. |
+| **React Router DOM** | v7.x | Data Router v7 (`createBrowserRouter`) con soporte de layouts anidados, loaders y error boundaries. |
 | **Axios** | ^1.20 | Cliente HTTP para comunicación tipada con la API RESTful. |
 
 ---
 
-## 2. Pautas Visuales y Estilo Editorial
+## 2. Pautas Visuales y Estilo Editorial (Ronda 4)
 
 AyVino implementa una estética de **revista editorial de vinos**: cálida, noble, sofisticada y limpia, distanciándose del diseño corporativo frío.
 
-### 2.1 Paleta Cromática y Acabados (Fondo Oscuro Mate)
-- **Fondo Base Carbón Mate (`#0f0f11` / `#121214`)**: Evita el negro puro ofreciendo una textura sobria, descansada y elegante para la interfaz nocturna de cava.
-- **Acento Bordó Vino Sobrio (`#722F37` / `#5c1d24`)**: Utilizado exclusivamente en botones de acción primaria (`+ REGISTRAR BOTELLA`, `"Descorchar"`) e insignias activas, sin saturación chillona.
-- **Bordes de Estructura Limpia (`border-neutral-800` / `border-white/5`)**: Delimitación milimétrica de 1px para tarjetas, buscador e inputs.
+### 2.1 Paleta Cromática y Acabados Unificados
+- **Fondo Base Nocturno Mate (`#0f0f11` / `#0b0b0e` / `#0c0c0e`)**: 
+  - Vistas operativas y catálogos: `#0f0f11` con footer persistente `#0c0c0e`.
+  - Vistas inmersivas (configuración y ficha de perfil): `#0b0b0e` edge-to-edge con `WineryTopBar` fija y paneles `#121015`/`#17151a`.
+- **Acento Borgoña Vino Sobrio (`#6e1a24` / `#85222e`)**: Utilizado de manera consistente en todos los botones de acción primaria (`Nueva etiqueta`, `Guardar datos`, `Actualizar contraseña`, `Registrar mi bodega`), foco `ring-rose-500/50` y selecciones `selection:bg-[#6e1a24]`.
+- **Acentos Dorados de Cava (`amber-200/60` a `amber-300`)**: Reservados para pasos editoriales, sellos de terruño, estrellas de cata y microetiquetas (`font-mono tracking-[0.25em]`).
+- **Bordes Milimétricos Limpios (`border-white/5` y `border-white/10`)**: Delimitación sobria de 1px para tarjetas, buscadores, inputs y separadores de panel.
 
 ### 2.2 Tipografías y Jerarquía Editorial
-- **`Fraunces` / `Cormorant Garamond` (Serif 600)**: Títulos principales (`h1`, `h2`) en peso semi-bold, sin cursivas ni trazos ultra finos, con `tracking-tight` y color `text-neutral-100`.
-- **`Plus Jakarta Sans` / `Geist Sans` (Sans-Serif 400 y 500)**: Interfaz, botones, textos de bajada y tablas técnicas.
-- **`font-mono` (Caja alta & tracking amplio)**: Eyebrows y saludos (`text-[11px] font-mono tracking-[0.25em] uppercase text-neutral-400 font-medium`).
-- **Navegación Superior (Navbar Reactivo al Scroll en 3 Columnas)**: Barra fija con transición fluida (`fixed top-0 left-0 right-0 z-50 w-full transition-all duration-500`). En el primer pliegue durante el Hero (`window.scrollY <= window.innerHeight * 0.7`), se mantiene transparente (`bg-transparent border-b border-transparent shadow-none`); al descender más allá del 70% del viewport, se funde con la estética carbón (`bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/[0.08] shadow-lg shadow-black/40`) gestionado limpiamente con `cn()`. Layout centrado (`flex justify-between md:grid md:grid-cols-3 max-w-7xl mx-auto px-6 h-18`), logo sans contemporáneo de alta jerarquía con detalle de marca borravino (`AyVino.` en `text-xl font-bold tracking-tight text-zinc-100 md:justify-self-start` con punto `.text-rose-500`), enlaces en Title Case con mayor escala y separación (`text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150`, `hidden md:flex justify-center gap-10 transition-all duration-300`) y botón de acción "Crear cuenta" unificado a la paleta borravino sobria (`bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98]`).
-
-- **Hero Editorial Centrado con Atmósfera en Capas**: En `Landing.tsx`, composición que abarca el primer pliegue de la pantalla (`min-h-screen flex flex-col justify-between pt-20 md:pt-24 pb-12 sm:pb-16`) sobre fondo carbón profundo (`#0a0a0c`). Incorpora textura de lienzo técnica Dot Pattern atenuada al 7% con desvanecimiento elíptico perimetral (`opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_60%,transparent_100%)]`) y un sistema de iluminación ambiental multicapa calibrado con halo borravino principal (`h-[450px] w-[700px] bg-rose-700/25 blur-[120px] -translate-y-10`) y halo cálido/ámbar de soporte (`h-[300px] w-[450px] bg-amber-600/20 blur-[90px] translate-y-8`), eliminando la sensación de negro plano y aportando profundidad luminosa real detrás del titular sin competir con el texto. Titular equilibrado (`text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight text-zinc-100 mb-6 px-4`) con degradado de texto en la segunda línea (*"coleccioná cada copa"*) y bajada reflexiva amplia (`max-w-3xl text-neutral-400 text-base md:text-lg leading-relaxed px-4`) centrados verticalmente (`my-auto`). Hacia el pie del Hero (`mt-auto`), se ubican los botones de acción con el botón primario *"Explorar catálogo"* sincronizado con la paleta borravino (`bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-xl px-6 py-3 text-sm font-medium shadow-sm active:scale-[0.98]`, `mb-10 md:mb-14`) y la fila inferior de métricas sobre un padding inferior contenido, descansando de forma natural en el tercio inferior de la pantalla.
-- **Cinta Compacta de KPIs (`Metrics`)**: Franja horizontal con fondo `#121214`, micro-iconos lineales y métricas con tipografía Fraunces y font-mono.
-- **Bento Grid Modular (`PromoBlocks` y `StockCarousel`)**: Mosaico con tarjetas oscuras estructuradas, micro-datos técnicos de servicio y guarda.
-- **Modal de Descorche (`UncorkDialog`)**: Ficha técnica de cata dividida con escaparate visual y registro sensorial.
-- **Split-Card Flotante de Autenticación (`LoginPage.tsx` y `RegisterPage.tsx`)**: Arquitectura visual a dos columnas encajada en pantalla (`h-screen overflow-hidden p-4 bg-[#0e0e11]`) con estética *Clean Dark & Editorial Clásica de Bodega*. Tarjeta contenida (`h-[88vh] max-h-[640px] w-full max-w-5xl bg-[#141416]`), esquinas `rounded-3xl`, sombra profunda `shadow-2xl shadow-black/80` y borde `border-white/10`. Columna izquierda con encabezado superior invertido (Volver a la izquierda, AyVino a la derecha), cabecera editorial con tag de colección en Login (`"Colección Privada"` en `text-xs uppercase tracking-[0.25em] text-amber-200/60`), títulos en tipografía serif clásica de presencia vertical destacada (`font-serif text-3xl sm:text-4xl text-zinc-100 font-normal tracking-tight leading-tight`) y subtítulo explicativo legible (`text-sm text-zinc-400 mt-2 font-sans font-light`). Formulario con `<form noValidate>` y validación reactiva de campos obligatorios en estado de React (`errors: Record<string, string>`), inputs minimalistas Clean Dark sin etiquetas externas (solo placeholder amplio interior, altura `h-12`, esquinas `rounded-xl`, padding `px-4`, fondo `bg-zinc-900/50 hover:bg-zinc-900/70`, borde `border-zinc-800/80 focus:border-zinc-500 focus:bg-zinc-900`, texto `text-zinc-100 placeholder:text-zinc-500`), alternancia de visibilidad de contraseña con botón integrado (`pr-11`, `Eye`/`EyeOff` en `text-zinc-500 hover:text-zinc-300`), feedback contextual inline mínimo (`text-[11px] text-rose-400 mt-1 pl-1`) con borde `border-rose-500/70`, y botón primario estilo sello de cava con radio coincidente (`h-12 w-full rounded-xl bg-[#4f131f] hover:bg-[#5e1725] border border-rose-400/20 text-xs uppercase tracking-widest text-rose-100 font-medium transition-colors shadow-sm mt-2`) con textos directos (*"Iniciar sesión"* y *"Crear cuenta"*). Columna derecha con foto vertical nativa en WebP de viñedos y cordillera (`auth-vineyard.webp`), tinte suave, división nítida editorial mediante borde izquierdo (`border-l border-white/10`) eliminando cortes abruptos en el cielo, degradado inferior para legibilidad tipográfica y texto plano (*"VALLE DE UCO · MENDOZA"*).
-- **Selección Curada y Tarjetas Editoriales (`WineCard.tsx`)**: Integración directa de fotografía real de botellas con `object-contain` y sombra de contacto profunda `drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)]`. Eliminación definitiva de píldoras o pastillas encapsuladas en favor de texto tipográfico puro (`text-xs font-sans font-medium uppercase tracking-[0.2em] text-amber-200/70` para Ficha Oficial y `text-neutral-400` para Comunidad), varietal y añada en `text-xs font-sans font-medium uppercase tracking-wider text-neutral-400`, nombre destacado en `font-serif text-2xl text-neutral-100 font-semibold tracking-tight`, bodega y región en `text-sm text-neutral-300 font-normal leading-relaxed mt-1`, y enlace "Ver ficha" con puntaje en `text-sm font-medium text-neutral-200 hover:text-white`.
-- **Navegación Dinámica con Smart Autohide (`Navbar.tsx` y `DashboardNavbar.tsx`)**: Barra de navegación superior reactiva con patrón de autohide:
-  - En la parte superior (`scrollY < 20px`): completamente transparente (`bg-transparent border-transparent shadow-none`).
-  - Durante todo el Hero inicial (`scrollY <= heroThreshold`): permanece visible continuamente.
-  - Al desplazarse hacia abajo una vez superado el Hero: se desliza suavemente fuera de la pantalla (`-translate-y-full transition-all duration-300`).
-  - Al desplazarse hacia arriba: vuelve a deslizarse visible (`translate-y-0`) con blur translúcido mínimo idéntico al Landing (`backdrop-blur-md bg-stone-950/60 border-b border-white/5 shadow-lg shadow-black/40`).
-  - En el Dashboard (`DashboardNavbar.tsx`): branding oficial `AyVino.` idéntico al Landing con enlace a `/dashboard`, enlaces de descubrimiento central reducidos a *"Explorar"*, *"Maridaje"* y *"Comunidad"* con distribución flexible sin rotura de líneas (`whitespace-nowrap`, `gap-8` a `gap-10`), eliminación del selector de ubicación, avatar de usuario agrandado con menú desplegable que centraliza la gestión personal (Encabezado con rol, Bloque Colección con *"Mi Cava"*, *"Mi historial"*, *"Deseados"*, separador sutil y Bloque Cuenta con *"Cuenta"*, *"Cerrar sesión"*).
-- **Hero Unificado y Barra de Métricas "Cava Strip" (`QuickActions.tsx` y `Metrics.tsx`)**: Layout con altura completa del primer pliegue (`min-h-screen flex flex-col justify-between pt-20 pb-4 sm:pb-5`) con atmósfera envolvente (halo radial borgoña y micropuntos atenuados). Las márgenes internas y de encabezados (`QuickActions`) y la cinta de métricas (`Metrics`) están calibradas verticalmente de forma compacta para garantizar visibilidad total del 100% de las cajas y subtítulos en pantallas estándar de laptop antes del pliegue. Incorpora navegación cinematográfica reactiva al scroll:
-  - **Difuminado y Fade Out Progresivo**: A medida que el usuario desciende, el Hero disuelve su fondo (`backgroundColor: rgba(15,15,17, 1 -> 0.05)`), atenúa su contenido (`opacity: 1 -> 0`), aplica desenfoque progresivo (`filter: blur(0px -> 8px)`) y elevación vertical sutil (`translateY(-28px)`), revelando orgánicamente el fondo continuo de corchos (`corchos-vinos.webp`).
-  - **Auto-Scroll Inteligente con Tope Exacto**: Al superar el 38% de scroll del primer pliegue, el viewport se desliza suavemente hacia el límite exacto del Hero (`window.scrollTo({ top: heroHeight, behavior: 'smooth' })`) con bloqueo antirrebote (850ms).
-  - **Catálogo Exclusivo por Bodegas** (`FilterChips.tsx` y `WineryBlock.tsx`): Estructurado con amplio respiro superior editorial (`pt-24 sm:pt-32` y `scroll-mt-28` en `#catalogo`) para que el titular descanse holgadamente debajo de la barra de navegación; tarjetas esmeriladas puras sin marcos ni bordes artificiales (`bg-stone-950/40`, `backdrop-blur-xl`, `rounded-2xl`, `shadow-xl shadow-black/50`), con escaparate flotante libre de recuadros que exhibe la imagen de la botella completa y sin recortes (`object-contain`). Las secciones personales de inventario y maridaje residen en sus propias páginas dedicadas (`/cava` y `/maridaje`).
-- **Ficha Técnica Editorial en Modal (`WineDetailModal.tsx`)**: Arquitectura visual contenida sin scroll en escritorio (`max-w-4xl max-h-[85vh] bg-[#141417] border border-white/10 rounded-2xl shadow-2xl`):
-  - *Columna Izquierda (Escaparate)*: Fondo `#0f0f12` con divisor `border-white/5`, botella contenida (`max-h-[340px]`) con halo difuso (`bg-rose-900/10 blur-[70px]`) y etiquetas esquineras en `text-xs font-sans uppercase tracking-widest text-neutral-300 font-medium`.
-  - *Columna Derecha (Ficha Editorial)*: Eyebrow en texto plano sin cápsulas (`text-[11px] font-sans uppercase tracking-[0.25em] text-amber-200/70 font-medium` con separador `·`), título en `font-serif text-2xl sm:text-3xl text-neutral-100 font-semibold tracking-tight leading-snug`, región en `text-sm text-neutral-300 font-normal mt-1`, métricas contenidas (`py-3 my-3.5 border-y border-white/10`) con etiquetas en dorado cava (`text-[10px] uppercase tracking-[0.2em] text-amber-200/60 font-medium`) y números serif (`text-xl text-white font-semibold`), notas de cata nítidas de alto contraste en `text-sm sm:text-base text-neutral-100 font-normal leading-relaxed` (`line-clamp-3`), aromas fluidos en `text-sm text-neutral-200 mt-2 font-normal` con `text-amber-200/90 font-medium`, maridaje y terroir dispuestos en dos columnas horizontales (`grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-white/5`) con títulos `text-[11px] font-sans uppercase tracking-[0.2em] text-amber-200/80 font-semibold` y descripciones en `text-sm text-neutral-100 font-normal leading-snug`, y botón de acción en borravino de marca (`bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 rounded-xl px-5 py-2.5 text-xs uppercase tracking-wider font-medium shadow-sm active:scale-[0.98]`) que redirige a `/login` pasando el estado de retorno (`state: { from: location }`). Cero scroll vertical en pantallas estándar 1080p/900p y soporte de accesibilidad total.
-- **Ficha Editorial de Vino Individual — Diseño Despojado & Fluido (`WineDetailPage.tsx` en `/vinos/:id`)**:
-  - Réplica fiel de alta costura de la vista Stitch *"AyVino — Ficha Editorial de Vino (Diseño Despojado & Fluido)"*.
-  - Activada exclusivamente desde las tarjetas del explorador de vinos en el Dashboard (`WineryBlock.tsx`), manteniendo Landing y Cava con sus modales de cata especializados.
-  - **Disposición Asimétrica de 2 Columnas Balanceada (`max-w-7xl mx-auto px-6 py-8`, `gap-10`)**:
-    - *Columna Izquierda (`lg:col-span-5`)*: Tarjeta contenedora de botella esmerilada (`bg-neutral-900/60 border border-neutral-800 rounded-2xl shadow-xl`) con halo radial orgánico (`blur-2xl`) y sombra de contacto profunda; selector plano de añadas en píldoras con feedback de graduación; botones de acción primarios ("Guardar en cava", "Escribir reseña" destacado y "Compartir ficha"); tarjeta espaciosa de Bodega & Terruño con región, año de fundación, sello de trazabilidad verificada en acento ámbar (sin verde discordante) y enlace directo listo para la vista de perfil de bodega; sello fino de estiba y trazabilidad al pie.
-    - *Columna Derecha (`lg:col-span-7`)*: Header con tipografía pura y sobria sin cápsulas/píldoras (`text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100`, con eyebrow mono `TINTO NOBLE · COSECHA 2019`); barra integrada de métricas clave (KPIs en `grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-900/40 border border-neutral-800/80` con valores en `text-xl lg:text-2xl font-mono font-semibold` sin saltos partidos); composición varietal con barra tricolor proporcional; descripción sensorial fluida con tipografía abierta.
-  - **Sección Transversal de Comunidad & Gráfico Sensorial (3/4 + 1/4)**:
-    - *Bloque 3/4 (`lg:col-span-8`)*: Catas & Bitácora de la Comunidad con filtro por estrellas y paginación; formulario interactivo con calificación organoléptica decimal continua (1.0 a 5.0 con slider de paso 0.1 y visualizador de estrellas fraccionales continuas), con autoría implícita del usuario autenticado (sin campo manual redundante).
-    - *Bloque 1/4 (`lg:col-span-4`)*: Perfil Sensorial Enológico con gráfico SVG de radar/telaraña sobre 6 ejes sommelier (Cuerpo, Taninos, Acidez, Fruta, Crianza y Persistencia) con barras de progreso y dictamen enológico.
-  - **Cierre Enogastronómico (Maridajes Sugeridos)**:
-    - Grilla editorial limpia de 4 columnas sin píldoras ni cápsulas, exhibiendo cada maridaje con icono sommelier, tipografía serif destacada y nota de armonía sensorial.
-
-
-
+- **Serif Editorial (600)**: Títulos principales (`h1`, `h2`) en peso semi-bold, con `tracking-tight` y color `text-neutral-100` o `text-white`.
+- **Sans-Serif Interfaz (400 y 500)**: Formularios, botones, textos descriptivos y tablas técnicas.
+- **`font-mono` (Caja alta & tracking amplio)**: Eyebrows, metadatos y fechas (`text-[10px] sm:text-[11px] font-mono tracking-[0.2em] uppercase text-neutral-400 font-medium`).
 
 ---
 
-## 3. Estructura de Directorios Clave
+## 3. Arquitectura del Área de Bodega (`features/winery` y vistas)
+
+Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vitivinícola reside desacoplado en `src/frontend/src/features/winery/` y páginas `Winery*.tsx`, sin importar componentes de las áreas privadas de usuario (`features/dashboard`, `features/wines`, `features/pairings`, `features/cava`).
+
+### 3.1 Jerarquía de Layouts de Bodega
+1. **`WineryPublicLayout` (Rutas Públicas)**:
+   - Envuelve `/para-bodegas`.
+   - Renderiza el `Navbar` superior compartido, `<Outlet />` para la vista hija y el footer institucional.
+2. **`WineryLayout` (Panel Protegido `/bodega/*`)**:
+   - Reemplaza la antigua sidebar por `WineryNavbar`: barra superior persistente fija con logo "AyVino.", enlaces de navegación (`NavLink` con `isActive`), badge de estado institucional y menú desplegable con avatar/logo de bodega (`WineryLogo`), accesos a configuración, perfil público y cierre de sesión.
+   - Provee contexto reactivo memoizado a las vistas hijas vía `WineryProvider` y `Outlet context`.
+   - Footer legal persistente `#0c0c0e` con el texto: *"Beber con moderación · Prohibida su venta a menores de 18 años"*.
+   - Tratamiento de estados globales: carga (`WineryLoadingState`), error de sincronización (`WineryErrorState`) y 404 para cuentas autenticadas sin bodega asociada.
+3. **`WineryTopBar` (Vistas Inmersivas Contextuales del Productor)**:
+   - Utilizado en `/bodega/configuracion` y `/bodega/perfil`.
+   - Barra contextual superior fija (`h-14`, backdrop-blur, borde `border-b border-white/10`), marca enlazando a `/bodega/dashboard` y botón *"Volver al panel"*.
+4. **`WineryPublicProfileLayout` (Perfil Público Vidriera `/bodegas/:id`)**:
+   - Layout inmersivo con barra contextual propia `WineryPublicTopBar` (logo redirige a `/` si es anónimo o a `/dashboard` si hay sesión; botón volver).
+   - Cabecera inmersiva con `WineryBanner` (degradado temático determinista a partir del nombre de la bodega con los temas de `constants/bannerThemes.ts` o fotografía oficial panorámica 3:1 con overlay oscuro de contraste, límite de 2 MB), logo circular superpuesto, metadatos, botón Seguir con rollback optimista y redirección de login, copiar enlace y tabs NavLink.
+   - Pestañas anidadas vía `<Outlet />` con contexto compartido memoizado (`useMemo`): *"La bodega"* (`WineryPublicOverviewPage`) y *"Catálogo"* (`WineryPublicCatalogPage` paginado en servidor con `pageNumber`, `pageSize`, `search`, `wineType`, `grapeId`, `year`, `sort` y punto de selección único `onSelectWine`).
+   - Modo vista previa (`isPreview: true` para dueño o admin de bodega en revisión): cartel fijo explicativo y etiquetas marcadas como borrador. Estado 404 amable para bodegas no disponibles.
+
+### 3.2 Vistas del Área de Bodega
+- **Propuesta de Valor Institucional (`ForWineriesPage.tsx` en `/para-bodegas`)**: Landing de bienvenida para bodegas con beneficios y pasos de certificación.
+- **Registro Unificado de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card inmersivo en 2 pasos con integración de `RegionPicker` y mapa Leaflet.
+- **Panel Principal (`WineryDashboardPage.tsx` en `/bodega/dashboard`)**: Cinta de 4 KPIs (`WineryKpiRibbon`), accesos rápidos (`WineryQuickActions`), checklist interactivo de puesta a punto institucional (`WineryChecklistCard`, con persistencia en `localStorage` por bodega, botón para descartar en cualquier momento y cartel celebratorio que se oculta permanentemente al alcanzar el 100% de progreso) y últimas etiquetas oficiales (`WineryRecentWines`).
+- **Configuración de la Bodega (`WineryConfigPage.tsx` en `/bodega/configuracion`)**: Clon visual inmersivo de `AccountPage` con sidebar izquierda (logo circular con `ring-4`, botones de subida/eliminación de logo, gestión de banner institucional 3:1 con `WineryBanner` e `ImageUploadField` en carpeta `banners`, navegación en `font-mono`) y 4 secciones independientes:
+  1. *Datos de la bodega*: Nombre oficial, año de fundación, sitio web y semblanza histórica (con validaciones y contador).
+  2. *Región y terruño*: Selector territorial interactivo con `RegionPicker` (mapa satelital o selección en lista).
+  3. *Cuenta del responsable*: Nombre de usuario y correo del titular en modo solo lectura (`getCurrentUserApi`).
+  4. *Seguridad y acceso*: Formulario de cambio de contraseña con toggle de visibilidad (`changePasswordApi`).
+- **Ficha Institucional de Bodega (`WineryOverviewPage.tsx` en `/bodega/perfil`)**: Rediseño visual alineado con `ProfilePage`:
+  - Banner vitivinícola unificado `WineryBanner` (fotografía oficial o degradado determinista por defecto).
+  - Logo circular con aro `ring-4` superpuesto sobre el banner.
+  - Nombre en Serif grande, badges de estado (`Oficial`, `En revisión`, `Observaciones`), terruño y año de fundación.
+  - Botones de acción: *"Editar configuración"* (hacia `/bodega/configuracion`) y *"Ver cómo lo ven los usuarios"* (hacia `/bodegas/:id`, siempre habilitado).
+  - Cinta de métricas consolidadas (seguidores, etiquetas oficiales, cosechas y puntaje de la comunidad).
+  - Mapa Leaflet de terruño de solo lectura y catálogo resumido.
+- **"Mi catálogo" de la Bodega (`WineryCatalogPage.tsx` en `/bodega/vinos`)**: Catálogo integral de etiquetas con cinta de métricas (`WineryCatalogRibbon`), barra de búsqueda y filtros reactivos por tipo, uva, año y estado de añada (`WineryCatalogToolbar`), visualización dual grilla/lista (`WineryCatalogCard`), paginación inmutable de 12 etiquetas por página, silueta de botella estilizada propia de bodega (`WineryCatalogBottleSilhouette`), estados vacíos (`WineryCatalogEmptyState`), alta oficial (`WineCreateModal`) y agregado rápido de añadas (`WineVintagesModal`).
+- **Ficha Detallada de Vino (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)**: Ficha técnica completa de la etiqueta con botón "Volver al catálogo", cabecera editorial con origen ("Oficial de tu bodega" / "Agregado por la comunidad"), valoración comunitaria, notas de cata y acciones "Editar etiqueta" (`WineEditModal`) y "Agregar añada" (`WineVintagesModal`). Listado vertical cronológico de cosechas (`WineryVintageCard`) con barra proporcional de corte varietal, alcohol, temperatura, consejo de guarda y estado de moderación. Sección de maridajes recomendados de solo lectura (`WineryWinePairingsList`) y 404 amigable para etiquetas inexistentes o ajenas.
+- **Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)**: Adopción de botellas subidas por aficionados conservando sus reseñas históricas.
+- **Vidriera Pública Universal (`WineryPublicProfileLayout.tsx` en `/bodegas/:id`)**:
+  - Reemplazo integral de la antigua página monolítica.
+  - Subruta índice *"La bodega"* (`WineryPublicOverviewPage.tsx`): semblanza histórica institucional, terruño, mapa satelital de solo lectura (`WineryReadOnlyMap.tsx`) y totales de producción.
+  - Subruta *"Catálogo"* (`WineryPublicCatalogPage.tsx`): catálogo paginado con filtros server-side reflejados en la URL (`searchParams`: búsqueda, tipo, uva, año, orden), tarjetas `WineryPublicCatalogCard.tsx`, siluetas `WineryCatalogBottleSilhouette` y punto de entrada único (`onSelectWine`) hacia el modal técnico provisorio `WineryPublicWineDetailModal.tsx`.
+
+---
+
+## 4. Arquitectura del Panel de Administración (`features/admin` y vistas `/admin/*`)
+
+El panel de administración es una herramienta interna, sobria y funcional diseñada exclusivamente para usuarios con rol `Admin`. Implementa el mismo tema oscuro `#0f0f11` y acentos borgoña `#6b1d28` que el resto del sistema, garantizando responsividad fluida (menú lateral drawer en móviles y barra lateral fija en escritorio).
+
+### 4.1 Componentes y Utilidades Compartidas (`features/admin`)
+- **`AdminLayout.tsx`**: Layout maestro protegido (`ProtectedRoute allowedRoles={['Admin']}`). Incluye sidebar con navegación activa, cabecera con avatar y badge de rol "Admin", menú colapsable para dispositivos móviles, y enlaces rápidos de pie ("Volver al sitio" y "Cerrar sesión"). Aloja el `AdminToastProvider`.
+- **`PageHeader.tsx`**: Título editorial, descripción explicativa de sección y slots para acciones primarias.
+- **`DataTable.tsx`**: Tabla genérica tipada `<T>` con estados de carga animados (5 skeletons), mensaje vacío personalizado y scroll horizontal contenido sin romper el viewport general.
+- **`PaginationControls.tsx`**: Paginación Anterior/Siguiente adaptada a colecciones sin conteo total de registros, indicador de página y selector de tamaño (10, 25, 50).
+- **`StatusBadge.tsx` y `ActiveBadge.tsx`**: Badges visuales para estados de moderación (`Pending` en ámbar, `Approved` en verde, `Rejected` en rojo) y actividad de usuarios (`Activo` en verde, `Inactivo` en gris).
+- **`ConfirmDialog.tsx`**: Diálogo modal accesible (`role="dialog"`, aria-modal, trampa de foco y cierre con Escape) con soporte para variantes neutras y críticas (`danger`) con feedback de procesamiento.
+- **`AdminToast.tsx` / `useAdminToast`**: Notificaciones flotantes no invasivas para confirmaciones de éxito y captura de errores.
+- **`ErrorBanner.tsx`**: Alertas visuales con botón de reintento ante fallos de red o de API.
+- **`usePagedList.ts`**: Hook reutilizable de paginación que aísla respuestas obsoletas asíncronas y reinicia a la página inicial ante cambios en dependencias o filtros.
+- **`getApiErrorMessage.ts`**: Extractor tipado de errores RFC 7807 (Problem Details) priorizando `detail` > `title`.
+
+### 4.2 Vistas del Panel de Administración
+- **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo editorial al administrador conectado y panel consolidado impulsado por el endpoint especializado `GET /api/admin/stats` y `GET /api/admin/audit-logs`:
+  - *Cuatro tarjetas KPI con conteos exactos*: Bodegas pendientes (`/admin/bodegas?status=Pending`), Cosechas pendientes (`/admin/cosechas?status=Pending`), Ciudades pendientes (`/admin/ciudades?status=Pending`) y Usuarios bloqueados (`/admin/usuarios`). Indicadores visuales en ámbar ante elementos pendientes y alerta destacada ante cuentas suspendidas.
+  - *Métricas del Ecosistema*: Panel resumen con total de usuarios registrados, bodegas aprobadas, catálogo de vinos (con desglose dinámico de oficiales vs. comunitarios) y total de reseñas comunitarias.
+  - *Widget de Actividad Reciente*: Carga de las últimas 5 operaciones del registro de auditoría (`getAuditLogs({ pageNumber: 1, pageSize: 5 })`) con nombre de administrador, acción formateada en español, tipo/identificador de entidad, timestamp `es-AR` y enlace directo *"Ver todo"* a `/admin/auditoria`.
+  - *Resiliencia desacoplada*: Manejo independiente de fallos de red y botones de reintento dedicados para estadísticas y auditoría sin degradación mutua ni bloqueos de interfaz.
+- **Moderación de Bodegas (`AdminWineriesPage.tsx` en `/admin/bodegas`)**: Filtros por chip según estado de moderación (con sincronización en URL `?status=`), tabla detallada con iniciales/logo, acciones dinámicas de aprobación/rechazo/suspensión (para bodegas aprobadas la acción se denomina Suspender con confirmación explicativa sobre ocultamiento público), modal de detalle institucional con hipervínculo al perfil público y eliminación física con diálogo destructivo.
+- **Moderación de Ciudades (`AdminCitiesPage.tsx` en `/admin/ciudades`)**: Gestión de ciudades sugeridas por la comunidad al registrar bodegas. Filtro por provincia con resolución en memoria de nombres de provincia, y aprobación o rechazo con confirmación.
+- **Moderación de Cosechas (`AdminVintagesPage.tsx` en `/admin/cosechas`)**: Bandeja centralizada de añadas cargadas por usuarios y bodegas. Filtros de estado, tabla con miniaturas, resolución sensorial de varietales (blends), modal de ficha técnica extendida (temperatura de servicio, guarda) y acciones de moderación o baja.
+- **Gestión de Usuarios (`AdminUsersPage.tsx` en `/admin/usuarios`)**: Catálogo de cuentas registradas con avatar, rol y fecha de alta. Buscador en tiempo real y selector de rol sobre la página cargada, acciones de bloqueo y desbloqueo (badge Activo/Bloqueado) con advertencia de persistencia de sesión abierta, cambio de rol entre Admin y User, eliminación definitiva y protección de todas las cuentas con rol Admin (deshabilitando Bloquear y Eliminar con tooltip informativo).
+- **Catálogo de Variedades de Uva (`AdminGrapesPage.tsx` en `/admin/uvas`)**: ABM integral de cepas enológicas. Filtros por tipo de color, tabla con descriptores sensoriales (cuerpo, taninos, acidez), modal de alta/edición con validación de longitudes y selects opcionales, y borrado con captura de conflictos (409).
+- **Catálogo de Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM completo de sugerencias gastronómicas categorizadas (Carnes, Pescados, Quesos, Pastas, etc.), modal de creación/edición y eliminación con confirmación.
+- **Registro de Auditoría (`AdminAuditPage.tsx` en `/admin/auditoria`)**: Historial inmutable de acciones realizadas por administradores. Filtros combinados por acción, tipo de entidad y rango de fechas (desde/hasta), reseteo dinámico de filtros, tabla con fecha formateada en `es-AR`, enlaces directos a las secciones del panel para cada entidad auditada y detalle con truncado contextual.
+- **Moderación de Reseñas (`AdminReviewsPage.tsx` en `/admin/resenas`)**: Bandeja de moderación comunitaria con filtros combinados por rating (chips Todos, 1 a 5 estrellas), ID de vino e ID de usuario iniciados opcionalmente desde query params, tabla con visualización de estrellas dinámicas, modal accesible para lectura de comentarios extensos y eliminación definitiva con diálogo de confirmación 'danger' y recálculo transaccional de puntajes.
+- **Gestión y Moderación de Vinos (`AdminWinesPage.tsx` en `/admin/vinos`)**: Catálogo maestro de etiquetas con filtros reactivos por nombre, tipo de vino y bodega. Tabla detallada con badges de origen ('Comunitario' / 'Oficial'), cálculo de reseñas, badge de botella duplicada ('Duplicado de #id'), modal de solo lectura de cosechas asociadas, modal de edición integral con precarga de bodegas oficiales aprobadas, eliminación física con confirmación 'danger', y acción de **fusión de etiquetas duplicadas** mediante un modal de dos pasos (paso 1: buscador de etiqueta canónica destino excluyendo el mismo vino y etiquetas ya duplicadas; paso 2: resumen de la unificación de cosechas, reseñas, marcas e inventario con checkbox obligatorio de confirmación destructiva y manejo en vivo de errores del servidor). Las etiquetas que ya son duplicados ocultan las acciones de edición y fusión y exhiben el identificador de su etiqueta principal.
+
+---
+
+## 5. Estructura de Directorios
 
 ```text
 src/frontend/src/
-├── assets/                    # Recursos visuales estáticos optimizados (hero-bottles.webp, auth-vineyard.webp, corchos-vinos.webp)
-├── components/                # Componentes transversales y reutilizables en toda la aplicación
-│   ├── community/             # Modales comunitarios transversales (CommunityModal.tsx)
-│   └── layout/                # Estructura visual global compartida (Navbar.tsx, AppLayout.tsx, RootLayout.tsx, RouteErrorElement.tsx)
-├── features/                  # Arquitectura orientada a características (Feature-Driven Architecture)
-│   ├── auth/                  # Módulo de Autenticación
-│   │   ├── api/               # Llamadas API del módulo (authApi.ts)
-│   │   ├── components/        # Componentes UI de autenticación y guardias (AuthField.tsx, ProtectedRoute.tsx)
-│   │   ├── context/           # Estado global de autenticación (AuthContext.tsx)
-│   │   ├── types/             # DTOs y tipos de autenticación (index.ts)
-│   │   └── index.ts           # Barrel export público del módulo auth
-│   ├── cava/                  # Módulo de Bóveda y Mi Cava Personal (Experiencia Coleccionista Stitch)
-│   │   ├── components/        # Componentes de la bóveda (VaultHeader, VaultVitals, VaultTabs, VaultWineCard, etc.)
-│   │   ├── data/              # Conjunto inicial curado de etiquetas icónicas y telemetría (defaultVaultData.ts)
-│   │   ├── types.ts           # Modelos de dominio tipados (CellarWine, CellarVitals, CellarTelemetry, etc.)
-│   │   └── index.ts           # Barrel export del módulo cava
-│   ├── dashboard/             # Módulo del Dashboard Principal
-│   │   ├── components/        # Componentes del dominio (QuickActions, Metrics, StockCarousel, UncorkDialog, etc.)
-│   │   └── index.ts           # Barrel export público del feature dashboard
-│   └── wines/                 # Módulo de Vinos y Catálogo
-│       ├── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
-│       ├── data/              # Mock curado con assets reales vinculados (curatedWines.ts)
-│       ├── utils/             # Adaptadores de dominio y mapeadores (wineMapper.ts)
-│       └── index.ts           # Barrel export del módulo wines
-│   ├── pairings/              # Dominio de maridajes y afinidad enogastronómica
-│   │   ├── components/
-│   │   │   ├── PairingInteractiveHub.tsx # Switcher bidireccional y navegación de categorías
-│   │   │   └── PairingDetailView.tsx    # Ficha técnica sommelier, servicio y etiquetas
-│   │   └── index.ts           # Barrel export del módulo pairings
-├── data/                      # Datos estáticos curados y taxonomías cerradas
-│   └── pairingsData.ts        # Matriz enogastronómica bidireccional tipada y notas sommelier
-├── lib/                       # Utilidades transversales
-│   └── utils.ts               # Función cn con clsx y tailwind-merge
-├── pages/                     # Páginas y vistas principales (*Page.tsx)
-│   ├── CatalogPage.tsx        # Catálogo general protegido
-│   ├── CavaPage.tsx           # Mi Cava personal y registro de descorches
-│   ├── DashboardPage.tsx      # Homepage / Exploración y catálogo por bodegas post-login
-│   ├── Landing.tsx            # Vista de bienvenida con Hero y vinos destacados
-│   ├── LoginPage.tsx          # Formulario de acceso editorial
-│   ├── PairingPage.tsx        # Recomendaciones gastronómicas y maridaje
-│   ├── RegisterPage.tsx       # Formulario de registro de sommelier persistente
-│   ├── TermsPage.tsx          # Vista legal completa de Términos y Condiciones con índice lateral sticky
-│   ├── WineDetailPage.tsx     # Ficha Editorial de Vino despojada y fluida (/vinos/:id)
-│   └── WineryDashboardPage.tsx# Panel exclusivo para bodegas y administradores
-├── routes/                    # Configuración de enrutamiento
-│   └── AppRoutes.tsx          # Definición de rutas públicas y protegidas con react-router-dom
-├── services/                  # Infraestructura y clientes compartidos
-│   └── apiClient.ts           # Instancia centralizada de Axios con interceptores JWT y refresh token
-├── styles/                    # Sistema de estilización centralizado
-│   ├── tokens.css             # Variables de diseño (:root, paleta vinícola, múltiplos de 4px)
-│   ├── reset.css              # Normalización y reseteo base
-│   └── global.css             # Reglas tipográficas, integración Tailwind v4 y animaciones
-├── types/                     # Tipos globales transversales
-│   └── wine.ts                # Modelos de presentación (CuratedWine, DashboardWine, etc.)
-├── App.tsx                    # Componente contenedor raíz con BrowserRouter y AuthProvider
-└── main.tsx                   # Punto de entrada de React 19 (carga en cascada de estilos)
+├── assets/                    # Recursos visuales optimizados
+├── components/                # Componentes transversales
+│   └── layout/                # RootLayout, AppLayout, ProfileTopBar, RouteErrorElement, Navbar
+├── constants/                 # Constantes globales compartidas (bannerThemes.ts)
+├── features/                  # Arquitectura orientada a características
+│   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
+│   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi, adminReviewsApi, adminWinesApi, adminStatsApi
+│   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
+│   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
+│   │   ├── hooks/             # usePagedList
+│   │   ├── types/             # adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines, adminStats
+│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels
+│   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
+│   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
+│   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
+│   ├── pairings/              # Módulo de Maridajes Enogastronómicos
+│   ├── wines/                 # Módulo de Vinos de Usuario
+│   └── winery/                # Módulo Institucional de Bodegas (100% Desacoplado)
+│       ├── api/               # wineryApi, wineApi, locationApi, grapeApi, imageApi
+│       ├── components/        # WineryNavbar, WineryTopBar, WineryLayout, WineryPublicLayout,
+│       │                      # WineryPublicCatalogCard, WineryPublicWineDetailModal, WineryLogo,
+│       │                      # WineryStatusBanner, WineryKpiRibbon, WineryQuickActions,
+│       │                      # WineryChecklistCard, WineryRecentWines, RegionPicker,
+│       │                      # WineCreateModal, WineVintagesModal, ImageUploadField, etc.
+│       ├── context/           # WineryContext (estado global memoizado con useMemo)
+│       ├── hooks/             # useMyWinery (sincronización con /api/wineries/me)
+│       ├── types/             # DTOs tipados estrictos (winery, wine, location, grape, problemDetails)
+│       └── utils/             # Funciones puras auxiliares
+├── pages/                     # Páginas y vistas principales
+│   ├── AdminCitiesPage.tsx    # Moderación de ciudades (/admin/ciudades)
+│   ├── AdminDashboardPage.tsx # Inicio del panel admin (/admin)
+│   ├── AdminGrapesPage.tsx    # Catálogo de variedades de uva (/admin/uvas)
+│   ├── AdminPairingsPage.tsx  # Catálogo de maridajes (/admin/maridajes)
+│   │   AdminAuditPage.tsx     # Registro de auditoría (/admin/auditoria)
+│   │   AdminReviewsPage.tsx   # Moderación de reseñas (/admin/resenas)
+│   │   AdminWinesPage.tsx     # Gestión de vinos (/admin/vinos)
+│   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
+│   ├── AdminVintagesPage.tsx  # Moderación de cosechas (/admin/cosechas)
+│   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
+│   ├── ForWineriesPage.tsx    # Landing para bodegas (/para-bodegas)
+│   ├── WineryRegisterPage.tsx # Registro split-card (/bodega/registro)
+│   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
+│   ├── WineryConfigPage.tsx   # Configuración inmersiva (/bodega/configuracion)
+│   ├── WineryOverviewPage.tsx # Ficha institucional con banner (/bodega/perfil)
+│   ├── WineryCatalogPage.tsx  # Mi catálogo del dueño (/bodega/vinos)
+│   ├── WineryWineDetailPage.tsx # Ficha técnica de vino (/bodega/vinos/:wineId)
+│   ├── WineryClaimPage.tsx    # Reclamo de vinos comunitarios (/bodega/reclamar)
+│   ├── WineryPublicProfileLayout.tsx # Layout del perfil público (/bodegas/:id)
+│   ├── WineryPublicOverviewPage.tsx  # Pestaña "La bodega" (/bodegas/:id)
+│   └── WineryPublicCatalogPage.tsx   # Pestaña "Catálogo" (/bodegas/:id/catalogo)
+├── routes/                    # Data Router v7
+│   └── AppRoutes.tsx          # Definición centralizada con createBrowserRouter
+└── services/                  # Infraestructura
+    └── apiClient.ts           # Cliente Axios con mutex de refresh token
 ```
 
 ---
 
-## 4. Convenciones de Tipado y TypeScript
+## 6. Calidad y Cumplimiento de Reglas 8 a 11
 
-1. **Prohibido el uso de `any`**: Cualquier tipo desconocido debe gestionarse con genéricos, tipos de unión discriminada o `unknown` con type guards.
-2. **Interfaces Explícitas para Componentes**: Cada componente debe definir su interfaz `Props` explícita:
-   ```typescript
-   export interface WineCardProps {
-     wine: CuratedWine;
-     onSelect: (wine: CuratedWine) => void;
-   }
-   ```
-3. **Modelos de Datos Centralizados en `src/types/`**: Evitar definiciones duplicadas de interfaces en componentes locales.
+El área de bodega y el panel de administración fueron auditados y normalizados bajo cumplimiento estricto de las reglas constitucionales del proyecto:
+- **Regla 8 (Inmutabilidad y Actualizaciones Funcionales)**: Ninguna mutación in-place (`push`, `splice`, `sort`). Todos los setters con dependencia del estado previo usan forma funcional `setX(prev => ...)`. En listas dinámicas (`blend`), cada fila posee un identificador determinista único (`id: string`) para evitar claves por índice de array.
+- **Regla 9 (Saneamiento de Efectos y Limpieza de Recursos)**: Todos los `useEffect` que crean timers para auto-dismiss de mensajes devuelven funciones de limpieza con `clearTimeout`. Los efectos vigilan dependencias primitivas estables (`wineId`, `wineryId`, `key`) en lugar de objetos completos y controlan banderas de desmontaje (`cancelled`) para ignorar respuestas obsoletas.
+- **Regla 10 (Formularios Controlados y Validaciones)**: Todos los inputs inicializan con cadenas vacías controladas (nunca `null` ni `undefined`). Todos los formularios interceptan el envío mediante `e.preventDefault()`.
+- **Regla 11 (Contextos Memoizados y Estado Derivado Puro)**: `WineryContext`, `AdminToastContext` y sus proveedores devuelven objetos memoizados con `useMemo`. No se almacenan valores derivados en `useState`.
 
 ---
 
-## 5. Sistema de Enrutamiento y Guardias de Seguridad
+## 7. Verificación y Testing
 
-El enrutamiento se gestiona mediante **React Router DOM v7** con un enfoque declarativo centralizado en [`src/frontend/src/routes/AppRoutes.tsx`](../../src/frontend/src/routes/AppRoutes.tsx):
-
-- **Guardia de Rutas (`ProtectedRoute.tsx`)**:
-  - Valida el estado de autenticación (`isAuthenticated`) y los roles permitidos (`allowedRoles?: UserRole[]`).
-  - Si la sesión se encuentra cargando (`isLoading = true`), presenta un indicador de espera accesible.
-  - Si no está autenticado, redirige hacia `/login` preservando la ubicación previa en el estado de navegación (`<Navigate to="/login" state={{ from: location }} replace />`).
-  - Al completar el inicio de sesión en `LoginPage.tsx`, se redirige al usuario a `location.state?.from?.pathname || '/dashboard'` respetando la navegación original.
-  - Si el usuario está autenticado pero su rol no coincide con `allowedRoles`, redirige a `/dashboard` (`<Navigate to="/dashboard" replace />`).
-  - Si cumple los criterios, renderiza la vista solicitada.
-
----
-
-## 6. Manejo de Sesión y Renovación Automática (Refresh Token)
-
-La capa de comunicación HTTP reside en [`src/frontend/src/services/apiClient.ts`](../../src/frontend/src/services/apiClient.ts) y opera en estrecha sincronía con [`AuthContext.tsx`](../../src/frontend/src/features/auth/context/AuthContext.tsx):
-
-1. **Hidratación Perezosa Síncrona y Estado Derivado**:
-   - En `AuthContext.tsx`, `user` se inicializa síncronamente en el primer ciclo de render mediante funciones proveedoras en `useState(() => ...)`.
-   - `isAuthenticated` es un **estado derivado** directo (`user !== null`), eliminando estados sincronizados manualmente o redundantes.
-2. **Inyección Segura de Bearer Token**: El interceptor de request valida que el origen de la URL de destino coincida estrictamente con `API_BASE_URL` antes de adjuntar `Authorization: Bearer <accessToken>`, blindando el token contra fugas a terceros.
-3. **Mutex Concurrente en `401 Unauthorized`**:
-   - Para evitar tormentas de peticiones a `/api/auth/refresh` ante múltiples llamadas simultáneas no autenticadas, se implementa una promesa compartida única (`refreshPromise`).
-   - El primer fallo 401 inicia la promesa; las peticiones concurrentes esperan la resolución común y reintentan con el nuevo token sin disparar renovaciones duplicadas.
-   - Si la renovación falla o se recibe un 401 fuera de login, se ejecuta `purgeAndSignalUnauthorized()` y se emite el evento global `window.dispatchEvent(new CustomEvent('auth:unauthorized'))`.
-   - El proveedor `AuthContext.tsx` escucha este evento en un `useEffect`, limpia el estado reactivo (`user = null`) y ejecuta la navegación limpia por SPA a `/login`.
-4. **Rendimiento, Code-Splitting y Core Web Vitals**:
-   - Todas las páginas en `AppRoutes.tsx` se cargan bajo demanda con `React.lazy` y `<Suspense fallback={<RouteFallbackLoader />}>`.
-   - Todas las etiquetas de imagen (`WineCard`, `WineDetailModal`, vistas de autenticación) cuentan con `loading="lazy"`, `decoding="async"` y dimensiones relativas/fijas controladas para prevenir Cumulative Layout Shift (CLS).
-   - En mobile, `WineDetailModal` implementa zonas táctiles accesibles (mínimo 44x44px) y scroll dinámico adaptativo (`max-h-[92dvh] overflow-y-auto` en mobile y `md:overflow-hidden` contenido en escritorio).
-
----
-
-## 7. Guía de Prueba y Verificación de Flujos
-
-### 7.1 Arranque de Entornos
 ```bash
-# Terminal 1: Backend (.NET Core)
-cd src/backend/AyVino.Api
-dotnet run
-
-# Terminal 2: Frontend (Vite SPA)
+# Frontend (Vitest + Testing Library)
 cd src/frontend
-npm run dev
+npm test        # 29 suites de prueba, 101 tests pasando en verde
+npm run lint    # Cero errores y cero advertencias en ESLint
+npm run build   # Compilación estricta TypeScript (tsc -b && vite build)
+
+# Backend (.NET Core)
+dotnet test     # Tests unitarios pasando en verde
+dotnet build    # Cero errores de compilador
 ```
-
-### 7.2 Casos de Prueba Interactivos
-
-1. **Flujo de Usuario Anónimo**:
-   - Ingresar a `http://localhost:5173/`.
-   - Intentar navegar manualmente a `/catalogo` o `/bodega/dashboard`.
-   - **Resultado esperado**: El guardia `ProtectedRoute` intercepta la navegación y redirige automáticamente a `/`.
-2. **Inicio de Sesión con Credenciales**:
-   - Abrir el panel lateral presionando *"Iniciar Sesión"*.
-   - Probar credenciales incorrectas para verificar la alerta de error.
-   - Ingresar con credenciales válidas registradas en el backend.
-   - **Resultado esperado**: Cierre automático del drawer, aparición de la píldora de usuario en el `Navbar` con su rol y desbloqueo de los accesos a `/catalogo` y/o `/bodega/dashboard`.
-3. **Cierre de Sesión (Logout)**:
-   - Presionar *"Salir"* en el `Navbar`.
-   - **Resultado esperado**: Se invoca `POST /api/auth/revoke`, se limpian los tokens de `localStorage` y se restablece la vista pública.
-4. **Verificación de Calidad de Código**:
-   ```bash
-   cd src/frontend
-   npm run build  # Compilación estricta TypeScript (0 errores)
-   npm run lint   # Validación de reglas ESLint (0 advertencias)
-   ```
 
 ---
 
@@ -305,5 +296,3 @@ Unifica las superficies, fondos y elevación visual en toda la aplicación, elim
 - **Píldoras de Filtros con Contraste Editorial (`FilterChips.tsx`)**:
   - Activo ("TODOS"): `bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm`.
   - Inactivo: `border border-white/[0.08] hover:border-white/[0.16] text-neutral-400 hover:text-neutral-200`.
-
-

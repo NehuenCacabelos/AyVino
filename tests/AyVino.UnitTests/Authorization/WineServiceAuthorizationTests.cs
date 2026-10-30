@@ -119,10 +119,37 @@ public class WineServiceAuthorizationTests
     }
 
     [Fact]
-    public async Task CreateAsync_Owner_WithPendingWinery_ThrowsForbiddenException()
+    public async Task CreateAsync_Owner_WithPendingWinery_Succeeds()
     {
         // Arrange
         var winery = CreateWinery(10, userId: 10, status: WineryStatus.Pending);
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(args => ((Wine)args[0]) with { Id = 100 });
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.ExistsByIdAsync(10, Arg.Any<CancellationToken>()).Returns(true);
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var locationRepo = Substitute.For<ILocationRepository>();
+        locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineService(wineRepo, wineryRepo, locationRepo, Substitute.For<IGrapeRepository>());
+        var actor = new Actor(10, AppRoles.Winery);
+
+        // Act
+        var result = await service.CreateAsync(CreateWineDto(wineryId: 10), actor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(SourceType.Official.ToString(), result.SourceType);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Owner_WithRejectedWinery_ThrowsForbiddenException()
+    {
+        // Arrange
+        var winery = CreateWinery(10, userId: 10, status: WineryStatus.Rejected);
         var wineRepo = Substitute.For<IWineRepository>();
         var wineryRepo = Substitute.For<IWineryRepository>();
         wineryRepo.ExistsByIdAsync(10, Arg.Any<CancellationToken>()).Returns(true);
@@ -138,7 +165,7 @@ public class WineServiceAuthorizationTests
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.CreateAsync(CreateWineDto(wineryId: 10), actor));
 
-        Assert.Equal("La bodega debe estar aprobada para publicar vinos oficiales.", ex.Message);
+        Assert.Equal("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.", ex.Message);
     }
 
     [Fact]
@@ -250,6 +277,7 @@ public class WineServiceAuthorizationTests
 
         var wineRepo = Substitute.For<IWineRepository>();
         wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.GetVisibleByIdAsync(1, 10, false, Arg.Any<CancellationToken>()).Returns(existingWine);
         wineRepo.UpdateAsync(Arg.Any<Wine>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -270,6 +298,63 @@ public class WineServiceAuthorizationTests
         await wineRepo.Received(1).UpdateAsync(
             Arg.Is<Wine>(w => w.WineryId == 10 && w.SourceType == SourceType.Official),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Owner_WineFromPendingWinery_Succeeds()
+    {
+        // Arrange: El dueño de una bodega Pending puede editar su vino
+        var existingWine = CreateWine(id: 1, wineryId: 10, SourceType.Official);
+        var winery = CreateWinery(10, userId: 5, status: WineryStatus.Pending);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.GetVisibleByIdAsync(1, 5, false, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.UpdateAsync(Arg.Any<Wine>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+        wineryRepo.ExistsByIdAsync(10, Arg.Any<CancellationToken>()).Returns(true);
+
+        var locationRepo = Substitute.For<ILocationRepository>();
+        locationRepo.ExistsByIdAsync(1, Arg.Any<CancellationToken>()).Returns(true);
+
+        var service = new WineService(wineRepo, wineryRepo, locationRepo, Substitute.For<IGrapeRepository>());
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Act
+        var result = await service.UpdateAsync(1, UpdateWineDto(wineryId: 10), actor);
+
+        // Assert
+        Assert.NotNull(result);
+        await wineRepo.Received(1).UpdateAsync(
+            Arg.Is<Wine>(w => w.WineryId == 10 && w.SourceType == SourceType.Official),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Owner_WineFromRejectedWinery_ThrowsForbiddenException()
+    {
+        // Arrange: Una bodega Rejected no puede editar vinos
+        var existingWine = CreateWine(id: 1, wineryId: 10, SourceType.Official);
+        var winery = CreateWinery(10, userId: 5, status: WineryStatus.Rejected);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var locationRepo = Substitute.For<ILocationRepository>();
+        var service = new WineService(wineRepo, wineryRepo, locationRepo, Substitute.For<IGrapeRepository>());
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.UpdateAsync(1, UpdateWineDto(wineryId: 10), actor));
+
+        Assert.Equal("La bodega debe estar aprobada o pendiente para editar vinos.", ex.Message);
+        await wineRepo.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
     }
 
     [Fact]
@@ -345,6 +430,7 @@ public class WineServiceAuthorizationTests
 
         var wineRepo = Substitute.For<IWineRepository>();
         wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.GetVisibleByIdAsync(1, 99, true, Arg.Any<CancellationToken>()).Returns(existingWine);
         wineRepo.UpdateAsync(Arg.Any<Wine>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var locationRepo = Substitute.For<ILocationRepository>();
@@ -371,6 +457,7 @@ public class WineServiceAuthorizationTests
 
         var wineRepo = Substitute.For<IWineRepository>();
         wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.GetVisibleByIdAsync(1, 99, true, Arg.Any<CancellationToken>()).Returns(existingWine);
         wineRepo.UpdateAsync(Arg.Any<Wine>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -400,6 +487,7 @@ public class WineServiceAuthorizationTests
 
         var wineRepo = Substitute.For<IWineRepository>();
         wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(existingWine);
+        wineRepo.GetVisibleByIdAsync(1, 99, true, Arg.Any<CancellationToken>()).Returns(existingWine);
         wineRepo.UpdateAsync(Arg.Any<Wine>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var locationRepo = Substitute.For<ILocationRepository>();

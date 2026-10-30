@@ -48,6 +48,7 @@ export interface WineVintageApiDto {
   alcoholContent: number | null;
   servingTemperature: number | null;
   agingAdvice: string | null;
+  imageId?: string | null;
   imageUrl: string | null;
   approvalStatus: ApprovalStatusEnum | string;
   uploadedByUserId: number;

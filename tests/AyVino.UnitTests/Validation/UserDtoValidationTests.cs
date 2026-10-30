@@ -10,22 +10,19 @@ public class UserDtoValidationTests
         Email: "juan@example.com",
         Password: "Password123!",
         Role: "User",
-        Bio: "Amante del buen vino.",
-        Photo: "avatar.jpg"
+        Bio: "Amante del buen vino."
     );
 
     private static RegisterUserRequestDto ValidRegisterUser() => new(
         Username: "sommelier_juan",
         Email: "juan@example.com",
         Password: "Password123!",
-        Bio: "Amante del buen vino.",
-        Photo: "avatar.jpg"
+        Bio: "Amante del buen vino."
     );
 
     private static UpdateUserProfileRequestDto ValidUpdateProfile() => new(
         Username: "sommelier_juan",
-        Bio: "Nueva biografía.",
-        Photo: "nueva_foto.jpg"
+        Bio: "Nueva biografía."
     );
 
     [Fact]
@@ -129,17 +126,6 @@ public class UserDtoValidationTests
     }
 
     [Fact]
-    public void CreateUserRequestDto_Photo_LengthBoundaries()
-    {
-        var valid = ValidCreateUser() with { Photo = new string('a', 100) };
-        Assert.Empty(ValidationTestHelper.Validate(valid));
-
-        var invalid = ValidCreateUser() with { Photo = new string('a', 101) };
-        var results = ValidationTestHelper.Validate(invalid);
-        Assert.True(ValidationTestHelper.HasErrorFor(results, nameof(CreateUserRequestDto.Photo)));
-    }
-
-    [Fact]
     public void CreateUserRequestDto_ErrorMessage_IsSpanish()
     {
         var dto = new CreateUserRequestDto("", "sin-arroba", "123");
@@ -188,9 +174,9 @@ public class UserDtoValidationTests
     }
 
     [Fact]
-    public void UpdateUserProfileRequestDto_BioAndPhoto_Null_Valid()
+    public void UpdateUserProfileRequestDto_Bio_Null_Valid()
     {
-        var dto = new UpdateUserProfileRequestDto("valid_user", null, null);
+        var dto = new UpdateUserProfileRequestDto("valid_user", null);
         var results = ValidationTestHelper.Validate(dto);
         Assert.Empty(results);
     }

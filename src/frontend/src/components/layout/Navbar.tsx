@@ -8,6 +8,7 @@ import {
   LogOut,
   Compass,
   LayoutDashboard,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth';
 import { cn } from '../../lib/utils';
@@ -71,8 +72,14 @@ export default function Navbar() {
     navigate('/', { replace: true });
   };
 
-  const isWineryOrAdmin = user?.role === 'Winery' || user?.role === 'Admin';
-  const homePath = isAuthenticated ? (user?.role === 'Winery' ? '/bodega/dashboard' : '/dashboard') : '/';
+  const isWinery = user?.role === 'Winery';
+  const homePath = isAuthenticated
+    ? user?.role === 'Admin'
+      ? '/admin'
+      : user?.role === 'Winery'
+        ? '/bodega/dashboard'
+        : '/dashboard'
+    : '/';
 
   const navLinks = [
     { label: 'Destacados', href: '/#seleccion-curada' },
@@ -152,13 +159,23 @@ export default function Navbar() {
               </>
             )}
 
-            {isWineryOrAdmin && (
+            {isWinery && (
               <Link
                 to="/bodega/dashboard"
                 className="text-[15px] font-medium text-zinc-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Panel Bodega</span>
+              </Link>
+            )}
+
+            {user?.role === 'Admin' && (
+              <Link
+                to="/admin"
+                className="text-[15px] font-medium text-rose-300 hover:text-white transition-colors duration-150 flex items-center gap-1.5 font-semibold whitespace-nowrap"
+              >
+                <Shield className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Panel admin</span>
               </Link>
             )}
           </nav>
@@ -191,6 +208,12 @@ export default function Navbar() {
                 </div>
               ) : (
                 <>
+                  <Link
+                    to="/para-bodegas"
+                    className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-amber-200/90 transition-colors px-2 py-1.5 cursor-pointer"
+                  >
+                    Para bodegas
+                  </Link>
                   <Link
                     to="/login"
                     className="text-sm font-medium text-zinc-300 hover:text-white transition-colors px-3 py-1.5 cursor-pointer"
@@ -289,7 +312,7 @@ export default function Navbar() {
               </>
             )}
 
-            {isWineryOrAdmin && (
+            {isWinery && (
               <Link
                 to="/bodega/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
@@ -297,6 +320,17 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4 text-neutral-400" />
                 Panel Bodega
+              </Link>
+            )}
+
+            {user?.role === 'Admin' && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-white py-1 flex items-center gap-2 font-semibold"
+              >
+                <Shield className="w-4 h-4 text-rose-400" />
+                Panel admin
               </Link>
             )}
           </div>
@@ -326,6 +360,13 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                <Link
+                  to="/para-bodegas"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2 text-xs font-mono uppercase tracking-wider text-amber-200/90 hover:text-amber-100 transition-colors"
+                >
+                  Para bodegas
+                </Link>
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}

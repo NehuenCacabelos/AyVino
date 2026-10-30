@@ -245,5 +245,119 @@ public class PairingServiceAuthorizationTests
 
         Assert.Equal("Wine with ID 999 not found.", ex.Message);
     }
+
+    #region Pending / Rejected Winery & Anti-Regression Tests
+
+    [Fact]
+    public async Task AddToWineAsync_Owner_WineFromPendingWinery_Succeeds()
+    {
+        // Arrange: El dueño de una bodega Pending puede asociar maridajes
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5);
+        winery = winery with { Status = WineryStatus.Pending };
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var pairingRepo = Substitute.For<IPairingRepository>();
+        pairingRepo.ExistsByIdAsync(5, Arg.Any<CancellationToken>()).Returns(true);
+        pairingRepo.IsAssociatedAsync(1, 5, Arg.Any<CancellationToken>()).Returns(false);
+
+        var service = new PairingService(pairingRepo, wineRepo, wineryRepo);
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Act
+        await service.AddToWineAsync(1, 5, actor);
+
+        // Assert
+        await pairingRepo.Received(1).AddToWineAsync(1, 5, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AddToWineAsync_Owner_WineFromRejectedWinery_ThrowsForbiddenException()
+    {
+        // Arrange: Una bodega Rejected no puede asociar maridajes
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5);
+        winery = winery with { Status = WineryStatus.Rejected };
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var pairingRepo = Substitute.For<IPairingRepository>();
+        var service = new PairingService(pairingRepo, wineRepo, wineryRepo);
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.AddToWineAsync(1, 5, actor));
+
+        Assert.Equal("La bodega debe estar aprobada o pendiente para modificar los maridajes de este vino.", ex.Message);
+        await pairingRepo.DidNotReceiveWithAnyArgs().AddToWineAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task AddToWineAsync_OtherWineryOwner_ThrowsForbiddenException()
+    {
+        // Arrange: Dueño de otra bodega recibe 403
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var pairingRepo = Substitute.For<IPairingRepository>();
+        var service = new PairingService(pairingRepo, wineRepo, wineryRepo);
+        var actor = new Actor(6, AppRoles.Winery);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.AddToWineAsync(1, 5, actor));
+
+        Assert.Equal("No tenés permiso para modificar los maridajes de este vino.", ex.Message);
+        await pairingRepo.DidNotReceiveWithAnyArgs().AddToWineAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task AddToWineAsync_UsesInternalGetByIdAsync_NotPublicGetVisibleByIdAsync()
+    {
+        // Anti-regresión: Verifica que AddToWineAsync use GetByIdAsync y no GetVisibleByIdAsync
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5);
+        winery = winery with { Status = WineryStatus.Pending };
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+        wineRepo.GetVisibleByIdAsync(Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns((Wine?)null);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var pairingRepo = Substitute.For<IPairingRepository>();
+        pairingRepo.ExistsByIdAsync(5, Arg.Any<CancellationToken>()).Returns(true);
+        pairingRepo.IsAssociatedAsync(1, 5, Arg.Any<CancellationToken>()).Returns(false);
+
+        var service = new PairingService(pairingRepo, wineRepo, wineryRepo);
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Act
+        await service.AddToWineAsync(1, 5, actor);
+
+        // Assert
+        await wineRepo.Received(1).GetByIdAsync(1, Arg.Any<CancellationToken>());
+        await wineRepo.DidNotReceiveWithAnyArgs().GetVisibleByIdAsync(default, default, default, default);
+    }
+
+    #endregion
 }
 

@@ -33,7 +33,6 @@ public class WineServiceTests
             AlcoholContent: 14.2m,
             ServingTemperature: 16,
             AgingAdvice: "Beber antes de 2028",
-            ImageUrl: "https://example.com/vintage.jpg",
             Grapes: [new WineGrapeRequestDto(GrapeId: 5, Percentage: 100)]
         );
 
@@ -249,6 +248,75 @@ public class WineServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(999));
     }
 
+    [Fact]
+    public async Task DeleteAsync_WineNotFound_ThrowsNotFoundException()
+    {
+        var fakeWineRepo = new FakeWineRepository { ExistingWine = null };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteAsync(999));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WineWithUserHistory_ThrowsConflictException_WithExactCountsAndFusionAdvice()
+    {
+        var fakeWineRepo = new FakeWineRepository
+        {
+            ExistingWine = new Wine { Id = 42, Name = "Vino Con Historial" },
+            UsageCountsResult = new WineUsageCounts(DuplicateWinesCount: 0, ReviewCount: 3, UserWineCount: 5, CellarItemCount: 1)
+        };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.DeleteAsync(42));
+        Assert.Contains("historial de usuarios (reseñas: 3, marcas: 5, cava: 1)", ex.Message);
+        Assert.Contains("Si es un duplicado, usá la fusión.", ex.Message);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WineWithDuplicatesPointingToIt_ThrowsConflictException()
+    {
+        var fakeWineRepo = new FakeWineRepository
+        {
+            ExistingWine = new Wine { Id = 42, Name = "Vino Principal" },
+            UsageCountsResult = new WineUsageCounts(DuplicateWinesCount: 2, ReviewCount: 0, UserWineCount: 0, CellarItemCount: 0)
+        };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.DeleteAsync(42));
+        Assert.Contains("vinos duplicados apuntándole (2)", ex.Message);
+        Assert.Contains("Si es un duplicado, usá la fusión.", ex.Message);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WineWithoutHistory_SucceedsAndCallsDelete()
+    {
+        var fakeWineRepo = new FakeWineRepository
+        {
+            ExistingWine = new Wine { Id = 42, Name = "Vino Limpio" },
+            UsageCountsResult = new WineUsageCounts(DuplicateWinesCount: 0, ReviewCount: 0, UserWineCount: 0, CellarItemCount: 0)
+        };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        await service.DeleteAsync(42);
+
+        Assert.Null(fakeWineRepo.ExistingWine);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DuplicateWineWithoutHistory_SucceedsAndCallsDelete()
+    {
+        var fakeWineRepo = new FakeWineRepository
+        {
+            ExistingWine = new Wine { Id = 88, Name = "Vino Duplicado", DuplicateOfWineId = 42 },
+            UsageCountsResult = new WineUsageCounts(DuplicateWinesCount: 0, ReviewCount: 0, UserWineCount: 0, CellarItemCount: 0)
+        };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        await service.DeleteAsync(88);
+
+        Assert.Null(fakeWineRepo.ExistingWine);
+    }
+
     #region Fakes
 
     private sealed class FakeWineRepository : IWineRepository
@@ -261,6 +329,9 @@ public class WineServiceTests
 
         public Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(ExistingWine?.Id == id ? ExistingWine : null);
+
+        public Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+            GetByIdAsync(id, ct);
 
         public Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Wine>>(ExistingWine is not null && ids.Contains(ExistingWine.Id) ? [ExistingWine] : []);
@@ -309,6 +380,13 @@ public class WineServiceTests
             Task.FromResult(wineIds.Count());
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
+
+        public Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
+            Task.FromResult(new MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));
+
+        public WineUsageCounts UsageCountsResult { get; set; } = new(0, 0, 0, 0);
+        public Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(UsageCountsResult);
     }
 
     private sealed class FakeWineryRepository : IWineryRepository
@@ -316,6 +394,9 @@ public class WineServiceTests
         public int? ExistingWineryId { get; set; }
 
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult<Winery?>(null);
+
+        public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
             Task.FromResult<Winery?>(null);
 
         public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
@@ -342,6 +423,9 @@ public class WineServiceTests
         public int? ExistingLocationId { get; set; }
 
         public Task<Location?> GetByIdAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult<Location?>(null);
+
+        public Task<Location?> GetByCityIdAsync(int cityId, CancellationToken ct = default) =>
             Task.FromResult<Location?>(null);
 
         public Task<int> CreateAsync(Location location, CancellationToken ct = default) =>

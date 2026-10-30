@@ -13,4 +13,10 @@ public record Winery
     public int? UserId { get; init; }
     public WineryStatus Status { get; init; }
     public DateTime RegisterDate { get; init; }
+    public decimal? Latitude { get; init; }
+    public decimal? Longitude { get; init; }
+    public Guid? LogoImageId { get; init; }
+    public Guid? BannerImageId { get; init; }
+    public string? StateName { get; init; }
+    public string? RegionName { get; init; }
 }

@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Data;
+using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using Dapper;
@@ -20,6 +21,26 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    public async Task<Wine?> GetVisibleByIdAsync(int id, int? currentUserId, bool isAdmin, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
+                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE w.id = @Id
+              AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+              );
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Wine>(
+            new CommandDefinition(sql, new { Id = id, CurrentUserId = currentUserId, IsAdmin = isAdmin }, cancellationToken: ct));
+    }
+
     public async Task<IEnumerable<Wine>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
     {
         var idList = ids as IReadOnlyCollection<int> ?? ids.ToArray();
@@ -34,25 +55,44 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new { Ids = idList.ToArray() }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default)
+    public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, null, false, ct);
+
+    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        // El filtro de año/uva ahora mira DENTRO de las cosechas de cada etiqueta (EXISTS),
-        // porque la etiqueta en sí ya no tiene year ni grapes propios.
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                    w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
             FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
             WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
+              AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+              )
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+              )
               AND (@GrapeId IS NULL OR EXISTS (
                     SELECT 1 FROM wine_vintages wv
                     JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
-                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId))
+                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId
+                      AND (@IsAdmin = TRUE
+                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                           OR wv.approval_status = 2)))
               AND (
                     (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
                         SELECT 1 FROM wine_vintages wv2
                         WHERE wv2.wine_id = w.id
                           AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
                           AND (@YearTo IS NULL OR wv2.year <= @YearTo)
+                          AND (@IsAdmin = TRUE
+                               OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
+                               OR wv2.approval_status = 2)
                     )
                   )
             ORDER BY w.id
@@ -67,6 +107,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 GrapeId = grapeId,
                 YearFrom = yearFrom,
                 YearTo = yearTo,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin,
                 Offset = offset,
                 PageSize = pageSize
             }, cancellationToken: ct));
@@ -80,8 +122,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             RETURNING id;
             """;
         const string insertVintageSql = """
-            INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_url, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
-            VALUES (@WineId, @Year, @AlcoholContent, @ServingTemperature, @AgingAdvice, @ImageUrl, @ApprovalStatus, @UploadedByUserId, @RegisterDate, 0, 0)
+            INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_id, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
+            VALUES (@WineId, @Year, @AlcoholContent, @ServingTemperature, @AgingAdvice, @ImageId, @ApprovalStatus, @UploadedByUserId, @RegisterDate, 0, 0)
             RETURNING id;
             """;
         const string insertGrapeSql = """
@@ -112,7 +154,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 firstVintage.AlcoholContent,
                 firstVintage.ServingTemperature,
                 firstVintage.AgingAdvice,
-                firstVintage.ImageUrl,
+                firstVintage.ImageId,
                 ApprovalStatus = (int)firstVintage.ApprovalStatus,
                 firstVintage.UploadedByUserId,
                 firstVintage.RegisterDate
@@ -121,12 +163,15 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         foreach (var grape in grapes)
         {
             await connection.ExecuteAsync(
-                new CommandDefinition(insertGrapeSql, new { WineVintageId = vintageId, grape.GrapeId, grape.Percentage },
-                    transaction: transaction, cancellationToken: ct));
+                new CommandDefinition(insertGrapeSql, new
+                {
+                    WineVintageId = vintageId,
+                    grape.GrapeId,
+                    grape.Percentage
+                }, transaction: transaction, cancellationToken: ct));
         }
 
         await transaction.CommitAsync(ct);
-
         return wine with { Id = wineId };
     }
 
@@ -161,27 +206,45 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        // wine_vintages tiene ON DELETE CASCADE hacia wines, eliminando en cascada cosechas y uvas asociadas.
         const string sql = "DELETE FROM wines WHERE id = @Id;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        var rows = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        var rows = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         return rows > 0;
     }
 
     public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
     {
-        const string sql = "SELECT EXISTS(SELECT 1 FROM wines WHERE id = @Id);";
+        const string sql = "SELECT 1 FROM wines WHERE id = @Id LIMIT 1;";
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
+                (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
+                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleAsync<WineUsageCounts>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default)
     {
-        var sql = $"""
-            SELECT {SelectColumns}
+        const string sql = """
+            SELECT id, winery_id, winery_name_text, name, description, wine_type,
+                   location_id, source_type, duplicate_of_wine_id, rating_sum, review_count
             FROM wines
             WHERE winery_id IS NULL
-              AND winery_name_text ILIKE @Pattern;
+              AND duplicate_of_wine_id IS NULL
+              AND winery_name_text ILIKE @Pattern
+            ORDER BY id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Wine>(
@@ -207,21 +270,31 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-        // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
+    // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
     // 0.25 tolera errores de tipeo normales (letras de más/de menos, mayúsculas) sin devolver basura.
     private const double SimilarityThreshold = 0.25;
-    public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default)
+    public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) =>
+        SearchAsync(name, winery, year, wineType, pageNumber, pageSize, null, false, ct);
+
+    public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
-        // Cada criterio de texto matchea por substring (ILIKE, rápido y exacto) O por similitud
-        // de trigramas (tolera errores de tipeo que ILIKE no perdona). LEFT JOIN a wineries porque
-        // la bodega "real" solo existe si winery_id está seteado; si es un vino comunitario sin
-        // bodega, el nombre está en winery_name_text.
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                 w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
             FROM wines w
             LEFT JOIN wineries wy ON wy.id = w.winery_id
-            WHERE (@Name IS NULL
+            WHERE (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR (w.winery_id IS NULL OR wy.status = 2)
+            )
+            AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+            )
+            AND (@Name IS NULL
                 OR w.name ILIKE @NamePattern
                 OR similarity(w.name, @Name) > @Threshold)
             AND (@Winery IS NULL
@@ -231,7 +304,11 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 OR similarity(COALESCE(wy.name, ''), @Winery) > @Threshold)
             AND (@WineType IS NULL OR w.wine_type = @WineType)
             AND (@Year IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year))
+                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
+                    AND (@IsAdmin = TRUE
+                         OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                         OR wv.approval_status = 2)
+                ))
             ORDER BY
             GREATEST(
                 CASE WHEN @Name IS NULL THEN 0 ELSE similarity(w.name, @Name) END,
@@ -254,8 +331,203 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 Threshold = SimilarityThreshold,
                 WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
                 Year = year,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin,
                 Offset = (pageNumber - 1) * pageSize,
                 PageSize = pageSize
             }, cancellationToken: ct));
+    }
+
+    public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        try
+        {
+            var movedVintages = 0;
+            var mergedVintages = 0;
+            var movedReviews = 0;
+            var discardedReviews = 0;
+            var movedCellarItems = 0;
+
+            // 1. Obtener cosechas de ambos vinos
+            const string getVintagesSql = "SELECT id, year FROM wine_vintages WHERE wine_id = @WineId;";
+            var duplicateVintages = (await connection.QueryAsync<(int Id, int? Year)>(
+                new CommandDefinition(getVintagesSql, new { WineId = duplicateId }, transaction: transaction, cancellationToken: ct))).ToList();
+            var targetVintages = (await connection.QueryAsync<(int Id, int? Year)>(
+                new CommandDefinition(getVintagesSql, new { WineId = targetId }, transaction: transaction, cancellationToken: ct))).ToList();
+
+            foreach (var dupV in duplicateVintages)
+            {
+                var matchingTargetV = targetVintages.Cast<(int Id, int? Year)?>().FirstOrDefault(tv => tv!.Value.Year == dupV.Year);
+
+                if (matchingTargetV is null)
+                {
+                    // Mover cosecha directamente al vino principal
+                    const string moveVintageSql = "UPDATE wine_vintages SET wine_id = @TargetId WHERE id = @VintageId;";
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        moveVintageSql, new { TargetId = targetId, VintageId = dupV.Id }, transaction: transaction, cancellationToken: ct));
+                    movedVintages++;
+                }
+                else
+                {
+                    // Fusionar en la cosecha destino existente
+                    mergedVintages++;
+                    var targetVintageId = matchingTargetV.Value.Id;
+                    var dupVintageId = dupV.Id;
+
+                    // A) Reseñas
+                    const string getDupReviewsSql = "SELECT id, user_id FROM reviews WHERE wine_vintage_id = @DupVintageId;";
+                    var dupReviews = (await connection.QueryAsync<(int Id, int UserId)>(
+                        new CommandDefinition(getDupReviewsSql, new { DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct))).ToList();
+
+                    foreach (var rev in dupReviews)
+                    {
+                        const string checkReviewSql = "SELECT 1 FROM reviews WHERE wine_vintage_id = @TargetVintageId AND user_id = @UserId LIMIT 1;";
+                        var exists = await connection.ExecuteScalarAsync<bool>(
+                            new CommandDefinition(checkReviewSql, new { TargetVintageId = targetVintageId, rev.UserId }, transaction: transaction, cancellationToken: ct));
+
+                        if (exists)
+                        {
+                            const string deleteReviewSql = "DELETE FROM reviews WHERE id = @Id;";
+                            await connection.ExecuteAsync(new CommandDefinition(
+                                deleteReviewSql, new { rev.Id }, transaction: transaction, cancellationToken: ct));
+                            discardedReviews++;
+                        }
+                        else
+                        {
+                            const string moveReviewSql = "UPDATE reviews SET wine_vintage_id = @TargetVintageId WHERE id = @Id;";
+                            await connection.ExecuteAsync(new CommandDefinition(
+                                moveReviewSql, new { TargetVintageId = targetVintageId, rev.Id }, transaction: transaction, cancellationToken: ct));
+                            movedReviews++;
+                        }
+                    }
+
+                    // B) Elementos de cava
+                    const string getDupCellarItemsSql = "SELECT cellar_id, quantity FROM cellar_items WHERE wine_vintage_id = @DupVintageId;";
+                    var dupCellarItems = (await connection.QueryAsync<(int CellarId, int Quantity)>(
+                        new CommandDefinition(getDupCellarItemsSql, new { DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct))).ToList();
+
+                    foreach (var ci in dupCellarItems)
+                    {
+                        const string checkCellarItemSql = "SELECT quantity FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @TargetVintageId;";
+                        var existingQty = await connection.QuerySingleOrDefaultAsync<int?>(
+                            new CommandDefinition(checkCellarItemSql, new { ci.CellarId, TargetVintageId = targetVintageId }, transaction: transaction, cancellationToken: ct));
+
+                        if (existingQty.HasValue)
+                        {
+                            const string sumCellarSql = """
+                                UPDATE cellar_items
+                                SET quantity = LEAST(999, quantity + @Quantity), updated_at = NOW()
+                                WHERE cellar_id = @CellarId AND wine_vintage_id = @TargetVintageId;
+                                DELETE FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @DupVintageId;
+                                """;
+                            await connection.ExecuteAsync(new CommandDefinition(
+                                sumCellarSql, new { ci.CellarId, TargetVintageId = targetVintageId, DupVintageId = dupVintageId, ci.Quantity }, transaction: transaction, cancellationToken: ct));
+                            movedCellarItems++;
+                        }
+                        else
+                        {
+                            const string moveCellarSql = """
+                                UPDATE cellar_items
+                                SET wine_vintage_id = @TargetVintageId
+                                WHERE cellar_id = @CellarId AND wine_vintage_id = @DupVintageId;
+                                """;
+                            await connection.ExecuteAsync(new CommandDefinition(
+                                moveCellarSql, new { ci.CellarId, TargetVintageId = targetVintageId, DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct));
+                            movedCellarItems++;
+                        }
+                    }
+
+                    // C) Wine grapes: se conservan los del principal y se descartan los del duplicado
+                    const string deleteGrapesSql = "DELETE FROM wine_grapes WHERE wine_vintage_id = @DupVintageId;";
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        deleteGrapesSql, new { DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct));
+
+                    // D) Eliminar la cosecha del duplicado
+                    const string deleteVintageSql = "DELETE FROM wine_vintages WHERE id = @DupVintageId;";
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        deleteVintageSql, new { DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct));
+
+                    // E) Recalcular rating_sum y review_count de la cosecha destino
+                    const string recalcTargetVintageSql = """
+                        UPDATE wine_vintages
+                        SET rating_sum = COALESCE((SELECT SUM(rating) FROM reviews WHERE wine_vintage_id = @TargetVintageId), 0),
+                            review_count = COALESCE((SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @TargetVintageId), 0)
+                        WHERE id = @TargetVintageId;
+                        """;
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        recalcTargetVintageSql, new { TargetVintageId = targetVintageId }, transaction: transaction, cancellationToken: ct));
+                }
+            }
+
+            // 2. wine_pairings: copiar al principal los que falten y borrar los del duplicado
+            const string mergePairingsSql = """
+                INSERT INTO wine_pairings (wine_id, pairing_id)
+                SELECT @TargetId, pairing_id
+                FROM wine_pairings
+                WHERE wine_id = @DuplicateId
+                ON CONFLICT (wine_id, pairing_id) DO NOTHING;
+
+                DELETE FROM wine_pairings WHERE wine_id = @DuplicateId;
+                """;
+            await connection.ExecuteAsync(new CommandDefinition(
+                mergePairingsSql, new { TargetId = targetId, DuplicateId = duplicateId }, transaction: transaction, cancellationToken: ct));
+
+            // 3. user_wines: combinar por usuario con OR y borrar los del duplicado
+            const string mergeUserWinesSql = """
+                INSERT INTO user_wines (user_id, wine_id, is_wanted, is_tried, is_favorite, created_at, updated_at)
+                SELECT user_id, @TargetId, is_wanted, is_tried, is_favorite, created_at, NOW()
+                FROM user_wines
+                WHERE wine_id = @DuplicateId
+                ON CONFLICT (user_id, wine_id) DO UPDATE
+                SET is_wanted = user_wines.is_wanted OR EXCLUDED.is_wanted,
+                    is_tried = user_wines.is_tried OR EXCLUDED.is_tried,
+                    is_favorite = user_wines.is_favorite OR EXCLUDED.is_favorite,
+                    updated_at = NOW();
+
+                DELETE FROM user_wines WHERE wine_id = @DuplicateId;
+                """;
+            await connection.ExecuteAsync(new CommandDefinition(
+                mergeUserWinesSql, new { TargetId = targetId, DuplicateId = duplicateId }, transaction: transaction, cancellationToken: ct));
+
+            // 4. Recalcular rating_sum y review_count del vino principal
+            const string recalcTargetWineSql = """
+                UPDATE wines
+                SET rating_sum = COALESCE((SELECT SUM(rating_sum) FROM wine_vintages WHERE wine_id = @TargetId), 0),
+                    review_count = COALESCE((SELECT SUM(review_count) FROM wine_vintages WHERE wine_id = @TargetId), 0)
+                WHERE id = @TargetId;
+                """;
+            await connection.ExecuteAsync(new CommandDefinition(
+                recalcTargetWineSql, new { TargetId = targetId }, transaction: transaction, cancellationToken: ct));
+
+            // 5. Marcar vino duplicado
+            const string markDuplicateSql = """
+                UPDATE wines
+                SET duplicate_of_wine_id = @TargetId,
+                    rating_sum = 0,
+                    review_count = 0
+                WHERE id = @DuplicateId;
+                """;
+            await connection.ExecuteAsync(new CommandDefinition(
+                markDuplicateSql, new { TargetId = targetId, DuplicateId = duplicateId }, transaction: transaction, cancellationToken: ct));
+
+            await transaction.CommitAsync(ct);
+
+            return new MergeWinesResultDto(
+                targetId,
+                duplicateId,
+                movedVintages,
+                mergedVintages,
+                movedReviews,
+                discardedReviews,
+                movedCellarItems);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 }

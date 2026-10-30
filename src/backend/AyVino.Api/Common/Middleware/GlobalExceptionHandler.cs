@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace AyVino.Api.Common.Middleware;
 
@@ -25,6 +26,11 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 badReq.StatusCode,
                 GetTitleForStatusCode(badReq.StatusCode),
                 "La solicitud es inválida o está mal formada."
+            ),
+            PostgresException pgEx when pgEx.SqlState == PostgresErrorCodes.ForeignKeyViolation => (
+                StatusCodes.Status409Conflict,
+                GetTitleForStatusCode(StatusCodes.Status409Conflict),
+                "No se puede eliminar el registro porque tiene otros datos asociados en el sistema."
             ),
             _ => (
                 StatusCodes.Status500InternalServerError,
@@ -67,7 +73,10 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         StatusCodes.Status403Forbidden => "Acceso prohibido",
         StatusCodes.Status404NotFound => "Recurso no encontrado",
         StatusCodes.Status409Conflict => "Conflicto de recursos",
+        StatusCodes.Status413PayloadTooLarge => "Carga demasiado grande",
+        StatusCodes.Status415UnsupportedMediaType => "Tipo de medio no soportado",
+        StatusCodes.Status422UnprocessableEntity => "Entidad no procesable",
+        StatusCodes.Status503ServiceUnavailable => "Servicio no disponible",
         _ => "Error en la solicitud"
     };
 }
-
