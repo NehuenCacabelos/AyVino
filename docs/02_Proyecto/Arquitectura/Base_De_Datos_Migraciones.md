@@ -256,10 +256,14 @@ La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los met
 - `created_at` (`timestamptz`): Fecha y hora UTC de subida.
 
 **Reglas de Claves Foráneas hacia `images`**:
-- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen física se elimina, el usuario pasa a `null` reactivando el avatar determinista de DiceBear.
-- `wineries.logo_image_id`: Clave foránea con `ON DELETE RESTRICT`. Requiere que el orquestador desvincule el logo antes de borrar la fila de `images`.
-- `wineries.banner_image_id`: Clave foránea con `ON DELETE RESTRICT`.
-- `wine_vintages.image_id`: Clave foránea con `ON DELETE RESTRICT`.
+Todas las referencias foráneas hacia `images` están configuradas con `ON DELETE SET NULL` en la migración `M20261029002_AddImageReferencesToEntities` y en el esquema relacional:
+- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si el registro de la imagen es eliminado, el usuario pasa a `null`, reactivando transparentemente el avatar determinista de DiceBear.
+- `wineries.logo_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con logo `null`, mostrando su placeholder inicial.
+- `wineries.banner_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con banner `null`, aplicando el gradiente temático de respaldo.
+- `wine_vintages.image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la cosecha queda con `null`, mostrando la silueta estándar de botella.
+
+**Justificación de `ON DELETE SET NULL` y Orden Transaccional**:
+Garantiza el desacoplamiento total entre el ciclo de vida de los archivos multimedia y las entidades principales de negocio. La eliminación de una imagen nunca bloquea ni destruye en cascada a la bodega, vino o usuario. Adicionalmente, el orquestador (`ImageTransactionRunner`) ejecuta el orden estricto de dos pasos: primero actualiza a `null` (o al nuevo ID) la referencia en la entidad padre, y recién después elimina la fila en la tabla `images`.
 
 ### Eliminación de Columnas Legacy (Migración `M20261029003`)
 Tras migrar el almacenamiento al modelo unificado de identificadores de imagen referenciales, la migración `M20261029003_RemoveLegacyImageColumns` elimina de forma definitiva en `Up()` las columnas obsoletas de tipo string/URL:

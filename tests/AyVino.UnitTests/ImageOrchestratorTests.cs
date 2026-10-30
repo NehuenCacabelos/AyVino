@@ -365,4 +365,92 @@ public class ImageOrchestratorTests
 
         await _imageStorage.Received(1).DeleteAsync("ayvino/vintages/compensate_bottle", Arg.Any<CancellationToken>());
     }
+    [Fact]
+    public async Task UploadWineryLogoAsync_WhenReplacingExistingLogo_AttachesNewReferenceFirstThenPurgesOldImage()
+    {
+        // Arrange
+        var oldLogoId = Guid.NewGuid();
+        var winery = new Winery { Id = 5, Name = "Catena", UserId = 100, Status = WineryStatus.Approved, LogoImageId = oldLogoId };
+        _wineryRepository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var oldImage = new Image { Id = oldLogoId, ExternalId = "old_logo_external_id" };
+        _imageRepository.GetByIdAsync(oldLogoId, Arg.Any<CancellationToken>()).Returns(oldImage);
+
+        var actor = new Actor(UserId: 100, Role: AppRoles.Winery);
+        var uploadResult = new StoredImageResult("new_logo_external_id", 1000, 400, 400);
+        _imageStorage.UploadAsync(Arg.Any<Guid>(), Arg.Any<Stream>(), "image/jpeg", ImageType.WineryLogo, Arg.Any<CancellationToken>())
+            .Returns(uploadResult);
+
+        var file = CreateValidJpegFile();
+
+        // Act
+        var newId = await _sut.UploadWineryLogoAsync(5, file, actor);
+
+        // Assert: Attachment of new image happens BEFORE deletion of old image
+        Received.InOrder(() =>
+        {
+            _transactionRunner.AttachWineryLogoAsync(Arg.Is<Image>(img => img.Id == newId), 5, Arg.Any<CancellationToken>());
+            _imageRepository.DeleteAsync(oldLogoId, Arg.Any<CancellationToken>());
+            _imageStorage.DeleteAsync("old_logo_external_id", Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
+    public async Task DeleteWineryLogoAsync_WhenOwner_DetachesFromDatabaseBeforeDeletingFromCloudinary()
+    {
+        // Arrange
+        var logoId = Guid.NewGuid();
+        var winery = new Winery { Id = 5, Name = "Catena", UserId = 100, Status = WineryStatus.Approved, LogoImageId = logoId };
+        _wineryRepository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var image = new Image { Id = logoId, ExternalId = "catena_logo_ext" };
+        _imageRepository.GetByIdAsync(logoId, Arg.Any<CancellationToken>()).Returns(image);
+
+        var actor = new Actor(UserId: 100, Role: AppRoles.Winery);
+
+        // Act
+        await _sut.DeleteWineryLogoAsync(5, actor);
+
+        // Assert order: detach from database happens BEFORE Cloudinary destruction
+        Received.InOrder(() =>
+        {
+            _transactionRunner.DetachAndDeleteWineryLogoAsync(5, logoId, Arg.Any<CancellationToken>());
+            _imageStorage.DeleteAsync("catena_logo_ext", Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
+    public async Task UploadVintageImageAsync_WhenReplacingExistingImage_AttachesNewReferenceFirstThenPurgesOldImage()
+    {
+        // Arrange
+        var oldImageId = Guid.NewGuid();
+        var wine = new Wine { Id = 10, WineryId = 5, Name = "Malbec 2020", WineType = WineType.Red, LocationId = 1 };
+        var vintage = new WineVintage { Id = 20, WineId = 10, Year = 2020, UploadedByUserId = 100, ApprovalStatus = ApprovalStatus.Approved, ImageId = oldImageId };
+        _wineRepository.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(wine);
+        _vintageRepository.GetByIdAsync(20, Arg.Any<CancellationToken>()).Returns(vintage);
+
+        var winery = new Winery { Id = 5, Name = "Bodega A", UserId = 50, Status = WineryStatus.Approved };
+        _wineryRepository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var oldImage = new Image { Id = oldImageId, ExternalId = "old_bottle_external_id" };
+        _imageRepository.GetByIdAsync(oldImageId, Arg.Any<CancellationToken>()).Returns(oldImage);
+
+        var ownerActor = new Actor(UserId: 50, Role: AppRoles.Winery);
+        var uploadResult = new StoredImageResult("new_bottle_external_id", 3000, 600, 1200);
+        _imageStorage.UploadAsync(Arg.Any<Guid>(), Arg.Any<Stream>(), "image/jpeg", ImageType.WineVintage, Arg.Any<CancellationToken>())
+            .Returns(uploadResult);
+
+        var file = CreateValidJpegFile();
+
+        // Act
+        var newId = await _sut.UploadVintageImageAsync(10, 20, file, ownerActor);
+
+        // Assert: Attachment of new vintage image reference happens BEFORE deletion of old image
+        Received.InOrder(() =>
+        {
+            _transactionRunner.AttachVintageImageAsync(Arg.Is<Image>(img => img.Id == newId), 20, Arg.Any<CancellationToken>());
+            _imageRepository.DeleteAsync(oldImageId, Arg.Any<CancellationToken>());
+            _imageStorage.DeleteAsync("old_bottle_external_id", Arg.Any<CancellationToken>());
+        });
+    }
 }
