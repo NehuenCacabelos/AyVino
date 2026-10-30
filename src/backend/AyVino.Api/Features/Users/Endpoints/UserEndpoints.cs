@@ -78,18 +78,9 @@ public static class UserEndpoints
             return Results.Ok(new { imageId });
         })
         .DisableAntiforgery()
-        .WithName("UploadMyAvatarPut")
-        .WithSummary("Sube una foto de perfil personalizada para el usuario autenticado");
-
-        authenticatedGroup.MapPost("/me/avatar", async (IFormFile file, ClaimsPrincipal claimsPrincipal, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
-        {
-            var userId = claimsPrincipal.GetUserId();
-            var imageId = await imageOrchestrator.UploadAvatarAsync(userId, file, ct);
-            return Results.Ok(new { imageId });
-        })
-        .DisableAntiforgery()
         .WithName("UploadMyAvatar")
         .WithSummary("Sube una foto de perfil personalizada para el usuario autenticado");
+
 
         authenticatedGroup.MapDelete("/me/avatar", async (ClaimsPrincipal claimsPrincipal, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
         {

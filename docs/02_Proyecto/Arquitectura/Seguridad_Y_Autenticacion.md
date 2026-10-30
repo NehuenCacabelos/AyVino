@@ -187,9 +187,9 @@ AyVino desacopla la persistencia física de imágenes de su base de datos relaci
   - Entrega encabezados de caché `Cache-Control: public, max-age=604800` (7 días) y redirige mediante HTTP 302 hacia la URL transformada del CDN de Cloudinary.
   - No expone metadatos sensibles ni identificadores internos de Cloudinary en el payload (solo responde redirecciones basadas en el UUID de la tabla `images`).
 - **Escrituras y Modificaciones Protegidas**:
-  - **Logos y Banners de Bodega** (`POST`/`DELETE /api/wineries/{id}/logo`, `POST`/`DELETE /api/wineries/{id}/banner`): Exigen autenticación JWT y validan que el `Actor` sea propietario de la bodega o posea rol `Admin`.
-  - **Imágenes de Cosecha (Vintages)** (`POST`/`DELETE /api/wines/{wineId}/vintages/{vintageId}/image`): Exigen token JWT y validan que el actor sea el dueño de la bodega asociada al vino o administrador.
-  - **Avatar de Usuario** (`POST`/`DELETE /api/users/me/avatar`): Requiere autenticación JWT. La operación se ata de manera estricta al `actor.UserId` extraído del claim del token, impidiendo que un usuario suplante la foto de perfil de otro.
+  - **Logos y Banners de Bodega** (`PUT`/`DELETE /api/wineries/{id}/logo`, `PUT`/`DELETE /api/wineries/{id}/banner`): Exigen autenticación JWT y validan que el `Actor` sea propietario de la bodega o posea rol `Admin`.
+  - **Imágenes de Cosecha (Vintages)** (`PUT`/`DELETE /api/wines/{wineId}/vintages/{vintageId}/image`): Exigen token JWT y validan que el actor sea el dueño de la bodega asociada al vino o administrador.
+  - **Avatar de Usuario** (`PUT`/`DELETE /api/users/me/avatar`): Requiere autenticación JWT. La operación se ata de manera estricta al `actor.UserId` extraído del claim del token, impidiendo que un usuario suplante la foto de perfil de otro.
 
 ### 7.3 Validación Estricta de Carga (Magic Bytes y Cuotas)
 Para neutralizar la inyección de archivos maliciosos (Polyglots, scripts ejecutables camuflados o payloads desmedidos):

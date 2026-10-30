@@ -175,7 +175,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `GET` | `/api/users/{username}/cellar-items` | Público | Lista los vinos en cava de un usuario para visualización pública en modo solo lectura. | Query params: `pageNumber = 1`, `pageSize = 20` | `200 OK` (`IReadOnlyList<PublicCellarItemResponseDto>`) |
 | `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
-| `POST` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`UserResponseDto`) |
+| `PUT` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/users/me/avatar` | Autenticado | Elimina la foto de perfil física y restaura el avatar por defecto. | - | `200 OK` (`UserResponseDto`) |
 | `GET` | `/api/users` | Admin (`RequireAdmin`) | Lista paginada de todos los usuarios registrados en el sistema. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UserResponseDto>`) |
 | `GET` | `/api/users/{id}` | Admin (`RequireAdmin`) | Obtiene los detalles de cualquier usuario por ID. | - | `200 OK` (`UserResponseDto`) |
@@ -525,7 +525,7 @@ El subsistema de imágenes gestiona la carga, validación, almacenamiento en Clo
 | `DELETE` | `/api/wineries/{id}/banner` | Autenticado (Dueño / Admin) | Quita el banner oficial de la bodega y elimina el archivo físico. | - | `204 No Content` |
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Sube y asocia la fotografía oficial de la botella para una cosecha. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Quita la fotografía de la botella y elimina el archivo físico. | - | `204 No Content` |
-| `PUT` / `POST` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Sube y asocia la foto de perfil del usuario autenticado. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `PUT` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Sube y asocia la foto de perfil del usuario autenticado. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Quita el avatar personalizado y reactiva el fallback dinámico DiceBear. | - | `204 No Content` |
 
 ### Especificación de Transformaciones por Variante
