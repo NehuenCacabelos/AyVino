@@ -108,12 +108,20 @@ Features/
 │   ├── Repositories/  # ICellarRepository, CellarRepository, ICellarItemRepository, CellarItemRepository
 │   └── Services/      # ICellarService, CellarService, ICellarItemService, CellarItemService, CellarCareService
 │
-└── WineCare/          # Consejos enológicos: temperaturas óptimas, decantado y ventanas de consumo
-    ├── DTOs/          # WineCareResponseDto, ServingTemperatureDto, DecantingDto, DrinkingWindowDto
-    ├── Endpoints/     # WineCareEndpoints.cs
-    ├── Enums/         # DrinkingStatus, AdviceSource
-    ├── Repositories/  # IWineCareRepository.cs y WineCareRepository.cs
-    └── Services/      # IWineCareService.cs y WineCareService.cs
+├── WineCare/          # Consejos enológicos: temperaturas óptimas, decantado y ventanas de consumo
+│   ├── DTOs/          # WineCareResponseDto, ServingTemperatureDto, DecantingDto, DrinkingWindowDto
+│   ├── Endpoints/     # WineCareEndpoints.cs
+│   ├── Enums/         # DrinkingStatus, AdviceSource
+│   ├── Repositories/  # IWineCareRepository.cs y WineCareRepository.cs
+│   └── Services/      # IWineCareService.cs y WineCareService.cs
+│
+└── Images/            # Almacenamiento, entrega y optimización de imágenes en Cloudinary
+    ├── DTOs/          # ImageResponseDto, ImageUploadResultDto
+    ├── Endpoints/     # ImageEndpoints.cs
+    ├── Enums/         # ImageVariant (Thumbnail, Medium, Large, Original)
+    ├── Models/        # StoredImage (Image)
+    ├── Repositories/  # IImageRepository.cs y ImageRepository.cs
+    └── Services/      # IImageStorage, CloudinaryImageStorage, IImageOrchestrator, ImageOrchestrator, IImageTransactionRunner, ImageTransactionRunner, ImageValidator
 ```
 
 ---
@@ -125,6 +133,20 @@ Aquellos aspectos técnicos requeridos transversalmente por múltiples slices se
 ### Acceso a Base de Datos ([`Common/Data/`](../../src/backend/AyVino.Api/Common/Data))
 - **`IDbConnectionFactory`**: Interfaz asíncrona y síncrona para obtener conexiones físicas a PostgreSQL.
 - **`NpgsqlConnectionFactory`**: Implementación basada en `NpgsqlConnection` que inyecta la cadena de conexión provista mediante User Secrets en desarrollo o variables de entorno en producción.
+
+### Almacenamiento Unificado de Imágenes con Cloudinary ([`Features/Images/`](../../src/backend/AyVino.Api/Features/Images))
+- **Único Proveedor Multimedia**: Cloudinary es el proveedor exclusivo para la carga, transformación y entrega de imágenes. Supabase Storage y el almacenamiento local de avatares fueron eliminados.
+- **Abstracción `IImageStorage` y `CloudinaryImageStorage`**: Encapsula el cliente oficial de Cloudinary (`CloudinaryDotNet`), realizando cargas (`UploadAsync`), borrados físicos (`DeleteAsync`) y generación de URLs optimizadas con variantes dinámicas (`BuildDeliveryUrl`).
+- **Orquestación y Compensación Transaccional (`IImageOrchestrator`, `IImageTransactionRunner`)**:
+  Para garantizar consistencia atómica entre el almacenamiento en la nube y PostgreSQL, las altas y bajas de imágenes implementan un flujo de compensación:
+  1. Validación en memoria de formato (JPEG, PNG, WebP) mediante números mágicos y tamaño (máx. 5 MB) con `ImageValidator`.
+  2. Subida física del archivo a Cloudinary en carpetas de dominio (`ayvino/{folder}`).
+  3. Ejecución transaccional en PostgreSQL vía `IImageTransactionRunner`: inserción en la tabla `images` y actualización de la clave foránea (`logo_image_id`, `banner_image_id`, `image_id`, `avatar_image_id`).
+  4. En caso de fallo en la base de datos, se activa inmediatamente la compensación eliminando el asset recién subido de Cloudinary (`RollbackCloudinaryUploadAsync`).
+  5. En caso de éxito con reemplazo de imagen existente, la imagen anterior se elimina de PostgreSQL y se purga en Cloudinary.
+- **Entrega con Redirección y Caché (`GET /api/images/{id}`)**:
+  - Redirección HTTP 302 hacia el CDN de Cloudinary aplicando auto-formato (`f_auto`) y auto-calidad (`q_auto`).
+  - Cabecera `Cache-Control: public, max-age=604800` (7 días) para maximizar la velocidad de carga en el frontend.
 
 ### Manejo Global de Excepciones ([`Common/Middleware/`](../../src/backend/AyVino.Api/Common/Middleware))
 - **`GlobalExceptionHandler`**: Interceptor que traduce cualquier excepción de negocio o fallo no controlado al formato estándar RFC 7807 (`ProblemDetails`).

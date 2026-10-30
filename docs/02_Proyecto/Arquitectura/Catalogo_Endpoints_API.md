@@ -510,6 +510,33 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 
 ---
 
+## 19. Almacenamiento y Entrega Unificada de Imágenes (`/api/images`)
+
+El subsistema de imágenes gestiona la carga, validación, almacenamiento en Cloudinary y entrega centralizada mediante identificadores UUID almacenados en la tabla relacional `images`.
+
+### Resumen de Endpoints
+
+| Método | Ruta | Acceso | Descripción | Entrada | Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/images/{id}` | Público (`AllowAnonymous`) | Resuelve y redirige a la URL optimizada en Cloudinary con header de caché de 7 días. Soporta query param opcional `?variant=avatar\|logo\|banner\|bottle`. | Query param opcional `variant` | `302 Found` (header `Location` y `Cache-Control: public, max-age=604800`) / `404 Not Found` / `400 Bad Request` |
+| `PUT` | `/api/wineries/{id}/logo` | Autenticado (Dueño / Admin) | Sube y asocia el logo oficial de la bodega. Elimina la imagen previa si existía. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wineries/{id}/logo` | Autenticado (Dueño / Admin) | Quita el logo oficial de la bodega y elimina el archivo físico. Idempotente. | - | `204 No Content` |
+| `PUT` | `/api/wineries/{id}/banner` | Autenticado (Dueño / Admin) | Sube y asocia el banner oficial de la bodega (proporción 3:1). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wineries/{id}/banner` | Autenticado (Dueño / Admin) | Quita el banner oficial de la bodega y elimina el archivo físico. | - | `204 No Content` |
+| `PUT` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Sube y asocia la fotografía oficial de la botella para una cosecha. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/wines/{wineId}/vintages/{vintageId}/image` | Autenticado (Dueño / Uploader pendiente / Admin) | Quita la fotografía de la botella y elimina el archivo físico. | - | `204 No Content` |
+| `PUT` / `POST` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Sube y asocia la foto de perfil del usuario autenticado. | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
+| `DELETE` | `/api/users/me/avatar` | Autenticado (`User`, `Winery`, `Admin`) | Quita el avatar personalizado y reactiva el fallback dinámico DiceBear. | - | `204 No Content` |
+
+### Especificación de Transformaciones por Variante
+- `avatar`: `c_fill,g_face,w_256,h_256,q_auto,f_auto`
+- `logo`: `c_fit,w_400,h_400,q_auto,f_auto`
+- `banner`: `c_fill,g_center,w_1500,h_500,q_auto,f_auto`
+- `bottle`: `c_fit,w_800,h_1200,q_auto,f_auto`
+- Sin variante: entrega la imagen original con optimización automática (`q_auto,f_auto`).
+
+---
+
 ## 🔗 Referencias Relacionadas
 - [[Backend_Overview]]: Vertical slices, repositorios y servicios.
 - [[Seguridad_Y_Autenticacion]]: Flujo de tokens, claims y políticas de acceso.

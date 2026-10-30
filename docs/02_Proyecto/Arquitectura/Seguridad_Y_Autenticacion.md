@@ -168,6 +168,33 @@ dotnet user-secrets set "Jwt:SecretKey" "TuClaveSecretaDeDesarrolloMin32Bytes!" 
 En servidores de despliegue, Docker o plataformas en la nube, se configuran mediante variables de entorno estándar de ASP.NET Core:
 - `Jwt__SecretKey`: Clave criptográfica HMAC-SHA256 de alta entropía.
 - `ConnectionStrings__DefaultConnection`: Cadena de conexión hacia PostgreSQL.
+- `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret`: Credenciales de acceso al servicio de almacenamiento multimedia.
+
+---
+
+## 7. Seguridad en el Almacenamiento y Entrega de Imágenes
+
+AyVino desacopla la persistencia física de imágenes de su base de datos relacional mediante Cloudinary como único proveedor de almacenamiento. Esta arquitectura implementa estrictas garantías de seguridad:
+
+### 7.1 Aislamiento de Credenciales de Cloudinary (Server-Side Only)
+- Las claves API (`Cloudinary:CloudName`, `Cloudinary:ApiKey` y `Cloudinary:ApiSecret`) residen **exclusivamente en el backend**.
+- En desarrollo se configuran mediante `dotnet user-secrets`; en producción se inyectan como variables de entorno seguras.
+- El cliente frontend **nunca** interactúa de forma directa con la API de Cloudinary ni conoce sus credenciales. Todas las operaciones de subida y borrado se canalizan a través de los endpoints de la API de AyVino.
+
+### 7.2 Políticas de Autorización y Titularidad en Endpoints Multimedia
+- **Lectura Pública Anónima (`GET /api/images/{id}`)**:
+  - Endpoint marcado con `[AllowAnonymous]` para habilitar la carga directa en tags `<img>` y clientes web sin requerir headers `Authorization`.
+  - Entrega encabezados de caché `Cache-Control: public, max-age=604800` (7 días) y redirige mediante HTTP 302 hacia la URL transformada del CDN de Cloudinary.
+  - No expone metadatos sensibles ni identificadores internos de Cloudinary en el payload (solo responde redirecciones basadas en el UUID de la tabla `images`).
+- **Escrituras y Modificaciones Protegidas**:
+  - **Logos y Banners de Bodega** (`POST`/`DELETE /api/wineries/{id}/logo`, `POST`/`DELETE /api/wineries/{id}/banner`): Exigen autenticación JWT y validan que el `Actor` sea propietario de la bodega o posea rol `Admin`.
+  - **Imágenes de Cosecha (Vintages)** (`POST`/`DELETE /api/wines/{wineId}/vintages/{vintageId}/image`): Exigen token JWT y validan que el actor sea el dueño de la bodega asociada al vino o administrador.
+  - **Avatar de Usuario** (`POST`/`DELETE /api/users/me/avatar`): Requiere autenticación JWT. La operación se ata de manera estricta al `actor.UserId` extraído del claim del token, impidiendo que un usuario suplante la foto de perfil de otro.
+
+### 7.3 Validación Estricta de Carga (Magic Bytes y Cuotas)
+Para neutralizar la inyección de archivos maliciosos (Polyglots, scripts ejecutables camuflados o payloads desmedidos):
+- Validación de tamaño máximo de 5 MB por archivo.
+- Inspección binaria de **números mágicos (magic bytes)** en el encabezado de los archivos (`ImageValidator.cs`), permitiendo exclusivamente firmas legítimas de JPEG (`FF D8 FF`), PNG (`89 50 4E 47 0D 0A 1A 0A`) y WebP (`RIFF....WEBP`).
 
 ---
 

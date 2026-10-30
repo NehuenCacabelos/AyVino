@@ -243,4 +243,72 @@ public class ImageStorageTests
 
         Assert.Contains(id.ToString(), ex.Message);
     }
+    [Theory]
+    [InlineData("AVATAR", "avatar")]
+    [InlineData("Logo", "logo")]
+    [InlineData("BANNER", "banner")]
+    [InlineData("Bottle", "bottle")]
+    public async Task GetImageByIdAsync_CaseInsensitiveVariant_NormalizesVariant(string variantInput, string expectedNormalized)
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var externalId = $"test/image/{id}";
+        var expectedUrl = $"https://res.cloudinary.com/demo/image/upload/{externalId}";
+
+        var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(new Image
+        {
+            Id = id,
+            Provider = "cloudinary",
+            ExternalId = externalId,
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Width = 100,
+            Height = 100,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.BuildDeliveryUrl(externalId, expectedNormalized).Returns(expectedUrl);
+
+        var httpContext = new DefaultHttpContext();
+
+        // Act
+        var result = await ImageEndpoints.GetImageByIdAsync(id, variantInput, imageRepo, storage, httpContext, CancellationToken.None);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectHttpResult>(result);
+        Assert.Equal(expectedUrl, redirectResult.Url);
+        storage.Received(1).BuildDeliveryUrl(externalId, expectedNormalized);
+    }
+
+    [Fact]
+    public async Task GetImageByIdAsync_StorageThrowsServiceUnavailable_PropagatesException()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var externalId = $"test/image/{id}";
+
+        var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(new Image
+        {
+            Id = id,
+            Provider = "cloudinary",
+            ExternalId = externalId,
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Width = 100,
+            Height = 100,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.BuildDeliveryUrl(externalId, Arg.Any<string?>()).Returns(_ => throw new ServiceUnavailableException("Cloudinary unavailable"));
+
+        var httpContext = new DefaultHttpContext();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ServiceUnavailableException>(() =>
+            ImageEndpoints.GetImageByIdAsync(id, null, imageRepo, storage, httpContext, CancellationToken.None));
+    }
 }

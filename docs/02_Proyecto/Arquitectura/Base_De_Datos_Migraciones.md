@@ -48,6 +48,8 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
 | `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
 | `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
+| `20261029001` | `CreateImagesTable.cs` | `images` | Tabla relacional para metadatos de imágenes en Cloudinary (`id` UUID, `provider`, `external_id`, `mime_type`, `size_bytes`, `width`, `height`, `created_at`) con índice único sobre `external_id`. |
+| `20261029002` | `AddImageReferencesToEntities.cs` | `users`, `wineries`, `wine_vintages` | Claves foráneas UUID hacia `images`: `users.avatar_image_id` (`ON DELETE SET NULL`), `wineries.logo_image_id` (`ON DELETE RESTRICT`), `wineries.banner_image_id` (`ON DELETE RESTRICT`), `wine_vintages.image_id` (`ON DELETE RESTRICT`). |
 
 ---
 
@@ -228,7 +230,35 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
+
+    IMAGES {
+        uuid id PK
+        string provider
+        string external_id UK
+        string mime_type
+        bigint size_bytes
+        int width
+        int height
+        datetime created_at
+    }
 ```
+
+### Tabla `images` y Reglas de Integridad Referencial
+
+La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los metadatos de archivos subidos al proveedor Cloudinary:
+- `id` (`UUID PK`): Identificador único expuesto hacia el frontend (`/api/images/{id}`).
+- `provider` (`varchar(50)`): Proveedor de almacenamiento (fijo `"cloudinary"`).
+- `external_id` (`varchar(300) UK`): Public ID asignado en Cloudinary (ej: `ayvino/wineries/logos/abc123_400x400`). Cuenta con índice único `ix_images_external_id`.
+- `mime_type` (`varchar(100)`): Tipo MIME validado por magic bytes (`image/jpeg`, `image/png`, `image/webp`).
+- `size_bytes` (`bigint`): Peso del archivo en bytes (límite máximo 5 MB).
+- `width` (`int`) y `height` (`int`): Dimensiones de la imagen en píxeles informadas por Cloudinary.
+- `created_at` (`timestamptz`): Fecha y hora UTC de subida.
+
+**Reglas de Claves Foráneas hacia `images`**:
+- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen física se elimina, el usuario pasa a `null` reactivando el avatar determinista de DiceBear.
+- `wineries.logo_image_id`: Clave foránea con `ON DELETE RESTRICT`. Requiere que el orquestador desvincule el logo antes de borrar la fila de `images`.
+- `wineries.banner_image_id`: Clave foránea con `ON DELETE RESTRICT`.
+- `wine_vintages.image_id`: Clave foránea con `ON DELETE RESTRICT`.
 
 ---
 
