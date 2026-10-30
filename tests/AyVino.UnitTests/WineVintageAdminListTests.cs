@@ -104,7 +104,7 @@ public class WineVintageAdminListTests
                 WineryName = "Bodega del Fin del Mundo",
                 Year = 2022,
                 AlcoholContent = 14.2m,
-                ImageUrl = "https://example.com/vintage.jpg",
+                ImageId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 ApprovalStatus = ApprovalStatus.Pending,
                 UploadedByUserId = 3,
                 UploadedByUsername = "sommelier_juan",
@@ -129,7 +129,7 @@ public class WineVintageAdminListTests
         Assert.Equal("Bodega del Fin del Mundo", item.WineryName);
         Assert.Equal(2022, item.Year);
         Assert.Equal(14.2m, item.AlcoholContent);
-        Assert.Equal("https://example.com/vintage.jpg", item.ImageUrl);
+        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), item.ImageId);
         Assert.Equal("Pending", item.ApprovalStatus);
         Assert.Equal(3, item.UploadedByUserId);
         Assert.Equal("sommelier_juan", item.UploadedByUsername);

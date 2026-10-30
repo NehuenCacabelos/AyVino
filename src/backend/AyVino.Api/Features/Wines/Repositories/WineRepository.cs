@@ -122,8 +122,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             RETURNING id;
             """;
         const string insertVintageSql = """
-            INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_url, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
-            VALUES (@WineId, @Year, @AlcoholContent, @ServingTemperature, @AgingAdvice, @ImageUrl, @ApprovalStatus, @UploadedByUserId, @RegisterDate, 0, 0)
+            INSERT INTO wine_vintages (wine_id, year, alcohol_content, serving_temperature, aging_advice, image_id, approval_status, uploaded_by_user_id, register_date, rating_sum, review_count)
+            VALUES (@WineId, @Year, @AlcoholContent, @ServingTemperature, @AgingAdvice, @ImageId, @ApprovalStatus, @UploadedByUserId, @RegisterDate, 0, 0)
             RETURNING id;
             """;
         const string insertGrapeSql = """
@@ -154,7 +154,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 firstVintage.AlcoholContent,
                 firstVintage.ServingTemperature,
                 firstVintage.AgingAdvice,
-                firstVintage.ImageUrl,
+                firstVintage.ImageId,
                 ApprovalStatus = (int)firstVintage.ApprovalStatus,
                 firstVintage.UploadedByUserId,
                 firstVintage.RegisterDate

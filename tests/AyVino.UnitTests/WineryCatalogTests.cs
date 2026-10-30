@@ -87,7 +87,7 @@ public class WineryCatalogTests
 
         var vintages = new List<WineryCatalogVintageRow>
         {
-            new(201, 101, 2019, 14.5m, 16, "5 años", "https://img/v1.png", ApprovalStatus.Approved, DateTime.UtcNow, 25, 5),
+            new(201, 101, 2019, 14.5m, 16, "5 años", null, ApprovalStatus.Approved, DateTime.UtcNow, 25, 5),
             new(202, 101, 2022, 14.0m, 16, null, null, ApprovalStatus.Pending, DateTime.UtcNow, 0, 0),
             new(203, 102, null, 13.0m, 10, null, null, ApprovalStatus.Rejected, DateTime.UtcNow, 0, 0)
         };

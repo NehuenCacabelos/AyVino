@@ -14,6 +14,6 @@ public record WineryResponseDto(
     DateTime RegisterDate,
     decimal? Latitude = null,
     decimal? Longitude = null,
-    string? LogoUrl = null,
-    string? BannerUrl = null,
+    Guid? LogoImageId = null,
+    Guid? BannerImageId = null,
     WineryLocationSummaryDto? Location = null);

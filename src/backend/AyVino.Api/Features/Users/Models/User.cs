@@ -8,6 +8,6 @@ public record User
     public string Role { get; init; } = "User";
     public DateTime RegisterDate { get; init; } = DateTime.UtcNow;
     public bool IsActive { get; init; } = true;
-    public string? Photo { get; init; }
+    public Guid? AvatarImageId { get; init; }
     public string? Bio { get; init; }
 }

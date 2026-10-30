@@ -15,8 +15,8 @@ public record Winery
     public DateTime RegisterDate { get; init; }
     public decimal? Latitude { get; init; }
     public decimal? Longitude { get; init; }
-    public string? LogoUrl { get; init; }
-    public string? BannerUrl { get; init; }
+    public Guid? LogoImageId { get; init; }
+    public Guid? BannerImageId { get; init; }
     public string? StateName { get; init; }
     public string? RegionName { get; init; }
 }

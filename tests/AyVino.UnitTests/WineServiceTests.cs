@@ -33,7 +33,6 @@ public class WineServiceTests
             AlcoholContent: 14.2m,
             ServingTemperature: 16,
             AgingAdvice: "Beber antes de 2028",
-            ImageUrl: "https://example.com/vintage.jpg",
             Grapes: [new WineGrapeRequestDto(GrapeId: 5, Percentage: 100)]
         );
 

@@ -203,7 +203,7 @@ public class CellarItemServiceTests
                 WineryId = 5,
                 WineryNameText = "Catena",
                 Year = 2020,
-                ImageUrl = "https://example.com/malbec.png",
+                ImageId = Guid.NewGuid(),
                 RatingSum = 45,
                 ReviewCount = 10,
                 Quantity = 3

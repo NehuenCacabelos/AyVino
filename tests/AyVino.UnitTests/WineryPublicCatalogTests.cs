@@ -35,8 +35,8 @@ public class WineryPublicCatalogTests
             RegisterDate: new DateTime(2025, 1, 1),
             Latitude: -33.123m,
             Longitude: -68.456m,
-            LogoUrl: "https://storage.ayvino.com/wineries/logo.webp",
-            BannerUrl: "https://storage.ayvino.com/banners/banner.webp",
+            LogoImageId: null,
+            BannerImageId: null,
             StateName: "Mendoza",
             RegionName: "Luján de Cuyo");
     }
@@ -277,7 +277,7 @@ public class WineryPublicCatalogTests
 
         var vintageRows = new List<WineryCatalogVintageRow>
         {
-            new(Id: 501, WineId: 101, Year: 2021, AlcoholContent: 14.5m, ServingTemperature: 16, AgingAdvice: "12 meses en barrica", ImageUrl: "https://storage.ayvino.com/vintages/v1.webp", ApprovalStatus: ApprovalStatus.Approved, RegisterDate: DateTime.UtcNow, RatingSum: 25, ReviewCount: 5)
+            new(Id: 501, WineId: 101, Year: 2021, AlcoholContent: 14.5m, ServingTemperature: 16, AgingAdvice: "12 meses en barrica", ImageId: null, ApprovalStatus: ApprovalStatus.Approved, RegisterDate: DateTime.UtcNow, RatingSum: 25, ReviewCount: 5)
         };
         _repository.GetPublicVintagesByWineIdsAsync(Arg.Any<IEnumerable<int>>(), false, Arg.Any<CancellationToken>())
             .Returns(vintageRows);

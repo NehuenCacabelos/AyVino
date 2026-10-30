@@ -133,7 +133,6 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             id,
             normalizedUsername,
             dto.Bio?.Trim(),
-            dto.Photo?.Trim(),
             ct);
 
         if (!updated)
@@ -144,40 +143,7 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         var updatedUser = existingUser with
         {
             Username = normalizedUsername,
-            Bio = dto.Bio?.Trim(),
-            Photo = dto.Photo?.Trim()
-        };
-
-        return updatedUser.ToResponseDto();
-    }
-
-    public async Task<UserResponseDto> UpdateAvatarAsync(int id, string? photoUrl, CancellationToken ct = default)
-    {
-        if (id <= 0)
-        {
-            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-        }
-
-        var existingUser = await userRepository.GetByIdAsync(id, ct)
-            ?? throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-
-        var normalizedPhoto = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl.Trim();
-
-        var updated = await userRepository.UpdateProfileAsync(
-            id,
-            existingUser.Username,
-            existingUser.Bio,
-            normalizedPhoto,
-            ct);
-
-        if (!updated)
-        {
-            throw new NotFoundException($"Usuario con ID {id} no encontrado.");
-        }
-
-        var updatedUser = existingUser with
-        {
-            Photo = normalizedPhoto
+            Bio = dto.Bio?.Trim()
         };
 
         return updatedUser.ToResponseDto();

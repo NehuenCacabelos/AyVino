@@ -10,7 +10,6 @@ public class WineDtoValidationTests
         AlcoholContent: 14.5m,
         ServingTemperature: 16,
         AgingAdvice: "Beber dentro de 5 años.",
-        ImageUrl: "https://example.com/vintage.jpg",
         Grapes: [new WineGrapeRequestDto(1, 100m)]
     );
 
@@ -234,31 +233,6 @@ public class WineDtoValidationTests
         var invalid = ValidVintage() with { AgingAdvice = new string('a', 501) };
         var results = ValidationTestHelper.Validate(invalid);
         Assert.True(ValidationTestHelper.HasErrorFor(results, nameof(CreateWineVintageRequestDto.AgingAdvice)));
-    }
-
-    [Theory]
-    [InlineData("https://example.com/image.png", true)]
-    [InlineData("x", false)]
-    [InlineData("no-url", false)]
-    public void CreateWineVintageRequestDto_ImageUrl_UrlFormat(string url, bool expectedValid)
-    {
-        var dto = ValidVintage() with { ImageUrl = url };
-        var results = ValidationTestHelper.Validate(dto);
-        var hasError = ValidationTestHelper.HasErrorFor(results, nameof(CreateWineVintageRequestDto.ImageUrl));
-        Assert.Equal(!expectedValid, hasError);
-    }
-
-    [Fact]
-    public void CreateWineVintageRequestDto_ImageUrl_LengthBoundaries()
-    {
-        var validUrl = "https://example.com/" + new string('a', 280); // 300 chars
-        var valid = ValidVintage() with { ImageUrl = validUrl };
-        Assert.Empty(ValidationTestHelper.Validate(valid));
-
-        var invalidUrl = "https://example.com/" + new string('a', 281); // 301 chars
-        var invalid = ValidVintage() with { ImageUrl = invalidUrl };
-        var results = ValidationTestHelper.Validate(invalid);
-        Assert.True(ValidationTestHelper.HasErrorFor(results, nameof(CreateWineVintageRequestDto.ImageUrl)));
     }
 
     [Fact]

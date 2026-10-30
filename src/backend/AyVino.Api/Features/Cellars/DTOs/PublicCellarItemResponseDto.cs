@@ -8,7 +8,6 @@ public record PublicCellarItemResponseDto(
     int? WineryId,
     string? WineryNameText,
     int? Year,
-    string? ImageUrl,
+    Guid? ImageId,
     decimal? AverageRating,
     int ReviewCount);
-

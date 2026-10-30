@@ -13,7 +13,7 @@ public static class AdminWineVintageMappingExtensions
         row.WineryName,
         row.Year,
         row.AlcoholContent,
-        row.ImageUrl,
+        row.ImageId,
         row.ApprovalStatus.ToString(),
         row.UploadedByUserId,
         row.UploadedByUsername,

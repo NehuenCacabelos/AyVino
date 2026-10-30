@@ -12,7 +12,6 @@ public static class WineVintageMappingExtensions
         AlcoholContent = dto.AlcoholContent,
         ServingTemperature = dto.ServingTemperature,
         AgingAdvice = dto.AgingAdvice,
-        ImageUrl = dto.ImageUrl,
         ApprovalStatus = ApprovalStatus.Pending,
         UploadedByUserId = userId,
         RegisterDate = DateTime.UtcNow
@@ -25,8 +24,7 @@ public static class WineVintageMappingExtensions
         Year = dto.Year,
         AlcoholContent = dto.AlcoholContent,
         ServingTemperature = dto.ServingTemperature,
-        AgingAdvice = dto.AgingAdvice,
-        ImageUrl = dto.ImageUrl
+        AgingAdvice = dto.AgingAdvice
     };
 
     public static WineVintageResponseDto ToResponseDto(this WineVintage vintage, IEnumerable<WineGrape> grapes) => new(
@@ -36,7 +34,7 @@ public static class WineVintageMappingExtensions
         vintage.AlcoholContent,
         vintage.ServingTemperature,
         vintage.AgingAdvice,
-        vintage.ImageUrl,
+        vintage.ImageId,
         vintage.ApprovalStatus.ToString(),
         vintage.UploadedByUserId,
         vintage.RegisterDate,

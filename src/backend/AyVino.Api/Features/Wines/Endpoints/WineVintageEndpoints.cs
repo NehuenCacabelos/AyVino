@@ -1,9 +1,14 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace AyVino.Api.Features.Wines.Endpoints;
 
@@ -54,6 +59,27 @@ public static class WineVintageEndpoints
             .WithName("DeleteWineVintage")
             .WithSummary("Deletes a single vintage.")
             .WithAudit(AuditAction.VintageDeleted, "Vintage", idRouteKey: "vintageId");
+
+        group.MapPut("/{vintageId:int}/image", async (int wineId, int vintageId, IFormFile file, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var imageId = await imageOrchestrator.UploadVintageImageAsync(wineId, vintageId, file, actor, ct);
+            return Results.Ok(new { imageId });
+        })
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .WithName("UploadVintageImage")
+            .WithSummary("Sube o reemplaza la imagen de una cosecha.");
+
+        group.MapDelete("/{vintageId:int}/image", async (int wineId, int vintageId, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            await imageOrchestrator.DeleteVintageImageAsync(wineId, vintageId, actor, ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .WithName("DeleteVintageImage")
+            .WithSummary("Elimina la imagen de una cosecha.");
 
         var adminGroup = app.MapGroup("/api/wine-vintages")
             .WithTags("Admin - Wine Vintages")

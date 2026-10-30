@@ -3,8 +3,12 @@ using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
+using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace AyVino.Api.Features.Wineries.Endpoints;
 
@@ -73,6 +77,48 @@ public static class WineryEndpoints
             .WithName("DeleteWinery")
             .WithSummary("Deletes a winery.")
             .WithAudit(AuditAction.WineryDeleted, "Winery", idRouteKey: "id");
+
+        group.MapPut("/{id:int}/logo", async (int id, IFormFile file, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var imageId = await imageOrchestrator.UploadWineryLogoAsync(id, file, actor, ct);
+            return Results.Ok(new { imageId });
+        })
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .WithName("UploadWineryLogo")
+            .WithSummary("Sube o reemplaza el logo de una bodega.");
+
+        group.MapDelete("/{id:int}/logo", async (int id, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            await imageOrchestrator.DeleteWineryLogoAsync(id, actor, ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .WithName("DeleteWineryLogo")
+            .WithSummary("Elimina el logo de una bodega.");
+
+        group.MapPut("/{id:int}/banner", async (int id, IFormFile file, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var imageId = await imageOrchestrator.UploadWineryBannerAsync(id, file, actor, ct);
+            return Results.Ok(new { imageId });
+        })
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .WithName("UploadWineryBanner")
+            .WithSummary("Sube o reemplaza el banner de una bodega.");
+
+        group.MapDelete("/{id:int}/banner", async (int id, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            await imageOrchestrator.DeleteWineryBannerAsync(id, actor, ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .WithName("DeleteWineryBanner")
+            .WithSummary("Elimina el banner de una bodega.");
 
         return app;
     }

@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Features.Wines.Models;
 
 namespace AyVino.Api.Features.Wines.Repositories;
@@ -16,6 +17,8 @@ public interface IWineVintageRepository
     Task<IEnumerable<WineGrape>> GetGrapesByVintageIdsAsync(IEnumerable<int> vintageIds, CancellationToken ct = default);
     Task<WineVintage> CreateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default);
     Task<bool> UpdateAsync(WineVintage vintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default);
+    Task<bool> UpdateImageIdAsync(int vintageId, Guid? imageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(true);
+    Task<bool> UpdateImageIdAsync(int vintageId, Guid? imageId, CancellationToken ct = default) => Task.FromResult(true);
     Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
@@ -23,4 +26,3 @@ public interface IWineVintageRepository
     Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
         Task.FromResult(Enumerable.Empty<AdminWineVintageListRow>());
 }
-

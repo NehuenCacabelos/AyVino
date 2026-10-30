@@ -18,7 +18,7 @@ public record WineryCatalogVintageDto(
     decimal? AlcoholContent,
     int? ServingTemperature,
     string? AgingAdvice,
-    string? ImageUrl,
+    Guid? ImageId,
     string ApprovalStatus,
     decimal? AverageRating,
     int ReviewCount,

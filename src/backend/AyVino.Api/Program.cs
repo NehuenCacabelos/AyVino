@@ -237,12 +237,13 @@ builder.Services.AddSingleton(new Cloudinary(new Account(
 builder.Services.AddSingleton<ICloudinaryClient, CloudinaryClientWrapper>();
 builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
 builder.Services.AddScoped<IImageRepository, ImageRepository>();
+builder.Services.AddScoped<IImageTransactionRunner, ImageTransactionRunner>();
+builder.Services.AddScoped<IImageOrchestrator, ImageOrchestrator>();
 
 // Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHostedService<TokenCleanupBackgroundService>();
 builder.Services.AddScoped<IWineryRepository, WineryRepository>();

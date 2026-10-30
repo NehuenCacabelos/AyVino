@@ -18,7 +18,7 @@ public static class CellarMappingExtensions
         row.WineryId,
         row.WineryNameText,
         row.Year,
-        row.ImageUrl,
+        row.ImageId,
         // Misma regla que Reviews/UserWines: el promedio recién se muestra desde 5 reseñas.
         row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : null,
         row.ReviewCount,
@@ -38,7 +38,7 @@ public static class CellarMappingExtensions
         row.WineryId,
         row.WineryNameText,
         row.Year,
-        row.ImageUrl,
+        row.ImageId,
         row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : null,
         row.ReviewCount);
 

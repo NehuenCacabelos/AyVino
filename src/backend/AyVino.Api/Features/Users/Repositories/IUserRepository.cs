@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
 
@@ -12,7 +13,11 @@ public interface IUserRepository
     Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
     Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default);
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);
-    Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default);
+    Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default);
+    Task<bool> UpdateProfileAsync(int id, string username, string? bio, string? photo, CancellationToken ct = default) =>
+        UpdateProfileAsync(id, username, bio, ct);
+    Task<bool> UpdateAvatarImageIdAsync(int userId, Guid? avatarImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(true);
+    Task<bool> UpdateAvatarImageIdAsync(int userId, Guid? avatarImageId, CancellationToken ct = default) => Task.FromResult(true);
     Task<bool> SetIsActiveAsync(int id, bool isActive, CancellationToken ct = default);
     Task<bool> SetRoleAsync(int id, string role, CancellationToken ct = default) => Task.FromResult(true);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);

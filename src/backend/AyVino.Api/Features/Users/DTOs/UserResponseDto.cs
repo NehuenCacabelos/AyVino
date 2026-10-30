@@ -7,7 +7,6 @@ public record UserResponseDto(
     string Role,
     DateTime RegisterDate,
     bool IsActive,
-    string? Photo,
+    Guid? AvatarImageId,
     string? Bio
 );
-

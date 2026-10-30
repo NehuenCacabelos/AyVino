@@ -9,7 +9,7 @@ public record WineVintageResponseDto(
     decimal? AlcoholContent,
     int? ServingTemperature,
     string? AgingAdvice,
-    string? ImageUrl,
+    Guid? ImageId,
     string ApprovalStatus,
     int UploadedByUserId,
     DateTime RegisterDate,

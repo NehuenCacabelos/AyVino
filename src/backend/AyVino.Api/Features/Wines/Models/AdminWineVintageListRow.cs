@@ -12,7 +12,7 @@ public record AdminWineVintageListRow
     public string? WineryName { get; init; }
     public int? Year { get; init; }
     public decimal? AlcoholContent { get; init; }
-    public string? ImageUrl { get; init; }
+    public Guid? ImageId { get; init; }
     public ApprovalStatus ApprovalStatus { get; init; }
     public int UploadedByUserId { get; init; }
     public string? UploadedByUsername { get; init; }

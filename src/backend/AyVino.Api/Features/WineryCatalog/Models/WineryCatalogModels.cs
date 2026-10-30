@@ -37,7 +37,7 @@ public record WineryCatalogVintageRow(
     decimal? AlcoholContent,
     int? ServingTemperature,
     string? AgingAdvice,
-    string? ImageUrl,
+    Guid? ImageId,
     ApprovalStatus ApprovalStatus,
     DateTime RegisterDate,
     int RatingSum,
@@ -66,8 +66,8 @@ public record WineryPublicProfileRow(
     DateTime RegisterDate,
     decimal? Latitude,
     decimal? Longitude,
-    string? LogoUrl,
-    string? BannerUrl,
+    Guid? LogoImageId,
+    Guid? BannerImageId,
     string? StateName,
     string? RegionName)
 {

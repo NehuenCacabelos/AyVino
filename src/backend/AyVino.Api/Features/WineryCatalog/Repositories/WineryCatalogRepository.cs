@@ -69,7 +69,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
         const string sql = """
             SELECT id, wine_id AS WineId, year, alcohol_content AS AlcoholContent,
                    serving_temperature AS ServingTemperature, aging_advice AS AgingAdvice,
-                   image_url AS ImageUrl, approval_status AS ApprovalStatus,
+                   image_id AS ImageId, approval_status AS ApprovalStatus,
                    register_date AS RegisterDate, rating_sum AS RatingSum, review_count AS ReviewCount
             FROM wine_vintages
             WHERE wine_id = ANY(@Ids)
@@ -108,7 +108,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
             SELECT 
                 w.id, w.name, w.description, w.foundation_year AS FoundationYear, w.website,
                 w.user_id AS UserId, CAST(w.status AS integer) AS Status, w.register_date AS RegisterDate,
-                w.latitude, w.longitude, w.logo_url AS LogoUrl, w.banner_url AS BannerUrl,
+                w.latitude, w.longitude, w.logo_image_id AS LogoImageId, w.banner_image_id AS BannerImageId,
                 s.name AS StateName, c.name AS RegionName
             FROM wineries w
             LEFT JOIN locations l ON l.id = w.location_id
@@ -298,7 +298,7 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
         const string sql = """
             SELECT id, wine_id AS WineId, year, alcohol_content AS AlcoholContent,
                    serving_temperature AS ServingTemperature, aging_advice AS AgingAdvice,
-                   image_url AS ImageUrl, approval_status AS ApprovalStatus,
+                   image_id AS ImageId, approval_status AS ApprovalStatus,
                    register_date AS RegisterDate, rating_sum AS RatingSum, review_count AS ReviewCount
             FROM wine_vintages
             WHERE wine_id = ANY(@Ids)

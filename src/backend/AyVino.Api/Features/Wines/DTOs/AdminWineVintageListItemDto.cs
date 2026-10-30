@@ -9,7 +9,7 @@ public record AdminWineVintageListItemDto(
     string? WineryName,
     int? Year,
     decimal? AlcoholContent,
-    string? ImageUrl,
+    Guid? ImageId,
     string ApprovalStatus,
     int UploadedByUserId,
     string? UploadedByUsername,

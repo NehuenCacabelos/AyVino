@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wineries.Models;
 using Dapper;
@@ -8,7 +9,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 {
     private const string SelectColumns = """
         w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
-        w.user_id, w.status, w.register_date, w.latitude, w.longitude, w.logo_url, w.banner_url,
+        w.user_id, w.status, w.register_date, w.latitude, w.longitude,
+        w.logo_image_id AS LogoImageId, w.banner_image_id AS BannerImageId,
         s.name AS StateName, c.name AS RegionName
         FROM wineries w
         LEFT JOIN locations l ON l.id = w.location_id
@@ -75,8 +77,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
     {
         const string sql = """
-            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_url)
-            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoUrl)
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_image_id, banner_image_id)
+            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoImageId, @BannerImageId)
             RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -94,7 +96,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.RegisterDate,
                 winery.Latitude,
                 winery.Longitude,
-                winery.LogoUrl
+                winery.LogoImageId,
+                winery.BannerImageId
             }, cancellationToken: ct));
 
         return winery with { Id = id };
@@ -110,9 +113,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 foundation_year = @FoundationYear,
                 website = @Website,
                 latitude = @Latitude,
-                longitude = @Longitude,
-                logo_url = @LogoUrl,
-                banner_url = @BannerUrl
+                longitude = @Longitude
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -126,11 +127,45 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.FoundationYear,
                 winery.Website,
                 winery.Latitude,
-                winery.Longitude,
-                winery.LogoUrl,
-                winery.BannerUrl
+                winery.Longitude
             }, cancellationToken: ct));
         return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateLogoImageIdAsync(int wineryId, Guid? logoImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE wineries
+            SET logo_image_id = @LogoImageId
+            WHERE id = @WineryId;
+            """;
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { WineryId = wineryId, LogoImageId = logoImageId }, transaction: transaction, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateLogoImageIdAsync(int wineryId, Guid? logoImageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await UpdateLogoImageIdAsync(wineryId, logoImageId, connection, null, ct);
+    }
+
+    public async Task<bool> UpdateBannerImageIdAsync(int wineryId, Guid? bannerImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE wineries
+            SET banner_image_id = @BannerImageId
+            WHERE id = @WineryId;
+            """;
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { WineryId = wineryId, BannerImageId = bannerImageId }, transaction: transaction, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateBannerImageIdAsync(int wineryId, Guid? bannerImageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await UpdateBannerImageIdAsync(wineryId, bannerImageId, connection, null, ct);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)

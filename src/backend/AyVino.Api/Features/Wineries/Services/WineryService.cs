@@ -115,34 +115,6 @@ public class WineryService(
             targetLongitude = existing.Longitude;
         }
 
-        string? targetLogoUrl;
-        if (dto.LogoUrl == null)
-        {
-            targetLogoUrl = existing.LogoUrl;
-        }
-        else if (string.IsNullOrWhiteSpace(dto.LogoUrl))
-        {
-            targetLogoUrl = null;
-        }
-        else
-        {
-            targetLogoUrl = dto.LogoUrl.Trim();
-        }
-
-        string? targetBannerUrl;
-        if (dto.BannerUrl == null)
-        {
-            targetBannerUrl = existing.BannerUrl;
-        }
-        else if (string.IsNullOrWhiteSpace(dto.BannerUrl))
-        {
-            targetBannerUrl = null;
-        }
-        else
-        {
-            targetBannerUrl = dto.BannerUrl.Trim();
-        }
-
         var winery = existing with
         {
             Name = dto.Name,
@@ -151,9 +123,7 @@ public class WineryService(
             Latitude = targetLatitude,
             Longitude = targetLongitude,
             FoundationYear = dto.FoundationYear,
-            Website = dto.Website,
-            LogoUrl = targetLogoUrl,
-            BannerUrl = targetBannerUrl
+            Website = dto.Website
         };
 
         var updated = await wineryRepository.UpdateAsync(winery, ct);
@@ -230,7 +200,7 @@ public class WineryService(
             Role = createdUser.Role,
             RegisterDate = createdUser.RegisterDate,
             IsActive = createdUser.IsActive,
-            Photo = createdUser.Photo,
+            AvatarImageId = createdUser.AvatarImageId,
             Bio = createdUser.Bio
         };
 
