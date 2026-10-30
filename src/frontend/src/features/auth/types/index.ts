@@ -46,6 +46,7 @@ export interface UserProfileDto {
   role: UserRole | string;
   registerDate: string;
   isActive: boolean;
+  avatarImageId?: string | null;
   photo?: string | null;
   bio?: string | null;
 }

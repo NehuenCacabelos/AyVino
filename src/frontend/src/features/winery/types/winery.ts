@@ -26,6 +26,8 @@ export interface WineryResponseDto {
   registerDate: string;
   latitude?: number | null;
   longitude?: number | null;
+  logoImageId?: string | null;
+  bannerImageId?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
   location?: WineryLocationSummaryDto | null;

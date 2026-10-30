@@ -48,7 +48,8 @@ export interface WineVintageResponseDto {
   alcoholContent: number | null;
   servingTemperature: number | null;
   agingAdvice: string | null;
-  imageUrl: string | null;
+  imageId?: string | null;
+  imageUrl?: string | null;
   approvalStatus: ApprovalStatus | string;
   uploadedByUserId: number;
   registerDate: string;

@@ -1,3 +1,5 @@
+import { imageUrl } from './image';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 /**
@@ -13,10 +15,18 @@ function getBackendOrigin(): string {
 
 /**
  * Resuelve la URL del avatar de usuario:
- * - Si tiene foto personalizada física o remota, devuelve su URL correspondiente.
+ * - Si tiene avatarImageId, devuelve imageUrl(avatarImageId, 'avatar').
+ * - Si tiene foto personalizada física o remota (legado), devuelve su URL correspondiente.
  * - Si no tiene foto, genera un avatar dinámico estilizado y sobrio mediante DiceBear (estilo 'notionists').
  */
-export function getAvatarUrl(user?: { photo?: string | null; username?: string | null } | null): string {
+export function getAvatarUrl(
+  user?: { avatarImageId?: string | null; photo?: string | null; username?: string | null } | null,
+): string {
+  if (user?.avatarImageId) {
+    const url = imageUrl(user.avatarImageId, 'avatar');
+    if (url) return url;
+  }
+
   if (user?.photo && user.photo.trim().length > 0) {
     const photo = user.photo.trim();
     if (photo.startsWith('http://') || photo.startsWith('https://')) {
@@ -30,4 +40,3 @@ export function getAvatarUrl(user?: { photo?: string | null; username?: string |
   const seed = user?.username?.trim() || 'AyVino';
   return `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1c1917,292524`;
 }
-

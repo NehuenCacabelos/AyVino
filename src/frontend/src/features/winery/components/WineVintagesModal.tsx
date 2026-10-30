@@ -14,8 +14,10 @@ import {
   Save,
 } from 'lucide-react';
 import { getWineVintages, createWineVintage } from '../api/wineApi';
+import { uploadVintageImage } from '../api/imageApi';
 import { getGrapes } from '../api/grapeApi';
 import ImageUploadField from './ImageUploadField';
+import { imageUrl } from '../../../lib/image';
 import type {
   WineResponseDto,
   WineVintageResponseDto,
@@ -56,7 +58,8 @@ export default function WineVintagesModal({
   const [newAlcohol, setNewAlcohol] = useState('14.0');
   const [newServingTemp, setNewServingTemp] = useState('16');
   const [newAgingAdvice, setNewAgingAdvice] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [blend, setBlend] = useState<BlendRow[]>([]);
 
   // Estados de feedback
@@ -221,15 +224,24 @@ export default function WineVintagesModal({
         alcoholContent: newAlcohol ? Number(newAlcohol) : null,
         servingTemperature: newServingTemp ? Number(newServingTemp) : null,
         agingAdvice: newAgingAdvice.trim() || null,
-        imageUrl: newImageUrl?.trim() ? newImageUrl.trim() : null,
         grapes: validGrapes.length > 0 ? validGrapes : null,
       };
 
       const created = await createWineVintage(wine.id, payload);
+
+      if (selectedFile) {
+        try {
+          await uploadVintageImage(wine.id, created.id, selectedFile);
+        } catch {
+          alert('Cosecha creada pero falló la subida de imagen. Podés reintentar editando la cosecha.');
+        }
+      }
+
       setVintages((prev) => [...prev, created]);
       setSuccessMessage(`Añada ${created.year ?? 'nueva'} registrada con éxito.`);
       setShowAddForm(false);
-      setNewImageUrl(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
       onVintageAdded?.();
     } catch (err: unknown) {
       let detail: string | undefined;
@@ -323,7 +335,8 @@ export default function WineVintagesModal({
                   type="button"
                   onClick={() => {
                     setShowAddForm(false);
-                    setNewImageUrl(null);
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
                   }}
                   className="text-xs text-neutral-400 hover:text-white"
                 >
@@ -387,12 +400,22 @@ export default function WineVintagesModal({
               {/* Foto de la Cosecha / Añada (Opcional) */}
               <div className="pt-1">
                 <ImageUploadField
-                  value={newImageUrl}
-                  onChange={(url) => setNewImageUrl(url || null)}
+                  value={previewUrl}
+                  variant="bottle"
+                  aspectRatio="bottle"
+                  onUpload={async (file: File) => {
+                    setSelectedFile(file);
+                    const objectUrl = URL.createObjectURL(file);
+                    setPreviewUrl(objectUrl);
+                    return objectUrl;
+                  }}
+                  onDelete={async () => {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
                   folder="vintages"
                   label="Foto de la botella o cosecha (opcional)"
-                  helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 2 MB)."
-                  aspectRatio="bottle"
+                  helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 5 MB)."
                 />
               </div>
 
@@ -513,10 +536,10 @@ export default function WineVintagesModal({
                 >
                   <div className="flex items-start sm:items-center gap-4">
                     {/* Miniatura de Cosecha */}
-                    {v.imageUrl && (
+                    {(v.imageId || v.imageUrl) && (
                       <div className="w-14 h-20 rounded-xl overflow-hidden bg-stone-900 border border-white/10 shrink-0">
                         <img
-                          src={v.imageUrl}
+                          src={imageUrl(v.imageId, 'bottle') ?? v.imageUrl!}
                           alt={`Cosecha ${v.year ?? ''}`}
                           className="w-full h-full object-cover"
                           loading="lazy"

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { getBannerThemeByUsername } from '../../../constants/bannerThemes';
 import { cn } from '../../../lib/utils';
+import { imageUrl } from '../../../lib/image';
 
 export interface WineryBannerProps {
   wineryName?: string | null;
   bannerUrl?: string | null;
+  bannerImageId?: string | null;
   className?: string;
   heightClassName?: string;
 }
@@ -17,12 +19,16 @@ export interface WineryBannerProps {
 export default function WineryBanner({
   wineryName,
   bannerUrl,
+  bannerImageId,
   className,
   heightClassName = 'h-44 sm:h-52 md:h-60 lg:h-64',
 }: WineryBannerProps) {
   const [imageError, setImageError] = useState(false);
 
-  const hasCustomBanner = Boolean(bannerUrl && bannerUrl.trim().length > 0 && !imageError);
+  const effectiveBannerUrl = bannerImageId ? imageUrl(bannerImageId, 'banner') : bannerUrl;
+  const hasCustomBanner = Boolean(
+    effectiveBannerUrl && effectiveBannerUrl.trim().length > 0 && !imageError,
+  );
   const bannerTheme = getBannerThemeByUsername(wineryName);
 
   if (hasCustomBanner) {
@@ -36,7 +42,7 @@ export default function WineryBanner({
         )}
       >
         <img
-          src={bannerUrl!}
+          src={effectiveBannerUrl!.trim()}
           alt={wineryName ? `Banner de ${wineryName}` : 'Banner de bodega'}
           className="w-full h-full object-cover object-center"
           loading="eager"
@@ -59,14 +65,14 @@ export default function WineryBanner({
         className,
       )}
     >
+      {/* Patrón de líneas sutiles y viñeta para dotar de profundidad al degradado */}
       <div
         className={cn(
-          'absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] via-transparent to-transparent pointer-events-none',
+          'absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] via-transparent to-black/40',
           bannerTheme.radialOverlayClass,
         )}
       />
-      {/* Fade-out inferior para fundir con el fondo inmersivo */}
-      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0b0b0e] via-[#0b0b0e]/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0e] via-transparent to-transparent pointer-events-none" />
     </div>
   );
 }

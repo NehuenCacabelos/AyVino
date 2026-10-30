@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { getWineryInitials } from '../utils/wineryUtils';
 import { cn } from '../../../lib/utils';
+import { imageUrl } from '../../../lib/image';
 
 export interface WineryLogoProps {
   src?: string | null;
+  logoImageId?: string | null;
   name?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
@@ -27,6 +29,7 @@ const SIZE_CLASSES = {
  */
 export default function WineryLogo({
   src,
+  logoImageId,
   name,
   size = 'md',
   className = '',
@@ -35,14 +38,15 @@ export default function WineryLogo({
 }: WineryLogoProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
-  const hasValidLogo = Boolean(src && src.trim().length > 0 && !imageFailed);
+  const effectiveSrc = logoImageId ? imageUrl(logoImageId, 'logo') : src;
+  const hasValidLogo = Boolean(effectiveSrc && effectiveSrc.trim().length > 0 && !imageFailed);
   const initials = getWineryInitials(name);
   const sizeClass = SIZE_CLASSES[size];
 
   if (hasValidLogo) {
     return (
       <img
-        src={src!.trim()}
+        src={effectiveSrc!.trim()}
         alt={alt ?? `Logo oficial de ${name || 'la bodega'}`}
         onError={() => setImageFailed(true)}
         loading="lazy"
@@ -59,14 +63,15 @@ export default function WineryLogo({
 
   return (
     <div
-      aria-hidden="true"
+      data-testid="winery-monogram"
+      aria-label={alt ?? `Monograma de ${name || 'la bodega'}`}
       className={cn(
-        'rounded-full bg-stone-900 border border-white/10 flex items-center justify-center font-serif font-semibold text-rose-200 shadow-md shrink-0 select-none',
+        'rounded-full border border-white/15 bg-gradient-to-br from-[#2a171d] via-[#1a1216] to-[#0e0c10] flex items-center justify-center font-serif text-amber-200/90 font-semibold tracking-wider select-none shadow-md shrink-0',
         sizeClass,
         className,
       )}
     >
-      <span>{initials}</span>
+      {initials}
     </div>
   );
 }

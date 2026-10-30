@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ImageUploadField from '@/features/winery/components/ImageUploadField';
-import * as imageApi from '@/features/winery/api/imageApi';
-
-vi.mock('@/features/winery/api/imageApi', () => ({
-  uploadImage: vi.fn(),
-}));
 
 describe('ImageUploadField Component', () => {
   beforeEach(() => {
@@ -15,9 +10,8 @@ describe('ImageUploadField Component', () => {
   it('renders upload zone with label and helper text', () => {
     render(
       <ImageUploadField
-        value=""
-        onChange={vi.fn()}
-        folder="wineries"
+        currentImageId={null}
+        variant="logo"
         label="Logo Oficial de la Bodega"
       />,
     );
@@ -27,18 +21,18 @@ describe('ImageUploadField Component', () => {
     expect(screen.getByText(/Formatos admitidos: JPG, PNG o WEBP/i)).toBeInTheDocument();
   });
 
-  it('rejects files larger than 2 MB client-side before calling the backend', async () => {
-    const onChangeMock = vi.fn();
+  it('rejects files larger than 5 MB client-side before calling onUpload', async () => {
+    const onUploadMock = vi.fn();
     render(
       <ImageUploadField
-        value=""
-        onChange={onChangeMock}
-        folder="wineries"
+        currentImageId={null}
+        variant="logo"
         label="Logo de Bodega"
+        onUpload={onUploadMock}
       />,
     );
 
-    const largeFile = new File(['x'.repeat(2.5 * 1024 * 1024)], 'foto_pesada.jpg', {
+    const largeFile = new File(['x'.repeat(5.5 * 1024 * 1024)], 'foto_pesada.jpg', {
       type: 'image/jpeg',
     });
 
@@ -47,21 +41,20 @@ describe('ImageUploadField Component', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('La imagen supera el tamaño máximo permitido de 2 MB.'),
+        screen.getByText('La imagen supera el tamaño máximo permitido de 5 MB.'),
       ).toBeInTheDocument();
-      expect(imageApi.uploadImage).not.toHaveBeenCalled();
-      expect(onChangeMock).not.toHaveBeenCalled();
+      expect(onUploadMock).not.toHaveBeenCalled();
     });
   });
 
-  it('rejects unsupported file formats before calling the backend', async () => {
-    const onChangeMock = vi.fn();
+  it('rejects unsupported file formats before calling onUpload', async () => {
+    const onUploadMock = vi.fn();
     render(
       <ImageUploadField
-        value=""
-        onChange={onChangeMock}
-        folder="wineries"
+        currentImageId={null}
+        variant="logo"
         label="Logo de Bodega"
+        onUpload={onUploadMock}
       />,
     );
 
@@ -76,23 +69,20 @@ describe('ImageUploadField Component', () => {
       expect(
         screen.getByText(/Formato no permitido. Solo se aceptan archivos JPG, PNG o WEBP./i),
       ).toBeInTheDocument();
-      expect(imageApi.uploadImage).not.toHaveBeenCalled();
+      expect(onUploadMock).not.toHaveBeenCalled();
     });
   });
 
-  it('uploads valid image to backend and propagates resulting URL via onChange', async () => {
-    const onChangeMock = vi.fn();
+  it('uploads valid image via onUpload and notifies onUploadingChange', async () => {
+    const onUploadMock = vi.fn().mockResolvedValue('img-uuid-1234');
     const onUploadingChangeMock = vi.fn();
-    vi.mocked(imageApi.uploadImage).mockResolvedValueOnce({
-      url: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/logo123.webp',
-    });
 
     render(
       <ImageUploadField
-        value=""
-        onChange={onChangeMock}
-        folder="wineries"
+        currentImageId={null}
+        variant="logo"
         label="Logo de Bodega"
+        onUpload={onUploadMock}
         onUploadingChange={onUploadingChangeMock}
       />,
     );
@@ -102,31 +92,36 @@ describe('ImageUploadField Component', () => {
     fireEvent.change(input, { target: { files: [validFile] } });
 
     await waitFor(() => {
-      expect(imageApi.uploadImage).toHaveBeenCalledWith(validFile, 'wineries');
-      expect(onChangeMock).toHaveBeenCalledWith(
-        'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/logo123.webp',
-      );
+      expect(onUploadMock).toHaveBeenCalledWith(validFile);
       expect(onUploadingChangeMock).toHaveBeenCalledWith(true);
       expect(onUploadingChangeMock).toHaveBeenCalledWith(false);
     });
   });
 
-  it('renders preview with "Quitar logo" button and sends empty string when removed', () => {
-    const onChangeMock = vi.fn();
+  it('renders preview with "Quitar logo" button and calls onDelete when removed', async () => {
+    const onDeleteMock = vi.fn().mockResolvedValue(undefined);
     render(
       <ImageUploadField
-        value="https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/logo.png"
-        onChange={onChangeMock}
-        folder="wineries"
+        currentImageId="123e4567-e89b-12d3-a456-426614174000"
+        variant="logo"
         label="Logo de Bodega"
+        onDelete={onDeleteMock}
       />,
     );
 
     expect(screen.getByText('Logo oficial cargado')).toBeInTheDocument();
+    const previewImg = screen.getByAltText('Vista previa de imagen');
+    expect(previewImg).toHaveAttribute(
+      'src',
+      '/api/images/123e4567-e89b-12d3-a456-426614174000?variant=logo',
+    );
+
     const removeBtn = screen.getByRole('button', { name: 'Quitar logo' });
     fireEvent.click(removeBtn);
 
-    expect(onChangeMock).toHaveBeenCalledWith('');
+    await waitFor(() => {
+      expect(onDeleteMock).toHaveBeenCalled();
+    });
   });
 
   it('handles backend 503 error when storage is not configured', async () => {
@@ -137,14 +132,14 @@ describe('ImageUploadField Component', () => {
         data: { detail: 'Storage unavailable' },
       },
     };
-    vi.mocked(imageApi.uploadImage).mockRejectedValueOnce(axios503);
+    const onUploadMock = vi.fn().mockRejectedValue(axios503);
 
     render(
       <ImageUploadField
-        value=""
-        onChange={vi.fn()}
-        folder="wineries"
+        currentImageId={null}
+        variant="logo"
         label="Logo de Bodega"
+        onUpload={onUploadMock}
       />,
     );
 

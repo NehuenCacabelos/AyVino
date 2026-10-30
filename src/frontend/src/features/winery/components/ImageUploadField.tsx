@@ -1,15 +1,22 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from 'react';
 import { isAxiosError } from 'axios';
 import { Upload, X, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
-import { uploadImage } from '../api/imageApi';
+import { imageUrl, type ImageVariant } from '../../../lib/image';
 
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export interface ImageUploadFieldProps {
+  currentImageId?: string | null;
+  /** @deprecated usar currentImageId */
   value?: string | null;
-  onChange: (url: string) => void;
-  folder: 'wineries' | 'vintages' | 'banners';
+  variant?: ImageVariant;
+  onUpload?: (file: File) => Promise<string>;
+  onDelete?: () => Promise<void>;
+  /** @deprecated usar onUpload / onDelete */
+  onChange?: (value: string) => void;
+  /** @deprecated compatibilidad con llamadas previas */
+  folder?: 'wineries' | 'vintages' | 'banners';
   label?: string;
   helperText?: string;
   disabled?: boolean;
@@ -20,14 +27,19 @@ export interface ImageUploadFieldProps {
 /**
  * Componente reutilizable para carga y vista previa de imágenes oficiales.
  * Soporta selector de archivo tradicional y arrastrar y soltar (drag & drop).
- * Valida formato (JPG, PNG, WEBP) y tamaño (máx 2 MB) en el cliente antes del envío.
+ * Valida formato (JPG, PNG, WEBP) y tamaño (máx 5 MB) en el cliente antes del envío.
+ * Maneja respuestas de error RFC 7807 (413, 415, 422, 503).
  */
 export default function ImageUploadField({
+  currentImageId,
   value,
+  variant,
+  onUpload,
+  onDelete,
   onChange,
   folder,
   label = 'Imagen oficial',
-  helperText = 'Formatos admitidos: JPG, PNG o WEBP hasta 2 MB.',
+  helperText = 'Formatos admitidos: JPG, PNG o WEBP hasta 5 MB.',
   disabled = false,
   onUploadingChange,
   aspectRatio = 'square',
@@ -37,6 +49,28 @@ export default function ImageUploadField({
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Derivar variante adecuada según aspectRatio si no se especificó
+  const effectiveVariant: ImageVariant | undefined =
+    variant ??
+    (aspectRatio === 'banner'
+      ? 'banner'
+      : aspectRatio === 'bottle'
+        ? 'bottle'
+        : 'logo');
+
+  // Resolver URL de vista previa: prioridad a currentImageId con helper imageUrl()
+  const effectivePreviewUrl: string | null = (() => {
+    if (currentImageId) {
+      return imageUrl(currentImageId, effectiveVariant);
+    }
+    if (value && value.trim().length > 0) {
+      return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')
+        ? value
+        : imageUrl(value, effectiveVariant);
+    }
+    return null;
+  })();
 
   const setUploadingState = (uploading: boolean) => {
     setIsUploading(uploading);
@@ -48,7 +82,7 @@ export default function ImageUploadField({
       return 'Formato no permitido. Solo se aceptan archivos JPG, PNG o WEBP.';
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      return 'La imagen supera el tamaño máximo permitido de 2 MB.';
+      return 'La imagen supera el tamaño máximo permitido de 5 MB.';
     }
     return null;
   };
@@ -65,8 +99,10 @@ export default function ImageUploadField({
     setUploadingState(true);
 
     try {
-      const response = await uploadImage(file, folder);
-      onChange(response.url);
+      if (onUpload) {
+        const newImageId = await onUpload(file);
+        onChange?.(newImageId);
+      }
     } catch (err: unknown) {
       let status: number | undefined;
       let detail: string | undefined;
@@ -77,15 +113,17 @@ export default function ImageUploadField({
       }
 
       if (status === 413) {
-        setUploadError('La imagen supera el límite de 2 MB permitido por el servidor.');
+        setUploadError(detail ?? 'La imagen supera el límite de 5 MB permitido por el servidor.');
       } else if (status === 415) {
-        setUploadError('El formato de archivo no es compatible. Usá JPG, PNG o WEBP.');
+        setUploadError(detail ?? 'El formato de archivo no es compatible. Usá JPG, PNG o WEBP.');
+      } else if (status === 422) {
+        setUploadError(detail ?? 'El archivo enviado no es una imagen válida.');
+      } else if (status === 403) {
+        setUploadError(detail ?? 'No tenés permisos para modificar esta imagen.');
       } else if (status === 503) {
         setUploadError(
           'La carga de imágenes no está disponible por ahora. Podés continuar y subirla más tarde.',
         );
-      } else if (status === 422) {
-        setUploadError(detail ?? 'El archivo enviado no es una imagen válida.');
       } else {
         setUploadError(
           detail ?? 'No se pudo subir la imagen. Verificá tu conexión y volvé a intentar.',
@@ -129,23 +167,40 @@ export default function ImageUploadField({
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
     if (disabled || isUploading) return;
     setUploadError(null);
-    onChange(''); // Contrato de backend: cadena vacía "" quita el logo / banner / imagen
+
+    if (onDelete) {
+      setUploadingState(true);
+      try {
+        await onDelete();
+        onChange?.('');
+      } catch (err: unknown) {
+        let detail: string | undefined;
+        if (isAxiosError<{ detail?: string; title?: string }>(err)) {
+          detail = err.response?.data?.detail ?? err.response?.data?.title;
+        }
+        setUploadError(detail ?? 'No se pudo eliminar la imagen.');
+      } finally {
+        setUploadingState(false);
+      }
+    } else {
+      onChange?.('');
+    }
   };
 
-  const hasImage = Boolean(value && value.trim().length > 0);
+  const hasImage = Boolean(effectivePreviewUrl && effectivePreviewUrl.trim().length > 0);
 
   const getLoadedLabel = () => {
-    if (folder === 'banners') return 'Banner oficial cargado';
-    if (folder === 'wineries') return 'Logo oficial cargado';
+    if (folder === 'banners' || effectiveVariant === 'banner') return 'Banner oficial cargado';
+    if (folder === 'wineries' || effectiveVariant === 'logo') return 'Logo oficial cargado';
     return 'Fotografía de cosecha cargada';
   };
 
   const getRemoveLabel = () => {
-    if (folder === 'banners') return 'Quitar banner';
-    if (folder === 'wineries') return 'Quitar logo';
+    if (folder === 'banners' || effectiveVariant === 'banner') return 'Quitar banner';
+    if (folder === 'wineries' || effectiveVariant === 'logo') return 'Quitar logo';
     return 'Quitar imagen';
   };
 
@@ -181,7 +236,7 @@ export default function ImageUploadField({
             className={`overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shrink-0 ${getAspectRatioClasses()}`}
           >
             <img
-              src={value!}
+              src={effectivePreviewUrl!}
               alt="Vista previa de imagen"
               className="w-full h-full object-cover"
               loading="lazy"
@@ -193,7 +248,7 @@ export default function ImageUploadField({
             <p className="text-xs font-medium text-zinc-200 truncate">
               {getLoadedLabel()}
             </p>
-            <p className="text-[11px] text-zinc-500 font-mono truncate">{value}</p>
+            <p className="text-[11px] text-zinc-500 font-mono truncate">{effectivePreviewUrl}</p>
 
             <div className="flex items-center gap-2 pt-1">
               <button
@@ -202,7 +257,11 @@ export default function ImageUploadField({
                 disabled={disabled || isUploading}
                 className="text-xs text-amber-200/90 hover:text-amber-100 font-medium underline transition-colors cursor-pointer disabled:opacity-50"
               >
-                {folder === 'banners' ? 'Cambiar banner' : folder === 'wineries' ? 'Cambiar logo' : 'Cambiar imagen'}
+                {folder === 'banners' || effectiveVariant === 'banner'
+                  ? 'Cambiar banner'
+                  : folder === 'wineries' || effectiveVariant === 'logo'
+                    ? 'Cambiar logo'
+                    : 'Cambiar imagen'}
               </button>
               <span className="text-zinc-600">·</span>
               <button
@@ -248,7 +307,7 @@ export default function ImageUploadField({
             <div className="flex flex-col items-center gap-2 text-zinc-200">
               <Loader2 className="w-6 h-6 text-amber-200 animate-spin" />
               <p className="text-xs font-mono tracking-wider text-amber-200/90">
-                Subiendo imagen a Supabase Storage...
+                Procesando imagen...
               </p>
             </div>
           ) : (

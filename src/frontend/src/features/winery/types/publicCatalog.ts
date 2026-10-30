@@ -18,6 +18,8 @@ export interface WineryPublicProfileResponseDto {
   registerDate: string;
   latitude?: number | null;
   longitude?: number | null;
+  logoImageId?: string | null;
+  bannerImageId?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
   location?: WineryPublicLocationDto | null;
@@ -53,6 +55,7 @@ export interface WineryPublicCatalogVintageDto {
   alcoholContent?: number | null;
   servingTemperature?: number | null;
   agingAdvice?: string | null;
+  imageId?: string | null;
   imageUrl?: string | null;
   approvalStatus: 'Pending' | 'Approved' | 'Rejected' | string;
   averageRating?: number | null;

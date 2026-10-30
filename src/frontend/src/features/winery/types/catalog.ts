@@ -18,6 +18,7 @@ export interface WineryCatalogVintageDto {
   alcoholContent?: number | null;
   servingTemperature?: number | null;
   agingAdvice?: string | null;
+  imageId?: string | null;
   imageUrl?: string | null;
   approvalStatus: 'Pending' | 'Approved' | 'Rejected' | string;
   averageRating?: number | null;

@@ -27,7 +27,10 @@ import { useAuth } from '../features/auth';
 import {
   useWinery,
   updateWinery,
-  uploadImage,
+  uploadWineryLogo,
+  deleteWineryLogo,
+  uploadWineryBanner,
+  deleteWineryBanner,
   RegionPicker,
   WineryLogo,
   WineryTopBar,
@@ -106,6 +109,7 @@ export default function WineryConfigPage() {
   const [regionErrorMsg, setRegionErrorMsg] = useState<string | null>(null);
 
   // 3. Logo Oficial
+  const [logoPreviewId, setLogoPreviewId] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState<boolean>(false);
   const [logoSuccessMsg, setLogoSuccessMsg] = useState<string | null>(null);
@@ -113,6 +117,7 @@ export default function WineryConfigPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 3.1 Banner Oficial
+  const [bannerPreviewId, setBannerPreviewId] = useState<string | null>(null);
   const [isUpdatingBanner, setIsUpdatingBanner] = useState<boolean>(false);
   const [bannerSuccessMsg, setBannerSuccessMsg] = useState<string | null>(null);
   const [bannerErrorMsg, setBannerErrorMsg] = useState<string | null>(null);
@@ -222,8 +227,8 @@ export default function WineryConfigPage() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoErrorMsg('El logo supera el límite máximo permitido de 2 MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoErrorMsg('El logo supera el límite máximo permitido de 5 MB.');
       return;
     }
 
@@ -232,8 +237,8 @@ export default function WineryConfigPage() {
     setLogoSuccessMsg(null);
 
     try {
-      const uploadRes = await uploadImage(file, 'wineries');
-      await updateWinery(winery.id, { name: winery.name, logoUrl: uploadRes.url });
+      const res = await uploadWineryLogo(winery.id, file);
+      setLogoPreviewId(res.imageId);
       await reload();
       setLogoSuccessMsg('¡Logo institucional actualizado con éxito!');
     } catch (err: unknown) {
@@ -246,14 +251,16 @@ export default function WineryConfigPage() {
 
   // Quitar Logo Oficial
   const handleDeleteLogo = async () => {
-    if (!winery?.logoUrl) return;
+    if (!winery) return;
+    if (!winery.logoImageId && !winery.logoUrl && !logoPreviewId) return;
 
     setIsDeletingLogo(true);
     setLogoErrorMsg(null);
     setLogoSuccessMsg(null);
 
     try {
-      await updateWinery(winery.id, { name: winery.name, logoUrl: '' });
+      await deleteWineryLogo(winery.id);
+      setLogoPreviewId(null);
       await reload();
       setLogoSuccessMsg('Logo institucional eliminado. Se usará el isotipo dinámico.');
     } catch (err: unknown) {
@@ -263,26 +270,44 @@ export default function WineryConfigPage() {
     }
   };
 
-  // Banner Oficial (cargar / cambiar / quitar)
-  const handleBannerChange = async (url: string) => {
+  // Banner Oficial (cargar / cambiar)
+  const handleUploadBanner = async (file: File): Promise<string> => {
+    if (!winery) throw new Error('Bodega no disponible');
+    setIsUpdatingBanner(true);
+    setBannerSuccessMsg(null);
+    setBannerErrorMsg(null);
+
+    try {
+      const res = await uploadWineryBanner(winery.id, file);
+      setBannerPreviewId(res.imageId);
+      await reload();
+      setBannerSuccessMsg('¡Banner institucional actualizado con éxito!');
+      return res.imageId;
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'No se pudo actualizar el banner institucional.');
+      setBannerErrorMsg(msg);
+      throw err;
+    } finally {
+      setIsUpdatingBanner(false);
+    }
+  };
+
+  // Quitar Banner Oficial
+  const handleDeleteBanner = async (): Promise<void> => {
     if (!winery) return;
     setIsUpdatingBanner(true);
     setBannerSuccessMsg(null);
     setBannerErrorMsg(null);
 
     try {
-      await updateWinery(winery.id, {
-        name: winery.name,
-        bannerUrl: url,
-      });
+      await deleteWineryBanner(winery.id);
+      setBannerPreviewId(null);
       await reload();
-      setBannerSuccessMsg(
-        url
-          ? '¡Banner institucional actualizado con éxito!'
-          : 'Banner eliminado. Se usará el degradado institucional automático.'
-      );
+      setBannerSuccessMsg('Banner eliminado. Se usará el degradado institucional automático.');
     } catch (err: unknown) {
-      setBannerErrorMsg(extractErrorMessage(err, 'No se pudo actualizar el banner institucional.'));
+      const msg = extractErrorMessage(err, 'No se pudo eliminar el banner institucional.');
+      setBannerErrorMsg(msg);
+      throw err;
     } finally {
       setIsUpdatingBanner(false);
     }
@@ -487,12 +512,17 @@ export default function WineryConfigPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingLogo || isDeletingLogo}
-                aria-label={winery?.logoUrl ? 'Cambiar logo institucional' : 'Cargar logo institucional'}
+                aria-label={
+                  logoPreviewId || winery?.logoImageId || winery?.logoUrl
+                    ? 'Cambiar logo institucional'
+                    : 'Cargar logo institucional'
+                }
                 title="Hacé clic para cambiar el logo"
                 className="relative group mx-auto cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-full transition-transform active:scale-95 disabled:cursor-not-allowed"
               >
                 <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg overflow-hidden bg-stone-950 flex items-center justify-center">
                   <WineryLogo
+                    logoImageId={logoPreviewId ?? winery?.logoImageId}
                     src={winery?.logoUrl}
                     name={winery?.name}
                     size="lg"
@@ -504,7 +534,7 @@ export default function WineryConfigPage() {
                 <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-white gap-1 backdrop-blur-[1px]">
                   <Upload className="w-5 h-5 text-zinc-200" />
                   <span className="text-[10px] font-sans font-medium tracking-wide">
-                    {winery?.logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                    {logoPreviewId || winery?.logoImageId || winery?.logoUrl ? 'Cambiar logo' : 'Subir logo'}
                   </span>
                 </div>
 
@@ -540,7 +570,7 @@ export default function WineryConfigPage() {
               </div>
 
               {/* Botón secundario para quitar logo si existe */}
-              {winery?.logoUrl && (
+              {(logoPreviewId || winery?.logoImageId || winery?.logoUrl) && (
                 <div className="mt-2.5">
                   <button
                     type="button"
@@ -578,18 +608,21 @@ export default function WineryConfigPage() {
                 <div className="w-full aspect-[3/1] rounded-xl overflow-hidden ring-1 ring-white/10 shadow-lg bg-[#121015]">
                   <WineryBanner
                     wineryName={winery?.name}
+                    bannerImageId={bannerPreviewId ?? winery?.bannerImageId}
                     bannerUrl={winery?.bannerUrl}
                     heightClassName="h-full w-full"
                   />
                 </div>
 
                 <ImageUploadField
+                  currentImageId={bannerPreviewId ?? winery?.bannerImageId}
                   value={winery?.bannerUrl}
-                  onChange={handleBannerChange}
-                  folder="banners"
-                  label=""
-                  helperText="Recomendado: 1500×500 px (3:1). JPG, PNG o WEBP hasta 2 MB."
+                  variant="banner"
                   aspectRatio="banner"
+                  onUpload={handleUploadBanner}
+                  onDelete={handleDeleteBanner}
+                  label=""
+                  helperText="Recomendado: 1500×500 px (3:1). JPG, PNG o WEBP hasta 5 MB."
                   disabled={isUpdatingBanner}
                   onUploadingChange={setIsUpdatingBanner}
                 />

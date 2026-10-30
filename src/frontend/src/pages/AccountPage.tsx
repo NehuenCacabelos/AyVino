@@ -163,17 +163,15 @@ export default function AccountPage() {
 
   // Manejo de eliminación de foto
   const handleDeleteAvatar = async () => {
-    if (!user?.photo) return;
+    if (!user?.avatarImageId && !user?.photo) return;
 
     setIsDeletingAvatar(true);
     setProfileErrorMsg(null);
     setProfileSuccessMsg(null);
 
     try {
-      await deleteAvatarApi();
-      if (user) {
-        updateUserContext({ ...user, photo: null });
-      }
+      const updated = await deleteAvatarApi();
+      updateUserContext(updated);
       setProfileSuccessMsg('Foto de perfil eliminada. Se usará el avatar dinámico.');
     } catch (err: unknown) {
       setProfileErrorMsg(extractApiErrorMessage(err, 'No se pudo eliminar la foto de perfil.'));
@@ -322,10 +320,10 @@ export default function AccountPage() {
                   className="inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Upload className="h-3 w-3 text-zinc-400" />
-                  <span>{user?.photo ? 'Cambiar foto' : 'Cargar foto'}</span>
+                  <span>{user?.avatarImageId || user?.photo ? 'Cambiar foto' : 'Cargar foto'}</span>
                 </button>
 
-                {user?.photo && (
+                {(user?.avatarImageId || user?.photo) && (
                   <button
                     type="button"
                     disabled={isUploadingAvatar || isDeletingAvatar}

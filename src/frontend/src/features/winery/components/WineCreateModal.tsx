@@ -2,7 +2,8 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { isAxiosError } from 'axios';
 import { X, Plus, Trash2, Wine, AlertCircle, Save } from 'lucide-react';
 import { getGrapes } from '../api/grapeApi';
-import { createWine } from '../api/wineApi';
+import { createWine, getWineVintages } from '../api/wineApi';
+import { uploadVintageImage } from '../api/imageApi';
 import ImageUploadField from './ImageUploadField';
 import type {
   GrapeResponseDto,
@@ -56,7 +57,8 @@ export default function WineCreateModal({
   const [alcoholContent, setAlcoholContent] = useState<string>('14.0');
   const [servingTemperature, setServingTemperature] = useState<string>('16');
   const [agingAdvice, setAgingAdvice] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Blend Varietal (inicia con porcentaje vacío, nunca 100%)
   const [blend, setBlend] = useState<BlendRow[]>([]);
@@ -219,12 +221,23 @@ export default function WineCreateModal({
           alcoholContent: alcoholContent ? Number(alcoholContent) : null,
           servingTemperature: servingTemperature ? Number(servingTemperature) : null,
           agingAdvice: agingAdvice.trim() || null,
-          imageUrl: imageUrl?.trim() ? imageUrl.trim() : null,
           grapes: validGrapes.length > 0 ? validGrapes : null,
         },
       };
 
       const created = await createWine(payload);
+
+      if (selectedFile) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          if (vintages && vintages.length > 0) {
+            await uploadVintageImage(created.id, vintages[0].id, selectedFile);
+          }
+        } catch {
+          alert('Vino creado pero falló la subida de imagen. Podés subirla editando la cosecha.');
+        }
+      }
+
       onWineCreated(created);
       onClose();
     } catch (err: unknown) {
@@ -413,12 +426,22 @@ export default function WineCreateModal({
             {/* Foto de la botella o añada (Opcional) */}
             <div className="pt-2">
               <ImageUploadField
-                value={imageUrl}
-                onChange={(url) => setImageUrl(url || null)}
+                value={previewUrl}
+                variant="bottle"
+                aspectRatio="bottle"
+                onUpload={async (file: File) => {
+                  setSelectedFile(file);
+                  const objectUrl = URL.createObjectURL(file);
+                  setPreviewUrl(objectUrl);
+                  return objectUrl;
+                }}
+                onDelete={async () => {
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }}
                 folder="vintages"
                 label="Foto de la botella o etiqueta (opcional)"
-                helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 2 MB)."
-                aspectRatio="bottle"
+                helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 5 MB)."
               />
             </div>
           </div>

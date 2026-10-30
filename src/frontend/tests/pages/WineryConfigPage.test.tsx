@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WineryConfigPage from '@/pages/WineryConfigPage';
 import * as wineryApi from '@/features/winery/api/wineryApi';
+import * as imageApi from '@/features/winery/api/imageApi';
 import type { RegionPickerProps } from '@/features/winery/components/RegionPicker';
 import type { WineryResponseDto } from '@/features/winery/types';
 
@@ -59,6 +60,17 @@ vi.mock('@/features/winery/api/wineryApi', () => ({
   getWineryFollowers: vi.fn(),
   followWinery: vi.fn(),
   unfollowWinery: vi.fn(),
+}));
+
+vi.mock('@/features/winery/api/imageApi', () => ({
+  uploadWineryLogo: vi.fn(),
+  deleteWineryLogo: vi.fn(),
+  uploadWineryBanner: vi.fn(),
+  deleteWineryBanner: vi.fn(),
+  uploadVintageImage: vi.fn(),
+  deleteVintageImage: vi.fn(),
+  uploadMyAvatar: vi.fn(),
+  deleteMyAvatar: vi.fn(),
 }));
 
 // Mock de RegionPicker
@@ -233,12 +245,8 @@ describe('WineryConfigPage (/bodega/configuracion)', () => {
   });
 
   it('permite hacer clic directamente en la imagen del logo institucional para seleccionar y subir un nuevo logo', async () => {
-    const uploadSpy = vi.spyOn(wineryApi, 'uploadImage').mockResolvedValueOnce({
-      url: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
-    });
-    const updateSpy = vi.spyOn(wineryApi, 'updateWinery').mockResolvedValueOnce({
-      ...mockWinery,
-      logoUrl: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
+    const uploadSpy = vi.spyOn(imageApi, 'uploadWineryLogo').mockResolvedValueOnce({
+      imageId: 'new-logo-uuid-1234',
     });
 
     renderComponent();
@@ -252,13 +260,7 @@ describe('WineryConfigPage (/bodega/configuracion)', () => {
     fireEvent.change(fileInput, { target: { files: [newFile] } });
 
     await waitFor(() => {
-      expect(uploadSpy).toHaveBeenCalledWith(newFile, 'wineries');
-      expect(updateSpy).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({
-          logoUrl: 'https://example.supabase.co/storage/v1/object/public/ayvino-media/wineries/newlogo.webp',
-        })
-      );
+      expect(uploadSpy).toHaveBeenCalledWith(42, newFile);
       expect(mockReload).toHaveBeenCalled();
     });
 
