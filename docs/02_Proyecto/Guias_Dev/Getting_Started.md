@@ -39,24 +39,26 @@ POSTGRES_PORT=5432
 
 > **Puerto 5432 por defecto**: El contenedor mapea y expone la base de datos en el puerto estándar `5432`. Si ya contás con una instancia nativa de PostgreSQL corriendo localmente que ocupe ese puerto, podés configurar `POSTGRES_PORT=5433` como alternativa tanto en tu `.env` como en la cadena de conexión (`Port=5433`) para evitar colisiones.
 
-### 2.2 Almacenamiento de Imágenes (Supabase Storage)
-Para habilitar la carga de imágenes en `/api/images` (logos de bodegas y fotos de botellas/cosechas), se requiere configurar las credenciales de Supabase Storage.
+### 2.2 Almacenamiento de Imágenes (Cloudinary)
+AyVino utiliza Cloudinary como único proveedor para el almacenamiento, optimización y entrega de imágenes (logos, banners, fotos de botellas/cosechas y avatares de usuario).
 
-**Importante:** Por seguridad, las credenciales nunca deben comitearse a `appsettings.json`. En desarrollo local se utilizan **.NET User Secrets**:
+**Importante:** Por seguridad, las credenciales nunca deben versionarse en `appsettings.json`. En desarrollo local se configuran mediante **.NET User Secrets**:
 
 ```bash
 cd src/backend/AyVino.Api
-dotnet user-secrets set "Supabase:Url" "https://<tu-proyecto>.supabase.co"
-dotnet user-secrets set "Supabase:ServiceRoleKey" "<tu-service-role-key>"
-dotnet user-secrets set "Supabase:Bucket" "ayvino-images"
+dotnet user-secrets set "Cloudinary:CloudName" "<tu-cloud-name>"
+dotnet user-secrets set "Cloudinary:ApiKey" "<tu-api-key>"
+dotnet user-secrets set "Cloudinary:ApiSecret" "<tu-api-secret>"
+dotnet user-secrets set "Cloudinary:Environment" "dev"
 ```
 
-En entornos de producción, staging o CI/CD, pueden proveerse como variables de entorno estándar:
-- `Supabase__Url`
-- `Supabase__ServiceRoleKey`
-- `Supabase__Bucket`
+En entornos de producción, staging o CI/CD, se proveen como variables de entorno estándar de ASP.NET Core:
+- `Cloudinary__CloudName`
+- `Cloudinary__ApiKey`
+- `Cloudinary__ApiSecret`
+- `Cloudinary__Environment` (debe ser `dev` o `prod`)
 
-> **Degradación Elegante:** Si estas claves no están configuradas en el entorno local, la aplicación inicia y opera con normalidad para todas sus funcionalidades; únicamente el endpoint `POST /api/images` responderá con código `503 Service Unavailable` explicando que el servicio de almacenamiento no se encuentra configurado.
+> **Degradación Elegante:** Si estas claves no están configuradas en el entorno local, la aplicación inicia y opera con normalidad para todas sus funcionalidades; únicamente las operaciones de subida de imágenes responderán con código `503 Service Unavailable` informando que el servicio de almacenamiento no se encuentra configurado. La lectura pública `GET /api/images/{id}` continúa resolviendo identificadores persistidos sin requerir credenciales locales.
 
 
 ---
