@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, AlertCircle, Sparkles, Check, X } from 'lucide-react';
+import { ArrowUpRight, X } from 'lucide-react';
 import type {
   WineVarietyEntry,
   DishPairingEntry,
@@ -20,10 +21,49 @@ interface PairingDossierViewProps {
   onSelectFood: (id: string, fromLabel?: string) => void;
 }
 
+// ─── Label constante para la ficha técnica ────────────────────────────────────
+const LABEL_CLS =
+  'text-[11px] uppercase tracking-wider text-zinc-500 font-medium block';
+
+// ─── Celda de la ficha técnica ────────────────────────────────────────────────
+function SpecCell({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className={LABEL_CLS}>{label}</span>
+      <span
+        className={`text-sm font-semibold text-neutral-200 mt-0.5 whitespace-nowrap ${
+          mono ? 'font-mono' : 'font-sans'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ─── Fundamento Químico y Organoléptico ──────────────────────────────────────
+function ChemicalRationale({ text }: { text: string }) {
+  return (
+    <div className="border-l-2 border-zinc-700 pl-4 py-1">
+      <p className="text-sm text-zinc-300 font-sans leading-relaxed max-w-3xl">
+        {text}
+      </p>
+    </div>
+  );
+}
 
 /**
  * WitnessBottleList Component
- * Renderiza la lista tipográfica secundaria monospaciada de etiquetas reales del catálogo.
+ * Lista tipográfica editorial de etiquetas reales del catálogo.
+ * Tabla de índice con divide-y, sin font-mono en el wrapper.
  */
 function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   if (!bottles || bottles.length === 0) return null;
@@ -31,15 +71,15 @@ function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   return (
     <div className="pt-4 border-t border-neutral-800/80 space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-[11px] font-mono uppercase tracking-widest text-neutral-400 font-medium">
+        <h4 className={LABEL_CLS}>
           Etiquetas Testigo en Catálogo ({bottles.length})
         </h4>
-        <span className="text-[10px] font-mono text-neutral-500">
-          Añada / Bodega / Terruño
+        <span className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">
+          Añada · Bodega · Terruño
         </span>
       </div>
 
-      <div className="divide-y divide-neutral-900 border-y border-neutral-800/60 font-mono text-xs">
+      <div className="divide-y divide-neutral-800/60 border-y border-neutral-800/60 text-xs">
         {bottles.map((bottle) => (
           <div
             key={`${bottle.winery}-${bottle.label}`}
@@ -47,7 +87,9 @@ function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
           >
             <div className="flex items-center gap-2">
               {bottle.vintage && (
-                <span className="text-neutral-500 font-normal">{bottle.vintage}</span>
+                <span className="text-neutral-500 font-mono font-normal">
+                  {bottle.vintage}
+                </span>
               )}
               <span className="text-neutral-200 font-medium group-hover:text-amber-200 transition-colors">
                 {bottle.label}
@@ -77,8 +119,8 @@ function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
 
 /**
  * SuggestionsGrid Component
- * Renderiza las sugerencias de Afinidad, Contraste y Alertas de Choque.
- * Utiliza hipertexto tipográfico interactivo para pivotar entre modos.
+ * Tres columnas tipográficas con acentos de borde temático superiores:
+ * esmeralda (afinidad) / ámbar (contraste) / vino-rosa (evitar).
  */
 function SuggestionsGrid({
   affinities,
@@ -108,9 +150,9 @@ function SuggestionsGrid({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
       {/* 1. AFINIDAD */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-rose-300 font-semibold block">
-          Afinidad (Espejo Organoléptico)
+      <div className="space-y-2 border-t-2 border-emerald-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-400 block">
+          Afinidad — Espejo Organoléptico
         </span>
         <ul className="space-y-1.5 text-sm">
           {affinities.map((item) => (
@@ -118,9 +160,11 @@ function SuggestionsGrid({
               <button
                 type="button"
                 onClick={() => handleClickLink(item)}
-                className="text-left text-neutral-200 hover:text-rose-200 hover:underline transition-colors font-sans cursor-pointer group flex items-start gap-1.5"
+                className="text-left text-neutral-200 hover:text-emerald-200 hover:underline transition-colors font-sans cursor-pointer group flex items-start gap-1.5"
               >
-                <span className="text-rose-400/80 text-xs mt-0.5 select-none">↳</span>
+                <span className="text-emerald-400/70 text-xs mt-0.5 select-none">
+                  ↳
+                </span>
                 <span className="group-hover:translate-x-0.5 transition-transform">
                   {item.label}
                 </span>
@@ -131,9 +175,9 @@ function SuggestionsGrid({
       </div>
 
       {/* 2. CONTRASTE */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-300 font-semibold block">
-          Contraste (Corte & Balance)
+      <div className="space-y-2 border-t-2 border-amber-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-amber-400 block">
+          Contraste — Corte &amp; Balance
         </span>
         <ul className="space-y-1.5 text-sm">
           {contrasts.map((item) => (
@@ -143,7 +187,9 @@ function SuggestionsGrid({
                 onClick={() => handleClickLink(item)}
                 className="text-left text-neutral-200 hover:text-amber-200 hover:underline transition-colors font-sans cursor-pointer group flex items-start gap-1.5"
               >
-                <span className="text-amber-400/80 text-xs mt-0.5 select-none">↳</span>
+                <span className="text-amber-400/70 text-xs mt-0.5 select-none">
+                  ↳
+                </span>
                 <span className="group-hover:translate-x-0.5 transition-transform">
                   {item.label}
                 </span>
@@ -154,18 +200,18 @@ function SuggestionsGrid({
       </div>
 
       {/* 3. QUÉ EVITAR */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-semibold block">
-          Combinaciones a Evitar (Choques)
+      <div className="space-y-2 border-t-2 border-rose-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-rose-400 block">
+          Combinaciones a Evitar
         </span>
-        <ul className="space-y-2 text-xs">
+        <ul className="space-y-3 text-sm">
           {clashes.map((clash) => (
-            <li key={clash.target} className="text-neutral-400 leading-snug">
-              <strong className="text-neutral-200 font-medium block">
+            <li key={clash.target}>
+              <span className="text-sm font-medium text-zinc-200 block">
                 {clash.target}
-              </strong>
-              <span className="text-[11px] text-neutral-400 italic">
-                ({clash.reason})
+              </span>
+              <span className="text-xs text-zinc-400 leading-normal block mt-0.5">
+                {clash.reason}
               </span>
             </li>
           ))}
@@ -175,11 +221,46 @@ function SuggestionsGrid({
   );
 }
 
+// ─── Encabezado de Procedencia ────────────────────────────────────────────────
+function SourceContextBanner({
+  sourceContext,
+  onClear,
+  accent,
+}: {
+  sourceContext: string;
+  onClear?: () => void;
+  accent: 'rose' | 'amber';
+}) {
+  const colorCls =
+    accent === 'rose' ? 'text-rose-300/90' : 'text-amber-300/90';
+  return (
+    <div
+      className={`flex items-center justify-between text-xs font-sans py-1.5 border-b border-neutral-800/80 ${colorCls}`}
+    >
+      <span>Sugerencia derivada desde: &ldquo;{sourceContext}&rdquo;</span>
+      {onClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="hover:text-white transition-colors cursor-pointer text-[11px] uppercase tracking-wider flex items-center gap-1"
+        >
+          <X className="w-3 h-3" />
+          <span>Limpiar</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * PairingDossierView Component
  * Ficha tipográfica integral de Maridaje (Modo Cepa y Modo Plato).
- * Sigue la estética editorial de WineDetailPage: texto estructurado, líneas sobrias,
- * cero cards infladas.
+ * Estética editorial de WineDetailPage: texto estructurado, líneas sobrias, cero cards.
+ *
+ * IMPORTANTE — Reset de estado entre cepas:
+ * El componente recibe una `key` desde PairingInteractiveHub basada en el ID activo.
+ * React desmonta/remonta el componente al cambiar de cepa, reinicializando useState
+ * sin necesidad de useEffect (prohibido por AGENTS.md para estado derivado).
  */
 export default function PairingDossierView({
   mode,
@@ -191,33 +272,32 @@ export default function PairingDossierView({
   onSelectWine,
   onSelectFood,
 }: PairingDossierViewProps) {
-  // -------------------------------------------------------------
+  // ── MODO CEPA: tab activo (reset automático vía key desde el padre) ──────────
+  const initialStyleId = wine
+    ? (styleAnchor ?? wine.styles[0]?.styleId ?? '')
+    : '';
+  const [activeStyleId, setActiveStyleId] = useState<string>(initialStyleId);
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // MODO PLATO
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────────
   if (mode === 'food' && dish) {
     return (
       <article className="space-y-8 animate-fadeIn">
-        {/* Procedencia tipográfica */}
         {sourceContext && (
-          <div className="flex items-center justify-between text-xs font-mono text-amber-300/90 py-1.5 border-b border-neutral-800/80">
-            <span>Sugerencia derivada desde: "{sourceContext}"</span>
-            {onClearSourceContext && (
-              <button
-                type="button"
-                onClick={onClearSourceContext}
-                className="hover:text-white transition-colors cursor-pointer text-[11px] uppercase tracking-wider flex items-center gap-1"
-              >
-                <X className="w-3 h-3" />
-                <span>Limpiar</span>
-              </button>
-            )}
-          </div>
+          <SourceContextBanner
+            sourceContext={sourceContext}
+            onClear={onClearSourceContext}
+            accent="amber"
+          />
         )}
 
-        {/* Encabezado de la Comida / Plato */}
+        {/* Encabezado */}
         <header className="space-y-2">
-          <div className="text-xs font-mono tracking-widest text-amber-300/90 uppercase font-semibold">
-            {'familyId' in dish ? 'Plato Específico' : 'Recomendación por Categoría Gastronómica'}
+          <div className={`${LABEL_CLS} text-amber-300/90`}>
+            {'familyId' in dish
+              ? 'Plato Específico'
+              : 'Recomendación por Categoría Gastronómica'}
           </div>
           <h2 className="text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight">
             {dish.name}
@@ -227,51 +307,26 @@ export default function PairingDossierView({
           </p>
         </header>
 
-        {/* Tira de Especificaciones de Servicio (Espejo de WineDetailPage) */}
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 py-3 border-y border-neutral-800/80">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-              Temperatura Servicio Copa
-            </span>
-            <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-              {dish.servingTemperature}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-              Cristalería Recomendada
-            </span>
-            <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-              {dish.glassware}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-              Tip del Sommelier
-            </span>
-            <span className="text-sm font-normal text-neutral-300 font-sans">
-              {dish.serviceTip}
-            </span>
-          </div>
+        {/* Ficha técnica de servicio */}
+        <div className="flex flex-wrap items-start gap-x-8 gap-y-4 py-3 border-y border-neutral-800/80">
+          <SpecCell
+            label="Temperatura de Servicio"
+            value={dish.servingTemperature}
+            mono
+          />
+          <SpecCell label="Cristalería Recomendada" value={dish.glassware} />
+          <SpecCell label="Tip del Sommelier" value={dish.serviceTip} />
         </div>
 
         {/* Fundamento Enogastronómico */}
-        <section className="space-y-2">
-          <h3 className="text-xs font-mono tracking-widest uppercase text-neutral-400 font-medium">
-            Fundamento Químico y Organoléptico
-          </h3>
-          <p className="font-serif text-base sm:text-lg text-neutral-200 leading-relaxed font-light italic max-w-4xl">
-            "{dish.chemicalRationale}"
-          </p>
+        <section className="space-y-3">
+          <h3 className={LABEL_CLS}>Fundamento Químico y Organoléptico</h3>
+          <ChemicalRationale text={dish.chemicalRationale} />
         </section>
 
         {/* Sugerencias de Armonización */}
         <section className="space-y-3 pt-2 border-t border-neutral-800/80">
-          <h3 className="text-xs font-mono tracking-widest uppercase text-neutral-400 font-medium">
-            Armonizaciones Enológicas Sugeridas
-          </h3>
+          <h3 className={LABEL_CLS}>Armonizaciones Enológicas Sugeridas</h3>
           <SuggestionsGrid
             affinities={dish.affinities}
             contrasts={dish.contrasts}
@@ -283,45 +338,41 @@ export default function PairingDossierView({
           />
         </section>
 
-        {/* Etiquetas Testigo en Catálogo */}
         <WitnessBottleList bottles={dish.witnessBottles} />
       </article>
     );
   }
 
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────────
   // MODO CEPA
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────────
   if (mode === 'wine' && wine) {
     const hasMultipleStyles = wine.styles.length > 1;
+    const activeStyle: WineStyleProfile =
+      wine.styles.find((s) => s.styleId === activeStyleId) ?? wine.styles[0];
 
     return (
       <article className="space-y-8 animate-fadeIn">
-        {/* Procedencia tipográfica */}
         {sourceContext && (
-          <div className="flex items-center justify-between text-xs font-mono text-rose-300/90 py-1.5 border-b border-neutral-800/80">
-            <span>Sugerencia derivada desde: "{sourceContext}"</span>
-            {onClearSourceContext && (
-              <button
-                type="button"
-                onClick={onClearSourceContext}
-                className="hover:text-white transition-colors cursor-pointer text-[11px] uppercase tracking-wider flex items-center gap-1"
-              >
-                <X className="w-3 h-3" />
-                <span>Limpiar</span>
-              </button>
-            )}
-          </div>
+          <SourceContextBanner
+            sourceContext={sourceContext}
+            onClear={onClearSourceContext}
+            accent="rose"
+          />
         )}
 
-        {/* Encabezado de la Cepa */}
+        {/* Encabezado de la cepa */}
         <header className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-rose-300 uppercase font-semibold">
-            <span>Varietal Insignia</span>
+          <div className="flex items-center gap-2">
+            <span className={`${LABEL_CLS} text-rose-300`}>Varietal Insignia</span>
             {wine.originNote && (
               <>
-                <span className="text-neutral-600" aria-hidden="true">·</span>
-                <span className="text-neutral-400 font-normal">{wine.originNote}</span>
+                <span className="text-neutral-600 text-xs" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-[11px] text-neutral-400 font-medium">
+                  {wine.originNote}
+                </span>
               </>
             )}
           </div>
@@ -333,127 +384,79 @@ export default function PairingDossierView({
           </p>
         </header>
 
-        {/* Sub-estilos enológicos (Bifurcaciones tipográficas) */}
-        <div className="space-y-10">
-          {wine.styles.map((style: WineStyleProfile, index: number) => {
-            const isAnchorMatched = styleAnchor === style.styleId;
-
-            return (
-              <section
-                key={style.styleId}
-                id={`style-${style.styleId}`}
-                className={`space-y-6 ${
-                  index > 0 ? 'pt-8 border-t border-neutral-800/80' : ''
-                } ${isAnchorMatched ? 'bg-rose-950/10 p-4 rounded-sm border border-rose-900/40' : ''}`}
+        {/* Tabs de estilos (solo si hay más de uno) */}
+        {hasMultipleStyles && (
+          <div
+            className="flex items-center gap-0 border-b border-zinc-800"
+            role="tablist"
+            aria-label="Estilos del varietal"
+          >
+            {wine.styles.map((s) => (
+              <button
+                key={s.styleId}
+                type="button"
+                role="tab"
+                aria-selected={activeStyleId === s.styleId}
+                onClick={() => setActiveStyleId(s.styleId)}
+                className={`px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border-b-2 -mb-px ${
+                  activeStyleId === s.styleId
+                    ? 'text-rose-300 border-rose-500'
+                    : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                }`}
               >
-                {/* Cabecera del sub-estilo si hay multiplicidad */}
-                {hasMultipleStyles && (
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-mono uppercase tracking-wider text-rose-200 font-semibold flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400" aria-hidden="true" />
-                      <span>{style.styleName}</span>
-                    </h3>
-                    <span className="text-[11px] font-mono text-neutral-400">
-                      Estilo {index + 1} de {wine.styles.length}
-                    </span>
-                  </div>
-                )}
+                {s.styleName}
+              </button>
+            ))}
+          </div>
+        )}
 
-                {/* Tira de Especificaciones de Servicio y Perfil */}
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-3 py-3 border-y border-neutral-800/80">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                      Temperatura Óptima
-                    </span>
-                    <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-                      {style.servingTemperature}
-                    </span>
-                  </div>
+        {/* Bloque del estilo activo (único, sin scroll acumulativo) */}
+        <section
+          key={activeStyle.styleId}
+          role={hasMultipleStyles ? 'tabpanel' : undefined}
+          className="space-y-6"
+        >
+          {/* Ficha técnica de servicio y perfil */}
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-4 py-3 border-y border-neutral-800/80">
+            <SpecCell
+              label="Temperatura Óptima"
+              value={activeStyle.servingTemperature}
+              mono
+            />
+            <SpecCell label="Copa de Servicio" value={activeStyle.glassware} />
+            <SpecCell label="Acidez" value={activeStyle.acidity} />
+            <SpecCell label="Cuerpo" value={activeStyle.body} />
+            {activeStyle.tannins && (
+              <SpecCell label="Taninos" value={activeStyle.tannins} />
+            )}
+            <SpecCell label="Tip de Servicio" value={activeStyle.serviceTip} />
+          </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                      Copa de Servicio
-                    </span>
-                    <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-                      {style.glassware}
-                    </span>
-                  </div>
+          {/* Fundamento Enogastronómico */}
+          <div className="space-y-3">
+            <h4 className={LABEL_CLS}>Fundamento Químico y Organoléptico</h4>
+            <ChemicalRationale text={activeStyle.chemicalRationale} />
+          </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                      Acidez
-                    </span>
-                    <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-                      {style.acidity}
-                    </span>
-                  </div>
+          {/* Sugerencias de Armonización */}
+          <div className="space-y-3 pt-2 border-t border-neutral-800/80">
+            <h4 className={LABEL_CLS}>Armonizaciones Gastronómicas Sugeridas</h4>
+            <SuggestionsGrid
+              affinities={activeStyle.affinities}
+              contrasts={activeStyle.contrasts}
+              clashes={activeStyle.clashes}
+              mode="wine"
+              currentName={wine.name}
+              onSelectWine={onSelectWine}
+              onSelectFood={onSelectFood}
+            />
+          </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                      Cuerpo
-                    </span>
-                    <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-                      {style.body}
-                    </span>
-                  </div>
-
-                  {style.tannins && (
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                        Taninos
-                      </span>
-                      <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
-                        {style.tannins}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
-                      Tip de Servicio
-                    </span>
-                    <span className="text-sm font-normal text-neutral-300 font-sans">
-                      {style.serviceTip}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fundamento Enogastronómico */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-mono tracking-widest uppercase text-neutral-400 font-medium">
-                    Fundamento Químico y Organoléptico
-                  </h4>
-                  <p className="font-serif text-base sm:text-lg text-neutral-200 leading-relaxed font-light italic max-w-4xl">
-                    "{style.chemicalRationale}"
-                  </p>
-                </div>
-
-                {/* Sugerencias de Armonización */}
-                <div className="space-y-3 pt-2 border-t border-neutral-800/80">
-                  <h4 className="text-xs font-mono tracking-widest uppercase text-neutral-400 font-medium">
-                    Armonizaciones Gastronómicas Sugeridas
-                  </h4>
-                  <SuggestionsGrid
-                    affinities={style.affinities}
-                    contrasts={style.contrasts}
-                    clashes={style.clashes}
-                    mode="wine"
-                    currentName={wine.name}
-                    onSelectWine={onSelectWine}
-                    onSelectFood={onSelectFood}
-                  />
-                </div>
-
-                {/* Etiquetas Testigo en Catálogo */}
-                <WitnessBottleList bottles={style.witnessBottles} />
-              </section>
-            );
-          })}
-        </div>
+          <WitnessBottleList bottles={activeStyle.witnessBottles} />
+        </section>
       </article>
     );
   }
 
   return null;
 }
-

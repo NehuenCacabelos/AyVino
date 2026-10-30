@@ -112,6 +112,7 @@ export default function PairingInteractiveHub({
         className="pt-2"
       >
         <PairingDossierView
+          key={mode === 'wine' ? (wineId ?? 'wine') : (activeDishId ?? activeFamilyId ?? 'food')}
           mode={mode}
           wine={activeWine}
           dish={activeDishOrFamily}
