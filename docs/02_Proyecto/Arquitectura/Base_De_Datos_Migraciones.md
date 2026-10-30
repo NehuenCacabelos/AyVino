@@ -130,7 +130,8 @@ erDiagram
         string website_url
         string email
         string phone
-        string logo_url "nullable"
+        uuid logo_image_id FK "nullable"
+        uuid banner_image_id FK "nullable"
         decimal latitude "nullable"
         decimal longitude "nullable"
         int status "Pending/Approved/Rejected"
@@ -157,7 +158,7 @@ erDiagram
         decimal alcohol_content "nullable"
         int serving_temperature "nullable"
         string aging_advice
-        string image_url
+        uuid image_id FK "nullable"
         int approval_status
         int uploaded_by_user_id FK
         datetime register_date
@@ -259,6 +260,15 @@ La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los met
 - `wineries.logo_image_id`: Clave foránea con `ON DELETE RESTRICT`. Requiere que el orquestador desvincule el logo antes de borrar la fila de `images`.
 - `wineries.banner_image_id`: Clave foránea con `ON DELETE RESTRICT`.
 - `wine_vintages.image_id`: Clave foránea con `ON DELETE RESTRICT`.
+
+### Eliminación de Columnas Legacy (Migración `M20261029003`)
+Tras migrar el almacenamiento al modelo unificado de identificadores de imagen referenciales, la migración `M20261029003_RemoveLegacyImageColumns` elimina de forma definitiva en `Up()` las columnas obsoletas de tipo string/URL:
+- `users.photo`
+- `wineries.logo_url`
+- `wineries.banner_url`
+- `wine_vintages.image_url`
+
+El método `Down()` las reconstituye con sus tipos originales (`string/varchar`, nullable) garantizando reversibilidad total.
 
 ---
 
