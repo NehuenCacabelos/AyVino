@@ -9,6 +9,7 @@ export interface AdminWineVintageListItem {
   wineryName: string | null;
   year: number | null;
   alcoholContent: number | null;
+  imageId?: string | null;
   imageUrl: string | null;
   approvalStatus: ApprovalStatus | string;
   uploadedByUserId: number;

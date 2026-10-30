@@ -181,6 +181,7 @@ export default function AdminWineriesPage() {
         render: (row) => (
           <WineryLogo
             src={row.logoUrl}
+            logoImageId={row.logoImageId}
             name={row.name}
             size="sm"
             className="w-9 h-9 rounded-full mx-auto"
@@ -368,6 +369,7 @@ export default function AdminWineriesPage() {
               <div className="flex items-center gap-3">
                 <WineryLogo
                   src={detailWinery.logoUrl}
+                  logoImageId={detailWinery.logoImageId}
                   name={detailWinery.name}
                   size="md"
                   className="w-12 h-12 rounded-xl"

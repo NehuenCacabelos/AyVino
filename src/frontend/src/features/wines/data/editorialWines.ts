@@ -20,6 +20,7 @@ export interface WineVintageDetail {
   id: string;
   wineId: string;
   year: number;
+  imageId?: string | null;
   imageUrl?: string | null;
   alcoholContent: string;
   servingTemperature: string;

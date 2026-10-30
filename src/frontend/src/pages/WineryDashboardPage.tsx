@@ -206,6 +206,7 @@ export default function WineryDashboardPage() {
           <div className="flex items-center gap-4">
             <WineryLogo
               src={winery?.logoUrl}
+              logoImageId={winery?.logoImageId}
               name={winery?.name}
               size="lg"
               className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl shrink-0"

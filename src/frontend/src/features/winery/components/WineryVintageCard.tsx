@@ -3,6 +3,7 @@ import type { WineryCatalogVintageDto } from '../types/catalog';
 import { getVintageStatusBadge } from '../utils/catalogUtils';
 import WineryCatalogBottleSilhouette from './WineryCatalogBottleSilhouette';
 import { cn } from '../../../lib/utils';
+import { imageUrl } from '../../../lib/image';
 
 export interface WineryVintageCardProps {
   vintage: WineryCatalogVintageDto;
@@ -50,9 +51,9 @@ export default function WineryVintageCard({
     <article className="bg-[#121015] hover:bg-[#151218] rounded-2xl border border-white/5 hover:border-white/10 transition-colors p-5 shadow-md flex flex-col md:flex-row items-start gap-5">
       {/* Botella / Foto de la Cosecha */}
       <div className="w-20 h-32 md:w-24 md:h-36 bg-[#0a0a0c] rounded-xl border border-white/5 flex items-center justify-center p-2 shrink-0 overflow-hidden self-center md:self-start">
-        {vintage.imageUrl ? (
+        {vintage.imageId || vintage.imageUrl ? (
           <img
-            src={vintage.imageUrl}
+            src={vintage.imageId ? imageUrl(vintage.imageId, 'bottle')! : vintage.imageUrl!}
             alt={`Cosecha ${vintage.year ?? 'S/A'}`}
             loading="lazy"
             decoding="async"

@@ -21,6 +21,7 @@ import {
   type WineType,
 } from '../features/winery';
 import WineEditModal from '../features/winery/components/WineEditModal';
+import { imageUrl } from '../lib/image';
 
 function getWineTypeSpanish(type?: string | null): string {
   switch (type?.toLowerCase()) {
@@ -102,8 +103,10 @@ export default function WineryWineDetailPage() {
   }
 
   // Imagen de portada: la añada más reciente con foto
-  const vintageWithImage = wine.vintages.find((v) => Boolean(v.imageUrl));
-  const coverImage = vintageWithImage?.imageUrl;
+  const vintageWithImage = wine.vintages.find((v) => Boolean(v.imageId || v.imageUrl));
+  const coverImage = vintageWithImage?.imageId
+    ? imageUrl(vintageWithImage.imageId, 'bottle')
+    : vintageWithImage?.imageUrl;
   const wineTypeLabel = getWineTypeSpanish(wine.wineType);
   const isOfficial = wine.sourceType?.toLowerCase() === 'official';
 

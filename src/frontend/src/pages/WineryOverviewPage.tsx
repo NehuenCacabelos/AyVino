@@ -227,6 +227,7 @@ export default function WineryOverviewPage() {
         <WineryBanner
           wineryName={winery?.name}
           bannerUrl={winery?.bannerUrl}
+          bannerImageId={winery?.bannerImageId}
           heightClassName="h-44 sm:h-52 md:h-60 lg:h-64"
         />
 
@@ -241,11 +242,12 @@ export default function WineryOverviewPage() {
                   <div
                     className={cn(
                       'w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 flex items-center justify-center p-2.5 sm:p-3 transition-transform',
-                      winery?.logoUrl ? 'bg-white' : 'bg-[#17151a]'
+                      winery?.logoUrl || winery?.logoImageId ? 'bg-white' : 'bg-[#17151a]'
                     )}
                   >
                     <WineryLogo
                       src={winery?.logoUrl}
+                      logoImageId={winery?.logoImageId}
                       name={winery?.name}
                       size="lg"
                       objectFit="contain"

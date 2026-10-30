@@ -8,6 +8,7 @@ import {
 } from '../utils/catalogUtils';
 import WineryCatalogBottleSilhouette from './WineryCatalogBottleSilhouette';
 import { cn } from '../../../lib/utils';
+import { imageUrl } from '../../../lib/image';
 
 export interface WineryCatalogCardProps {
   wine: WineryCatalogWineDto;
@@ -40,8 +41,10 @@ export default function WineryCatalogCard({
   onAddVintage,
 }: WineryCatalogCardProps) {
   // Obtener la imagen de la añada más reciente con foto
-  const vintageWithImage = wine.vintages.find((v) => Boolean(v.imageUrl));
-  const coverImage = vintageWithImage?.imageUrl;
+  const vintageWithImage = wine.vintages.find((v) => Boolean(v.imageId || v.imageUrl));
+  const coverImage = vintageWithImage?.imageId
+    ? imageUrl(vintageWithImage.imageId, 'bottle')
+    : vintageWithImage?.imageUrl;
 
   const yearsRange = getVintageYearsRange(wine.vintages);
   const mainGrape = getMainGrape(wine.vintages);

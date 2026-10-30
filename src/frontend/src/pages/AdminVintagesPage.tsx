@@ -36,6 +36,7 @@ import {
 } from '../features/admin';
 import type { Column } from '../features/admin';
 import { cn } from '../lib/utils';
+import { imageUrl } from '../lib/image';
 
 type StatusFilter = 'Pending' | 'Approved' | 'Rejected' | 'All';
 
@@ -229,9 +230,9 @@ export default function AdminVintagesPage() {
         className: 'w-16 text-center',
         render: (row) => (
           <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-900 border border-white/10 flex items-center justify-center mx-auto">
-            {row.imageUrl ? (
+            {row.imageId || row.imageUrl ? (
               <img
-                src={row.imageUrl}
+                src={row.imageId ? imageUrl(row.imageId, 'bottle')! : row.imageUrl!}
                 alt={row.wineName}
                 className="w-full h-full object-cover"
               />
@@ -489,11 +490,15 @@ export default function AdminVintagesPage() {
                 {/* Imagen y ficha principal */}
                 <div className="flex flex-col sm:flex-row gap-4 p-4 bg-[#0c0c0e] rounded-xl border border-white/5 items-center sm:items-start">
                   <div className="w-24 h-32 rounded-lg overflow-hidden bg-neutral-900 border border-white/10 flex items-center justify-center shrink-0">
-                    {detailData?.imageUrl || detailItem.imageUrl ? (
+                    {(detailData?.imageId || detailData?.imageUrl || detailItem.imageId || detailItem.imageUrl) ? (
                       <img
-                        src={detailData?.imageUrl || detailItem.imageUrl || ''}
+                        src={
+                          detailData?.imageId
+                            ? imageUrl(detailData.imageId, 'bottle')!
+                            : (detailData?.imageUrl || (detailItem.imageId ? imageUrl(detailItem.imageId, 'bottle')! : detailItem.imageUrl!))
+                        }
                         alt={detailItem.wineName}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain p-2"
                       />
                     ) : (
                       <Wine className="w-8 h-8 text-neutral-600" />

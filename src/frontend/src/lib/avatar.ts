@@ -1,6 +1,6 @@
 import { imageUrl } from './image';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5230/api';
 
 /**
  * Obtiene el origen de la API (sin /api) para resolver archivos estáticos subidos al backend.
@@ -9,7 +9,7 @@ function getBackendOrigin(): string {
   try {
     return new URL(API_BASE_URL).origin;
   } catch {
-    return 'http://localhost:5000';
+    return 'http://localhost:5230';
   }
 }
 

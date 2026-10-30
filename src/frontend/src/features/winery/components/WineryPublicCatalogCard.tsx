@@ -3,6 +3,7 @@ import { Star, ShieldAlert } from 'lucide-react';
 import type { WineryPublicCatalogWineDto } from '../types';
 import WineryCatalogBottleSilhouette from './WineryCatalogBottleSilhouette';
 import { cn } from '../../../lib/utils';
+import { imageUrl } from '../../../lib/image';
 
 export interface WineryPublicCatalogCardProps {
   wine: WineryPublicCatalogWineDto;
@@ -39,8 +40,11 @@ export default function WineryPublicCatalogCard({
 }: WineryPublicCatalogCardProps) {
   // 1. Cosecha más reciente con fotografía
   const vintageWithImage = wine.vintages.find(
-    (v) => v.imageUrl && v.imageUrl.trim().length > 0,
+    (v) => (v.imageId && v.imageId.trim().length > 0) || (v.imageUrl && v.imageUrl.trim().length > 0),
   );
+  const coverImage = vintageWithImage?.imageId
+    ? imageUrl(vintageWithImage.imageId, 'bottle')
+    : vintageWithImage?.imageUrl;
   const primaryVintage = wine.vintages[0];
 
   // 2. Rango de años
@@ -106,9 +110,9 @@ export default function WineryPublicCatalogCard({
 
       {/* Área Visual de la Botella / Fotografía */}
       <div className="relative w-full h-52 sm:h-56 bg-gradient-to-b from-[#17151a] to-[#0f0e13] flex items-center justify-center p-4 overflow-hidden">
-        {vintageWithImage?.imageUrl ? (
+        {coverImage ? (
           <img
-            src={vintageWithImage.imageUrl}
+            src={coverImage}
             alt={wine.name}
             className="h-full w-full object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
             loading="lazy"

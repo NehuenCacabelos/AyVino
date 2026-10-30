@@ -1,4 +1,5 @@
 import type { WineApiDto, WineVintageApiDto, CuratedWine } from '../../../types/wine';
+import { imageUrl } from '../../../lib/image';
 
 /**
  * Adaptador puro que transforma las entidades de la API (.NET) al ViewModel
@@ -19,7 +20,7 @@ export function mapApiWineToCuratedWine(
     region: locationName ?? 'Argentina',
     rating: wine.averageRating ?? null,
     reviewCount: wine.reviewCount ?? 0,
-    imageUrl: vintage?.imageUrl ?? undefined,
+    imageUrl: (vintage?.imageId ? imageUrl(vintage.imageId, 'bottle') : vintage?.imageUrl) ?? undefined,
     sourceType: (wine.sourceType as 'Official' | 'Community') ?? 'Community',
     isOfficial: wine.sourceType === 'Official',
     aging: vintage?.agingAdvice ?? undefined,

@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../features/auth';
 import ProfileTopBar from '../components/layout/ProfileTopBar';
 import { getAvatarUrl } from '../lib/avatar';
+import { imageUrl } from '../lib/image';
 import {
   getPublicUserProfileApi,
   getPublicCellarItemsApi,
@@ -319,7 +320,7 @@ export default function ProfilePage() {
                     {/* Avatar Circular con aro aislante */}
                     <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0">
                       <img
-                        src={getAvatarUrl({ photo: profile.photo, username: profile.username })}
+                        src={getAvatarUrl({ avatarImageId: profile.avatarImageId, photo: profile.photo, username: profile.username })}
                         alt={profile.username}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -581,7 +582,7 @@ export default function ProfilePage() {
                                 className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                               >
                                 <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                                  <ShowcaseWineBottle src={item.imageUrl} alt={item.name} />
+                                  <ShowcaseWineBottle src={item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl} alt={item.name} />
                                 </div>
 
                                 <div className="space-y-1">
@@ -821,7 +822,7 @@ export default function ProfilePage() {
                           className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                         >
                           <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                            <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
+                            <ShowcaseWineBottle src={wine.imageId ? imageUrl(wine.imageId, 'bottle') : wine.imageUrl} alt={wine.name} />
                           </div>
 
                           <div className="space-y-1">
