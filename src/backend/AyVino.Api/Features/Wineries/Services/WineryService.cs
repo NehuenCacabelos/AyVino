@@ -21,8 +21,7 @@ public class WineryService(
     ICityRepository cityRepository,
     IGeorefClient georefClient,
     IUserService userService,
-    IJwtTokenGenerator jwtTokenGenerator,
-    IImageStorage? imageStorage = null) : IWineryService
+    IJwtTokenGenerator jwtTokenGenerator) : IWineryService
 {
     public async Task<WineryResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
@@ -127,11 +126,7 @@ public class WineryService(
         }
         else
         {
-            var trimmedLogo = dto.LogoUrl.Trim();
-            if (imageStorage != null && !imageStorage.IsUrlFromStorage(trimmedLogo))
-                throw new ValidationException("La URL del logo debe pertenecer al almacenamiento oficial del sistema.");
-
-            targetLogoUrl = trimmedLogo;
+            targetLogoUrl = dto.LogoUrl.Trim();
         }
 
         string? targetBannerUrl;
@@ -145,11 +140,7 @@ public class WineryService(
         }
         else
         {
-            var trimmedBanner = dto.BannerUrl.Trim();
-            if (imageStorage != null && !imageStorage.IsUrlFromStorage(trimmedBanner))
-                throw new ValidationException("La URL del banner debe pertenecer al almacenamiento oficial del sistema.");
-
-            targetBannerUrl = trimmedBanner;
+            targetBannerUrl = dto.BannerUrl.Trim();
         }
 
         var winery = existing with

@@ -26,16 +26,14 @@ public class WineryServiceTests
         IUserService? userService = null,
         IJwtTokenGenerator? jwtGenerator = null,
         ICityRepository? cityRepo = null,
-        IGeorefClient? georefClient = null,
-        IImageStorage? imageStorage = null) =>
+        IGeorefClient? georefClient = null) =>
         new(
             wineryRepo,
             locationRepo ?? Substitute.For<ILocationRepository>(),
             cityRepo ?? Substitute.For<ICityRepository>(),
             georefClient ?? Substitute.For<IGeorefClient>(),
             userService ?? Substitute.For<IUserService>(),
-            jwtGenerator ?? Substitute.For<IJwtTokenGenerator>(),
-            imageStorage);
+            jwtGenerator ?? Substitute.For<IJwtTokenGenerator>());
 
 
     [Fact]

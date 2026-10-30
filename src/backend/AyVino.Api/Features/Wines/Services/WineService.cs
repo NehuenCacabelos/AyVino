@@ -17,8 +17,7 @@ public class WineService(
     IWineRepository wineRepository,
     IWineryRepository wineryRepository,
     ILocationRepository locationRepository,
-    IGrapeRepository grapeRepository,
-    IImageStorage? imageStorage = null) : IWineService
+    IGrapeRepository grapeRepository) : IWineService
 {
     public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
@@ -55,11 +54,6 @@ public class WineService(
                 throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.FirstVintage.ImageUrl))
-        {
-            if (imageStorage != null && !imageStorage.IsUrlFromStorage(dto.FirstVintage.ImageUrl))
-                throw new ValidationException("La URL de la imagen debe pertenecer al almacenamiento oficial del sistema.");
-        }
 
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);

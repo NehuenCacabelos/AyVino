@@ -43,6 +43,9 @@ using AyVino.Api.Features.UserWines.Repositories;
 using AyVino.Api.Features.UserWines.Services;
 using AyVino.Api.Features.Images.Endpoints;
 using AyVino.Api.Features.Images.Services;
+using AyVino.Api.Features.Images.Configuration;
+using AyVino.Api.Features.Images.Repositories;
+using CloudinaryDotNet;
 using AyVino.Api.Features.Cellars.Endpoints;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Cellars.Services;
@@ -221,11 +224,19 @@ builder.Services.AddHttpClient<IGeorefClient, GeorefClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(5);
 });
 
-// Supabase Storage Client (HttpClient tipado)
-builder.Services.AddHttpClient<IImageStorage, SupabaseImageStorage>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(15);
-});
+// Cloudinary Configuration
+var cloudinaryOptions = builder.Configuration.GetSection(CloudinaryOptions.SectionName).Get<CloudinaryOptions>() ?? new CloudinaryOptions();
+cloudinaryOptions.Validate();
+
+builder.Services.AddSingleton(cloudinaryOptions);
+builder.Services.AddSingleton(new Cloudinary(new Account(
+    cloudinaryOptions.CloudName,
+    cloudinaryOptions.ApiKey,
+    cloudinaryOptions.ApiSecret
+)));
+builder.Services.AddSingleton<ICloudinaryClient, CloudinaryClientWrapper>();
+builder.Services.AddScoped<IImageStorage, CloudinaryImageStorage>();
+builder.Services.AddScoped<IImageRepository, ImageRepository>();
 
 // Features: Repositories & Services (Scoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
