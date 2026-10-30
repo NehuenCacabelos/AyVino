@@ -5,16 +5,10 @@ namespace AyVino.Api.Features.Images.Services;
 
 public static class ImageValidator
 {
-    private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
-    private static readonly HashSet<string> AllowedFolders = new(StringComparer.OrdinalIgnoreCase) { "wineries", "vintages", "banners" };
+    private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
 
-    public static (string Extension, string ContentType) Validate(IFormFile? file, string? folder)
+    public static (string Extension, string ContentType) Validate(IFormFile? file)
     {
-        if (string.IsNullOrWhiteSpace(folder) || !AllowedFolders.Contains(folder))
-        {
-            throw new UnprocessableEntityException("La carpeta destino debe ser 'wineries', 'vintages' o 'banners'.");
-        }
-
         if (file == null || file.Length == 0)
         {
             throw new UnprocessableEntityException("Debe proporcionar un archivo de imagen válido.");
@@ -22,7 +16,7 @@ public static class ImageValidator
 
         if (file.Length > MaxFileSizeBytes)
         {
-            throw new PayloadTooLargeException("El tamaño del archivo no puede superar los 2 MB.");
+            throw new PayloadTooLargeException("El tamaño del archivo no puede superar los 5 MB.");
         }
 
         var contentType = file.ContentType?.Trim().ToLowerInvariant();
@@ -97,4 +91,3 @@ public static class ImageValidator
         return null;
     }
 }
-

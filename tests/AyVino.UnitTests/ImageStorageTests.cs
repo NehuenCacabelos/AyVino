@@ -1,6 +1,10 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Features.Images.Endpoints;
+using AyVino.Api.Features.Images.Models;
+using AyVino.Api.Features.Images.Repositories;
 using AyVino.Api.Features.Images.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 
 namespace AyVino.UnitTests;
@@ -9,7 +13,6 @@ public class ImageStorageTests
 {
     private static IFormFile CreateMockFile(byte[] content, string fileName, string contentType)
     {
-        var stream = new MemoryStream(content);
         var file = Substitute.For<IFormFile>();
         file.Length.Returns(content.Length);
         file.FileName.Returns(fileName);
@@ -18,40 +21,26 @@ public class ImageStorageTests
         return file;
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("users")]
-    [InlineData("avatar")]
-    [InlineData("../../etc")]
-    public void ImageValidator_InvalidFolder_ThrowsUnprocessableEntityException(string? folder)
-    {
-        var file = CreateMockFile(new byte[20], "test.jpg", "image/jpeg");
-        var ex = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(file, folder));
-        Assert.Contains("wineries", ex.Message);
-    }
-
     [Fact]
     public void ImageValidator_NullOrEmptyFile_ThrowsUnprocessableEntityException()
     {
-        var ex = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(null, "wineries"));
+        var ex = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(null));
         Assert.Contains("archivo de imagen válido", ex.Message);
 
         var emptyFile = CreateMockFile([], "empty.jpg", "image/jpeg");
-        var ex2 = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(emptyFile, "wineries"));
+        var ex2 = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(emptyFile));
         Assert.Contains("archivo de imagen válido", ex2.Message);
     }
 
     [Fact]
-    public void ImageValidator_FileExceeds2MB_ThrowsPayloadTooLargeException()
+    public void ImageValidator_FileExceeds5MB_ThrowsPayloadTooLargeException()
     {
-        // 2 MB + 1 byte
-        var largeContent = new byte[2 * 1024 * 1024 + 1];
+        // 5 MB + 1 byte
+        var largeContent = new byte[5 * 1024 * 1024 + 1];
         var file = CreateMockFile(largeContent, "large.jpg", "image/jpeg");
 
-        var ex = Assert.Throws<PayloadTooLargeException>(() => ImageValidator.Validate(file, "wineries"));
-        Assert.Contains("2 MB", ex.Message);
+        var ex = Assert.Throws<PayloadTooLargeException>(() => ImageValidator.Validate(file));
+        Assert.Contains("5 MB", ex.Message);
     }
 
     [Theory]
@@ -64,7 +53,7 @@ public class ImageStorageTests
         var content = new byte[50];
         var file = CreateMockFile(content, "test.file", contentType);
 
-        var ex = Assert.Throws<UnsupportedMediaTypeException>(() => ImageValidator.Validate(file, "wineries"));
+        var ex = Assert.Throws<UnsupportedMediaTypeException>(() => ImageValidator.Validate(file));
         Assert.Contains("Solo se aceptan formatos JPG, PNG y WEBP", ex.Message);
     }
 
@@ -78,7 +67,7 @@ public class ImageStorageTests
         jpegBytes[2] = 0xFF;
 
         var file = CreateMockFile(jpegBytes, "bottle.jpg", "image/jpeg");
-        var (ext, mime) = ImageValidator.Validate(file, "vintages");
+        var (ext, mime) = ImageValidator.Validate(file);
 
         Assert.Equal(".jpg", ext);
         Assert.Equal("image/jpeg", mime);
@@ -99,7 +88,7 @@ public class ImageStorageTests
         pngBytes[7] = 0x0A;
 
         var file = CreateMockFile(pngBytes, "logo.png", "image/png");
-        var (ext, mime) = ImageValidator.Validate(file, "wineries");
+        var (ext, mime) = ImageValidator.Validate(file);
 
         Assert.Equal(".png", ext);
         Assert.Equal("image/png", mime);
@@ -120,7 +109,7 @@ public class ImageStorageTests
         webpBytes[11] = 0x50; // P
 
         var file = CreateMockFile(webpBytes, "foto.webp", "image/webp");
-        var (ext, mime) = ImageValidator.Validate(file, "vintages");
+        var (ext, mime) = ImageValidator.Validate(file);
 
         Assert.Equal(".webp", ext);
         Assert.Equal("image/webp", mime);
@@ -135,23 +124,123 @@ public class ImageStorageTests
         jpegBytes[2] = 0xFF;
 
         var file = CreateMockFile(jpegBytes, "fake.png", "image/png");
-        var ex = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(file, "wineries"));
+        var ex = Assert.Throws<UnprocessableEntityException>(() => ImageValidator.Validate(file));
         Assert.Contains("no coincide", ex.Message);
     }
 
     [Fact]
-    public void ImageValidator_ValidFolderBanners_Accepted()
+    public async Task GetImageByIdAsync_ExistingImage_Returns302WithDeliveryUrlAndCacheControlHeader()
     {
-        var jpegBytes = new byte[20];
-        jpegBytes[0] = 0xFF;
-        jpegBytes[1] = 0xD8;
-        jpegBytes[2] = 0xFF;
+        // Arrange
+        var id = Guid.NewGuid();
+        var externalId = $"test/image/{id}";
+        var expectedUrl = $"https://res.cloudinary.com/demo/image/upload/{externalId}";
 
-        var file = CreateMockFile(jpegBytes, "banner.jpg", "image/jpeg");
-        var (ext, mime) = ImageValidator.Validate(file, "banners");
+        var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(new Image
+        {
+            Id = id,
+            Provider = "cloudinary",
+            ExternalId = externalId,
+            MimeType = "image/jpeg",
+            SizeBytes = 1024,
+            Width = 100,
+            Height = 100,
+            CreatedAt = DateTime.UtcNow
+        });
 
-        Assert.Equal(".jpg", ext);
-        Assert.Equal("image/jpeg", mime);
+        var storage = Substitute.For<IImageStorage>();
+        storage.BuildDeliveryUrl(externalId, null).Returns(expectedUrl);
+
+        var httpContext = new DefaultHttpContext();
+
+        // Act
+        var result = await ImageEndpoints.GetImageByIdAsync(id, null, imageRepo, storage, httpContext, CancellationToken.None);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectHttpResult>(result);
+        Assert.Equal(expectedUrl, redirectResult.Url);
+        Assert.False(redirectResult.Permanent);
+        Assert.Equal("public, max-age=604800", httpContext.Response.Headers.CacheControl.ToString());
+    }
+
+    [Theory]
+    [InlineData("avatar")]
+    [InlineData("logo")]
+    [InlineData("banner")]
+    [InlineData("bottle")]
+    [InlineData("AVATAR")]
+    [InlineData("  logo  ")]
+    public async Task GetImageByIdAsync_WithValidVariant_PassesNormalizedVariantToStorage(string variant)
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var externalId = $"test/image/{id}";
+        var normalizedVariant = variant.Trim().ToLowerInvariant();
+        var expectedUrl = $"https://res.cloudinary.com/demo/image/upload/w_200/{externalId}";
+
+        var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(new Image
+        {
+            Id = id,
+            Provider = "cloudinary",
+            ExternalId = externalId,
+            MimeType = "image/png",
+            SizeBytes = 2048,
+            Width = 200,
+            Height = 200,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var storage = Substitute.For<IImageStorage>();
+        storage.BuildDeliveryUrl(externalId, normalizedVariant).Returns(expectedUrl);
+
+        var httpContext = new DefaultHttpContext();
+
+        // Act
+        var result = await ImageEndpoints.GetImageByIdAsync(id, variant, imageRepo, storage, httpContext, CancellationToken.None);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectHttpResult>(result);
+        Assert.Equal(expectedUrl, redirectResult.Url);
+        storage.Received(1).BuildDeliveryUrl(externalId, normalizedVariant);
+    }
+
+    [Theory]
+    [InlineData("invalid")]
+    [InlineData("thumb")]
+    [InlineData("header")]
+    public async Task GetImageByIdAsync_WithInvalidVariant_ThrowsValidationException(string invalidVariant)
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var imageRepo = Substitute.For<IImageRepository>();
+        var storage = Substitute.For<IImageStorage>();
+        var httpContext = new DefaultHttpContext();
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
+            ImageEndpoints.GetImageByIdAsync(id, invalidVariant, imageRepo, storage, httpContext, CancellationToken.None));
+
+        Assert.Contains("no válida", ex.Message);
+        Assert.Contains("avatar, logo, banner, bottle", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetImageByIdAsync_NonExistingImage_ThrowsNotFoundException()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns((Image?)null);
+
+        var storage = Substitute.For<IImageStorage>();
+        var httpContext = new DefaultHttpContext();
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
+            ImageEndpoints.GetImageByIdAsync(id, null, imageRepo, storage, httpContext, CancellationToken.None));
+
+        Assert.Contains(id.ToString(), ex.Message);
     }
 }
-
