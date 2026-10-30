@@ -43,6 +43,7 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
 | `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
 | `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
+| `20261030001` | `EnsureUsersPhotoAndBioColumns.cs` | `users` | Verificación y agregado idempotente de columnas `photo` (VARCHAR 100) y `bio` (VARCHAR 1000) para sincronizar bases remotas previas. |
 
 ---
 

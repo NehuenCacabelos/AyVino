@@ -69,6 +69,7 @@ docs/
 - [[00_Meta/Templates/tpl_idea|Plantilla de Idea]]: Ficha para registrar propuestas de producto o backlog técnico.
 
 ### 🍇 01_Dominio Enogastronómico
+- [[01_Dominio/Maridajes/Guia_Maridajes_Vinos_Argentinos|Guía Maestra de Maridajes]]: Principios de armonización, maridaje por cepa y vademécum de etiquetas de Fabricio Portelli.
 - [[01_Dominio/Cepas/|Directorio de Cepas]]: Varietales de uva tintas, blancas y criollas de Argentina.
 - [[01_Dominio/Regiones/|Directorio de Regiones]]: Valles y terruños vitivinícolas (Mendoza, San Juan, Salta, Patagonia, etc.).
 - [[01_Dominio/Maridajes/|Directorio de Maridajes]]: Fichas sommelier de interacciones enogastronómicas.

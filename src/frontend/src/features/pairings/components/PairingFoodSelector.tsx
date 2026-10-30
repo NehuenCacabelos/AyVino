@@ -1,66 +1,98 @@
-import { Utensils, Flame } from 'lucide-react';
-import { FOOD_CATEGORY_LIST } from '../../../data/pairingsData';
-import type { FoodCategoryId } from '../../../data/pairingsData';
+import { useMemo } from 'react';
+import {
+  FOOD_FAMILIES,
+  getDishesByFamily,
+  type FoodFamilyId,
+} from '../../../data/pairingsData';
 
 interface PairingFoodSelectorProps {
-  selectedFoodId: FoodCategoryId;
-  onSelectFood: (id: FoodCategoryId) => void;
+  selectedFamilyId: FoodFamilyId;
+  selectedDishId: string | null;
+  onSelectCategory: (familyId: FoodFamilyId) => void;
+  onSelectDish: (dishId: string) => void;
 }
 
+/**
+ * PairingFoodSelector Component
+ * Selector progresivo por categorías gastronómicas.
+ * A primera vista solo muestra las 6 categorías principales para evitar sobrecarga.
+ * Ofrece una línea secundaria sutil para afinar opcionalmente por plato concreto.
+ */
 export default function PairingFoodSelector({
-  selectedFoodId,
-  onSelectFood,
+  selectedFamilyId,
+  selectedDishId,
+  onSelectCategory,
+  onSelectDish,
 }: PairingFoodSelectorProps) {
+  // Platos correspondientes a la categoría seleccionada
+  const categoryDishes = useMemo(() => {
+    return getDishesByFamily(selectedFamilyId);
+  }, [selectedFamilyId]);
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-xs text-neutral-400">
-        <span className="flex items-center gap-1.5 uppercase tracking-wider text-[11px] font-mono text-neutral-300">
-          <Flame className="w-3.5 h-3.5 text-rose-300" />
-          Categoría gastronómica ({FOOD_CATEGORY_LIST.length})
+    <div className="space-y-3 pt-1 pb-4 border-b border-neutral-800/80">
+      {/* 1. Nivel Principal: Solo Categorías Gastronómicas a primera vista */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-neutral-400 font-medium sm:w-28 shrink-0">
+          Categoría
         </span>
-        <span className="text-[11px] font-mono text-neutral-500 hidden sm:inline">
-          Selección rápida
-        </span>
-      </div>
-
-      {/* Chips de Comidas con estilo oficial AyVino de Cava / Iniciar Sesión */}
-      <div
-        className="flex items-center gap-2.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap scrollbar-none"
-        role="group"
-        aria-label="Seleccionar plato o estilo gastronómico"
-      >
-        {FOOD_CATEGORY_LIST.map((item) => {
-          const isSelected = item.id === selectedFoodId;
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onSelectFood(item.id)}
-              className={`group inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-xs font-sans font-medium transition-colors shrink-0 cursor-pointer border ${
-                isSelected
-                  ? 'bg-[#4f131f] hover:bg-[#5e1725] text-rose-100 border-rose-400/30 shadow-sm'
-                  : 'bg-zinc-900/70 text-zinc-300 border-zinc-700/60 hover:border-zinc-500 hover:text-white hover:bg-zinc-800/80 shadow-sm'
-              }`}
-            >
-              <Utensils
-                className={`w-3.5 h-3.5 transition-colors ${
-                  isSelected ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
-                }`}
-              />
-              <span>{item.title}</span>
-              <span
-                className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md ${
-                  isSelected
-                    ? 'bg-[#6e1a24] text-rose-100 border border-rose-400/20 font-semibold'
-                    : 'bg-zinc-800 text-zinc-400 group-hover:text-zinc-300'
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          {FOOD_FAMILIES.map((fam) => {
+            const isCategoryActive = fam.id === selectedFamilyId;
+            return (
+              <button
+                key={fam.id}
+                type="button"
+                onClick={() => onSelectCategory(fam.id as FoodFamilyId)}
+                className={`rounded-sm px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer border ${
+                  isCategoryActive
+                    ? 'bg-neutral-800 border-neutral-600 text-white font-medium shadow-sm'
+                    : 'border-neutral-800/80 hover:border-neutral-700 text-neutral-400 hover:text-neutral-200'
                 }`}
               >
-                {item.recommendedVarieties.length}
-              </span>
-            </button>
-          );
-        })}
+                {fam.title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Nivel Secundario: Afinar por plato concreto (opcional) */}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4 pt-1">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 font-medium sm:w-28 shrink-0 sm:pt-1">
+          Afinar plato
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+          <button
+            type="button"
+            onClick={() => onSelectCategory(selectedFamilyId)}
+            className={`rounded-sm px-2.5 py-1 text-[11px] transition-colors cursor-pointer border ${
+              selectedDishId === null
+                ? 'bg-neutral-800/90 border-neutral-600 text-amber-200 font-medium'
+                : 'border-neutral-800/60 hover:border-neutral-700 text-neutral-400 hover:text-neutral-300'
+            }`}
+          >
+            Toda la categoría
+          </button>
+
+          {categoryDishes.map((dish) => {
+            const isDishSelected = dish.id === selectedDishId;
+            return (
+              <button
+                key={dish.id}
+                type="button"
+                onClick={() => onSelectDish(dish.id)}
+                className={`rounded-sm px-2.5 py-1 text-[11px] transition-colors cursor-pointer border ${
+                  isDishSelected
+                    ? 'bg-neutral-800 border-neutral-600 text-white font-medium shadow-sm'
+                    : 'border-neutral-800/60 hover:border-neutral-700 text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                {dish.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

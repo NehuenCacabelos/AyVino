@@ -1,174 +1,120 @@
 import { useState, useMemo } from 'react';
-import { Grape, Search, X } from 'lucide-react';
-import { WINE_VARIETY_LIST } from '../../../data/pairingsData';
-import type {
-  WineVarietyId,
-  WineCategoryGroup,
+import {
+  getAllWineVarieties,
+  MAIN_WINE_IDS,
+  type WineVarietyEntry,
 } from '../../../data/pairingsData';
 
-const MAIN_VARIETY_IDS: WineVarietyId[] = [
-  'malbec',
-  'cabernet-sauvignon',
-  'cabernet-franc',
-  'bonarda',
-  'syrah',
-  'chardonnay',
-  'torrontes',
-  'pinot-noir',
-];
-
-type VarietyFilterTab = 'main' | 'all' | WineCategoryGroup;
+type WineFilterTab = 'main' | 'all' | 'tinto' | 'blanco' | 'rosado-naranjo';
 
 interface PairingWineSelectorProps {
-  selectedWineId: WineVarietyId;
-  onSelectWine: (id: WineVarietyId) => void;
+  selectedWineId: string;
+  onSelectWine: (id: string) => void;
 }
 
+/**
+ * PairingWineSelector Component
+ * Selector tipográfico filtrable de cepas.
+ * A primera vista solo muestra las cepas principales/comunes para mantener la vista limpia.
+ * Permite filtrar por Todas, Tintos, Blancos o Rosados/Naranjos sin cards ni píldoras.
+ */
 export default function PairingWineSelector({
   selectedWineId,
   onSelectWine,
 }: PairingWineSelectorProps) {
-  // Pestaña inicial por defecto: "Principales" (6-8 cepas más populares)
-  const [activeTab, setActiveTab] = useState<VarietyFilterTab>('main');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<WineFilterTab>('main');
+  const allVarieties = useMemo(() => getAllWineVarieties(), []);
 
-  // Conteos por categoría
-  const countPrincipales = MAIN_VARIETY_IDS.length;
-  const countTintos = useMemo(
-    () => WINE_VARIETY_LIST.filter((w) => w.categoryGroup === 'Tintos').length,
-    []
-  );
-  const countBlancos = useMemo(
-    () => WINE_VARIETY_LIST.filter((w) => w.categoryGroup === 'Blancos').length,
-    []
-  );
-  const countCriollas = useMemo(
-    () => WINE_VARIETY_LIST.filter((w) => w.categoryGroup === 'Criollas / Rosados').length,
-    []
-  );
-
-  // Lista filtrada derivada sin usar useEffect ni useState redundante
+  // Lista filtrada derivada
   const filteredVarieties = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return WINE_VARIETY_LIST.filter((variety) => {
-      // Si hay una búsqueda de texto activa, busca en todo el catálogo de 29 cepas
-      if (query) {
-        return (
-          variety.title.toLowerCase().includes(query) ||
-          variety.body.toLowerCase().includes(query) ||
-          variety.acidity.toLowerCase().includes(query) ||
-          variety.flavorProfile.toLowerCase().includes(query)
+    switch (activeTab) {
+      case 'main':
+        // Principales comunes (más la seleccionada si no estuviera en la lista)
+        return allVarieties.filter(
+          (w) => MAIN_WINE_IDS.includes(w.id) || w.id === selectedWineId
         );
-      }
+      case 'all':
+        return allVarieties;
+      case 'tinto':
+        return allVarieties.filter((w) => w.category === 'tinto');
+      case 'blanco':
+        return allVarieties.filter((w) => w.category === 'blanco');
+      case 'rosado-naranjo':
+        return allVarieties.filter(
+          (w) => w.category === 'rosado' || w.category === 'naranjo'
+        );
+      default:
+        return allVarieties;
+    }
+  }, [activeTab, allVarieties, selectedWineId]);
 
-      // Si no hay búsqueda, respeta la pestaña seleccionada
-      if (activeTab === 'main') {
-        // En "Principales", muestra las 8 principales y también la seleccionada actual si no estuviera incluida
-        return MAIN_VARIETY_IDS.includes(variety.id) || variety.id === selectedWineId;
-      }
-      if (activeTab === 'all') return true;
-      return variety.categoryGroup === activeTab;
-    });
-  }, [activeTab, searchQuery, selectedWineId]);
+  const tabs: { label: string; value: WineFilterTab }[] = [
+    { label: 'Principales', value: 'main' },
+    { label: 'Todas', value: 'all' },
+    { label: 'Tintos', value: 'tinto' },
+    { label: 'Blancos', value: 'blanco' },
+    { label: 'Rosados / Naranjos', value: 'rosado-naranjo' },
+  ];
 
   return (
-    <div className="flex flex-col gap-3.5">
-      {/* Barra superior de control: Tabs de categoría + Buscador instantáneo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <span className="flex items-center gap-1.5 uppercase tracking-wider text-[11px] font-mono text-neutral-300 mr-1 shrink-0">
-            <Grape className="w-3.5 h-3.5 text-amber-400" />
-            Cepa ({filteredVarieties.length})
-          </span>
-
-          {(
-            [
-              { label: `Principales (${countPrincipales})`, value: 'main' as VarietyFilterTab },
-              { label: `Todas (${WINE_VARIETY_LIST.length})`, value: 'all' as VarietyFilterTab },
-              { label: `Tintos (${countTintos})`, value: 'Tintos' as VarietyFilterTab },
-              { label: `Blancos (${countBlancos})`, value: 'Blancos' as VarietyFilterTab },
-              { label: `Rosados / Criollas (${countCriollas})`, value: 'Criollas / Rosados' as VarietyFilterTab },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all duration-150 shrink-0 cursor-pointer border ${
-                activeTab === tab.value
-                  ? 'bg-amber-400/15 text-amber-300 border-amber-400/60 shadow-sm'
-                  : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/60'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Input de Búsqueda Rápida en rounded-lg */}
-        <div className="relative w-full sm:w-60 shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por cepa o perfil..."
-            className="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg bg-zinc-900/80 border border-zinc-700/60 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/70 font-sans transition-colors shadow-inner"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 p-0.5 cursor-pointer"
-              aria-label="Limpiar búsqueda"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+    <div className="space-y-3 pt-1 pb-4 border-b border-neutral-800/80">
+      {/* 1. Barra de Filtrado Tipográfica */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-mono uppercase tracking-wider text-neutral-400">
+        <span className="text-[11px] text-neutral-500 font-medium sm:w-28 shrink-0">
+          Filtrar cepas
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {tabs.map((tab, idx) => {
+            const isTabActive = activeTab === tab.value;
+            return (
+              <span key={tab.value} className="inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(tab.value)}
+                  className={`transition-colors cursor-pointer text-xs ${
+                    isTabActive
+                      ? 'text-rose-300 font-semibold underline decoration-rose-500 underline-offset-4'
+                      : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+                {idx < tabs.length - 1 && (
+                  <span className="text-neutral-700 select-none" aria-hidden="true">
+                    /
+                  </span>
+                )}
+              </span>
+            );
+          })}
         </div>
       </div>
 
-      {/* Tags de Cepas con forma rounded-lg y alto contraste */}
-      {filteredVarieties.length === 0 ? (
-        <div className="p-4 rounded-lg bg-zinc-900/40 border border-zinc-800 text-xs text-zinc-400 text-center">
-          No se encontraron cepas para &ldquo;{searchQuery}&rdquo;. Intentá con otro término o seleccioná otra categoría.
-        </div>
-      ) : (
-        <div
-          className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap scrollbar-none"
-          role="group"
-          aria-label="Seleccionar variedad de uva"
-        >
-          {filteredVarieties.map((variety) => {
-            const isSelected = variety.id === selectedWineId;
-
+      {/* 2. Lista de Cepas según filtro activo (Compacta y sobria) */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pt-1">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-neutral-400 font-medium sm:w-28 shrink-0">
+          Varietales ({filteredVarieties.length})
+        </span>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          {filteredVarieties.map((wine: WineVarietyEntry) => {
+            const isSelected = wine.id === selectedWineId;
             return (
               <button
-                key={variety.id}
+                key={wine.id}
                 type="button"
-                onClick={() => onSelectWine(variety.id)}
-                className={`group inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-sans font-medium transition-all duration-150 shrink-0 cursor-pointer border ${
+                onClick={() => onSelectWine(wine.id)}
+                className={`rounded-sm px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer border ${
                   isSelected
-                    ? 'bg-amber-950/50 text-amber-100 border-amber-400 shadow-[0_0_14px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/30'
-                    : 'bg-zinc-900/70 text-zinc-300 border-zinc-700/60 hover:border-zinc-500 hover:text-white hover:bg-zinc-800/80 shadow-sm'
+                    ? 'bg-neutral-800 border-neutral-600 text-white font-medium shadow-sm'
+                    : 'border-neutral-800/80 hover:border-neutral-700 text-neutral-400 hover:text-neutral-200'
                 }`}
               >
-                <span>{variety.title}</span>
-                <span
-                  className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-md ${
-                    isSelected
-                      ? 'bg-amber-400/25 text-amber-200 border border-amber-400/30 font-semibold'
-                      : 'bg-zinc-800 text-zinc-400 group-hover:text-zinc-300'
-                  }`}
-                >
-                  {variety.categoryGroup === 'Criollas / Rosados' ? 'Criolla' : variety.categoryGroup.slice(0, -1)}
-                </span>
+                {wine.name}
               </button>
             );
           })}
         </div>
-      )}
+      </div>
     </div>
   );
 }

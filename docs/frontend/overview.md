@@ -219,21 +219,21 @@ npm run dev
 
 ## 8. Hub Interactivo de Maridaje Enogastronómico Argentino (`/maridaje`)
 
-La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país. Fue refactorizada íntegramente bajo un lenguaje de **Dossier Técnico de Sommelier**, erradicando el anidamiento excesivo de tarjetas (*card-nesting hell*) y optimizando el espacio vertical y el flujo cognitivo.
+La vista de maridaje implementa un motor de descubrimiento y recomendación bidireccional sommelier, conectando la cultura culinaria argentina con la diversidad de terruños y cepas del país (ver especificación de dominio completa en [[01_Dominio/Maridajes/Guia_Maridajes_Vinos_Argentinos|Guía Maestra de Maridajes]]). Fue refactorizada íntegramente bajo un lenguaje de **Guía Técnica de Sommelier**, erradicando el anidamiento excesivo de tarjetas (*card-nesting hell*) y optimizando el espacio vertical y el flujo cognitivo.
 
 ### 8.1 Arquitectura de Estado y Navegación Reactiva
 - **Sincronización en URL SearchParams (`usePairingParams.ts`)**:
-  - Parámetros persistentes: `?mode=food&food=asado-fuegos` o `?mode=wine&wine=malbec`.
+  - Parámetros persistentes: `?mode=wine&wine=malbec` (modo por defecto) o `?mode=food&food=asado-fuegos`.
   - Actualización atómica con `{ replace: true }`: habilita enlaces compartibles directamente, historial del navegador y retorno exacto.
   - Contexto bidireccional fluido: al transicionar de un plato a una cepa recomendada, inyecta `from=...` para desplegar un badge contextual técnico con enlace de retorno.
   - Validación estricta y fallback determinista contra los identificadores de dominio de `pairingsData.ts`.
 
 ### 8.2 Componentes Modulares y Desacoplamiento
 La vista se descompone en microcomponentes semánticos bajo `src/features/pairings/components/`:
-1. **`PairingModeSelector.tsx`**: Segmented control con botones de radio sutil (`rounded-lg` / `rounded-md`) y estilo unificado oficial de AyVino (idéntico al botón de *Iniciar sesión* de la app: fondo borgoña noble `bg-[#4f131f] hover:bg-[#5e1725]`, borde `border-rose-400/30` y texto `text-rose-100`) para alternar limpiamente entre *Tengo un plato* y *Tengo un vino*, con roles ARIA `tablist`/`tab` accesibles.
-2. **`PairingFoodSelector.tsx`**: Chips sutilmente redondeados (`rounded-lg px-3.5 py-2`) con la estética unificada de *Iniciar sesión* (`bg-[#4f131f]`, borde sutil y badge `bg-[#6e1a24]`) para las 7 categorías gastronómicas argentinas.
-3. **`PairingWineSelector.tsx`**: Selector enológico híbrido con filtro por defecto **"Principales"** (que exhibe las 8 cepas insignia de entrada: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Chardonnay, Torrontés, Pinot Noir), buscador reactivo instantáneo y pestañas complementarias (`Todas`, `Tintos`, `Blancos`, `Rosados / Criollas`) en botones con radio `rounded-lg`.
-4. **`PairingDossierHeader.tsx`**: Cabecera tipográfica editorial sobre el fondo base oscuro liso (`#0d0d0f`) con badge `Dossier del Sommelier` en acento rosa viejo / borgoña (`text-rose-300`), acompañada por una barra de métricas de servicio transparente y horizontal (temperatura de servicio, copa ideal, principio organoléptico y acidez/cuerpo) separada por divisores verticales sutiles (`divide-zinc-800/80`).
+1. **`PairingModeSelector.tsx`**: Segmented control con botones de radio sutil (`rounded-lg` / `rounded-md`) para alternar limpiamente entre *Tengo un vino* (primero por defecto, en borgoña noble `bg-[#4f131f] hover:bg-[#5e1725]`, borde `border-rose-400/30` y texto `text-rose-100`) y *Tengo un plato* (marrón café tostado `bg-[#382216] hover:bg-[#482b1c]`, borde `border-amber-700/40` y texto `text-amber-100`), con roles ARIA `tablist`/`tab` accesibles.
+2. **`PairingFoodSelector.tsx`**: Chips sutilmente redondeados (`rounded-lg px-3.5 py-2`) con la estética cálida y armonizada con *Tengo un plato* (marrón tostado `bg-[#382216]`, borde `border-amber-700/40` y badge `bg-[#4a2e1e]`) para las 7 categorías gastronómicas argentinas.
+3. **`PairingWineSelector.tsx`**: Selector enológico híbrido alineado con *Tengo un vino* (borgoña noble `bg-[#4f131f]`, borde `border-rose-400/40`, acento `text-rose-100` y badge `bg-[#6e1a24]`) con filtro por defecto **"Principales"** (que exhibe las 8 cepas insignia de entrada: Malbec, Cabernet Sauvignon, Cabernet Franc, Bonarda, Syrah, Chardonnay, Torrontés, Pinot Noir), buscador reactivo instantáneo y pestañas complementarias (`Todas`, `Tintos`, `Blancos`, `Rosados / Criollas`) en botones con radio `rounded-lg`.
+4. **`PairingDossierHeader.tsx`**: Cabecera tipográfica editorial sobre el fondo base oscuro liso (`#0d0d0f`) con badge `La guía del sommelier` en acento rosa viejo / borgoña (`text-rose-300`), acompañada por una barra de métricas de servicio transparente y horizontal (temperatura de servicio, copa ideal, principio organoléptico y acidez/cuerpo) separada por divisores verticales sutiles (`divide-zinc-800/80`).
 5. **Flujo de Respuesta Sommelier Invertido**:
    - **1°: Cepas enológicas sugeridas (`PairingAffinities.tsx` con `section="suggested"`)**: Despliega en primer lugar el perfil y las variedades afines ideales para la comida seleccionada.
    - **2°: Botellas recomendadas en catálogo (`PairingBottleHero.tsx`)**: Exhibe las etiquetas comerciales curadas concretas para explorar o comprar inmediatamente basadas en las cepas sugeridas.
