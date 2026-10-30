@@ -21,6 +21,22 @@ describe('WineryChecklistCard', () => {
     userId: 5,
   };
 
+
+  it('calculates 40% when account and logoImageId are present and others are pending', () => {
+    const wineryWithLogoImageId: WineryResponseDto = {
+      ...baseWinery,
+      logoImageId: '123e4567-e89b-12d3-a456-426614174000',
+    };
+
+    render(
+      <MemoryRouter>
+        <WineryChecklistCard winery={wineryWithLogoImageId} winesCount={0} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/40%/)).toBeInTheDocument();
+  });
+
   it('calculates 40% when account and logo are present and others are pending', () => {
     const wineryWithLogo: WineryResponseDto = {
       ...baseWinery,

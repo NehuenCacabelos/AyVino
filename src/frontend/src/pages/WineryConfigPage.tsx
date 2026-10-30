@@ -34,7 +34,6 @@ import {
   RegionPicker,
   WineryLogo,
   WineryTopBar,
-  WineryBanner,
   ImageUploadField,
   type UpdateWineryRequestDto,
   type RegionPickerValue,
@@ -602,16 +601,6 @@ export default function WineryConfigPage() {
                     Banner institucional
                   </span>
                   <span className="text-[10px] font-mono text-zinc-500">Proporción 3:1</span>
-                </div>
-
-                {/* Vista previa 3:1 con WineryBanner */}
-                <div className="w-full aspect-[3/1] rounded-xl overflow-hidden ring-1 ring-white/10 shadow-lg bg-[#121015]">
-                  <WineryBanner
-                    wineryName={winery?.name}
-                    bannerImageId={bannerPreviewId ?? winery?.bannerImageId}
-                    bannerUrl={winery?.bannerUrl}
-                    heightClassName="h-full w-full"
-                  />
                 </div>
 
                 <ImageUploadField

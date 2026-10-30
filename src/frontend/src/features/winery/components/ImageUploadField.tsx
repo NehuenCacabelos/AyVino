@@ -1,7 +1,8 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from 'react';
 import { isAxiosError } from 'axios';
-import { Upload, X, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
+import { Upload, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
 import { imageUrl, type ImageVariant } from '../../../lib/image';
+import { cn } from '../../../lib/utils';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -231,9 +232,17 @@ export default function ImageUploadField({
 
       {hasImage ? (
         /* Vista Previa con opción de Quitar */
-        <div className="relative flex items-center gap-4 p-3.5 rounded-2xl bg-zinc-900/40 border border-white/10">
+        <div
+          className={cn(
+            'relative rounded-2xl bg-zinc-900/40 border border-white/10 p-3.5',
+            aspectRatio === 'banner' ? 'flex flex-col gap-2.5' : 'flex items-center gap-4',
+          )}
+        >
           <div
-            className={`overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shrink-0 ${getAspectRatioClasses()}`}
+            className={cn(
+              'overflow-hidden rounded-xl border border-white/15 bg-zinc-950 shrink-0',
+              aspectRatio === 'banner' ? 'w-full aspect-[3/1]' : getAspectRatioClasses(),
+            )}
           >
             <img
               src={effectivePreviewUrl!}
@@ -244,13 +253,19 @@ export default function ImageUploadField({
             />
           </div>
 
-          <div className="flex-1 min-w-0 space-y-1">
+          <div
+            className={cn(
+              'min-w-0',
+              aspectRatio === 'banner'
+                ? 'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 w-full pt-0.5'
+                : 'flex-1 space-y-1',
+            )}
+          >
             <p className="text-xs font-medium text-zinc-200 truncate">
               {getLoadedLabel()}
             </p>
-            <p className="text-[11px] text-zinc-500 font-mono truncate">{effectivePreviewUrl}</p>
 
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -275,16 +290,6 @@ export default function ImageUploadField({
               </button>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handleRemoveImage}
-            disabled={disabled || isUploading}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
-            aria-label="Eliminar imagen"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       ) : (
         /* Zona de Arrastrar y Soltar / Clic */

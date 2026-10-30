@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getBannerThemeByUsername } from '../../../constants/bannerThemes';
 import { cn } from '../../../lib/utils';
 import { imageUrl } from '../../../lib/image';
@@ -26,6 +26,10 @@ export default function WineryBanner({
   const [imageError, setImageError] = useState(false);
 
   const effectiveBannerUrl = bannerImageId ? imageUrl(bannerImageId, 'banner') : bannerUrl;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [effectiveBannerUrl]);
   const hasCustomBanner = Boolean(
     effectiveBannerUrl && effectiveBannerUrl.trim().length > 0 && !imageError,
   );

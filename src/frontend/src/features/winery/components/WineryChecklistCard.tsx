@@ -66,7 +66,10 @@ export default function WineryChecklistCard({
       id: 'logo',
       label: 'Logo oficial del establecimiento',
       description: 'Subí el logo o escudo de tu bodega para personalizar tu vidriera.',
-      completed: Boolean(winery.logoUrl && winery.logoUrl.trim().length > 0),
+      completed: Boolean(
+        (winery.logoImageId && winery.logoImageId.trim().length > 0) ||
+        (winery.logoUrl && winery.logoUrl.trim().length > 0),
+      ),
       actionText: 'Subir logo',
       actionTo: '/bodega/configuracion',
     },
