@@ -5,5 +5,6 @@ public enum ImageType
     Avatar,
     WineryLogo,
     WineryBanner,
-    WineVintage
+    WineVintage,
+    UserVintage
 }

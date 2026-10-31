@@ -153,6 +153,7 @@ public class CloudinaryImageStorage : IImageStorage
             ImageType.WineryLogo => "logos-bodega",
             ImageType.WineryBanner => "banners-bodega",
             ImageType.WineVintage => "cosechas",
+            ImageType.UserVintage => "user-vintages",
             _ => throw new ArgumentOutOfRangeException(nameof(imageType), imageType, "Tipo de imagen no soportado.")
         };
 
