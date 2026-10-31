@@ -10,4 +10,6 @@ public interface IImageRepository
     Task InsertAsync(Image image, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<bool> IsReferencedAsync(Guid id, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(false);
+    Task<bool> IsReferencedAsync(Guid id, CancellationToken ct = default) => Task.FromResult(false);
 }

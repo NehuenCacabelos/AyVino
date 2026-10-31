@@ -50,4 +50,26 @@ public class ImageRepository(IDbConnectionFactory connectionFactory) : IImageRep
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await DeleteAsync(id, connection, null, ct);
     }
+
+    public async Task<bool> IsReferencedAsync(Guid id, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM users WHERE avatar_image_id = @Id
+                UNION ALL
+                SELECT 1 FROM wineries WHERE logo_image_id = @Id OR banner_image_id = @Id
+                UNION ALL
+                SELECT 1 FROM wine_vintages WHERE image_id = @Id
+                UNION ALL
+                SELECT 1 FROM user_vintage_images WHERE image_id = @Id
+            );
+            """;
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(sql, new { Id = id }, transaction, cancellationToken: ct));
+    }
+
+    public async Task<bool> IsReferencedAsync(Guid id, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await IsReferencedAsync(id, connection, null, ct);
+    }
 }
