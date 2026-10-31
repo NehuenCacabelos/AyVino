@@ -290,4 +290,87 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         return await connection.QueryAsync<AdminWineVintageListRow>(
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
+    public async Task<int> GetDistinctUserCountAsync(int vintageId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT COUNT(DISTINCT user_id)
+            FROM (
+                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = @VintageId AND uploaded_by_user_id IS NOT NULL
+                UNION
+                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = @VintageId
+                UNION
+                SELECT user_id FROM reviews WHERE wine_vintage_id = @VintageId
+                UNION
+                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = @VintageId
+            ) u;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new { VintageId = vintageId }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyDictionary<int, int>> GetDistinctUserCountsAsync(IEnumerable<int> vintageIds, CancellationToken ct = default)
+    {
+        var idList = vintageIds.ToList();
+        if (idList.Count == 0) return new Dictionary<int, int>();
+
+        const string sql = """
+            SELECT vintage_id AS Key, COUNT(DISTINCT user_id) AS Value
+            FROM (
+                SELECT id AS vintage_id, uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = ANY(@VintageIds) AND uploaded_by_user_id IS NOT NULL
+                UNION
+                SELECT ci.wine_vintage_id AS vintage_id, c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = ANY(@VintageIds)
+                UNION
+                SELECT wine_vintage_id AS vintage_id, user_id FROM reviews WHERE wine_vintage_id = ANY(@VintageIds)
+                UNION
+                SELECT wine_vintage_id AS vintage_id, user_id FROM user_vintage_images WHERE wine_vintage_id = ANY(@VintageIds)
+            ) u
+            GROUP BY vintage_id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<KeyValuePair<int, int>>(
+            new CommandDefinition(sql, new { VintageIds = idList }, cancellationToken: ct));
+        return rows.ToDictionary(r => r.Key, r => r.Value);
+    }
+
+    public async Task<bool> IsUserParticipantAsync(int vintageId, int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM wine_vintages WHERE id = @VintageId AND uploaded_by_user_id = @UserId
+                UNION ALL
+                SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = @VintageId AND c.user_id = @UserId
+                UNION ALL
+                SELECT 1 FROM reviews WHERE wine_vintage_id = @VintageId AND user_id = @UserId
+                UNION ALL
+                SELECT 1 FROM user_vintage_images WHERE wine_vintage_id = @VintageId AND user_id = @UserId
+            );
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(sql, new { VintageId = vintageId, UserId = userId }, cancellationToken: ct));
+    }
+
+    public async Task<HashSet<int>> GetParticipantVintageIdsAsync(int userId, IEnumerable<int> vintageIds, CancellationToken ct = default)
+    {
+        var idList = vintageIds.ToList();
+        if (idList.Count == 0) return [];
+
+        const string sql = """
+            SELECT DISTINCT vintage_id
+            FROM (
+                SELECT id AS vintage_id FROM wine_vintages WHERE id = ANY(@VintageIds) AND uploaded_by_user_id = @UserId
+                UNION
+                SELECT ci.wine_vintage_id AS vintage_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = ANY(@VintageIds) AND c.user_id = @UserId
+                UNION
+                SELECT wine_vintage_id AS vintage_id FROM reviews WHERE wine_vintage_id = ANY(@VintageIds) AND user_id = @UserId
+                UNION
+                SELECT wine_vintage_id AS vintage_id FROM user_vintage_images WHERE wine_vintage_id = ANY(@VintageIds) AND user_id = @UserId
+            ) u;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<int>(
+            new CommandDefinition(sql, new { VintageIds = idList, UserId = userId }, cancellationToken: ct));
+        return rows.ToHashSet();
+    }
 }

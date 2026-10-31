@@ -23,6 +23,10 @@ public interface IWineVintageRepository
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
     Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default);
+    Task<int> GetDistinctUserCountAsync(int vintageId, CancellationToken ct = default) => Task.FromResult(0);
+    Task<IReadOnlyDictionary<int, int>> GetDistinctUserCountsAsync(IEnumerable<int> vintageIds, CancellationToken ct = default) => Task.FromResult<IReadOnlyDictionary<int, int>>(new Dictionary<int, int>());
+    Task<bool> IsUserParticipantAsync(int vintageId, int userId, CancellationToken ct = default) => Task.FromResult(false);
+    Task<HashSet<int>> GetParticipantVintageIdsAsync(int userId, IEnumerable<int> vintageIds, CancellationToken ct = default) => Task.FromResult(new HashSet<int>());
     Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
         Task.FromResult(Enumerable.Empty<AdminWineVintageListRow>());
 }

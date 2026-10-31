@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using AyVino.Api.Features.Wines.Configuration;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
@@ -8,7 +10,7 @@ using Dapper;
 
 namespace AyVino.Api.Features.Wines.Repositories;
 
-public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepository
+public class WineRepository(IDbConnectionFactory connectionFactory, IOptions<CommunityOptions>? communityOptions = null) : IWineRepository
 {
     private const string SelectColumns = """
         id, winery_id, winery_name_text, name, description, wine_type, location_id,
@@ -85,7 +87,30 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
               AND (
                 @IsAdmin = TRUE
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+                OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv_pub
+                    WHERE wv_pub.wine_id = w.id
+                      AND (
+                        wv_pub.approval_status = 2
+                        OR (@CurrentUserId IS NOT NULL AND (
+                            wv_pub.uploaded_by_user_id = @CurrentUserId
+                            OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id AND c.user_id = @CurrentUserId)
+                            OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = wv_pub.id AND r.user_id = @CurrentUserId)
+                            OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = wv_pub.id AND uvi.user_id = @CurrentUserId)
+                        ))
+                        OR (wv_pub.approval_status = 1 AND (
+                            SELECT COUNT(DISTINCT u.user_id) FROM (
+                                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = wv_pub.id AND uploaded_by_user_id IS NOT NULL
+                                UNION
+                                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id
+                                UNION
+                                SELECT user_id FROM reviews WHERE wine_vintage_id = wv_pub.id
+                                UNION
+                                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = wv_pub.id
+                            ) u
+                        ) >= @MinUsers)
+                      )
+                )
               )
               AND (@GrapeId IS NULL OR EXISTS (
                     SELECT 1 FROM wine_vintages wv
@@ -120,7 +145,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 CurrentUserId = currentUserId,
                 IsAdmin = isAdmin,
                 Offset = offset,
-                PageSize = pageSize
+                PageSize = pageSize,
+                MinUsers = communityOptions?.Value?.MinUsersForPublicVisibility ?? 2
             }, cancellationToken: ct));
     }
 
@@ -347,7 +373,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 CurrentUserId = currentUserId,
                 IsAdmin = isAdmin,
                 Offset = (pageNumber - 1) * pageSize,
-                PageSize = pageSize
+                PageSize = pageSize,
+                MinUsers = communityOptions?.Value?.MinUsersForPublicVisibility ?? 2
             }, cancellationToken: ct));
     }
 
