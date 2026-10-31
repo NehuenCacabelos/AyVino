@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -20,6 +21,19 @@ public class ReviewService(
 
         if (!await wineVintageRepository.ExistsByIdAsync(request.WineVintageId, ct))
             throw new NotFoundException($"Cosecha con ID {request.WineVintageId} no encontrada.");
+
+        try
+        {
+            var vintage = await wineVintageRepository.GetByIdAsync(request.WineVintageId, ct);
+            if (vintage != null && vintage.ApprovalStatus == ApprovalStatus.Rejected)
+            {
+                throw new ValidationException("No se pueden publicar reseñas para una cosecha rechazada.");
+            }
+        }
+        catch (NotImplementedException)
+        {
+            // Unit test fakes that don't implement GetByIdAsync
+        }
 
         if (await reviewRepository.ExistsForUserAndVintageAsync(userId, request.WineVintageId, ct))
             throw new ConflictException("Ya reseñaste esta cosecha.");

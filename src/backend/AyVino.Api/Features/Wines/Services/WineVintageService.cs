@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using AyVino.Api.Features.Wines.Configuration;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -18,7 +20,8 @@ public class WineVintageService(
     IWineVintageRepository vintageRepository,
     IWineRepository wineRepository,
     IGrapeRepository grapeRepository,
-    IWineryRepository wineryRepository) : IWineVintageService
+    IWineryRepository wineryRepository,
+    IOptions<CommunityOptions>? communityOptions = null) : IWineVintageService
 {
     public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, Actor? actor = null, CancellationToken ct = default)
     {
@@ -38,8 +41,7 @@ public class WineVintageService(
         }
 
         // Regla de visibilidad:
-        // Una añada Pending/Rejected solo la ven el dueño, el uploader y los admin.
-        if (vintage.ApprovalStatus != ApprovalStatus.Approved)
+        if (vintage.ApprovalStatus == ApprovalStatus.Rejected)
         {
             var isUploader = actor != null && vintage.UploadedByUserId == actor.UserId;
             var isAdmin = actor?.IsAdmin == true;
@@ -48,6 +50,23 @@ public class WineVintageService(
             if (!isAdmin && !isUploader && !isWineryOwner)
             {
                 throw new NotFoundException($"Vintage with ID {vintageId} not found for wine {wineId}.");
+            }
+        }
+        else if (vintage.ApprovalStatus == ApprovalStatus.Pending)
+        {
+            var isUploader = actor != null && vintage.UploadedByUserId == actor.UserId;
+            var isAdmin = actor?.IsAdmin == true;
+            var isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
+            var isParticipant = actor != null && (isUploader || await vintageRepository.IsUserParticipantAsync(vintageId, actor.UserId, ct));
+
+            if (!isAdmin && !isWineryOwner && !isParticipant)
+            {
+                var minUsers = communityOptions?.Value?.MinUsersForPublicVisibility ?? 2;
+                var userCount = await vintageRepository.GetDistinctUserCountAsync(vintageId, ct);
+                if (userCount < minUsers)
+                {
+                    throw new NotFoundException($"Vintage with ID {vintageId} not found for wine {wineId}.");
+                }
             }
         }
 
@@ -84,12 +103,41 @@ public class WineVintageService(
         var isWineryOwner = actor != null && WineryAccessRules.IsOwner(winery, actor);
         var isAdmin = actor?.IsAdmin == true;
 
+        var minUsers = communityOptions?.Value?.MinUsersForPublicVisibility ?? 2;
+        var pendingVintages = vintages.Where(v => v.ApprovalStatus == ApprovalStatus.Pending).ToList();
+        IReadOnlyDictionary<int, int> counts = new Dictionary<int, int>();
+        HashSet<int> participantVintageIds = [];
+
+        if (pendingVintages.Count > 0 && !isAdmin && !isWineryOwner)
+        {
+            var pendingIds = pendingVintages.Select(v => v.Id).ToList();
+            counts = (await vintageRepository.GetDistinctUserCountsAsync(pendingIds, ct)) ?? new Dictionary<int, int>();
+            if (actor != null)
+            {
+                participantVintageIds = (await vintageRepository.GetParticipantVintageIdsAsync(actor.UserId, pendingIds, ct)) ?? [];
+            }
+        }
+
         vintages = vintages.Where(v =>
-            v.ApprovalStatus == ApprovalStatus.Approved
-            || isAdmin
-            || isWineryOwner
-            || (actor != null && v.UploadedByUserId == actor.UserId)
-        ).ToList();
+        {
+            if (v.ApprovalStatus == ApprovalStatus.Approved)
+                return true;
+
+            if (v.ApprovalStatus == ApprovalStatus.Rejected)
+                return isAdmin || isWineryOwner || (actor != null && v.UploadedByUserId == actor.UserId);
+
+            // Pending
+            if (isAdmin || isWineryOwner)
+                return true;
+
+            if (actor != null && (v.UploadedByUserId == actor.UserId || participantVintageIds.Contains(v.Id)))
+                return true;
+
+            if (counts != null && counts.TryGetValue(v.Id, out var count) && count >= minUsers)
+                return true;
+
+            return false;
+        }).ToList();
 
         if (vintages.Count == 0)
         {

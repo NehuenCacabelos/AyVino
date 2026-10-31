@@ -20,10 +20,16 @@ public class CellarItemService(
         await EnsureCellarOwnedAsync(userId, cellarId, ct);
 
         // Solo se exige que la cosecha exista (igual que Reviews): las Pending también se pueden guardar.
-        var vintageExists = request.WineVintageId > 0
-            && await wineVintageRepository.ExistsByIdAsync(request.WineVintageId, ct);
-        if (!vintageExists)
-            throw new NotFoundException($"Cosecha con ID {request.WineVintageId} no encontrada.");
+        var vintage = request.WineVintageId > 0 ? await wineVintageRepository.GetByIdAsync(request.WineVintageId, ct) : null;
+        if (vintage is null)
+        {
+            if (request.WineVintageId <= 0 || !await wineVintageRepository.ExistsByIdAsync(request.WineVintageId, ct))
+                throw new NotFoundException($"Cosecha con ID {request.WineVintageId} no encontrada.");
+        }
+        else if (vintage.ApprovalStatus == ApprovalStatus.Rejected)
+        {
+            throw new ValidationException("No se pueden agregar cosechas rechazadas a la cava.");
+        }
 
         if (await itemRepository.GetAsync(cellarId, request.WineVintageId, ct) is not null)
             throw new ConflictException("Esta cosecha ya está en la cava. Editá la cantidad.");
