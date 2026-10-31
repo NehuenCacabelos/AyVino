@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Wines.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using AyVino.Api.Common.Data;
@@ -264,6 +265,7 @@ builder.Services.AddScoped<IPairingRepository, PairingRepository>();
 builder.Services.AddScoped<IPairingService, PairingService>();
 builder.Services.AddScoped<IWineVintageRepository, WineVintageRepository>();
 builder.Services.AddScoped<IWineVintageService, WineVintageService>();
+builder.Services.Configure<CommunityOptions>(builder.Configuration.GetSection(CommunityOptions.SectionName));
 builder.Services.AddScoped<IUserVintageImageRepository, UserVintageImageRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
