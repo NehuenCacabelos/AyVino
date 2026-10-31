@@ -7,4 +7,7 @@ public record MergeWinesResultDto(
     int MergedVintages,
     int MovedReviews,
     int DiscardedReviews,
-    int MovedCellarItems);
+    int MovedCellarItems,
+    int MovedUserImages = 0,
+    int DiscardedUserImages = 0,
+    int MovedActivities = 0);
