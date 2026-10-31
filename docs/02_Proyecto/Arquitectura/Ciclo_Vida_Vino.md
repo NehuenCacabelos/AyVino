@@ -156,6 +156,54 @@ Para salvaguardar la integridad de las experiencias y registros de los usuarios 
 
 ---
 
+---
+
+## 8. Vinos Comunitarios, Visibilidad por Uso, Fotos Personales y Descorches
+
+### 8.1. Visibilidad Comunitaria por Umbral de Usuarios ($N$ Configurable)
+Para potenciar la inteligencia colectiva y la catalogación comunitaria sin comprometer la calidad del catálogo:
+- **Umbral Configurable**: Mediante `Community:MinUsersForPublicVisibility` (por defecto `2`), se establece el número mínimo de usuarios independientes necesarios para que una cosecha comunitaria en estado `Pending` adquiera visibilidad pública general.
+- **Conjunto de Usuarios Participantes**: Se define como el conjunto disjunto de:
+  1. El creador/uploader original (`uploaded_by_user_id`).
+  2. Usuarios que tienen al menos una botella de esa cosecha en su cava personal (`cellar_items`).
+  3. Usuarios que han publicado una reseña sobre esa cosecha (`reviews`).
+  4. Usuarios que han subido una foto personal de esa cosecha (`user_vintage_images`).
+- **Estados de Visibilidad**:
+  - `Approved`: Visible públicamente para cualquier usuario o visitante anónimo.
+  - `Pending`: Visible para el público general si y solo si la cantidad de usuarios distintos $\ge N$. Antes de alcanzar dicho umbral, es visible únicamente para los administradores, el dueño de la bodega y los propios usuarios participantes. En la interfaz se rotula como *"Sin verificar"* hasta su aprobación editorial.
+  - `Rejected`: Se oculta de inmediato para el público general y participantes ordinarios; únicamente visible para administradores, el dueño de la bodega y el uploader original.
+
+### 8.2. Coincidencia de Etiquetas y Prevención de Duplicados
+- **Normalizador de Etiquetas (`WineLabelNormalizer`)**: Genera una clave determinista `label_key` normalizando:
+  - Texto a minúsculas invariantes.
+  - Descomposición canónica FormD quitando marcas diacríticas (`NonSpacingMark`).
+  - Caracteres no alfanuméricos tratados como espacios; espacios colapsados y recortados.
+  - Clave compuesta: `nombre | bodega | tipo_de_vino`.
+- **Detección Previa y Adopción**: El endpoint `GET /api/wines/match` permite verificar si un vino o cosecha ya existe antes de crearlo. Al intentar crear un vino o cosecha idéntica, el backend devuelve HTTP `409 Conflict` con extensiones Problem Details (`existingWineId`, `existingVintageId`), guiando al cliente hacia la adopción en vez de generar duplicados innecesarios.
+
+### 8.3. Fotos Personales y Borrado Seguro
+- **Independencia de Fotos Personales (`user_vintage_images`)**: Cada usuario puede asociar su propia foto a una cosecha mediante `PUT /api/wines/{wineId}/vintages/{vintageId}/my-image`. Esta foto personal es inviolable y nunca se pierde, incluso si la cosecha cambia de imagen pública oficial.
+- **Regla de Primera Foto**: Si una cosecha comunitaria carece de imagen pública oficial (`wine_vintages.image_id IS NULL`) y el usuario que sube la foto personal es su uploader original, se asigna automáticamente esa misma imagen como foto pública de la cosecha (compartiendo referencia de archivo en Cloudinary). Los usuarios no-uploaders nunca modifican la foto pública.
+- **Borrado Seguro por Conteo de Referencias**: Antes de eliminar físicamente un registro de `images` o su archivo en Cloudinary, `IImageRepository.IsReferencedAsync` verifica todas las tablas que pueden enlazarlo (`users.avatar_image_id`, `wineries.logo_image_id`, `wineries.banner_image_id`, `wine_vintages.image_id`, `user_vintage_images.image_id`). Si la imagen continúa referenciada en cualquier otra entidad, se preserva íntegra.
+
+### 8.4. Moderación Administrativa de Aportes
+- **Cola Priorizada**: En `GET /api/wine-vintages?status=Pending`, los registros se ordenan prioritariamente por `communityUsers DESC, registerDate ASC`, permitiendo al equipo editorial auditar primero aquellas cosechas con mayor tracción real.
+- **Consulta de Aportes**: Mediante `GET /api/wine-vintages/{vintageId}/contributions`, el administrador accede al listado de usuarios participantes, sus fotos personales y la marca de creador original.
+- **Promoción de Foto Oficial**: A través de `POST /api/wine-vintages/{vintageId}/promote-image`, el admin puede seleccionar la foto personal de cualquiera de los aportantes para convertirla en la imagen pública de la cosecha, registrando auditoría `VintageImagePromoted`.
+
+### 8.5. Descorches y Marca Irreversible de "Probado"
+- **Descorche Atómico (`POST /api/uncorks`)**: Ejecutado íntegramente dentro de una única transacción física ACID:
+  1. Si se provee `CellarId`: Descuenta 1 botella mediante SQL atómico condicional (`quantity > 0`). Si el stock llega a 0, la fila se elimina automáticamente de la cava.
+  2. Marca el vino como probado de forma irreversible e idempotente en `user_wines.is_tried = true`.
+  3. Si incluye puntaje, realiza el upsert de la reseña y recalcula los acumulados en cascada (`wine_vintages` y `wines`).
+  4. Registra la actividad `Uncorked` y, si la reseña fue creada nueva, también `Reviewed`.
+  5. Rollback total ante cualquier contingencia.
+- **Probado Permanente**: La condición de vino "probado" es acumulativa y no se revierte jamás al borrar un ítem de cava o descorchar botellas subsiguientes.
+
+### 8.6. Historial de Actividades (`user_activities`)
+- **Registro de Actos Personales**: Almacena cronológicamente los eventos ejecutados por el usuario (`Uncorked = 1`, `Reviewed = 2`, `AddedToCellar = 3`, `WineContributed = 4`). Marcas pasivas como "deseado" o "favorito" no generan eventos de actividad.
+- **Privacidad Estricta**: Accesible exclusivamente por el propio usuario autenticado (`GET /api/users/me/history`). No se aplican filtros de visibilidad pública sobre los vinos referenciados, pues reflejan vivencias propias.
+
 ## 🔗 Referencias Relacionadas
 - [[Especificacion_Requerimientos]]: Requerimientos RF-1.1 al RF-1.6.
 - [[Catalogo_Endpoints_API]]: Endpoints `/api/wines` y `/api/grapes`.

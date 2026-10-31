@@ -843,6 +843,14 @@ public class WineRepository(
                         moveVintageSql, new { TargetId = targetId, VintageId = dupV.Id }, transaction: transaction, cancellationToken: ct));
 
                     movedVintages++;
+                    const string moveActivitiesForDirectVintageSql = """
+                        UPDATE user_activities
+                        SET wine_id = @TargetId
+                        WHERE wine_vintage_id = @VintageId;
+                        """;
+                    movedActivities += await connection.ExecuteAsync(new CommandDefinition(
+                        moveActivitiesForDirectVintageSql, new { TargetId = targetId, VintageId = dupV.Id }, transaction: transaction, cancellationToken: ct));
+
 
                 }
 
@@ -1064,6 +1072,14 @@ public class WineRepository(
 
                     // E) Eliminar la cosecha del duplicado
 
+                    const string moveActivitiesForMergedVintageSql = """
+                        UPDATE user_activities
+                        SET wine_id = @TargetId, wine_vintage_id = @TargetVintageId
+                        WHERE wine_vintage_id = @DupVintageId;
+                        """;
+                    movedActivities += await connection.ExecuteAsync(new CommandDefinition(
+                        moveActivitiesForMergedVintageSql, new { TargetId = targetId, TargetVintageId = targetVintageId, DupVintageId = dupVintageId }, transaction: transaction, cancellationToken: ct));
+
                     const string deleteVintageSql = "DELETE FROM wine_vintages WHERE id = @DupVintageId;";
 
                     await connection.ExecuteAsync(new CommandDefinition(
@@ -1095,6 +1111,15 @@ public class WineRepository(
             }
 
 
+
+            // Reubicar actividades restantes asociadas al vino duplicado
+            const string moveRemainingActivitiesSql = """
+                UPDATE user_activities
+                SET wine_id = @TargetId
+                WHERE wine_id = @DuplicateId;
+                """;
+            movedActivities += await connection.ExecuteAsync(new CommandDefinition(
+                moveRemainingActivitiesSql, new { TargetId = targetId, DuplicateId = duplicateId }, transaction: transaction, cancellationToken: ct));
 
             // 2. wine_pairings: copiar al principal los que falten y borrar los del duplicado
 

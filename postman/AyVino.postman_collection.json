@@ -2561,6 +2561,50 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Match Wine",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/match?name=Malbec&wineryName=Catena&wineType=Red&year=2021",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "match"
+                  ],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": "Malbec"
+                    },
+                    {
+                      "key": "wineryName",
+                      "value": "Catena"
+                    },
+                    {
+                      "key": "wineType",
+                      "value": "Red"
+                    },
+                    {
+                      "key": "year",
+                      "value": "2021"
+                    }
+                  ]
+                },
+                "description": "Busca coincidencias exactas por clave normalizada (label_key) y añada para adopción comunitaria"
+              },
+              "response": []
             }
           ]
         },
@@ -2887,6 +2931,132 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Get My Vintage Image",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}/my-image",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}",
+                    "my-image"
+                  ]
+                },
+                "description": "Obtiene el identificador de la foto personal del usuario autenticado para la cosecha"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete My Vintage Image",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}/my-image",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}",
+                    "my-image"
+                  ]
+                },
+                "description": "Elimina la foto personal del usuario autenticado para la cosecha (borrado seguro)"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Vintage Contributions (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/{{vintageId}}/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "{{vintageId}}",
+                    "contributions"
+                  ]
+                },
+                "description": "Lista los aportes y fotos personales de los usuarios participantes de una cosecha"
+              },
+              "response": []
+            },
+            {
+              "name": "Promote Vintage Image (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/{{vintageId}}/promote-image",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "{{vintageId}}",
+                    "promote-image"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Promueve la foto personal de un usuario a foto oficial pública de la cosecha"
+              },
+              "response": []
             }
           ]
         },
@@ -5303,6 +5473,136 @@
                   }
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "Uncorks",
+          "item": [
+            {
+              "name": "Uncork Wine (With Cellar, Rating & Review)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/uncorks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "uncorks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"cellarId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Excelente apertura, gran bouquet!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Descorcha una botella descontando de cava, puntuando, reseñando y marcando probado"
+              },
+              "response": []
+            },
+            {
+              "name": "Uncork Wine (Direct, No Cellar)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/uncorks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "uncorks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"wineVintageId\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Descorche directo ('lo probé') sin estar en cava"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "History",
+          "item": [
+            {
+              "name": "Get My History",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/history?pageNumber=1&pageSize=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "20"
+                    },
+                    {
+                      "key": "type",
+                      "value": "Uncorked",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Obtiene el historial privado de actividades del usuario autenticado"
+              },
+              "response": []
             }
           ]
         }

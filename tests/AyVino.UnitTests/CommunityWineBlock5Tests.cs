@@ -134,6 +134,40 @@ public class CommunityWineBlock5Tests
     }
 
     [Fact]
+    public async Task MergeWinesAsync_WhenValidAdmin_PassesMovedActivities()
+    {
+        // Arrange
+        _wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>())
+            .Returns(new Wine { Id = 1, Name = "Vino Destino", WineType = WineType.Red });
+        _wineRepo.GetByIdAsync(2, Arg.Any<CancellationToken>())
+            .Returns(new Wine { Id = 2, Name = "Vino Duplicado", WineType = WineType.Red });
+
+        var expectedResult = new MergeWinesResultDto(
+            TargetId: 1,
+            DuplicateId: 2,
+            MovedVintages: 1,
+            MergedVintages: 1,
+            MovedReviews: 2,
+            DiscardedReviews: 1,
+            MovedCellarItems: 1,
+            MovedUserImages: 3,
+            DiscardedUserImages: 2,
+            MovedActivities: 7);
+
+        _wineRepo.MergeWinesAsync(1, 2, Arg.Any<CancellationToken>())
+            .Returns(expectedResult);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.MergeWinesAsync(1, 2, _adminActor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(7, result.MovedActivities);
+    }
+
+    [Fact]
     public void WineRepository_Constructor_SupportsOptionalImageDependencies()
     {
         // Arrange & Act

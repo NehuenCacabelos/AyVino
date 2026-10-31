@@ -1,312 +1,323 @@
----
-title: "Migraciones de Base de Datos y Modelo ERD"
-tipo: "arquitectura"
-tags:
-  - base-de-datos
-  - migraciones
-  - postgresql
-  - fluentmigrator
-  - erd
----
-
-# Migraciones de Base de Datos - FluentMigrator
-
-En cumplimiento de la constitución del proyecto ([[AGENTS.md]]):
-> **Base de Datos**: Cambios de esquema estructurados únicamente mediante `FluentMigrator`.
-
----
-
-## 1. Convenciones y Estructura
-
-Las migraciones residen en [`src/backend/AyVino.Api/Migrations/`](../../src/backend/AyVino.Api/Migrations) y heredan de la clase base `Migration` de FluentMigrator.
-
-Cada clase está decorada con el atributo `[Migration(version)]` donde la versión sigue el timestamp `YYYYMMDDNNN`. Toda migración es estrictamente bidireccional, implementando tanto `Up()` (aplicar cambios) como `Down()` (revertir cambios con eliminación ordenada de claves foráneas e índices).
-
----
-
-## 2. Catálogo Completo de Migraciones
-
-| Versión | Archivo de Migración | Tablas / Objetos Afectados | Descripción y Reglas de Negocio |
-| :--- | :--- | :--- | :--- |
-| `20260809001` | `CreateStatesTable.cs` | `states` | Tabla base para provincias argentinas (id, name). |
-| `20260809002` | `SeedStates.cs` | `states` | Carga inicial (seed) de las 24 jurisdicciones de Argentina (Mendoza, San Juan, Salta, Río Negro, La Rioja, etc.). |
-| `20260809003` | `CreateCitiesTable.cs` | `cities` | Ciudades y departamentos vitivinícolas con clave foránea a `states` y estado de moderación (`status`). |
-| `20260809004` | `CreateLocationsTable.cs` | `locations` | Terruños y zonas específicas de producción con clave foránea a `cities`. |
-| `20260829001` | `CreateUsersTable.cs` | `users`, `user_credentials` | Creación de perfiles de usuario (roles: `User`, `Winery`, `Admin`) y credenciales desacopladas (hash PBKDF2, intentos fallidos y bloqueo temporal). |
-| `20260829003` | `CreateWineriesTable.cs` | `wineries` | Catálogo de bodegas con estado (`Pending`, `Approved`, `Rejected`) y relación nullable `user_id` con `users` (soporta bodegas comunitarias sin dueño y bodegas oficiales). |
-| `20260829004` | `CreateGrapesTable.cs` | `grapes` | Variedades de uva y cepas con tipado por color (`color_type`: Tinto, Blanco, Rosado). |
-| `20260830001` | `CreateRefreshTokensTable.cs` | `refresh_tokens` | Almacenamiento seguro de tokens de refresco, tracking de IP de creación/revocación, enlace de rotación (`replaced_by_token`) y auditoría. |
-| `20260830002` | `CreateWinesTable.cs` | `wines`, `wine_vintages`, `wine_grapes` | Catálogo de etiquetas base (`wines`), cosechas anuales (`wine_vintages` con constraint de unicidad `UQ_WineVintages_WineId_Year` NULLS NOT DISTINCT) y composición varietal (`wine_grapes` con `CK_WineGrapes_Percentage`). |
-| `20260919001` | `CreatePairingsTable.cs` | `pairings`, `wine_pairings` | Catálogo de maridajes culinarios clasificados por categoría y tabla intermedia de asociación N:M `wine_pairings` con eliminación en cascada. |
-| `20260929001` | `CreateReviewsTable.cs` | `reviews` | Reseñas y calificaciones (1 a 5 estrellas) emitidas por usuarios sobre cosechas específicas (`wine_vintages`), con restricción de unicidad (`uq_reviews_user_wine_vintage`) y cascade rollup. |
-| `20260929003` | `CreateFollowTables.cs` | `user_follows`, `winery_follows` | Seguimiento social: usuarios siguen a otros usuarios y a bodegas aprobadas, con timestamps y claves compuestas. |
-| `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
-| `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
-| `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
-| `20261022001` | `AddGeorefIdToStatesAndCities.cs` | `states`, `cities` | Códigos Georef oficiales para las 24 provincias argentinas e índice único para `georef_id` en departamentos. |
-| `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
-| `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
-| `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
-| `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
-| `20261029001` | `CreateImagesTable.cs` | `images` | Tabla relacional para metadatos de imágenes en Cloudinary (`id` UUID, `provider`, `external_id`, `mime_type`, `size_bytes`, `width`, `height`, `created_at`) con índice único sobre `external_id`. |
-| `20261029002` | `AddImageReferencesToEntities.cs` | `users`, `wineries`, `wine_vintages` | Claves foráneas UUID hacia `images`: `users.avatar_image_id` (`ON DELETE SET NULL`), `wineries.logo_image_id` (`ON DELETE RESTRICT`), `wineries.banner_image_id` (`ON DELETE RESTRICT`), `wine_vintages.image_id` (`ON DELETE RESTRICT`). |
-
----
-
-## 3. Diagrama Entidad-Relación (ERD)
-
-```mermaid
-erDiagram
-    USERS ||--o| USER_CREDENTIALS : "tiene credenciales"
-    USERS ||--o{ REFRESH_TOKENS : "posee sesiones"
-    USERS ||--o{ WINERIES : "administra (opcional)"
-    USERS ||--o{ WINE_VINTAGES : "sube cosechas"
-    USERS ||--o{ REVIEWS : "escribe"
-    USERS ||--o{ USER_FOLLOWS : "sigue a usuarios"
-    USERS ||--o{ WINERY_FOLLOWS : "sigue a bodegas"
-    WINERIES ||--o{ WINERY_FOLLOWS : "recibe seguidores"
-    USERS ||--o{ USER_WINES : "marca estado"
-    WINES ||--o{ USER_WINES : "marcado por"
-    USERS ||--o{ CELLARS : "posee"
-    CELLARS ||--o{ CELLAR_ITEMS : "almacena botellas"
-    WINE_VINTAGES ||--o{ CELLAR_ITEMS : "guardado en"
-
-    STATES ||--o{ CITIES : "contiene"
-    CITIES ||--o{ LOCATIONS : "alberga terruños"
-    LOCATIONS ||--o{ WINERIES : "ubicación física"
-    LOCATIONS ||--o{ WINES : "origen geográfico"
-
-    WINERIES ||--o{ WINES : "produce botellas oficiales"
-    
-    WINES ||--o{ WINE_VINTAGES : "posee añadas"
-    WINE_VINTAGES ||--o{ WINE_GRAPES : "compuesto por"
-    GRAPES ||--o{ WINE_GRAPES : "participa en corte"
-
-    WINES ||--o{ WINE_PAIRINGS : "recomienda"
-    PAIRINGS ||--o{ WINE_PAIRINGS : "asociado a"
-
-    WINES ||--o| WINES : "es duplicado de (self-FK)"
-
-    WINE_VINTAGES ||--o{ REVIEWS : "recibe"
-
-    USERS {
-        int id PK
-        string email UK
-        string username UK
-        string role
-        string bio
-        string photo_url
-        boolean is_active
-        datetime created_at
-    }
-
-    USER_CREDENTIALS {
-        int user_id PK, FK
-        string password_hash
-        datetime last_password_change
-        int failed_login_attempts
-        datetime blocked_until
-    }
-
-    REFRESH_TOKENS {
-        int id PK
-        int user_id FK
-        string token UK
-        datetime expires_at
-        datetime created_at
-        string created_by_ip
-        datetime revoked_at
-        string revoked_by_ip
-        string replaced_by_token
-    }
-
-    WINERIES {
-        int id PK
-        int user_id FK "nullable"
-        string name
-        string description
-        int location_id FK
-        string address
-        string website_url
-        string email
-        string phone
-        uuid logo_image_id FK "nullable"
-        uuid banner_image_id FK "nullable"
-        decimal latitude "nullable"
-        decimal longitude "nullable"
-        int status "Pending/Approved/Rejected"
-    }
-
-    WINES {
-        int id PK
-        int winery_id FK "nullable"
-        string name
-        string description
-        int wine_type
-        int location_id FK "nullable"
-        string winery_name_text "nullable"
-        int source_type "1=Community, 2=Official"
-        int duplicate_of_wine_id FK "nullable"
-        int rating_sum
-        int review_count
-    }
-
-    WINE_VINTAGES {
-        int id PK
-        int wine_id FK
-        int year "nullable"
-        decimal alcohol_content "nullable"
-        int serving_temperature "nullable"
-        string aging_advice
-        uuid image_id FK "nullable"
-        int approval_status
-        int uploaded_by_user_id FK
-        datetime register_date
-        int rating_sum
-        int review_count
-    }
-
-    WINE_GRAPES {
-        int wine_vintage_id PK, FK
-        int grape_id PK, FK
-        decimal percentage "1.00 a 100.00"
-    }
-
-    PAIRINGS {
-        int id PK
-        string name
-        int category
-    }
-
-    WINE_PAIRINGS {
-        int wine_id PK, FK
-        int pairing_id PK, FK
-    }
-
-    REVIEWS {
-        int id PK
-        int user_id FK
-        int wine_vintage_id FK
-        int rating "1 a 5"
-        string comment
-        datetime created_at
-        datetime updated_at
-    }
-
-    USER_FOLLOWS {
-        int follower_id PK, FK
-        int followed_user_id PK, FK
-        datetime created_at
-    }
-
-    WINERY_FOLLOWS {
-        int user_id PK, FK
-        int winery_id PK, FK
-        datetime created_at
-    }
-
-    USER_WINES {
-        int user_id PK, FK
-        int wine_id PK, FK
-        boolean is_wanted
-        boolean is_tried
-        boolean is_favorite
-        datetime created_at
-        datetime updated_at
-    }
-
-    CELLARS {
-        int id PK
-        int user_id FK
-        string name
-        datetime created_at
-    }
-
-    CELLAR_ITEMS {
-        int cellar_id PK, FK
-        int wine_vintage_id PK, FK
-        int quantity
-        date purchase_date
-        string notes
-        datetime created_at
-        datetime updated_at
-    }
-
-    IMAGES {
-        uuid id PK
-        string provider
-        string external_id UK
-        string mime_type
-        bigint size_bytes
-        int width
-        int height
-        datetime created_at
-    }
-```
-
-### Tabla `images` y Reglas de Integridad Referencial
-
-La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los metadatos de archivos subidos al proveedor Cloudinary:
-- `id` (`UUID PK`): Identificador único expuesto hacia el frontend (`/api/images/{id}`).
-- `provider` (`varchar(50)`): Proveedor de almacenamiento (fijo `"cloudinary"`).
-- `external_id` (`varchar(300) UK`): Public ID asignado en Cloudinary (ej: `ayvino/wineries/logos/abc123_400x400`). Cuenta con índice único `ix_images_external_id`.
-- `mime_type` (`varchar(100)`): Tipo MIME validado por magic bytes (`image/jpeg`, `image/png`, `image/webp`).
-- `size_bytes` (`bigint`): Peso del archivo en bytes (límite máximo 5 MB).
-- `width` (`int`) y `height` (`int`): Dimensiones de la imagen en píxeles informadas por Cloudinary.
-- `created_at` (`timestamptz`): Fecha y hora UTC de subida.
-
-**Reglas de Claves Foráneas hacia `images`**:
-Todas las referencias foráneas hacia `images` están configuradas con `ON DELETE SET NULL` en la migración `M20261029002_AddImageReferencesToEntities` y en el esquema relacional:
-- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si el registro de la imagen es eliminado, el usuario pasa a `null`, reactivando transparentemente el avatar determinista de DiceBear.
-- `wineries.logo_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con logo `null`, mostrando su placeholder inicial.
-- `wineries.banner_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con banner `null`, aplicando el gradiente temático de respaldo.
-- `wine_vintages.image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la cosecha queda con `null`, mostrando la silueta estándar de botella.
-
-**Justificación de `ON DELETE SET NULL` y Orden Transaccional**:
-Garantiza el desacoplamiento total entre el ciclo de vida de los archivos multimedia y las entidades principales de negocio. La eliminación de una imagen nunca bloquea ni destruye en cascada a la bodega, vino o usuario. Adicionalmente, el orquestador (`ImageTransactionRunner`) ejecuta el orden estricto de dos pasos: primero actualiza a `null` (o al nuevo ID) la referencia en la entidad padre, y recién después elimina la fila en la tabla `images`.
-
-### Eliminación de Columnas Legacy (Migración `M20261029003`)
-Tras migrar el almacenamiento al modelo unificado de identificadores de imagen referenciales, la migración `M20261029003_RemoveLegacyImageColumns` elimina de forma definitiva en `Up()` las columnas obsoletas de tipo string/URL:
-- `users.photo`
-- `wineries.logo_url`
-- `wineries.banner_url`
-- `wine_vintages.image_url`
-
-El método `Down()` las reconstituye con sus tipos originales (`string/varchar`, nullable) garantizando reversibilidad total.
-
----
-
-## 4. Ejecución y Ciclo de Vida en Arranque
-
-FluentMigrator se ejecuta automáticamente al iniciar la API en `Program.cs`:
-
-```csharp
-using (var scope = app.Services.CreateScope())
-{
-    var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
-    try {
-        runner.MigrateUp();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogCritical(ex, "Error crítico durante la ejecución de las migraciones de base de datos.");
-        throw;
-    }
-}
-```
-
-### Reglas para Nuevas Migraciones
-
-1. **Nunca alterar migraciones ya aplicadas**: Si se requiere un cambio sobre una tabla existente, crear una nueva clase de migración con versión incremental.
-2. **Reversibilidad total**: Todo método `Up()` debe tener su contraparte exacta en `Down()` eliminando foreign keys, índices y constraints antes de borrar tablas.
-3. **Restricciones e Índices Explícitos**: Agregar siempre índices sobre columnas utilizadas en cláusulas `WHERE` o `JOIN` (ej: `winery_id`, `location_id`, `winery_name_text`).
-
----
-
-## 🔗 Referencias Relacionadas
-- [[Arquitectura_Overview]]: Principios rectores y tecnologías.
-- [[Backend_Overview]]: Repositorios Dapper e inyección de dependencias.
-- [[Ciclo_Vida_Vino]]: Enums de persistencia y estructura de cosechas.
-- [[Catalogo_Endpoints_API]]: Mapeo de tablas a endpoints REST.
-
+---
+title: "Migraciones de Base de Datos y Modelo ERD"
+tipo: "arquitectura"
+tags:
+  - base-de-datos
+  - migraciones
+  - postgresql
+  - fluentmigrator
+  - erd
+---
+
+# Migraciones de Base de Datos - FluentMigrator
+
+En cumplimiento de la constitución del proyecto ([[AGENTS.md]]):
+> **Base de Datos**: Cambios de esquema estructurados únicamente mediante `FluentMigrator`.
+
+---
+
+## 1. Convenciones y Estructura
+
+Las migraciones residen en [`src/backend/AyVino.Api/Migrations/`](../../src/backend/AyVino.Api/Migrations) y heredan de la clase base `Migration` de FluentMigrator.
+
+Cada clase está decorada con el atributo `[Migration(version)]` donde la versión sigue el timestamp `YYYYMMDDNNN`. Toda migración es estrictamente bidireccional, implementando tanto `Up()` (aplicar cambios) como `Down()` (revertir cambios con eliminación ordenada de claves foráneas e índices).
+
+---
+
+## 2. Catálogo Completo de Migraciones
+
+| Versión | Archivo de Migración | Tablas / Objetos Afectados | Descripción y Reglas de Negocio |
+| :--- | :--- | :--- | :--- |
+| `20260809001` | `CreateStatesTable.cs` | `states` | Tabla base para provincias argentinas (id, name). |
+| `20260809002` | `SeedStates.cs` | `states` | Carga inicial (seed) de las 24 jurisdicciones de Argentina (Mendoza, San Juan, Salta, Río Negro, La Rioja, etc.). |
+| `20260809003` | `CreateCitiesTable.cs` | `cities` | Ciudades y departamentos vitivinícolas con clave foránea a `states` y estado de moderación (`status`). |
+| `20260809004` | `CreateLocationsTable.cs` | `locations` | Terruños y zonas específicas de producción con clave foránea a `cities`. |
+| `20260829001` | `CreateUsersTable.cs` | `users`, `user_credentials` | Creación de perfiles de usuario (roles: `User`, `Winery`, `Admin`) y credenciales desacopladas (hash PBKDF2, intentos fallidos y bloqueo temporal). |
+| `20260829003` | `CreateWineriesTable.cs` | `wineries` | Catálogo de bodegas con estado (`Pending`, `Approved`, `Rejected`) y relación nullable `user_id` con `users` (soporta bodegas comunitarias sin dueño y bodegas oficiales). |
+| `20260829004` | `CreateGrapesTable.cs` | `grapes` | Variedades de uva y cepas con tipado por color (`color_type`: Tinto, Blanco, Rosado). |
+| `20260830001` | `CreateRefreshTokensTable.cs` | `refresh_tokens` | Almacenamiento seguro de tokens de refresco, tracking de IP de creación/revocación, enlace de rotación (`replaced_by_token`) y auditoría. |
+| `20260830002` | `CreateWinesTable.cs` | `wines`, `wine_vintages`, `wine_grapes` | Catálogo de etiquetas base (`wines`), cosechas anuales (`wine_vintages` con constraint de unicidad `UQ_WineVintages_WineId_Year` NULLS NOT DISTINCT) y composición varietal (`wine_grapes` con `CK_WineGrapes_Percentage`). |
+| `20260919001` | `CreatePairingsTable.cs` | `pairings`, `wine_pairings` | Catálogo de maridajes culinarios clasificados por categoría y tabla intermedia de asociación N:M `wine_pairings` con eliminación en cascada. |
+| `20260929001` | `CreateReviewsTable.cs` | `reviews` | Reseñas y calificaciones (1 a 5 estrellas) emitidas por usuarios sobre cosechas específicas (`wine_vintages`), con restricción de unicidad (`uq_reviews_user_wine_vintage`) y cascade rollup. |
+| `20260929003` | `CreateFollowTables.cs` | `user_follows`, `winery_follows` | Seguimiento social: usuarios siguen a otros usuarios y a bodegas aprobadas, con timestamps y claves compuestas. |
+| `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
+| `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
+| `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
+| `20261022001` | `AddGeorefIdToStatesAndCities.cs` | `states`, `cities` | Códigos Georef oficiales para las 24 provincias argentinas e índice único para `georef_id` en departamentos. |
+| `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
+| `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
+| `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
+| `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
+| `20261029001` | `CreateImagesTable.cs` | `images` | Tabla relacional para metadatos de imágenes en Cloudinary (`id` UUID, `provider`, `external_id`, `mime_type`, `size_bytes`, `width`, `height`, `created_at`) con índice único sobre `external_id`. |
+| `20261029002` | `AddImageReferencesToEntities.cs` | `users`, `wineries`, `wine_vintages` | Claves foráneas UUID hacia `images`: `users.avatar_image_id` (`ON DELETE SET NULL`), `wineries.logo_image_id` (`ON DELETE RESTRICT`), `wineries.banner_image_id` (`ON DELETE RESTRICT`), `wine_vintages.image_id` (`ON DELETE RESTRICT`). |
+| `20261031001` | `M20261031001_AddLabelKeyToWines.cs` | `wines` | Columna `label_key` (`varchar(500)` nullable) con índice no único para coincidencia y adopción de vinos comunitarios, con backfill inmediato de etiquetas existentes. |
+| `20261031002` | `M20261031002_CreateUserVintageImagesTable.cs` | `user_vintage_images` | Fotos personales de cosechas por usuario (`user_id`, `wine_vintage_id`, `image_id`, `created_at`) con clave primaria compuesta `(user_id, wine_vintage_id)` y eliminación en cascada. |
+| `20261031003` | `M20261031003_CreateUserActivitiesTable.cs` | `user_activities` | Historial de actividades del usuario (`id` bigint identity, `user_id` FK cascade, `type` smallint enum: 1=Uncorked, 2=Reviewed, 3=AddedToCellar, 4=WineContributed, `wine_id` FK cascade, `wine_vintage_id` FK cascade nullable, `occurred_at` timestamptz) con índice `(user_id, occurred_at DESC)`. |
+
+---
+
+## 3. Diagrama Entidad-Relación (ERD)
+
+```mermaid
+erDiagram
+    USERS ||--o| USER_CREDENTIALS : "tiene credenciales"
+    USERS ||--o{ REFRESH_TOKENS : "posee sesiones"
+    USERS ||--o{ WINERIES : "administra (opcional)"
+    USERS ||--o{ WINE_VINTAGES : "sube cosechas"
+    USERS ||--o{ REVIEWS : "escribe"
+    USERS ||--o{ USER_FOLLOWS : "sigue a usuarios"
+    USERS ||--o{ WINERY_FOLLOWS : "sigue a bodegas"
+    WINERIES ||--o{ WINERY_FOLLOWS : "recibe seguidores"
+    USERS ||--o{ USER_WINES : "marca estado"
+    WINES ||--o{ USER_WINES : "marcado por"
+    USERS ||--o{ CELLARS : "posee"
+    CELLARS ||--o{ CELLAR_ITEMS : "almacena botellas"
+    WINE_VINTAGES ||--o{ CELLAR_ITEMS : "guardado en"
+
+    STATES ||--o{ CITIES : "contiene"
+    CITIES ||--o{ LOCATIONS : "alberga terruños"
+    LOCATIONS ||--o{ WINERIES : "ubicación física"
+    LOCATIONS ||--o{ WINES : "origen geográfico"
+
+    WINERIES ||--o{ WINES : "produce botellas oficiales"
+    
+    WINES ||--o{ WINE_VINTAGES : "posee añadas"
+    WINE_VINTAGES ||--o{ WINE_GRAPES : "compuesto por"
+    GRAPES ||--o{ WINE_GRAPES : "participa en corte"
+
+    WINES ||--o{ WINE_PAIRINGS : "recomienda"
+    PAIRINGS ||--o{ WINE_PAIRINGS : "asociado a"
+
+    WINES ||--o| WINES : "es duplicado de (self-FK)"
+
+    WINE_VINTAGES ||--o{ REVIEWS : "recibe"
+
+    USERS ||--o{ USER_VINTAGE_IMAGES : "sube foto personal"
+    WINE_VINTAGES ||--o{ USER_VINTAGE_IMAGES : "asociada a"
+    IMAGES ||--o{ USER_VINTAGE_IMAGES : "referencia archivo"
+
+    USERS ||--o{ USER_ACTIVITIES : "registra historial"
+    WINES ||--o{ USER_ACTIVITIES : "vinculado a"
+    WINE_VINTAGES ||--o{ USER_ACTIVITIES : "asociado a (opcional)"
+
+    USERS {
+        int id PK
+        string email UK
+        string username UK
+        string role
+        string bio
+        string photo_url
+        boolean is_active
+        datetime created_at
+    }
+
+    USER_CREDENTIALS {
+        int user_id PK, FK
+        string password_hash
+        datetime last_password_change
+        int failed_login_attempts
+        datetime blocked_until
+    }
+
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        string token UK
+        datetime expires_at
+        datetime created_at
+        string created_by_ip
+        datetime revoked_at
+        string revoked_by_ip
+        string replaced_by_token
+    }
+
+    WINERIES {
+        int id PK
+        int user_id FK "nullable"
+        string name
+        string description
+        int location_id FK
+        string address
+        string website_url
+        string email
+        string phone
+        uuid logo_image_id FK "nullable"
+        uuid banner_image_id FK "nullable"
+        decimal latitude "nullable"
+        decimal longitude "nullable"
+        int status "Pending/Approved/Rejected"
+    }
+
+    WINES {
+        int id PK
+        int winery_id FK "nullable"
+        string name
+        string description
+        int wine_type
+        int location_id FK "nullable"
+        string winery_name_text "nullable"
+        int source_type "1=Community, 2=Official"
+        int duplicate_of_wine_id FK "nullable"
+        int rating_sum
+        int review_count
+    }
+
+    WINE_VINTAGES {
+        int id PK
+        int wine_id FK
+        int year "nullable"
+        decimal alcohol_content "nullable"
+        int serving_temperature "nullable"
+        string aging_advice
+        uuid image_id FK "nullable"
+        int approval_status
+        int uploaded_by_user_id FK
+        datetime register_date
+        int rating_sum
+        int review_count
+    }
+
+    WINE_GRAPES {
+        int wine_vintage_id PK, FK
+        int grape_id PK, FK
+        decimal percentage "1.00 a 100.00"
+    }
+
+    PAIRINGS {
+        int id PK
+        string name
+        int category
+    }
+
+    WINE_PAIRINGS {
+        int wine_id PK, FK
+        int pairing_id PK, FK
+    }
+
+    REVIEWS {
+        int id PK
+        int user_id FK
+        int wine_vintage_id FK
+        int rating "1 a 5"
+        string comment
+        datetime created_at
+        datetime updated_at
+    }
+
+    USER_FOLLOWS {
+        int follower_id PK, FK
+        int followed_user_id PK, FK
+        datetime created_at
+    }
+
+    WINERY_FOLLOWS {
+        int user_id PK, FK
+        int winery_id PK, FK
+        datetime created_at
+    }
+
+    USER_WINES {
+        int user_id PK, FK
+        int wine_id PK, FK
+        boolean is_wanted
+        boolean is_tried
+        boolean is_favorite
+        datetime created_at
+        datetime updated_at
+    }
+
+    CELLARS {
+        int id PK
+        int user_id FK
+        string name
+        datetime created_at
+    }
+
+    CELLAR_ITEMS {
+        int cellar_id PK, FK
+        int wine_vintage_id PK, FK
+        int quantity
+        date purchase_date
+        string notes
+        datetime created_at
+        datetime updated_at
+    }
+
+    IMAGES {
+        uuid id PK
+        string provider
+        string external_id UK
+        string mime_type
+        bigint size_bytes
+        int width
+        int height
+        datetime created_at
+    }
+```
+
+### Tabla `images` y Reglas de Integridad Referencial
+
+La tabla `images` (migraciones `M20261029001` y `M20261029002`) almacena los metadatos de archivos subidos al proveedor Cloudinary:
+- `id` (`UUID PK`): Identificador único expuesto hacia el frontend (`/api/images/{id}`).
+- `provider` (`varchar(50)`): Proveedor de almacenamiento (fijo `"cloudinary"`).
+- `external_id` (`varchar(300) UK`): Public ID asignado en Cloudinary (ej: `ayvino/wineries/logos/abc123_400x400`). Cuenta con índice único `ix_images_external_id`.
+- `mime_type` (`varchar(100)`): Tipo MIME validado por magic bytes (`image/jpeg`, `image/png`, `image/webp`).
+- `size_bytes` (`bigint`): Peso del archivo en bytes (límite máximo 5 MB).
+- `width` (`int`) y `height` (`int`): Dimensiones de la imagen en píxeles informadas por Cloudinary.
+- `created_at` (`timestamptz`): Fecha y hora UTC de subida.
+
+**Reglas de Claves Foráneas hacia `images`**:
+Todas las referencias foráneas hacia `images` están configuradas con `ON DELETE SET NULL` en la migración `M20261029002_AddImageReferencesToEntities` y en el esquema relacional:
+- `users.avatar_image_id`: Clave foránea con `ON DELETE SET NULL`. Si el registro de la imagen es eliminado, el usuario pasa a `null`, reactivando transparentemente el avatar determinista de DiceBear.
+- `wineries.logo_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con logo `null`, mostrando su placeholder inicial.
+- `wineries.banner_image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la bodega queda con banner `null`, aplicando el gradiente temático de respaldo.
+- `wine_vintages.image_id`: Clave foránea con `ON DELETE SET NULL`. Si la imagen es eliminada, la cosecha queda con `null`, mostrando la silueta estándar de botella.
+
+**Justificación de `ON DELETE SET NULL` y Orden Transaccional**:
+Garantiza el desacoplamiento total entre el ciclo de vida de los archivos multimedia y las entidades principales de negocio. La eliminación de una imagen nunca bloquea ni destruye en cascada a la bodega, vino o usuario. Adicionalmente, el orquestador (`ImageTransactionRunner`) ejecuta el orden estricto de dos pasos: primero actualiza a `null` (o al nuevo ID) la referencia en la entidad padre, y recién después elimina la fila en la tabla `images`.
+
+### Eliminación de Columnas Legacy (Migración `M20261029003`)
+Tras migrar el almacenamiento al modelo unificado de identificadores de imagen referenciales, la migración `M20261029003_RemoveLegacyImageColumns` elimina de forma definitiva en `Up()` las columnas obsoletas de tipo string/URL:
+- `users.photo`
+- `wineries.logo_url`
+- `wineries.banner_url`
+- `wine_vintages.image_url`
+
+El método `Down()` las reconstituye con sus tipos originales (`string/varchar`, nullable) garantizando reversibilidad total.
+
+---
+
+## 4. Ejecución y Ciclo de Vida en Arranque
+
+FluentMigrator se ejecuta automáticamente al iniciar la API en `Program.cs`:
+
+```csharp
+using (var scope = app.Services.CreateScope())
+{
+    var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+    try {
+        runner.MigrateUp();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical(ex, "Error crítico durante la ejecución de las migraciones de base de datos.");
+        throw;
+    }
+}
+```
+
+### Reglas para Nuevas Migraciones
+
+1. **Nunca alterar migraciones ya aplicadas**: Si se requiere un cambio sobre una tabla existente, crear una nueva clase de migración con versión incremental.
+2. **Reversibilidad total**: Todo método `Up()` debe tener su contraparte exacta en `Down()` eliminando foreign keys, índices y constraints antes de borrar tablas.
+3. **Restricciones e Índices Explícitos**: Agregar siempre índices sobre columnas utilizadas en cláusulas `WHERE` o `JOIN` (ej: `winery_id`, `location_id`, `winery_name_text`).
+
+---
+
+## 🔗 Referencias Relacionadas
+- [[Arquitectura_Overview]]: Principios rectores y tecnologías.
+- [[Backend_Overview]]: Repositorios Dapper e inyección de dependencias.
+- [[Ciclo_Vida_Vino]]: Enums de persistencia y estructura de cosechas.
+- [[Catalogo_Endpoints_API]]: Mapeo de tablas a endpoints REST.
+
