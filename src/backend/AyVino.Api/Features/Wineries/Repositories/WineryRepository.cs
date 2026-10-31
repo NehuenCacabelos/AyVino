@@ -1,3 +1,5 @@
+using AyVino.Api.Features.Wines.Enums;
+using AyVino.Api.Features.Wines.Utils;
 using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wineries.Models;
@@ -105,6 +107,9 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<bool> UpdateAsync(Winery winery, CancellationToken ct = default)
     {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
         const string sql = """
             UPDATE wineries
             SET name = @Name,
@@ -116,7 +121,6 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 longitude = @Longitude
             WHERE id = @Id;
             """;
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
             new CommandDefinition(sql, new
             {
@@ -128,7 +132,24 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.Website,
                 winery.Latitude,
                 winery.Longitude
-            }, cancellationToken: ct));
+            }, transaction: transaction, cancellationToken: ct));
+
+        if (rowsAffected > 0)
+        {
+            const string selectWinesSql = "SELECT id, name, wine_type FROM wines WHERE winery_id = @WineryId;";
+            var wines = (await connection.QueryAsync<(int Id, string Name, int WineType)>(
+                new CommandDefinition(selectWinesSql, new { WineryId = winery.Id }, transaction: transaction, cancellationToken: ct))).ToList();
+
+            const string updateWineSql = "UPDATE wines SET label_key = @LabelKey WHERE id = @Id;";
+            foreach (var w in wines)
+            {
+                var key = WineLabelNormalizer.BuildLabelKey(w.Name, winery.Name, (WineType)w.WineType);
+                await connection.ExecuteAsync(
+                    new CommandDefinition(updateWineSql, new { LabelKey = key, Id = w.Id }, transaction: transaction, cancellationToken: ct));
+            }
+        }
+
+        await transaction.CommitAsync(ct);
         return rowsAffected > 0;
     }
 

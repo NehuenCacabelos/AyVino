@@ -2,6 +2,8 @@ using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
+using System.Data;
+using AyVino.Api.Features.Wines.Utils;
 using Dapper;
 
 namespace AyVino.Api.Features.Wines.Repositories;
@@ -10,8 +12,16 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 {
     private const string SelectColumns = """
         id, winery_id, winery_name_text, name, description, wine_type, location_id,
-        source_type, duplicate_of_wine_id, rating_sum, review_count
+        source_type, duplicate_of_wine_id, rating_sum, review_count, label_key
         """;
+
+        public async Task<Wine?> GetByLabelKeyAsync(string labelKey, CancellationToken ct = default)
+    {
+        var sql = $"SELECT {SelectColumns} FROM wines WHERE duplicate_of_wine_id IS NULL AND label_key = @LabelKey LIMIT 1;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Wine>(
+            new CommandDefinition(sql, new { LabelKey = labelKey }, cancellationToken: ct));
+    }
 
     public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
     {
@@ -117,8 +127,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
     public async Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
         const string insertWineSql = """
-            INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count)
-            VALUES (@WineryId, @WineryNameText, @Name, @Description, @WineType, @LocationId, @SourceType, 0, 0)
+            INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count, label_key)
+            VALUES (@WineryId, @WineryNameText, @Name, @Description, @WineType, @LocationId, @SourceType, 0, 0, @LabelKey)
             RETURNING id;
             """;
         const string insertVintageSql = """
@@ -143,7 +153,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 wine.Description,
                 WineType = (int)wine.WineType,
                 wine.LocationId,
-                SourceType = (int)wine.SourceType
+                SourceType = (int)wine.SourceType,
+                wine.LabelKey
             }, transaction: transaction, cancellationToken: ct));
 
         var vintageId = await connection.ExecuteScalarAsync<int>(
@@ -185,7 +196,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 description = @Description,
                 wine_type = @WineType,
                 location_id = @LocationId,
-                source_type = @SourceType
+                source_type = @SourceType,
+                label_key = @LabelKey
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -199,7 +211,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 wine.Description,
                 WineType = (int)wine.WineType,
                 wine.LocationId,
-                SourceType = (int)wine.SourceType
+                SourceType = (int)wine.SourceType,
+                wine.LabelKey
             }, cancellationToken: ct));
         return rows > 0;
     }
@@ -239,7 +252,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
     {
         const string sql = """
             SELECT id, winery_id, winery_name_text, name, description, wine_type,
-                   location_id, source_type, duplicate_of_wine_id, rating_sum, review_count
+                   location_id, source_type, duplicate_of_wine_id, rating_sum, review_count, label_key
             FROM wines
             WHERE winery_id IS NULL
               AND duplicate_of_wine_id IS NULL
@@ -529,5 +542,31 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
+
+    public async Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string selectSql = "SELECT id, name, wine_type FROM wines WHERE winery_id = @WineryId;";
+        var wines = (await connection.QueryAsync<(int Id, string Name, int WineType)>(
+            new CommandDefinition(selectSql, new { WineryId = wineryId }, transaction: transaction, cancellationToken: ct))).ToList();
+
+        const string updateSql = "UPDATE wines SET label_key = @LabelKey WHERE id = @Id;";
+        var count = 0;
+        foreach (var w in wines)
+        {
+            var key = WineLabelNormalizer.BuildLabelKey(w.Name, newWineryName, (WineType)w.WineType);
+            count += await connection.ExecuteAsync(
+                new CommandDefinition(updateSql, new { LabelKey = key, Id = w.Id }, transaction: transaction, cancellationToken: ct));
+        }
+        return count;
+    }
+
+    public async Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        var updated = await UpdateLabelKeysForWineryAsync(wineryId, newWineryName, connection, transaction, ct);
+        await transaction.CommitAsync(ct);
+        return updated;
     }
 }

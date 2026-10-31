@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
@@ -28,5 +29,8 @@ public interface IWineRepository
         SearchAsync(name, winery, year, wineType, pageNumber, pageSize, ct);
 
     Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default);
-}
 
+    Task<Wine?> GetByLabelKeyAsync(string labelKey, CancellationToken ct = default) => Task.FromResult<Wine?>(null);
+    Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(0);
+    Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, CancellationToken ct = default) => Task.FromResult(0);
+}
