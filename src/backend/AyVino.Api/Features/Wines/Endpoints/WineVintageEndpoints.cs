@@ -81,6 +81,37 @@ public static class WineVintageEndpoints
             .WithName("DeleteVintageImage")
             .WithSummary("Elimina la imagen de una cosecha.");
 
+        group.MapPut("/{vintageId:int}/my-image", async (int wineId, int vintageId, IFormFile file, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var imageId = await imageOrchestrator.UploadUserVintageImageAsync(wineId, vintageId, file, actor, ct);
+            return Results.Ok(new { imageId });
+        })
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .WithName("UploadMyVintageImage")
+            .WithSummary("Sube o reemplaza la foto personal del usuario para una cosecha.");
+
+        group.MapGet("/{vintageId:int}/my-image", async (int wineId, int vintageId, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var imageId = await imageOrchestrator.GetUserVintageImageAsync(wineId, vintageId, actor, ct);
+            return imageId.HasValue ? Results.Ok(new { imageId = imageId.Value }) : Results.NotFound();
+        })
+            .RequireAuthorization()
+            .WithName("GetMyVintageImage")
+            .WithSummary("Obtiene el ID de la foto personal del usuario para una cosecha.");
+
+        group.MapDelete("/{vintageId:int}/my-image", async (int wineId, int vintageId, ClaimsPrincipal user, IImageOrchestrator imageOrchestrator, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            await imageOrchestrator.DeleteUserVintageImageAsync(wineId, vintageId, actor, ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .WithName("DeleteMyVintageImage")
+            .WithSummary("Elimina la foto personal del usuario para una cosecha.");
+
         var adminGroup = app.MapGroup("/api/wine-vintages")
             .WithTags("Admin - Wine Vintages")
             .RequireAuthorization(AppPolicies.RequireAdmin);
