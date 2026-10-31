@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Models;
@@ -180,7 +181,7 @@ public class ReviewSecurityTests
             Task.FromResult(ExistsResult);
 
         public Task<WineVintage?> GetByIdAsync(int id, CancellationToken ct = default) =>
-            throw new NotImplementedException();
+            Task.FromResult(ExistsResult ? new WineVintage { Id = id, ApprovalStatus = ApprovalStatus.Approved } : (WineVintage?)null);
 
         public Task<IEnumerable<WineVintage>> GetAllByWineIdAsync(int wineId, CancellationToken ct = default) =>
             throw new NotImplementedException();
