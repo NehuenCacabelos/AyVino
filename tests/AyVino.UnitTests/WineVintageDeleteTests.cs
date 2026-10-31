@@ -44,7 +44,7 @@ public class WineVintageDeleteTests
         var service = CreateService();
 
         var ex = await Assert.ThrowsAsync<ConflictException>(() => service.DeleteAsync(wineId: 10, vintageId: 100));
-        Assert.Contains("historial de usuarios (reseñas: 2, cava: 0)", ex.Message);
+        Assert.Contains("historial de otros usuarios (reseñas: 2, cava: 0, fotos: 0, actividades: 0)", ex.Message);
         Assert.Contains("Podés rechazarla en lugar de eliminarla para preservar el historial.", ex.Message);
         await _vintageRepo.DidNotReceive().DeleteAsync(Arg.Any<int>());
     }
@@ -57,7 +57,7 @@ public class WineVintageDeleteTests
         var service = CreateService();
 
         var ex = await Assert.ThrowsAsync<ConflictException>(() => service.DeleteAsync(wineId: 10, vintageId: 100));
-        Assert.Contains("historial de usuarios (reseñas: 0, cava: 4)", ex.Message);
+        Assert.Contains("historial de otros usuarios (reseñas: 0, cava: 4, fotos: 0, actividades: 0)", ex.Message);
         Assert.Contains("Podés rechazarla en lugar de eliminarla para preservar el historial.", ex.Message);
         await _vintageRepo.DidNotReceive().DeleteAsync(Arg.Any<int>());
     }

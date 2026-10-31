@@ -270,8 +270,8 @@ public class WineServiceTests
         var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
 
         var ex = await Assert.ThrowsAsync<ConflictException>(() => service.DeleteAsync(42));
-        Assert.Contains("historial de usuarios (reseñas: 3, marcas: 5, cava: 1)", ex.Message);
-        Assert.Contains("Si es un duplicado, usá la fusión.", ex.Message);
+        Assert.Contains("historial de otros usuarios (reseñas: 3, marcas: 5, cava: 1, fotos: 0, actividades: 0)", ex.Message);
+        Assert.Contains("Si es un duplicado, usá la fusión o rechazá sus cosechas para preservar el historial.", ex.Message);
     }
 
     [Fact]
