@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Wines.DTOs;
 using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wines.Enums;
@@ -257,7 +258,10 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default)
+        public Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
+        GetPagedForAdminAsync(pageNumber, pageSize, status, null, ct);
+
+public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, string? sort, CancellationToken ct = default)
     {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
@@ -273,22 +277,69 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
 
+        string orderBy;
+        if (string.Equals(sort, "users", StringComparison.OrdinalIgnoreCase) ||
+            (string.IsNullOrWhiteSpace(sort) && status == (int)ApprovalStatus.Pending))
+        {
+            orderBy = "CommunityUsers DESC, wv.register_date ASC, wv.id ASC";
+        }
+        else
+        {
+            orderBy = "wv.register_date ASC, wv.id ASC";
+        }
+
         var sql = $"""
             SELECT wv.id AS VintageId, wv.wine_id AS WineId, w.name AS WineName, w.wine_type AS WineType, w.winery_id AS WineryId,
                    COALESCE(wy.name, w.winery_name_text) AS WineryName, wv.year AS Year, wv.alcohol_content AS AlcoholContent,
                    wv.image_id AS ImageId, wv.approval_status AS ApprovalStatus, wv.uploaded_by_user_id AS UploadedByUserId,
-                   u.username AS UploadedByUsername, wv.register_date AS RegisterDate
+                   u.username AS UploadedByUsername, wv.register_date AS RegisterDate,
+                   (
+                       SELECT COUNT(DISTINCT usr.user_id)
+                       FROM (
+                           SELECT wv.uploaded_by_user_id AS user_id WHERE wv.uploaded_by_user_id IS NOT NULL
+                           UNION
+                           SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv.id
+                           UNION
+                           SELECT r.user_id FROM reviews r WHERE r.wine_vintage_id = wv.id
+                           UNION
+                           SELECT uvi.user_id FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = wv.id
+                       ) usr
+                   ) AS CommunityUsers
             FROM wine_vintages wv
             JOIN wines w ON w.id = wv.wine_id
             LEFT JOIN wineries wy ON wy.id = w.winery_id
             LEFT JOIN users u ON u.id = wv.uploaded_by_user_id
             {whereClause}
-            ORDER BY wv.register_date ASC, wv.id ASC
+            ORDER BY {orderBy}
             OFFSET @Offset LIMIT @PageSize;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<AdminWineVintageListRow>(
             new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<IEnumerable<VintageContributionDto>> GetContributionsAsync(int vintageId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT DISTINCT u.id AS UserId, u.username AS Username, uvi.image_id AS PersonalImageId,
+                   (wv.uploaded_by_user_id = u.id) AS IsUploader
+            FROM (
+                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = @VintageId AND uploaded_by_user_id IS NOT NULL
+                UNION
+                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = @VintageId
+                UNION
+                SELECT user_id FROM reviews WHERE wine_vintage_id = @VintageId
+                UNION
+                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = @VintageId
+            ) users_of_vintage
+            JOIN users u ON u.id = users_of_vintage.user_id
+            JOIN wine_vintages wv ON wv.id = @VintageId
+            LEFT JOIN user_vintage_images uvi ON uvi.wine_vintage_id = @VintageId AND uvi.user_id = u.id
+            ORDER BY IsUploader DESC, u.username ASC;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<VintageContributionDto>(
+            new CommandDefinition(sql, new { VintageId = vintageId }, cancellationToken: ct));
     }
     public async Task<int> GetDistinctUserCountAsync(int vintageId, CancellationToken ct = default)
     {

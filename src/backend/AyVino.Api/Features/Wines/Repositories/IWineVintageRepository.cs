@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Wines.DTOs;
 using System.Data;
 using AyVino.Api.Features.Wines.Models;
 
@@ -28,5 +29,9 @@ public interface IWineVintageRepository
     Task<bool> IsUserParticipantAsync(int vintageId, int userId, CancellationToken ct = default) => Task.FromResult(false);
     Task<HashSet<int>> GetParticipantVintageIdsAsync(int userId, IEnumerable<int> vintageIds, CancellationToken ct = default) => Task.FromResult(new HashSet<int>());
     Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
+        GetPagedForAdminAsync(pageNumber, pageSize, status, null, ct);
+    Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, string? sort, CancellationToken ct = default) =>
         Task.FromResult(Enumerable.Empty<AdminWineVintageListRow>());
+    Task<IEnumerable<VintageContributionDto>> GetContributionsAsync(int vintageId, CancellationToken ct = default) =>
+        Task.FromResult(Enumerable.Empty<VintageContributionDto>());
 }
