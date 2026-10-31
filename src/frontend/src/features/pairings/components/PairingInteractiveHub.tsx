@@ -59,20 +59,19 @@ export default function PairingInteractiveHub({
     : getFoodFamily(activeFamilyId);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto">
+    <div className="flex flex-col gap-10 w-full max-w-6xl mx-auto">
 
       {/* 1. Cabecera Editorial Principal */}
-      <div className="space-y-6 pb-4 border-b border-neutral-800/80">
-        <div className="space-y-1.5 max-w-2xl">
-          <span className="text-xs font-mono uppercase tracking-widest text-neutral-400 font-medium">
+      <div className="space-y-6 pb-6 border-b border-white/[0.06]">
+        <div className="space-y-2 max-w-2xl">
+          <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-[#a18c8c] font-medium">
             Cuaderno Enogastronómico AyVino
           </span>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight text-neutral-100 leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold tracking-tight text-[#e5e1e4] leading-tight">
             El Arte del Maridaje
           </h1>
-          <p className="text-sm sm:text-base text-neutral-400 font-sans leading-relaxed pt-1">
-            Armonización técnica basada en principios bioquímicos, pesos sápidos y terruños argentinos.
-            Seleccioná una cepa o una categoría gastronómica para explorar afinidades, contrastes y alertas.
+          <p className="text-sm sm:text-base text-zinc-400 font-sans leading-relaxed pt-1 max-w-2xl">
+            El vino correcto cambia cualquier plato. Elegí qué vas a descorchar o qué vas a poner en la mesa y te mostramos las mejores combinaciones, por afinidad o contraste.
           </p>
         </div>
 

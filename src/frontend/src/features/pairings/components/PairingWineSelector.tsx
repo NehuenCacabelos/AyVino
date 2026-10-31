@@ -5,18 +5,25 @@ import {
   type WineVarietyEntry,
 } from '../../../data/pairingsData';
 
-type WineFilterTab = 'main' | 'all' | 'tinto' | 'blanco' | 'rosado-naranjo';
+type WineFilterTab = 'main' | 'tinto' | 'blanco' | 'rosado-naranjo';
 
 interface PairingWineSelectorProps {
   selectedWineId: string;
   onSelectWine: (id: string) => void;
 }
 
+// Gradientes de fallback por categoría cuando no hay imagen
+const CATEGORY_GRADIENT: Record<string, string> = {
+  tinto: 'from-[#722f37] to-[#3c0610]',
+  blanco: 'from-[#5c4300] to-[#1a0e00]',
+  rosado: 'from-[#8e0029] to-[#40000d]',
+  naranjo: 'from-[#7a3e00] to-[#2e1600]',
+};
+
 /**
  * PairingWineSelector Component
- * Selector tipográfico filtrable de cepas.
- * A primera vista solo muestra las cepas principales/comunes para mantener la vista limpia.
- * Permite filtrar por Todas, Tintos, Blancos o Rosados/Naranjos sin cards ni píldoras.
+ * Galería estilo revista con cards cuadradas (rounded-none), foto de racimo arriba
+ * y título con descriptor dentro de la card. Idéntico al diseño de referencia.
  */
 export default function PairingWineSelector({
   selectedWineId,
@@ -25,16 +32,37 @@ export default function PairingWineSelector({
   const [activeTab, setActiveTab] = useState<WineFilterTab>('main');
   const allVarieties = useMemo(() => getAllWineVarieties(), []);
 
-  // Lista filtrada derivada
-  const filteredVarieties = useMemo(() => {
+  // Conteos dinámicos para los tabs
+  const mainCount = MAIN_WINE_IDS.length;
+  const tintoCount = useMemo(
+    () => allVarieties.filter((w) => w.category === 'tinto').length,
+    [allVarieties]
+  );
+  const blancoCount = useMemo(
+    () => allVarieties.filter((w) => w.category === 'blanco').length,
+    [allVarieties]
+  );
+  const rosadoNaranjoCount = useMemo(
+    () =>
+      allVarieties.filter(
+        (w) => w.category === 'rosado' || w.category === 'naranjo'
+      ).length,
+    [allVarieties]
+  );
+
+  const filterTabs: { label: string; value: WineFilterTab }[] = [
+    { label: `PRINCIPALES (${mainCount})`, value: 'main' },
+    { label: `TINTOS (${tintoCount})`, value: 'tinto' },
+    { label: `BLANCOS (${blancoCount})`, value: 'blanco' },
+    { label: `ROSADOS & NARANJOS (${rosadoNaranjoCount})`, value: 'rosado-naranjo' },
+  ];
+
+  const filteredVarieties = useMemo<WineVarietyEntry[]>(() => {
     switch (activeTab) {
       case 'main':
-        // Principales comunes (más la seleccionada si no estuviera en la lista)
         return allVarieties.filter(
           (w) => MAIN_WINE_IDS.includes(w.id) || w.id === selectedWineId
         );
-      case 'all':
-        return allVarieties;
       case 'tinto':
         return allVarieties.filter((w) => w.category === 'tinto');
       case 'blanco':
@@ -48,72 +76,104 @@ export default function PairingWineSelector({
     }
   }, [activeTab, allVarieties, selectedWineId]);
 
-  const tabs: { label: string; value: WineFilterTab }[] = [
-    { label: 'Principales', value: 'main' },
-    { label: 'Todas', value: 'all' },
-    { label: 'Tintos', value: 'tinto' },
-    { label: 'Blancos', value: 'blanco' },
-    { label: 'Rosados / Naranjos', value: 'rosado-naranjo' },
-  ];
-
   return (
-    <div className="space-y-3 pt-1 pb-4 border-b border-neutral-800/80">
-      {/* 1. Barra de Filtrado Tipográfica */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-mono uppercase tracking-wider text-neutral-400">
-        <span className="text-[11px] text-neutral-500 font-medium sm:w-28 shrink-0">
-          Filtrar cepas
-        </span>
-        <div className="flex flex-wrap items-center gap-2">
-          {tabs.map((tab, idx) => {
-            const isTabActive = activeTab === tab.value;
-            return (
-              <span key={tab.value} className="inline-flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(tab.value)}
-                  className={`transition-colors cursor-pointer text-xs ${
-                    isTabActive
-                      ? 'text-rose-300 font-semibold underline decoration-rose-500 underline-offset-4'
-                      : 'text-neutral-400 hover:text-neutral-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-                {idx < tabs.length - 1 && (
-                  <span className="text-neutral-700 select-none" aria-hidden="true">
-                    /
-                  </span>
-                )}
-              </span>
-            );
-          })}
-        </div>
+    <div className="space-y-4">
+      {/* 1. Tabs de filtro estilo revista (cuadrados, monoespaciados) */}
+      <div
+        className="flex overflow-x-auto gap-2 pb-1 scrollbar-none"
+        role="tablist"
+        aria-label="Filtro de varietales"
+      >
+        {filterTabs.map((tab) => {
+          const isActive = activeTab === tab.value;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.value)}
+              className={[
+                'px-3.5 py-1.5 text-xs font-mono tracking-wider uppercase transition-all duration-150 cursor-pointer rounded-none shrink-0 border',
+                isActive
+                  ? 'bg-[#19181a] border-[#c89d5c]/80 text-white shadow-sm'
+                  : 'bg-[#121214] border-white/5 text-[#8e8c8f] hover:text-white hover:border-white/20',
+              ].join(' ')}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. Lista de Cepas según filtro activo (Compacta y sobria) */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pt-1">
-        <span className="text-[11px] font-mono uppercase tracking-widest text-neutral-400 font-medium sm:w-28 shrink-0">
-          Varietales ({filteredVarieties.length})
-        </span>
-        <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          {filteredVarieties.map((wine: WineVarietyEntry) => {
-            const isSelected = wine.id === selectedWineId;
-            return (
-              <button
-                key={wine.id}
-                type="button"
-                onClick={() => onSelectWine(wine.id)}
-                className={`rounded-sm px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer border ${
-                  isSelected
-                    ? 'bg-neutral-800 border-neutral-600 text-white font-medium shadow-sm'
-                    : 'border-neutral-800/80 hover:border-neutral-700 text-neutral-400 hover:text-neutral-200'
-                }`}
-              >
-                {wine.name}
-              </button>
-            );
-          })}
-        </div>
+      {/* 2. Galería de cards cuadradas de uvas */}
+      <div
+        className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-2 scrollbar-none lg:grid lg:grid-cols-7"
+        role="listbox"
+        aria-label="Selector de varietal"
+      >
+        {filteredVarieties.map((wine) => {
+          const isSelected = wine.id === selectedWineId;
+          const gradient = CATEGORY_GRADIENT[wine.category] ?? CATEGORY_GRADIENT.tinto;
+
+          return (
+            <button
+              key={wine.id}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              onClick={() => onSelectWine(wine.id)}
+              className={[
+                'min-w-[135px] sm:min-w-[150px] lg:min-w-0 p-2.5 sm:p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 text-left rounded-none group border',
+                isSelected
+                  ? 'bg-[#18171a] border-[#c89d5c] shadow-[0_0_15px_rgba(200,157,92,0.14)] ring-1 ring-[#c89d5c]/30'
+                  : 'bg-[#121214] border-white/5 hover:border-white/20 hover:bg-[#151517]',
+              ].join(' ')}
+            >
+              {/* Imagen del racimo (cuadrada, dentro de la card) */}
+              <div className="w-full aspect-[4/3] overflow-hidden bg-neutral-900 rounded-none mb-2.5">
+                {wine.grapeImageUrl ? (
+                  <img
+                    src={wine.grapeImageUrl}
+                    alt={wine.name}
+                    loading="lazy"
+                    className={[
+                      'w-full h-full object-cover transition-transform duration-300',
+                      isSelected
+                        ? 'scale-105'
+                        : 'grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105',
+                    ].join(' ')}
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}
+                  >
+                    <span className="font-serif text-lg text-white/60">
+                      {wine.name.slice(0, 1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Nombre y subtítulo descriptivo DENTRO de la card */}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-serif text-sm sm:text-base text-white font-normal leading-tight truncate">
+                  {wine.name}
+                </span>
+                <span
+                  className={[
+                    'text-[10px] sm:text-[11px] font-mono tracking-widest uppercase truncate leading-tight',
+                    isSelected
+                      ? 'text-[#e5a93c] font-medium'
+                      : 'text-[#737373] group-hover:text-neutral-400',
+                  ].join(' ')}
+                >
+                  {wine.shortTag || wine.category.toUpperCase()}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, ArrowRight, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  ArrowRight,
+  X,
+  AlertTriangle,
+  Lightbulb,
+  FlaskConical,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
+import {
+  WineGlassSilhouette,
+  detectGlassType,
+  getGlassDisplayName,
+} from './WineGlassSilhouette';
 import type {
   WineVarietyEntry,
   DishPairingEntry,
@@ -22,85 +36,299 @@ interface PairingDossierViewProps {
 }
 
 // ─── Constantes de estilo ─────────────────────────────────────────────────────
-const LABEL_CLS =
-  'text-[11px] uppercase tracking-wider text-zinc-500 font-medium block';
+const LABEL_MONO =
+  'text-[11px] uppercase tracking-[0.18em] font-mono font-medium';
 
-// ─── Imagen de cabecera con badge superpuesto ─────────────────────────────────
-function DossierImage({
+// ─── Formateador de temperatura con 'a' destacada en ámbar ────────────────────
+function formatTemperature(tempStr: string) {
+  const clean = tempStr.replace(/\s*°C/g, '°C');
+  if (clean.includes(' a ')) {
+    const parts = clean.split(' a ');
+    return (
+      <>
+        <span>{parts[0]}</span>{' '}
+        <span className="text-[#e5a93c] font-sans font-normal">a</span>{' '}
+        <span>{parts[1]}</span>
+      </>
+    );
+  }
+  return <span>{clean}</span>;
+}
+
+// ─── Hero image inmersivo para modo plato ─────────────────────────────────────
+function PairingHeroImage({
   src,
   alt,
-  badge,
+  children,
 }: {
   src: string;
   alt: string;
-  badge?: string;
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="w-full md:w-56 lg:w-64 aspect-[4/3] rounded-xl overflow-hidden border border-zinc-800/80 bg-zinc-900/60 shrink-0 shadow-lg relative group">
+    <div className="relative w-full rounded-none overflow-hidden aspect-[21/9] md:aspect-[16/7] min-h-[220px] border border-white/10 shadow-2xl">
       <img
         src={src}
         alt={alt}
-        className="object-cover w-full h-full grayscale-[20%] contrast-[1.05] group-hover:grayscale-0 transition-all duration-500"
         loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover object-center"
       />
-      {badge && (
-        <span className="absolute bottom-2 left-2 text-[10px] font-mono text-zinc-300 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm border border-white/10 select-none">
-          {badge}
-        </span>
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-[#0e0e10]/60 to-transparent"
+        aria-hidden="true"
+      />
+      {children && (
+        <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-7">
+          {children}
+        </div>
       )}
     </div>
   );
 }
 
-// ─── Celda de la grilla técnica ───────────────────────────────────────────────
-function SpecCell({
-  label,
-  value,
-  mono = false,
+// ─── Card de afinidad / contraste con foto ────────────────────────────────────
+function PairingAffinityCard({
+  link,
+  variant,
+  mode,
+  currentName,
+  onSelectWine,
+  onSelectFood,
 }: {
-  label: string;
-  value: string;
-  mono?: boolean;
+  link: PairingLink;
+  variant: 'affinity' | 'contrast';
+  mode: 'wine' | 'food';
+  currentName: string;
+  onSelectWine: (id: string, anchor?: string, fromLabel?: string) => void;
+  onSelectFood: (id: string, fromLabel?: string) => void;
 }) {
+  const isAffinity = variant === 'affinity';
+  const badgePercent = isAffinity ? '94%' : '72%';
+  const borderColor = isAffinity
+    ? 'border-emerald-500/30 hover:border-emerald-400/60'
+    : 'border-amber-500/30 hover:border-amber-400/60';
+  const badgeColor = isAffinity
+    ? 'bg-emerald-900/70 text-emerald-300 border-emerald-500/40'
+    : 'bg-amber-900/70 text-amber-300 border-amber-500/40';
+  const labelColor = isAffinity ? 'text-emerald-400' : 'text-amber-400';
+  const variantLabel = isAffinity ? 'Afinidad' : 'Contraste';
+  const arrowColor = isAffinity
+    ? 'text-emerald-500/60 group-hover:text-emerald-400'
+    : 'text-amber-500/60 group-hover:text-amber-400';
+
+  const handleClick = () => {
+    if (mode === 'wine') {
+      onSelectFood(link.id, currentName);
+    } else {
+      onSelectWine(link.id, link.styleAnchor, currentName);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className={LABEL_CLS}>{label}</span>
-      <span
-        className={`text-sm font-semibold text-neutral-200 mt-0.5 ${
-          mono ? 'font-mono' : 'font-sans'
-        }`}
-      >
-        {value}
-      </span>
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`group relative flex flex-col gap-3 p-4 rounded-none border bg-[#201f21] hover:bg-[#2a2a2c] transition-all duration-200 cursor-pointer text-left w-full ${borderColor}`}
+    >
+      <div className="flex items-center justify-between">
+        <span className={`${LABEL_MONO} ${labelColor}`}>{variantLabel}</span>
+        <span
+          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-none border ${badgeColor}`}
+        >
+          {badgePercent}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-[#e5e1e4] font-sans leading-snug group-hover:text-white transition-colors">
+          {link.label}
+        </span>
+        <ArrowRight
+          className={`w-4 h-4 shrink-0 transition-all duration-150 group-hover:translate-x-0.5 ${arrowColor}`}
+        />
+      </div>
+    </button>
+  );
+}
+
+// ─── Card de clash / alerta ───────────────────────────────────────────────────
+function PairingClashCard({ target, reason }: { target: string; reason: string }) {
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-none border border-rose-900/40 bg-rose-950/20">
+      <AlertTriangle
+        className="w-4 h-4 text-rose-400 shrink-0 mt-0.5"
+        aria-hidden="true"
+      />
+      <div className="min-w-0">
+        <span className="text-sm font-semibold text-rose-200 block leading-snug">
+          {target}
+        </span>
+        <span className="text-xs text-rose-300/70 leading-relaxed block mt-0.5">
+          {reason}
+        </span>
+      </div>
     </div>
   );
 }
 
-// ─── Bloque editorial unificado: Tip + Fundamento ────────────────────────────
-function EditorialBlock({
-  tip,
-  rationale,
-}: {
-  tip: string;
-  rationale: string;
-}) {
+// ─── Tarjetas Paralelas Editoriales (Modo Cepa: Stitch Design) ───────────────
+interface WineEditorialDualCardsProps {
+  style: WineStyleProfile;
+  wineName: string;
+}
+
+function WineEditorialDualCards({ style, wineName }: WineEditorialDualCardsProps) {
+  const serviceMeta = style.serviceMetadata ?? {
+    label: 'TEMPERATURA RECOMENDADA',
+    value: style.servingTemperature,
+  };
+
+  const tipTitle = style.serviceTipTitle ?? 'Oxigenación y Temperatura Óptima';
+  const rationaleQuestion =
+    style.rationaleQuestion ?? `¿Por qué el ${wineName} es ideal para este maridaje?`;
+
+  const metrics = style.pairingMetrics ?? [
+    { label: 'AFINIDAD GRASA', percentage: 92, variant: 'amber' as const },
+    { label: 'BALANCE TÁNICO', percentage: 88, variant: 'wine' as const },
+    { label: 'RETROGUSTO Y NOTAS', percentage: 85, variant: 'zinc' as const },
+  ];
+
   return (
-    <div className="my-6 p-4 rounded-lg bg-zinc-900/40 border border-zinc-800/80 space-y-3 max-w-3xl">
-      <div className="flex items-start gap-2">
-        <span
-          className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+      {/* Tarjeta Izquierda (Tip del Sommelier) - lg:col-span-4 */}
+      <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-[#121113] p-7 flex flex-col justify-between shadow-xl">
+        <div>
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
+            <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-semibold">
+              TIP DEL SOMMELIER
+            </span>
+          </div>
+
+          {/* Cuerpo con espaciado equilibrado */}
+          <h3 className="font-serif text-xl sm:text-2xl text-zinc-100 font-normal mt-5 mb-4 tracking-tight">
+            {tipTitle}
+          </h3>
+          <p className="text-zinc-300 text-sm leading-relaxed font-light mb-4">
+            {style.serviceTip}
+          </p>
+
+          {/* Segundo tip casero / humano de servicio */}
+          {style.practicalTip && (
+            <div className="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-400/[0.04] border border-amber-400/20 flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="min-w-0">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-semibold block mb-1">
+                  CONSEJO CASERO DE SERVICIO
+                </span>
+                <p className="text-xs text-zinc-300 leading-relaxed font-light">
+                  {style.practicalTip}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 pt-5 border-t border-white/5 flex items-center justify-between text-xs font-mono text-zinc-500">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock className="w-3.5 h-3.5 text-zinc-500 shrink-0" aria-hidden="true" />
+            <span className="truncate">{serviceMeta.label}</span>
+          </div>
+          <span className="text-amber-400 font-medium shrink-0 ml-2">
+            {serviceMeta.value}
+          </span>
+        </div>
+      </div>
+
+      {/* Tarjeta Derecha (Fundamento y Por qué funciona el maridaje) - lg:col-span-8 */}
+      <div className="lg:col-span-8 rounded-2xl border border-white/10 bg-[#121113] p-7 flex flex-col justify-between shadow-xl">
+        <div>
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-amber-400/90 shrink-0" aria-hidden="true" />
+            <span className="text-xs font-mono uppercase tracking-widest text-amber-400/90 font-semibold">
+              POR QUÉ FUNCIONA • FUNDAMENTO
+            </span>
+          </div>
+
+          {/* Cuerpo con el mismo espaciado armónico */}
+          <h3 className="font-serif text-2xl sm:text-3xl text-zinc-100 font-normal mt-5 mb-4 tracking-tight leading-snug">
+            {rationaleQuestion}
+          </h3>
+          <p className="text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+            {style.chemicalRationale}
+          </p>
+        </div>
+
+        {/* Barras de Balance y Afinidad (Footer) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 mt-6 border-t border-white/5">
+          {metrics.map((metric) => {
+            const isAmber = metric.variant === 'amber';
+            const isWine = metric.variant === 'wine';
+            const valueColor = isAmber
+              ? 'text-amber-400'
+              : isWine
+              ? 'text-zinc-300'
+              : 'text-zinc-300';
+            const barFillColor = isAmber
+              ? 'bg-amber-400'
+              : isWine
+              ? 'bg-[#7a1c2d]'
+              : 'bg-zinc-400';
+
+            return (
+              <div key={metric.label}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">
+                    {metric.label}
+                  </span>
+                  <span className={`text-xs font-semibold ${valueColor}`}>
+                    {metric.percentage}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${barFillColor}`}
+                    style={{ width: `${Math.min(100, Math.max(0, metric.percentage))}%` }}
+                    role="progressbar"
+                    aria-valuenow={metric.percentage}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={metric.label}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bloque editorial: Tip + Fundamento ──────────────────────────────────────
+function EditorialBlock({ tip, rationale }: { tip: string; rationale: string }) {
+  return (
+    <div className="rounded-none border border-white/[0.06] bg-[#1c1b1d] divide-y divide-white/[0.06]">
+      <div className="p-4 sm:p-5 flex items-start gap-3">
+        <div
+          className="w-1 self-stretch rounded-none bg-[#fbbf24]/80 shrink-0"
           aria-hidden="true"
         />
         <div>
-          <span className={`${LABEL_CLS} text-amber-400/80 mb-1`}>
+          <span className={`${LABEL_MONO} text-[#fbbf24]/80 mb-1.5 block`}>
             Tip del Sommelier
           </span>
-          <p className="text-sm text-zinc-200 font-sans leading-relaxed">{tip}</p>
+          <p className="text-sm text-[#e5e1e4] font-sans leading-relaxed">{tip}</p>
         </div>
       </div>
-      <div className="border-t border-zinc-800/60 pt-3">
-        <span className={`${LABEL_CLS} mb-1`}>Fundamento Químico y Organoléptico</span>
-        <p className="text-sm text-zinc-400 font-sans leading-relaxed">{rationale}</p>
+      <div className="p-4 sm:p-5">
+        <span className={`${LABEL_MONO} text-[#a18c8c] mb-1.5 block`}>
+          Fundamento Bioquímico & Organoléptico
+        </span>
+        <p className="text-sm text-[#d8c1c2] font-sans leading-relaxed">{rationale}</p>
       </div>
     </div>
   );
@@ -109,45 +337,40 @@ function EditorialBlock({
 // ─── Lista de etiquetas testigo ───────────────────────────────────────────────
 function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   if (!bottles || bottles.length === 0) return null;
-
   return (
-    <div className="pt-4 border-t border-neutral-800/80 space-y-2">
-      <div className="flex items-center justify-between">
-        <h4 className={LABEL_CLS}>
-          Etiquetas Testigo en Catálogo ({bottles.length})
-        </h4>
-        <span className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">
-          Añada · Bodega · Terruño
-        </span>
-      </div>
-
-      <div className="divide-y divide-neutral-800/60 border-y border-neutral-800/60 text-xs">
+    <div className="space-y-3">
+      <h4 className={`${LABEL_MONO} text-[#a18c8c]`}>
+        Etiquetas de la Cava ({bottles.length})
+      </h4>
+      <div className="divide-y divide-white/[0.05] border border-white/[0.06] rounded-none overflow-hidden">
         {bottles.map((bottle) => (
           <div
             key={`${bottle.winery}-${bottle.label}`}
-            className="py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-300 group"
+            className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-[#1c1b1d] hover:bg-[#201f21] transition-colors group"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
               {bottle.vintage && (
-                <span className="text-neutral-500 font-mono font-normal">
+                <span className="text-[11px] font-mono text-[#fbbf24]/70 shrink-0">
                   {bottle.vintage}
                 </span>
               )}
-              <span className="text-neutral-200 font-medium group-hover:text-amber-200 transition-colors">
+              <span className="text-sm text-[#e5e1e4] font-medium group-hover:text-white transition-colors truncate">
                 {bottle.label}
               </span>
-              <span className="text-neutral-500 text-[11px]">· {bottle.winery}</span>
+              <span className="text-[11px] text-[#a18c8c] shrink-0 hidden sm:inline">
+                · {bottle.winery}
+              </span>
             </div>
-
-            <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
-              <span>{bottle.region}</span>
+            <div className="flex items-center gap-3 text-[11px] text-[#a18c8c] shrink-0">
+              <span className="truncate max-w-[160px]">{bottle.region}</span>
               {bottle.catalogWineId && (
                 <Link
                   to={`/catalogo?q=${encodeURIComponent(bottle.winery)}`}
-                  className="inline-flex items-center gap-0.5 text-rose-300 hover:text-white transition-colors"
-                  title="Ver en catálogo de AyVino"
+                  className="inline-flex items-center gap-0.5 text-[#ffb2b8] hover:text-white transition-colors shrink-0"
+                  title="Ver en catálogo"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <span>Explorar</span>
+                  <span>Ver</span>
                   <ArrowUpRight className="w-3 h-3" />
                 </Link>
               )}
@@ -159,8 +382,8 @@ function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   );
 }
 
-// ─── Grid de sugerencias: Afinidad / Contraste / Evitar ──────────────────────
-function SuggestionsGrid({
+// ─── Grid de Afinidad + Contraste + Evitar ───────────────────────────────────
+function SuggestionsSection({
   affinities,
   contrasts,
   clashes,
@@ -168,6 +391,7 @@ function SuggestionsGrid({
   currentName,
   onSelectWine,
   onSelectFood,
+  titleLabel,
 }: {
   affinities: PairingLink[];
   contrasts: PairingLink[];
@@ -176,82 +400,68 @@ function SuggestionsGrid({
   currentName: string;
   onSelectWine: (id: string, anchor?: string, fromLabel?: string) => void;
   onSelectFood: (id: string, fromLabel?: string) => void;
+  titleLabel: string;
 }) {
-  const handleClickLink = (link: PairingLink) => {
-    if (mode === 'wine') {
-      onSelectFood(link.id, currentName);
-    } else {
-      onSelectWine(link.id, link.styleAnchor, currentName);
-    }
-  };
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+    <div className="space-y-5">
+      <h3 className={`${LABEL_MONO} text-[#a18c8c]`}>{titleLabel}</h3>
 
-      {/* 1. AFINIDAD */}
-      <div className="space-y-1 border-t-2 border-emerald-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-400 block mb-2">
-          Afinidad — Espejo Organoléptico
-        </span>
-        <ul className="divide-y divide-zinc-800/60">
-          {affinities.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => handleClickLink(item)}
-                className="group flex items-center justify-between w-full py-2 cursor-pointer transition-colors text-left"
-              >
-                <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-sans">
-                  {item.label}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 text-emerald-500/50 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all duration-150 shrink-0 ml-2" />
-              </button>
-            </li>
-          ))}
-        </ul>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <span className={`${LABEL_MONO} text-emerald-400 block`}>
+            Afinidad — Espejo Organoléptico
+          </span>
+          <div className="flex flex-col gap-2">
+            {affinities.map((link) => (
+              <PairingAffinityCard
+                key={link.id}
+                link={link}
+                variant="affinity"
+                mode={mode}
+                currentName={currentName}
+                onSelectWine={onSelectWine}
+                onSelectFood={onSelectFood}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <span className={`${LABEL_MONO} text-amber-400 block`}>
+            Contraste — Corte & Balance
+          </span>
+          <div className="flex flex-col gap-2">
+            {contrasts.map((link) => (
+              <PairingAffinityCard
+                key={link.id}
+                link={link}
+                variant="contrast"
+                mode={mode}
+                currentName={currentName}
+                onSelectWine={onSelectWine}
+                onSelectFood={onSelectFood}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* 2. CONTRASTE */}
-      <div className="space-y-1 border-t-2 border-amber-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-amber-400 block mb-2">
-          Contraste — Corte &amp; Balance
-        </span>
-        <ul className="divide-y divide-zinc-800/60">
-          {contrasts.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => handleClickLink(item)}
-                className="group flex items-center justify-between w-full py-2 cursor-pointer transition-colors text-left"
-              >
-                <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-sans">
-                  {item.label}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 text-amber-500/50 group-hover:text-amber-400 group-hover:translate-x-1 transition-all duration-150 shrink-0 ml-2" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* 3. QUÉ EVITAR */}
-      <div className="space-y-1 border-t-2 border-rose-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-rose-400 block mb-2">
-          Combinaciones a Evitar
-        </span>
-        <ul className="space-y-3">
-          {clashes.map((clash) => (
-            <li key={clash.target}>
-              <span className="text-sm font-medium text-zinc-200 block">
-                {clash.target}
-              </span>
-              <span className="text-xs text-zinc-400 leading-normal block mt-0.5">
-                {clash.reason}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {clashes.length > 0 && (
+        <div className="space-y-2">
+          <span className={`${LABEL_MONO} text-rose-400 block`}>
+            Combinaciones a Evitar
+          </span>
+          <div className="flex flex-col gap-2">
+            {clashes.map((clash) => (
+              <PairingClashCard
+                key={clash.target}
+                target={clash.target}
+                reason={clash.reason}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -267,17 +477,19 @@ function SourceContextBanner({
   accent: 'rose' | 'amber';
 }) {
   const colorCls =
-    accent === 'rose' ? 'text-rose-300/90' : 'text-amber-300/90';
+    accent === 'rose'
+      ? 'text-[#ffb2b8]/80 border-[#ffb2b8]/20'
+      : 'text-[#fbbf24]/80 border-[#fbbf24]/20';
   return (
     <div
-      className={`flex items-center justify-between text-xs font-sans py-1.5 border-b border-neutral-800/80 ${colorCls}`}
+      className={`flex items-center justify-between text-xs font-sans py-2 px-4 rounded-lg border bg-white/[0.03] ${colorCls}`}
     >
       <span>Sugerencia derivada desde: &ldquo;{sourceContext}&rdquo;</span>
       {onClear && (
         <button
           type="button"
           onClick={onClear}
-          className="hover:text-white transition-colors cursor-pointer text-[11px] uppercase tracking-wider flex items-center gap-1"
+          className="hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-wider flex items-center gap-1 ml-3 shrink-0"
         >
           <X className="w-3 h-3" />
           <span>Limpiar</span>
@@ -289,13 +501,7 @@ function SourceContextBanner({
 
 /**
  * PairingDossierView Component
- * Ficha tipográfica integral de Maridaje (Modo Cepa y Modo Plato).
- * Estética editorial de WineDetailPage: texto estructurado, líneas sobrias, cero cards.
- *
- * IMPORTANTE — Reset de estado entre cepas:
- * El componente recibe una `key` desde PairingInteractiveHub basada en el ID activo.
- * React desmonta/remonta el componente al cambiar de cepa, reinicializando useState
- * sin necesidad de useEffect (prohibido por AGENTS.md para estado derivado).
+ * Ficha editorial inmersiva de Maridaje (Modo Cepa y Modo Plato).
  */
 export default function PairingDossierView({
   mode,
@@ -307,14 +513,14 @@ export default function PairingDossierView({
   onSelectWine,
   onSelectFood,
 }: PairingDossierViewProps) {
-  // ── MODO CEPA: tab activo (reset automático vía key desde el padre) ──────────
+  // MODO CEPA: sub-estilo activo
   const initialStyleId = wine
     ? (styleAnchor ?? wine.styles[0]?.styleId ?? '')
     : '';
   const [activeStyleId, setActiveStyleId] = useState<string>(initialStyleId);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // MODO PLATO
+  // MODO PLATO — "¿Qué vas a comer?"
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === 'food' && dish) {
     const foodImageUrl =
@@ -332,58 +538,48 @@ export default function PairingDossierView({
           />
         )}
 
-        {/* Cabecera con imagen */}
-        <header className="flex flex-col md:flex-row md:items-start justify-between gap-8 pb-6 border-b border-zinc-800/80">
-          <div className="space-y-2 flex-1 min-w-0">
-            <span className={`${LABEL_CLS} text-amber-300/90`}>
-              {categoryLabel}
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-zinc-100 leading-tight">
-              {dish.name}
-            </h2>
-            <p className="text-sm text-zinc-400 font-sans max-w-xl leading-relaxed">
-              {dish.tagline}
-            </p>
-          </div>
-
-          {foodImageUrl ? (
-            <DossierImage
-              src={foodImageUrl}
-              alt={dish.name}
-              badge={categoryLabel}
-            />
-          ) : null}
+        <header className="space-y-2">
+          <span className={`${LABEL_MONO} text-[#fbbf24]/80`}>{categoryLabel}</span>
+          <h2 className="text-3xl sm:text-4xl font-serif font-semibold tracking-tight text-[#e5e1e4] leading-tight">
+            {dish.name}
+          </h2>
+          <p className="text-sm text-[#d8c1c2] font-sans max-w-2xl leading-relaxed">
+            {dish.tagline}
+          </p>
         </header>
 
-        {/* Grilla técnica: Temperatura + Copa (datos duros) */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-b border-zinc-800/80">
-          <SpecCell
-            label="Temperatura"
-            value={dish.servingTemperature}
-            mono
-          />
-          <SpecCell label="Copa" value={dish.glassware} />
-        </div>
+        {foodImageUrl && (
+          <PairingHeroImage src={foodImageUrl} alt={dish.name}>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm border border-white/10">
+                <span className={`${LABEL_MONO} text-[#fbbf24]`}>Temperatura</span>
+                <span className="text-sm font-mono font-bold text-white">
+                  {dish.servingTemperature}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm border border-white/10">
+                <WineGlassSilhouette glassware={dish.glassware} className="w-5 h-7 text-[#fbbf24] shrink-0" />
+                <div>
+                  <span className={`${LABEL_MONO} text-[#fbbf24] text-[10px] block leading-none mb-0.5`}>Copa</span>
+                  <span className="text-sm text-white font-medium">{dish.glassware}</span>
+                </div>
+              </div>
+            </div>
+          </PairingHeroImage>
+        )}
 
-        {/* Bloque editorial: Tip + Fundamento */}
-        <EditorialBlock
-          tip={dish.serviceTip}
-          rationale={dish.chemicalRationale}
+        <EditorialBlock tip={dish.serviceTip} rationale={dish.chemicalRationale} />
+
+        <SuggestionsSection
+          affinities={dish.affinities}
+          contrasts={dish.contrasts}
+          clashes={dish.clashes}
+          mode="food"
+          currentName={dish.name}
+          onSelectWine={onSelectWine}
+          onSelectFood={onSelectFood}
+          titleLabel="Armonizaciones Enológicas Sugeridas"
         />
-
-        {/* Sugerencias de Armonización */}
-        <section className="space-y-3 pt-2 border-t border-neutral-800/80">
-          <h3 className={LABEL_CLS}>Armonizaciones Enológicas Sugeridas</h3>
-          <SuggestionsGrid
-            affinities={dish.affinities}
-            contrasts={dish.contrasts}
-            clashes={dish.clashes}
-            mode="food"
-            currentName={dish.name}
-            onSelectWine={onSelectWine}
-            onSelectFood={onSelectFood}
-          />
-        </section>
 
         <WitnessBottleList bottles={dish.witnessBottles} />
       </article>
@@ -391,7 +587,7 @@ export default function PairingDossierView({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // MODO CEPA
+  // MODO CEPA — "¿Qué vas a tomar?" (Idéntico a la imagen de referencia)
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === 'wine' && wine) {
     const hasMultipleStyles = wine.styles.length > 1;
@@ -408,112 +604,187 @@ export default function PairingDossierView({
           />
         )}
 
-        {/* Cabecera con imagen */}
-        <header className="flex flex-col md:flex-row md:items-start justify-between gap-8 pb-6 border-b border-zinc-800/80">
-          {/* Columna textual + tabs */}
-          <div className="space-y-4 flex-1 min-w-0">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`${LABEL_CLS} text-rose-300`}>
-                  Varietal Insignia
+        {/* 1. ARTÍCULO PRINCIPAL DE LA CEPA SELECCIONADA (ESTILO REVISTA EDITORIAL) */}
+        <section
+          key={wine.id}
+          aria-label={`Ficha editorial de ${wine.name}`}
+          className="relative rounded-2xl border border-white/10 bg-[#121113] p-6 sm:p-8 md:p-10 text-white shadow-2xl overflow-hidden"
+        >
+          {/* Imagen de fondo integrada a la derecha (50-60% del ancho) con gradientes de fusión suaves */}
+          {wine.grapeImageUrl && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 md:w-3/5 overflow-hidden select-none">
+              <img
+                src={wine.grapeImageUrl}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover object-center opacity-25"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-l from-transparent via-[#121113]/70 to-[#121113]"
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-[#121113] via-transparent to-[#121113]/40"
+                aria-hidden="true"
+              />
+            </div>
+          )}
+
+          <div className="relative z-10 flex flex-col justify-between">
+            {/* Bloque Superior: Header, Título, Descripción y Perfiles con espaciado natural y desahogado */}
+            <div>
+              {/* Encabezado Dinámico: Solo Malbec muestra "VARIETAL INSIGNIA • ", el resto muestra su región/terroir */}
+              <div className="mb-4">
+                <span className="text-xs font-mono uppercase tracking-widest text-amber-400/80 font-medium">
+                  {wine.id === 'malbec'
+                    ? `VARIETAL INSIGNIA • ${wine.originNote?.toUpperCase() || 'PRIMERA ZONA Y VALLE DE UCO'}`
+                    : (wine.originNote?.toUpperCase() || 'TERRUÑO ARGENTINO')}
                 </span>
-                {wine.originNote && (
-                  <>
-                    <span className="text-neutral-600 text-xs" aria-hidden="true">·</span>
-                    <span className="text-[11px] text-neutral-400 font-medium">
-                      {wine.originNote}
-                    </span>
-                  </>
-                )}
               </div>
-              <h2 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-zinc-100 leading-tight">
+
+              {/* Título amplio y con presencia */}
+              <h2 className="font-serif text-5xl sm:text-6xl font-normal text-zinc-100 tracking-tight leading-none mb-4">
                 {wine.name}
               </h2>
-              <p className="text-sm text-zinc-400 font-sans max-w-xl leading-relaxed">
+
+              {/* Descripción editorial con espacio y tamaño cómodo para leer */}
+              <p className="text-zinc-300 font-serif italic text-base sm:text-lg leading-relaxed max-w-2xl sm:max-w-3xl">
                 {wine.tagline}
               </p>
+
+              {/* Selector de Perfiles (Tabs/Toggles) - Exclusivo para cepas con más de un estilo (Malbec y Chardonnay) */}
+              {hasMultipleStyles && (
+                <div
+                  className="mt-6 sm:mt-7 flex flex-wrap items-center gap-2.5 sm:gap-3"
+                  role="tablist"
+                  aria-label="Estilos del varietal"
+                >
+                  {wine.styles.map((s) => {
+                    const isStyleActive = activeStyleId === s.styleId;
+                    return (
+                      <button
+                        key={s.styleId}
+                        type="button"
+                        role="tab"
+                        aria-selected={isStyleActive}
+                        onClick={() => setActiveStyleId(s.styleId)}
+                        className={[
+                          'px-5 py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer border',
+                          isStyleActive
+                            ? 'bg-[#5a1a24] hover:bg-[#6e202c] text-white border-transparent shadow-sm'
+                            : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10',
+                        ].join(' ')}
+                      >
+                        {s.styleName}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Tabs de estilos compactos */}
-            {hasMultipleStyles && (
+            {/* Métricas Organolépticas (Cápsula inferior a distancia visual armónica, sin huecos vacíos) */}
+            <div className="mt-8 sm:mt-10 rounded-xl border border-white/5 bg-black/40 p-5 sm:p-6 backdrop-blur-md">
               <div
-                className="flex items-center gap-0 border-b border-zinc-800"
-                role="tablist"
-                aria-label="Estilos del varietal"
+                className={[
+                  'grid gap-6 sm:gap-8',
+                  activeStyle.tannins
+                    ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-5'
+                    : 'grid-cols-2 sm:grid-cols-4',
+                ].join(' ')}
               >
-                {wine.styles.map((s) => (
-                  <button
-                    key={s.styleId}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeStyleId === s.styleId}
-                    onClick={() => setActiveStyleId(s.styleId)}
-                    className={`px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border-b-2 -mb-px ${
-                      activeStyleId === s.styleId
-                        ? 'text-rose-300 border-rose-500'
-                        : 'text-zinc-500 border-transparent hover:text-zinc-300'
-                    }`}
-                  >
-                    {s.styleName}
-                  </button>
-                ))}
+                {/* 1. TEMPERATURA */}
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 block">
+                    TEMPERATURA
+                  </span>
+                  <span className="text-sm font-semibold text-amber-400 font-mono">
+                    {formatTemperature(activeStyle.servingTemperature)}
+                  </span>
+                </div>
+
+                {/* 2. COPA RECOMENDADA */}
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 block">
+                    COPA RECOMENDADA
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-11 rounded-lg bg-white/[0.04] border border-white/10 shrink-0 flex items-center justify-center text-amber-400 shadow-sm"
+                      title={getGlassDisplayName(detectGlassType(activeStyle.glassware))}
+                    >
+                      <WineGlassSilhouette
+                        glassware={activeStyle.glassware}
+                        className="w-6 h-8 text-amber-400"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-zinc-200 leading-snug block">
+                        {activeStyle.glassware}
+                      </span>
+                      <span className="text-[10px] font-mono text-amber-400/80 uppercase tracking-wider block mt-0.5">
+                        {getGlassDisplayName(detectGlassType(activeStyle.glassware))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. ACIDEZ */}
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 block">
+                    ACIDEZ
+                  </span>
+                  <span className="text-sm font-medium text-zinc-200 leading-snug block">
+                    {activeStyle.acidity}
+                  </span>
+                </div>
+
+                {/* 4. CUERPO / DENSIDAD */}
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 block">
+                    CUERPO / DENSIDAD
+                  </span>
+                  <span className="text-sm font-medium text-zinc-200 leading-snug block">
+                    {activeStyle.body}
+                  </span>
+                </div>
+
+                {/* 5. TANINOS (Solo si la cepa los posee) */}
+                {activeStyle.tannins && (
+                  <div>
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 block">
+                      TANINOS
+                    </span>
+                    <span className="text-sm font-semibold text-amber-400 leading-snug block">
+                      {activeStyle.tannins}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
-
-          {/* Imagen del racimo */}
-          {wine.grapeImageUrl ? (
-            <DossierImage
-              src={wine.grapeImageUrl}
-              alt={`Racimo de ${wine.name}`}
-              badge="Vitis Vinifera"
-            />
-          ) : null}
-        </header>
-
-        {/* Bloque del estilo activo */}
-        <section
-          key={activeStyle.styleId}
-          role={hasMultipleStyles ? 'tabpanel' : undefined}
-          className="space-y-0"
-        >
-          {/* Grilla técnica simétrica: 5 columnas en desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-b border-zinc-800/80">
-            <SpecCell
-              label="Temperatura"
-              value={activeStyle.servingTemperature}
-              mono
-            />
-            <SpecCell label="Copa" value={activeStyle.glassware} />
-            <SpecCell label="Acidez" value={activeStyle.acidity} />
-            <SpecCell label="Cuerpo" value={activeStyle.body} />
-            {activeStyle.tannins && (
-              <SpecCell label="Taninos" value={activeStyle.tannins} />
-            )}
-          </div>
-
-          {/* Bloque editorial: Tip + Fundamento */}
-          <EditorialBlock
-            tip={activeStyle.serviceTip}
-            rationale={activeStyle.chemicalRationale}
-          />
-
-          {/* Sugerencias de Armonización */}
-          <div className="space-y-3 pt-2 border-t border-neutral-800/80">
-            <h4 className={LABEL_CLS}>Armonizaciones Gastronómicas Sugeridas</h4>
-            <SuggestionsGrid
-              affinities={activeStyle.affinities}
-              contrasts={activeStyle.contrasts}
-              clashes={activeStyle.clashes}
-              mode="wine"
-              currentName={wine.name}
-              onSelectWine={onSelectWine}
-              onSelectFood={onSelectFood}
-            />
-          </div>
-
-          <WitnessBottleList bottles={activeStyle.witnessBottles} />
         </section>
+
+        {/* 2. TIP DEL SOMMELIER Y FUNDAMENTO (TARJETAS PARALELAS STITCH) */}
+        <WineEditorialDualCards
+          style={activeStyle}
+          wineName={wine.name}
+        />
+
+        {/* 3. MARIDAJES GASTRONÓMICOS SUGERIDOS */}
+        <SuggestionsSection
+          affinities={activeStyle.affinities}
+          contrasts={activeStyle.contrasts}
+          clashes={activeStyle.clashes}
+          mode="wine"
+          currentName={wine.name}
+          onSelectWine={onSelectWine}
+          onSelectFood={onSelectFood}
+          titleLabel="Armonizaciones Gastronómicas Sugeridas"
+        />
+
+        {/* 4. ETIQUETAS DE LA CAVA */}
+        <WitnessBottleList bottles={activeStyle.witnessBottles} />
       </article>
     );
   }
