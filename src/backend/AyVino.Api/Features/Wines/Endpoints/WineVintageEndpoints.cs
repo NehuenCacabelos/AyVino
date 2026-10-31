@@ -116,10 +116,25 @@ public static class WineVintageEndpoints
             .WithTags("Admin - Wine Vintages")
             .RequireAuthorization(AppPolicies.RequireAdmin);
 
-        adminGroup.MapGet("/", async (IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null) =>
-            Results.Ok(await service.GetPagedForAdminAsync(pageNumber, pageSize, status, ct)))
+        adminGroup.MapGet("/", async (IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null, string? sort = null) =>
+            Results.Ok(await service.GetPagedForAdminAsync(pageNumber, pageSize, status, sort, ct)))
             .WithName("GetWineVintagesForAdmin")
-            .WithSummary("Lists all wine vintages with optional moderation status filter for administrative review.");
+            .WithSummary("Lists all wine vintages with optional moderation status and sort filter for administrative review.");
+
+        adminGroup.MapGet("/{vintageId:int}/contributions", async (int vintageId, IWineVintageService service, CancellationToken ct) =>
+            Results.Ok(await service.GetContributionsAsync(vintageId, ct)))
+            .WithName("GetVintageContributions")
+            .WithSummary("Obtiene la lista de aportes de usuarios para una cosecha.");
+
+        adminGroup.MapPost("/{vintageId:int}/promote-image", async (int vintageId, PromoteVintageImageRequestDto request, ClaimsPrincipal user, IWineVintageService service, CancellationToken ct) =>
+        {
+            var actor = user.GetActor();
+            var result = await service.PromoteImageAsync(vintageId, request.UserId, actor, ct);
+            return Results.Ok(result);
+        })
+            .WithName("PromoteVintageImage")
+            .WithSummary("Asigna la foto personal de un usuario como imagen pública de la cosecha.")
+            .WithAudit(AuditAction.VintageImagePromoted, "Vintage", idRouteKey: "vintageId", details: (ctx, res) => ctx.Arguments.OfType<PromoteVintageImageRequestDto>().FirstOrDefault()?.UserId.ToString());
 
         return app;
     }
