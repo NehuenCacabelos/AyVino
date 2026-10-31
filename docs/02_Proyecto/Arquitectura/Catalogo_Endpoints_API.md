@@ -357,7 +357,7 @@ Seguimiento unidireccional entre usuarios y hacia bodegas aprobadas. Protegido c
 
 ---
 
-## 12. Marcas y Listas Personales de Vinos (`/api/wines/...` y `/api/user-wines`)
+## 12. Marcas y Listas Personales de Vinos (`/api/wines/...` y `/api/user-wines/me`)
 
 Marcado rápido de botellas: deseadas (`wanted`), probadas (`tried`, permanente/no desmarcable) y favoritas (`favorite`).
 
