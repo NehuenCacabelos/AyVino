@@ -5,7 +5,7 @@ namespace AyVino.Api.Features.Wines.DTOs;
 
 public static class WineMappingExtensions
 {
-    public static Wine ToEntity(this CreateWineRequestDto dto, WineType wineType, SourceType sourceType) => new()
+    public static Wine ToEntity(this CreateWineRequestDto dto, WineType wineType, SourceType sourceType, string? labelKey = null) => new()
     {
         WineryId = dto.WineryId,
         WineryNameText = dto.WineryNameText,
@@ -13,10 +13,11 @@ public static class WineMappingExtensions
         Description = dto.Description,
         WineType = wineType,
         LocationId = dto.LocationId,
-        SourceType = sourceType
+        SourceType = sourceType,
+        LabelKey = labelKey
     };
 
-    public static Wine ToEntity(this UpdateWineRequestDto dto, int id, WineType wineType, SourceType sourceType) => new()
+    public static Wine ToEntity(this UpdateWineRequestDto dto, int id, WineType wineType, SourceType sourceType, string? labelKey = null) => new()
     {
         Id = id,
         WineryId = dto.WineryId,
@@ -25,7 +26,8 @@ public static class WineMappingExtensions
         Description = dto.Description,
         WineType = wineType,
         LocationId = dto.LocationId,
-        SourceType = sourceType
+        SourceType = sourceType,
+        LabelKey = labelKey
     };
 
     public static WineResponseDto ToResponseDto(this Wine wine) => new(

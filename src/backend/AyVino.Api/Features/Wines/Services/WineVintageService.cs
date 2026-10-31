@@ -122,6 +122,17 @@ public class WineVintageService(
         }
 
 
+        var existingVintages = await vintageRepository.GetAllByWineIdAsync(wineId, ct);
+        var existingVintage = existingVintages.FirstOrDefault(v => v.Year == dto.Year);
+        if (existingVintage is not null)
+        {
+            var extensions = new Dictionary<string, object?>
+            {
+                ["existingVintageId"] = existingVintage.Id
+            };
+            throw new ConflictException("Ya existe una cosecha para este año en el vino.", extensions);
+        }
+
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 

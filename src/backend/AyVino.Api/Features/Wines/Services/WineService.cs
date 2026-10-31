@@ -6,6 +6,7 @@ using AyVino.Api.Features.Wineries.Enums;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
+using AyVino.Api.Features.Wines.Utils;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Images.Services;
@@ -17,7 +18,8 @@ public class WineService(
     IWineRepository wineRepository,
     IWineryRepository wineryRepository,
     ILocationRepository locationRepository,
-    IGrapeRepository grapeRepository) : IWineService
+    IGrapeRepository grapeRepository,
+    IWineVintageRepository? vintageRepository = null) : IWineService
 {
     public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
@@ -40,26 +42,58 @@ public class WineService(
 
     public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default)
     {
-        var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
-
-        if (dto.WineryId.HasValue && !actor.IsAdmin)
+        string wineryName;
+        if (dto.WineryId.HasValue)
         {
-            var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct)
-                ?? throw new ValidationException($"Winery with ID {dto.WineryId} does not exist.");
+            var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct);
+            if (!actor.IsAdmin)
+            {
+                if (winery is null)
+                    throw new ValidationException($"Winery with ID {dto.WineryId} does not exist.");
 
-            if (!WineryAccessRules.IsOwner(winery, actor))
-                throw new ForbiddenException("Solo el dueño de la bodega puede publicar vinos oficiales a su nombre.");
+                if (!WineryAccessRules.IsOwner(winery, actor))
+                    throw new ForbiddenException("Solo el dueño de la bodega puede publicar vinos oficiales a su nombre.");
 
-            if (!WineryAccessRules.CanPublish(winery, actor))
-                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
+                if (!WineryAccessRules.CanPublish(winery, actor))
+                    throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
+            }
+            wineryName = winery?.Name ?? dto.WineryNameText?.Trim() ?? string.Empty;
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(dto.WineryNameText) || dto.WineryNameText.Trim().Length == 0)
+                throw new ValidationException("El nombre de la bodega es obligatorio cuando no se selecciona una bodega registrada.");
+            if (dto.WineryNameText.Trim().Length > 150)
+                throw new ValidationException("El nombre de la bodega no puede superar los 150 caracteres.");
+            wineryName = dto.WineryNameText.Trim();
         }
 
+        var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
+
+        var labelKey = WineLabelNormalizer.BuildLabelKey(dto.Name, wineryName, wineType);
+        var existingWine = await wineRepository.GetByLabelKeyAsync(labelKey, ct);
+        if (existingWine is not null)
+        {
+            int? existingVintageId = null;
+            if (vintageRepository is not null)
+            {
+                var vintages = await vintageRepository.GetAllByWineIdAsync(existingWine.Id, ct);
+                existingVintageId = vintages.FirstOrDefault(v => v.Year == dto.FirstVintage.Year)?.Id;
+            }
+
+            var extensions = new Dictionary<string, object?>
+            {
+                ["existingWineId"] = existingWine.Id,
+                ["existingVintageId"] = existingVintageId
+            };
+            throw new ConflictException("Ya existe un vino con características idénticas.", extensions);
+        }
 
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
-        var wineEntity = dto.ToEntity(wineType, sourceType);
+        var wineEntity = dto.ToEntity(wineType, sourceType, labelKey);
         var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId);
 
         var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
@@ -87,13 +121,78 @@ public class WineService(
                 throw new ForbiddenException("Solo un administrador puede cambiar la bodega de un vino.");
         }
 
+        string wineryName;
+        if (dto.WineryId.HasValue)
+        {
+            var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct);
+            wineryName = winery?.Name ?? dto.WineryNameText?.Trim() ?? string.Empty;
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(dto.WineryNameText) || dto.WineryNameText.Trim().Length == 0)
+                throw new ValidationException("El nombre de la bodega es obligatorio cuando no se selecciona una bodega registrada.");
+            if (dto.WineryNameText.Trim().Length > 150)
+                throw new ValidationException("El nombre de la bodega no puede superar los 150 caracteres.");
+            wineryName = dto.WineryNameText.Trim();
+        }
+
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
+        var labelKey = WineLabelNormalizer.BuildLabelKey(dto.Name, wineryName, wineType);
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
-        var wineEntity = dto.ToEntity(id, wineType, sourceType);
+        var wineEntity = dto.ToEntity(id, wineType, sourceType, labelKey);
         var updated = await wineRepository.UpdateAsync(wineEntity, ct);
         if (!updated) throw new NotFoundException($"Wine with ID {id} not found.");
 
         return await GetByIdAsync(id, actor, ct);
+    }
+
+    public async Task<WineMatchResultDto> MatchAsync(string? name, string? wineryName, string? wineType, int? year, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ValidationException("El nombre del vino es obligatorio.");
+        if (string.IsNullOrWhiteSpace(wineryName))
+            throw new ValidationException("El nombre de la bodega es obligatorio.");
+        if (string.IsNullOrWhiteSpace(wineType) || !Enum.TryParse<WineType>(wineType, ignoreCase: true, out var parsedType))
+            throw new ValidationException($"Invalid wine type: '{wineType}'.");
+
+        var labelKey = WineLabelNormalizer.BuildLabelKey(name, wineryName, parsedType);
+        var wine = await wineRepository.GetByLabelKeyAsync(labelKey, ct);
+        if (wine is null)
+        {
+            return new WineMatchResultDto(null, null);
+        }
+
+        string wineryDisplayName = wine.WineryNameText ?? string.Empty;
+        if (wine.WineryId.HasValue)
+        {
+            var wineryEntity = await wineryRepository.GetByIdAsync(wine.WineryId.Value, ct);
+            if (wineryEntity is not null)
+            {
+                wineryDisplayName = wineryEntity.Name;
+            }
+        }
+
+        var matchedWine = new MatchedWineDto(
+            wine.Id,
+            wine.Name,
+            wineryDisplayName,
+            wine.WineType.ToString());
+
+        MatchedVintageDto? matchedVintage = null;
+        if (vintageRepository is not null)
+        {
+            var vintages = await vintageRepository.GetAllByWineIdAsync(wine.Id, ct);
+            var vintage = vintages.FirstOrDefault(v => v.Year == year);
+            if (vintage is not null)
+            {
+                matchedVintage = new MatchedVintageDto(
+                    vintage.Id,
+                    vintage.Year,
+                    vintage.ApprovalStatus.ToString());
+            }
+        }
+
+        return new WineMatchResultDto(matchedWine, matchedVintage);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)

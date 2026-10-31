@@ -14,4 +14,5 @@ public interface IWineService
     Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default);
     Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default);
+    Task<WineMatchResultDto> MatchAsync(string? name, string? wineryName, string? wineType, int? year, CancellationToken ct = default);
 }
