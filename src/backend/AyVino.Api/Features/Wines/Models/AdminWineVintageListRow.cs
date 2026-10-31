@@ -17,4 +17,5 @@ public record AdminWineVintageListRow
     public int UploadedByUserId { get; init; }
     public string? UploadedByUsername { get; init; }
     public DateTime RegisterDate { get; init; }
+    public int CommunityUsers { get; init; }
 }

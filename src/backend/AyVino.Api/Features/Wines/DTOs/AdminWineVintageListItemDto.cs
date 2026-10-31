@@ -13,5 +13,6 @@ public record AdminWineVintageListItemDto(
     string ApprovalStatus,
     int UploadedByUserId,
     string? UploadedByUsername,
-    DateTime RegisterDate
+    DateTime RegisterDate,
+    int CommunityUsers = 0
 );

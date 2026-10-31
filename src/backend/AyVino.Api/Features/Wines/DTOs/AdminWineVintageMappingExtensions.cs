@@ -17,7 +17,8 @@ public static class AdminWineVintageMappingExtensions
         row.ApprovalStatus.ToString(),
         row.UploadedByUserId,
         row.UploadedByUsername,
-        row.RegisterDate
+        row.RegisterDate,
+        row.CommunityUsers
     );
 
     public static IEnumerable<AdminWineVintageListItemDto> ToListItemDtoList(this IEnumerable<AdminWineVintageListRow> rows) =>

@@ -19,5 +19,6 @@ public enum AuditAction : short
     WineUpdatedByAdmin = 15,
     WineDeleted = 16,
     ReviewDeletedByAdmin = 17,
-    WineMerged = 18
+    WineMerged = 18,
+    VintageImagePromoted = 19
 }
