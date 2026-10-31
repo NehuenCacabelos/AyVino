@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Models;
 
@@ -21,4 +22,6 @@ public interface IReviewRepository
     Task<int> CreateAsync(Review review, CancellationToken ct = default);
     Task<bool> UpdateAsync(Review review, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<(int ReviewId, bool Created)> UpsertInTransactionAsync(int userId, int wineVintageId, int rating, string? comment, IDbConnection connection, IDbTransaction transaction, CancellationToken ct = default) =>
+        Task.FromResult((0, false));
 }
