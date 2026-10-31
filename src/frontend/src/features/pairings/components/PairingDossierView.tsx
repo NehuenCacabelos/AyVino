@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, X } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, X } from 'lucide-react';
 import type {
   WineVarietyEntry,
   DishPairingEntry,
@@ -21,11 +21,38 @@ interface PairingDossierViewProps {
   onSelectFood: (id: string, fromLabel?: string) => void;
 }
 
-// ─── Label constante para la ficha técnica ────────────────────────────────────
+// ─── Constantes de estilo ─────────────────────────────────────────────────────
 const LABEL_CLS =
   'text-[11px] uppercase tracking-wider text-zinc-500 font-medium block';
 
-// ─── Celda de la ficha técnica ────────────────────────────────────────────────
+// ─── Imagen de cabecera con badge superpuesto ─────────────────────────────────
+function DossierImage({
+  src,
+  alt,
+  badge,
+}: {
+  src: string;
+  alt: string;
+  badge?: string;
+}) {
+  return (
+    <div className="w-full md:w-56 lg:w-64 aspect-[4/3] rounded-xl overflow-hidden border border-zinc-800/80 bg-zinc-900/60 shrink-0 shadow-lg relative group">
+      <img
+        src={src}
+        alt={alt}
+        className="object-cover w-full h-full grayscale-[20%] contrast-[1.05] group-hover:grayscale-0 transition-all duration-500"
+        loading="lazy"
+      />
+      {badge && (
+        <span className="absolute bottom-2 left-2 text-[10px] font-mono text-zinc-300 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm border border-white/10 select-none">
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Celda de la grilla técnica ───────────────────────────────────────────────
 function SpecCell({
   label,
   value,
@@ -39,7 +66,7 @@ function SpecCell({
     <div className="flex flex-col gap-0.5">
       <span className={LABEL_CLS}>{label}</span>
       <span
-        className={`text-sm font-semibold text-neutral-200 mt-0.5 whitespace-nowrap ${
+        className={`text-sm font-semibold text-neutral-200 mt-0.5 ${
           mono ? 'font-mono' : 'font-sans'
         }`}
       >
@@ -49,22 +76,37 @@ function SpecCell({
   );
 }
 
-// ─── Fundamento Químico y Organoléptico ──────────────────────────────────────
-function ChemicalRationale({ text }: { text: string }) {
+// ─── Bloque editorial unificado: Tip + Fundamento ────────────────────────────
+function EditorialBlock({
+  tip,
+  rationale,
+}: {
+  tip: string;
+  rationale: string;
+}) {
   return (
-    <div className="border-l-2 border-zinc-700 pl-4 py-1">
-      <p className="text-sm text-zinc-300 font-sans leading-relaxed max-w-3xl">
-        {text}
-      </p>
+    <div className="my-6 p-4 rounded-lg bg-zinc-900/40 border border-zinc-800/80 space-y-3 max-w-3xl">
+      <div className="flex items-start gap-2">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"
+          aria-hidden="true"
+        />
+        <div>
+          <span className={`${LABEL_CLS} text-amber-400/80 mb-1`}>
+            Tip del Sommelier
+          </span>
+          <p className="text-sm text-zinc-200 font-sans leading-relaxed">{tip}</p>
+        </div>
+      </div>
+      <div className="border-t border-zinc-800/60 pt-3">
+        <span className={`${LABEL_CLS} mb-1`}>Fundamento Químico y Organoléptico</span>
+        <p className="text-sm text-zinc-400 font-sans leading-relaxed">{rationale}</p>
+      </div>
     </div>
   );
 }
 
-/**
- * WitnessBottleList Component
- * Lista tipográfica editorial de etiquetas reales del catálogo.
- * Tabla de índice con divide-y, sin font-mono en el wrapper.
- */
+// ─── Lista de etiquetas testigo ───────────────────────────────────────────────
 function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   if (!bottles || bottles.length === 0) return null;
 
@@ -117,11 +159,7 @@ function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
   );
 }
 
-/**
- * SuggestionsGrid Component
- * Tres columnas tipográficas con acentos de borde temático superiores:
- * esmeralda (afinidad) / ámbar (contraste) / vino-rosa (evitar).
- */
+// ─── Grid de sugerencias: Afinidad / Contraste / Evitar ──────────────────────
 function SuggestionsGrid({
   affinities,
   contrasts,
@@ -149,25 +187,24 @@ function SuggestionsGrid({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+
       {/* 1. AFINIDAD */}
-      <div className="space-y-2 border-t-2 border-emerald-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-400 block">
+      <div className="space-y-1 border-t-2 border-emerald-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-400 block mb-2">
           Afinidad — Espejo Organoléptico
         </span>
-        <ul className="space-y-1.5 text-sm">
+        <ul className="divide-y divide-zinc-800/60">
           {affinities.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
                 onClick={() => handleClickLink(item)}
-                className="text-left text-neutral-200 hover:text-emerald-200 hover:underline transition-colors font-sans cursor-pointer group flex items-start gap-1.5"
+                className="group flex items-center justify-between w-full py-2 cursor-pointer transition-colors text-left"
               >
-                <span className="text-emerald-400/70 text-xs mt-0.5 select-none">
-                  ↳
-                </span>
-                <span className="group-hover:translate-x-0.5 transition-transform">
+                <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-sans">
                   {item.label}
                 </span>
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-500/50 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all duration-150 shrink-0 ml-2" />
               </button>
             </li>
           ))}
@@ -175,24 +212,22 @@ function SuggestionsGrid({
       </div>
 
       {/* 2. CONTRASTE */}
-      <div className="space-y-2 border-t-2 border-amber-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-amber-400 block">
+      <div className="space-y-1 border-t-2 border-amber-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-amber-400 block mb-2">
           Contraste — Corte &amp; Balance
         </span>
-        <ul className="space-y-1.5 text-sm">
+        <ul className="divide-y divide-zinc-800/60">
           {contrasts.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
                 onClick={() => handleClickLink(item)}
-                className="text-left text-neutral-200 hover:text-amber-200 hover:underline transition-colors font-sans cursor-pointer group flex items-start gap-1.5"
+                className="group flex items-center justify-between w-full py-2 cursor-pointer transition-colors text-left"
               >
-                <span className="text-amber-400/70 text-xs mt-0.5 select-none">
-                  ↳
-                </span>
-                <span className="group-hover:translate-x-0.5 transition-transform">
+                <span className="text-sm text-neutral-300 group-hover:text-white transition-colors font-sans">
                   {item.label}
                 </span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-500/50 group-hover:text-amber-400 group-hover:translate-x-1 transition-all duration-150 shrink-0 ml-2" />
               </button>
             </li>
           ))}
@@ -200,11 +235,11 @@ function SuggestionsGrid({
       </div>
 
       {/* 3. QUÉ EVITAR */}
-      <div className="space-y-2 border-t-2 border-rose-500/30 pt-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-rose-400 block">
+      <div className="space-y-1 border-t-2 border-rose-500/30 pt-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-rose-400 block mb-2">
           Combinaciones a Evitar
         </span>
-        <ul className="space-y-3 text-sm">
+        <ul className="space-y-3">
           {clashes.map((clash) => (
             <li key={clash.target}>
               <span className="text-sm font-medium text-zinc-200 block">
@@ -221,7 +256,7 @@ function SuggestionsGrid({
   );
 }
 
-// ─── Encabezado de Procedencia ────────────────────────────────────────────────
+// ─── Banner de procedencia ────────────────────────────────────────────────────
 function SourceContextBanner({
   sourceContext,
   onClear,
@@ -282,6 +317,11 @@ export default function PairingDossierView({
   // MODO PLATO
   // ─────────────────────────────────────────────────────────────────────────────
   if (mode === 'food' && dish) {
+    const foodImageUrl =
+      'foodImageUrl' in dish ? dish.foodImageUrl : undefined;
+    const categoryLabel =
+      'familyId' in dish ? 'Plato Específico' : 'Categoría Gastronómica';
+
     return (
       <article className="space-y-8 animate-fadeIn">
         {sourceContext && (
@@ -292,37 +332,44 @@ export default function PairingDossierView({
           />
         )}
 
-        {/* Encabezado */}
-        <header className="space-y-2">
-          <div className={`${LABEL_CLS} text-amber-300/90`}>
-            {'familyId' in dish
-              ? 'Plato Específico'
-              : 'Recomendación por Categoría Gastronómica'}
+        {/* Cabecera con imagen */}
+        <header className="flex flex-col md:flex-row md:items-start justify-between gap-8 pb-6 border-b border-zinc-800/80">
+          <div className="space-y-2 flex-1 min-w-0">
+            <span className={`${LABEL_CLS} text-amber-300/90`}>
+              {categoryLabel}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-zinc-100 leading-tight">
+              {dish.name}
+            </h2>
+            <p className="text-sm text-zinc-400 font-sans max-w-xl leading-relaxed">
+              {dish.tagline}
+            </p>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight">
-            {dish.name}
-          </h2>
-          <p className="text-base text-neutral-300 font-sans max-w-3xl leading-relaxed">
-            {dish.tagline}
-          </p>
+
+          {foodImageUrl ? (
+            <DossierImage
+              src={foodImageUrl}
+              alt={dish.name}
+              badge={categoryLabel}
+            />
+          ) : null}
         </header>
 
-        {/* Ficha técnica de servicio */}
-        <div className="flex flex-wrap items-start gap-x-8 gap-y-4 py-3 border-y border-neutral-800/80">
+        {/* Grilla técnica: Temperatura + Copa (datos duros) */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-b border-zinc-800/80">
           <SpecCell
-            label="Temperatura de Servicio"
+            label="Temperatura"
             value={dish.servingTemperature}
             mono
           />
-          <SpecCell label="Cristalería Recomendada" value={dish.glassware} />
-          <SpecCell label="Tip del Sommelier" value={dish.serviceTip} />
+          <SpecCell label="Copa" value={dish.glassware} />
         </div>
 
-        {/* Fundamento Enogastronómico */}
-        <section className="space-y-3">
-          <h3 className={LABEL_CLS}>Fundamento Químico y Organoléptico</h3>
-          <ChemicalRationale text={dish.chemicalRationale} />
-        </section>
+        {/* Bloque editorial: Tip + Fundamento */}
+        <EditorialBlock
+          tip={dish.serviceTip}
+          rationale={dish.chemicalRationale}
+        />
 
         {/* Sugerencias de Armonización */}
         <section className="space-y-3 pt-2 border-t border-neutral-800/80">
@@ -361,82 +408,95 @@ export default function PairingDossierView({
           />
         )}
 
-        {/* Encabezado de la cepa */}
-        <header className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className={`${LABEL_CLS} text-rose-300`}>Varietal Insignia</span>
-            {wine.originNote && (
-              <>
-                <span className="text-neutral-600 text-xs" aria-hidden="true">
-                  ·
+        {/* Cabecera con imagen */}
+        <header className="flex flex-col md:flex-row md:items-start justify-between gap-8 pb-6 border-b border-zinc-800/80">
+          {/* Columna textual + tabs */}
+          <div className="space-y-4 flex-1 min-w-0">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`${LABEL_CLS} text-rose-300`}>
+                  Varietal Insignia
                 </span>
-                <span className="text-[11px] text-neutral-400 font-medium">
-                  {wine.originNote}
-                </span>
-              </>
+                {wine.originNote && (
+                  <>
+                    <span className="text-neutral-600 text-xs" aria-hidden="true">·</span>
+                    <span className="text-[11px] text-neutral-400 font-medium">
+                      {wine.originNote}
+                    </span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-zinc-100 leading-tight">
+                {wine.name}
+              </h2>
+              <p className="text-sm text-zinc-400 font-sans max-w-xl leading-relaxed">
+                {wine.tagline}
+              </p>
+            </div>
+
+            {/* Tabs de estilos compactos */}
+            {hasMultipleStyles && (
+              <div
+                className="flex items-center gap-0 border-b border-zinc-800"
+                role="tablist"
+                aria-label="Estilos del varietal"
+              >
+                {wine.styles.map((s) => (
+                  <button
+                    key={s.styleId}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeStyleId === s.styleId}
+                    onClick={() => setActiveStyleId(s.styleId)}
+                    className={`px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border-b-2 -mb-px ${
+                      activeStyleId === s.styleId
+                        ? 'text-rose-300 border-rose-500'
+                        : 'text-zinc-500 border-transparent hover:text-zinc-300'
+                    }`}
+                  >
+                    {s.styleName}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-          <h2 className="text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight">
-            {wine.name}
-          </h2>
-          <p className="text-base text-neutral-300 font-sans max-w-3xl leading-relaxed">
-            {wine.tagline}
-          </p>
+
+          {/* Imagen del racimo */}
+          {wine.grapeImageUrl ? (
+            <DossierImage
+              src={wine.grapeImageUrl}
+              alt={`Racimo de ${wine.name}`}
+              badge="Vitis Vinifera"
+            />
+          ) : null}
         </header>
 
-        {/* Tabs de estilos (solo si hay más de uno) */}
-        {hasMultipleStyles && (
-          <div
-            className="flex items-center gap-0 border-b border-zinc-800"
-            role="tablist"
-            aria-label="Estilos del varietal"
-          >
-            {wine.styles.map((s) => (
-              <button
-                key={s.styleId}
-                type="button"
-                role="tab"
-                aria-selected={activeStyleId === s.styleId}
-                onClick={() => setActiveStyleId(s.styleId)}
-                className={`px-4 py-2 text-xs font-medium uppercase tracking-wider transition-colors border-b-2 -mb-px ${
-                  activeStyleId === s.styleId
-                    ? 'text-rose-300 border-rose-500'
-                    : 'text-zinc-500 border-transparent hover:text-zinc-300'
-                }`}
-              >
-                {s.styleName}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Bloque del estilo activo (único, sin scroll acumulativo) */}
+        {/* Bloque del estilo activo */}
         <section
           key={activeStyle.styleId}
           role={hasMultipleStyles ? 'tabpanel' : undefined}
-          className="space-y-6"
+          className="space-y-0"
         >
-          {/* Ficha técnica de servicio y perfil */}
-          <div className="flex flex-wrap items-start gap-x-8 gap-y-4 py-3 border-y border-neutral-800/80">
+          {/* Grilla técnica simétrica: 5 columnas en desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-b border-zinc-800/80">
             <SpecCell
-              label="Temperatura Óptima"
+              label="Temperatura"
               value={activeStyle.servingTemperature}
               mono
             />
-            <SpecCell label="Copa de Servicio" value={activeStyle.glassware} />
+            <SpecCell label="Copa" value={activeStyle.glassware} />
             <SpecCell label="Acidez" value={activeStyle.acidity} />
             <SpecCell label="Cuerpo" value={activeStyle.body} />
             {activeStyle.tannins && (
               <SpecCell label="Taninos" value={activeStyle.tannins} />
             )}
-            <SpecCell label="Tip de Servicio" value={activeStyle.serviceTip} />
           </div>
 
-          {/* Fundamento Enogastronómico */}
-          <div className="space-y-3">
-            <h4 className={LABEL_CLS}>Fundamento Químico y Organoléptico</h4>
-            <ChemicalRationale text={activeStyle.chemicalRationale} />
-          </div>
+          {/* Bloque editorial: Tip + Fundamento */}
+          <EditorialBlock
+            tip={activeStyle.serviceTip}
+            rationale={activeStyle.chemicalRationale}
+          />
 
           {/* Sugerencias de Armonización */}
           <div className="space-y-3 pt-2 border-t border-neutral-800/80">

@@ -19,12 +19,12 @@ interface PairingInteractiveHubProps {
 /**
  * PairingInteractiveHub Component
  * Hub interactivo y bidireccional de maridaje de AyVino.
- * Diseño minimalista y progresivo:
- * - En Platos: A primera vista solo se selecciona por Categoría (6 familias gastronómicas)
- *   y se despliega la recomendación general enológica, con opción sutil de afinar por plato específico.
- * - En Cepas: A primera vista se presentan las cepas más comunes / insignia, con filtros tipográficos
- *   (Principales, Todas, Tintos, Blancos, Rosados/Naranjos).
- * - Sincronización continua en URL SearchParams sin tarjetas infladas.
+ *
+ * Layout:
+ *  1. Título editorial + descripción
+ *  2. Selector de modo centrado (pill "Tengo un vino / Tengo un plato")
+ *  3. Índice tipográfico de selección progresivo (cepas o categorías/platos)
+ *  4. Ficha técnica del sommelier (PairingDossierView)
  */
 export default function PairingInteractiveHub({
   currentMode: externalMode,
@@ -60,8 +60,9 @@ export default function PairingInteractiveHub({
 
   return (
     <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto">
-      {/* 1. Cabecera Editorial Principal & Switcher de Modo */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-4 border-b border-neutral-800/80">
+
+      {/* 1. Cabecera Editorial Principal */}
+      <div className="space-y-6 pb-4 border-b border-neutral-800/80">
         <div className="space-y-1.5 max-w-2xl">
           <span className="text-xs font-mono uppercase tracking-widest text-neutral-400 font-medium">
             Cuaderno Enogastronómico AyVino
@@ -75,8 +76,8 @@ export default function PairingInteractiveHub({
           </p>
         </div>
 
-        {/* Conmutador de Modo Tipográfico */}
-        <div className="shrink-0 sm:pb-1">
+        {/* 2. Selector de Modo centrado — Pill de alto impacto */}
+        <div className="flex justify-center">
           <PairingModeSelector
             currentMode={mode}
             onModeChange={handleModeChange}
@@ -84,7 +85,7 @@ export default function PairingInteractiveHub({
         </div>
       </div>
 
-      {/* 2. Índice Tipográfico de Selección Progresivo */}
+      {/* 3. Índice Tipográfico de Selección Progresivo */}
       <section
         id="pairing-panel"
         aria-label="Índice de selección tipográfico"
@@ -105,7 +106,7 @@ export default function PairingInteractiveHub({
         )}
       </section>
 
-      {/* 3. Ficha Técnica y Dossier del Sommelier */}
+      {/* 4. Ficha Técnica y Dossier del Sommelier */}
       <section
         id="pairing-dossier"
         aria-label="Ficha técnica de maridaje"

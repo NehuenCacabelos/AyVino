@@ -55,6 +55,8 @@ export interface WineVarietyEntry {
   category: WineCategoryId;
   tagline: string;
   originNote?: string;
+  /** URL de imagen del racimo o uva para la cabecera de la ficha */
+  grapeImageUrl?: string;
   styles: WineStyleProfile[];
 }
 
@@ -63,6 +65,8 @@ export interface DishPairingEntry {
   familyId: FoodFamilyId;
   name: string;
   tagline: string;
+  /** URL de imagen del plato elaborado para la cabecera de la ficha */
+  foodImageUrl?: string;
   servingTemperature: string;
   glassware: string;
   serviceTip: string;
@@ -78,6 +82,8 @@ export interface FoodFamilyInfo {
   title: string;
   name: string;
   tagline: string;
+  /** URL de imagen representativa de la categoría gastronómica */
+  foodImageUrl?: string;
   servingTemperature: string;
   glassware: string;
   serviceTip: string;
