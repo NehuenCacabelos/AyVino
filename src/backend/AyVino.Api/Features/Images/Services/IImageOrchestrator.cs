@@ -16,4 +16,8 @@ public interface IImageOrchestrator
 
     Task<Guid> UploadVintageImageAsync(int wineId, int vintageId, IFormFile file, Actor actor, CancellationToken ct = default);
     Task DeleteVintageImageAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default);
+
+    Task<Guid> UploadUserVintageImageAsync(int wineId, int vintageId, IFormFile file, Actor actor, CancellationToken ct = default);
+    Task<Guid?> GetUserVintageImageAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default);
+    Task DeleteUserVintageImageAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default);
 }

@@ -12,7 +12,8 @@ public class ImageTransactionRunner(
     IImageRepository imageRepository,
     IUserRepository userRepository,
     IWineryRepository wineryRepository,
-    IWineVintageRepository vintageRepository) : IImageTransactionRunner
+    IWineVintageRepository vintageRepository,
+    IUserVintageImageRepository? userVintageImageRepository = null) : IImageTransactionRunner
 {
     public async Task AttachAvatarAsync(Image image, int userId, CancellationToken ct = default)
     {
@@ -31,7 +32,10 @@ public class ImageTransactionRunner(
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         await userRepository.UpdateAvatarImageIdAsync(userId, null, connection, transaction, ct);
-        await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        if (!await imageRepository.IsReferencedAsync(imageId, connection, transaction, ct))
+        {
+            await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        }
 
         await transaction.CommitAsync(ct);
     }
@@ -53,7 +57,10 @@ public class ImageTransactionRunner(
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         await wineryRepository.UpdateLogoImageIdAsync(wineryId, null, connection, transaction, ct);
-        await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        if (!await imageRepository.IsReferencedAsync(imageId, connection, transaction, ct))
+        {
+            await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        }
 
         await transaction.CommitAsync(ct);
     }
@@ -75,7 +82,10 @@ public class ImageTransactionRunner(
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         await wineryRepository.UpdateBannerImageIdAsync(wineryId, null, connection, transaction, ct);
-        await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        if (!await imageRepository.IsReferencedAsync(imageId, connection, transaction, ct))
+        {
+            await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        }
 
         await transaction.CommitAsync(ct);
     }
@@ -97,7 +107,41 @@ public class ImageTransactionRunner(
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         await vintageRepository.UpdateImageIdAsync(vintageId, null, connection, transaction, ct);
-        await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        if (!await imageRepository.IsReferencedAsync(imageId, connection, transaction, ct))
+        {
+            await imageRepository.DeleteAsync(imageId, connection, transaction, ct);
+        }
+
+        await transaction.CommitAsync(ct);
+    }
+    public async Task AttachUserVintageImageAsync(Image image, int userId, int vintageId, bool setAsVintageImage, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        await imageRepository.InsertAsync(image, connection, transaction, ct);
+        if (userVintageImageRepository is not null)
+        {
+            await userVintageImageRepository.UpsertAsync(userId, vintageId, image.Id, connection, transaction, ct);
+        }
+
+        if (setAsVintageImage)
+        {
+            await vintageRepository.UpdateImageIdAsync(vintageId, image.Id, connection, transaction, ct);
+        }
+
+        await transaction.CommitAsync(ct);
+    }
+
+    public async Task DetachUserVintageImageAsync(int userId, int vintageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        if (userVintageImageRepository is not null)
+        {
+            await userVintageImageRepository.DeleteAsync(userId, vintageId, connection, transaction, ct);
+        }
 
         await transaction.CommitAsync(ct);
     }

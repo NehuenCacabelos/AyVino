@@ -15,4 +15,7 @@ public interface IImageTransactionRunner
 
     Task AttachVintageImageAsync(Image image, int vintageId, CancellationToken ct = default);
     Task DetachAndDeleteVintageImageAsync(int vintageId, Guid imageId, CancellationToken ct = default);
+
+    Task AttachUserVintageImageAsync(Image image, int userId, int vintageId, bool setAsVintageImage, CancellationToken ct = default);
+    Task DetachUserVintageImageAsync(int userId, int vintageId, CancellationToken ct = default);
 }

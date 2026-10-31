@@ -22,7 +22,8 @@ public class ImageOrchestrator(
     IWineryRepository wineryRepository,
     IWineRepository wineRepository,
     IWineVintageRepository vintageRepository,
-    ILogger<ImageOrchestrator> logger) : IImageOrchestrator
+    ILogger<ImageOrchestrator> logger,
+    IUserVintageImageRepository? userVintageImageRepository = null) : IImageOrchestrator
 {
     public async Task<Guid> UploadAvatarAsync(int userId, IFormFile file, CancellationToken ct = default)
     {
@@ -90,7 +91,7 @@ public class ImageOrchestrator(
 
         await transactionRunner.DetachAndDeleteAvatarAsync(userId, imageId, ct);
 
-        if (image != null)
+        if (image != null && !await imageRepository.IsReferencedAsync(imageId, ct))
         {
             try
             {
@@ -375,7 +376,7 @@ public class ImageOrchestrator(
 
         await transactionRunner.DetachAndDeleteVintageImageAsync(vintageId, imageId, ct);
 
-        if (image != null)
+        if (image != null && !await imageRepository.IsReferencedAsync(imageId, ct))
         {
             try
             {
@@ -424,6 +425,11 @@ public class ImageOrchestrator(
     {
         try
         {
+            if (await imageRepository.IsReferencedAsync(imageId, ct))
+            {
+                return;
+            }
+
             var oldImage = await imageRepository.GetByIdAsync(imageId, ct);
             if (oldImage != null)
             {
@@ -435,5 +441,133 @@ public class ImageOrchestrator(
         {
             logger.LogWarning(ex, "Error al eliminar imagen previa {OldImageId} tras reemplazo", imageId);
         }
+    }
+    public async Task<Guid> UploadUserVintageImageAsync(int wineId, int vintageId, IFormFile file, Actor actor, CancellationToken ct = default)
+    {
+        var (ext, mime) = ImageValidator.Validate(file);
+
+        var wine = await wineRepository.GetByIdAsync(wineId, ct)
+            ?? throw new NotFoundException($"Vino con ID {wineId} no encontrado.");
+
+        var vintage = await vintageRepository.GetByIdAsync(vintageId, ct)
+            ?? throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada.");
+
+        if (vintage.WineId != wineId)
+        {
+            throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada para el vino {wineId}.");
+        }
+
+        if (vintage.ApprovalStatus == ApprovalStatus.Rejected)
+        {
+            throw new ValidationException("No se pueden asociar fotos personales a una cosecha rechazada.");
+        }
+
+        Guid? oldImageId = null;
+        if (userVintageImageRepository is not null)
+        {
+            oldImageId = await userVintageImageRepository.GetImageIdAsync(actor.UserId, vintageId, ct);
+        }
+
+        var newImageId = Guid.NewGuid();
+        using var stream = file.OpenReadStream();
+        var uploadResult = await imageStorage.UploadAsync(newImageId, stream, mime, ImageType.UserVintage, ct);
+
+        bool setAsVintageImage = !vintage.ImageId.HasValue && vintage.UploadedByUserId == actor.UserId;
+
+        try
+        {
+            var imageRecord = new Image
+            {
+                Id = newImageId,
+                Provider = "cloudinary",
+                ExternalId = uploadResult.ExternalId,
+                MimeType = mime,
+                SizeBytes = uploadResult.SizeBytes,
+                Width = uploadResult.Width,
+                Height = uploadResult.Height,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await transactionRunner.AttachUserVintageImageAsync(imageRecord, actor.UserId, vintageId, setAsVintageImage, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fallo en transacción DB al actualizar foto personal para cosecha {VintageId}. Compensando borrado en Cloudinary para {ExternalId}", vintageId, uploadResult.ExternalId);
+            try
+            {
+                await imageStorage.DeleteAsync(uploadResult.ExternalId, ct);
+            }
+            catch (Exception compEx)
+            {
+                logger.LogError(compEx, "Fallo al compensar borrado en Cloudinary para {ExternalId}", uploadResult.ExternalId);
+            }
+            throw;
+        }
+
+        if (oldImageId.HasValue)
+        {
+            await BestEffortDeleteImageAsync(oldImageId.Value, ct);
+        }
+
+        return newImageId;
+    }
+
+    public async Task<Guid?> GetUserVintageImageAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default)
+    {
+        var wine = await wineRepository.GetByIdAsync(wineId, ct)
+            ?? throw new NotFoundException($"Vino con ID {wineId} no encontrado.");
+
+        var vintage = await vintageRepository.GetByIdAsync(vintageId, ct)
+            ?? throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada.");
+
+        if (vintage.WineId != wineId)
+        {
+            throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada para el vino {wineId}.");
+        }
+
+        if (vintage.ApprovalStatus == ApprovalStatus.Rejected)
+        {
+            throw new ValidationException("No se pueden consultar fotos personales de una cosecha rechazada.");
+        }
+
+        if (userVintageImageRepository is null)
+        {
+            return null;
+        }
+
+        return await userVintageImageRepository.GetImageIdAsync(actor.UserId, vintageId, ct);
+    }
+
+    public async Task DeleteUserVintageImageAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default)
+    {
+        var wine = await wineRepository.GetByIdAsync(wineId, ct)
+            ?? throw new NotFoundException($"Vino con ID {wineId} no encontrado.");
+
+        var vintage = await vintageRepository.GetByIdAsync(vintageId, ct)
+            ?? throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada.");
+
+        if (vintage.WineId != wineId)
+        {
+            throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada para el vino {wineId}.");
+        }
+
+        if (vintage.ApprovalStatus == ApprovalStatus.Rejected)
+        {
+            throw new ValidationException("No se pueden gestionar fotos personales de una cosecha rechazada.");
+        }
+
+        if (userVintageImageRepository is null)
+        {
+            return;
+        }
+
+        var imageId = await userVintageImageRepository.GetImageIdAsync(actor.UserId, vintageId, ct);
+        if (!imageId.HasValue)
+        {
+            return;
+        }
+
+        await transactionRunner.DetachUserVintageImageAsync(actor.UserId, vintageId, ct);
+        await BestEffortDeleteImageAsync(imageId.Value, ct);
     }
 }

@@ -264,6 +264,7 @@ builder.Services.AddScoped<IPairingRepository, PairingRepository>();
 builder.Services.AddScoped<IPairingService, PairingService>();
 builder.Services.AddScoped<IWineVintageRepository, WineVintageRepository>();
 builder.Services.AddScoped<IWineVintageService, WineVintageService>();
+builder.Services.AddScoped<IUserVintageImageRepository, UserVintageImageRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFollowRepository, FollowRepository>();
