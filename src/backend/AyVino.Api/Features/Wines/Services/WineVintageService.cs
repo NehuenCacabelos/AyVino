@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Images.Repositories;
 using Microsoft.Extensions.Options;
 using AyVino.Api.Features.Wines.Configuration;
 using AyVino.Api.Common.Constants;
@@ -21,7 +22,10 @@ public class WineVintageService(
     IWineRepository wineRepository,
     IGrapeRepository grapeRepository,
     IWineryRepository wineryRepository,
-    IOptions<CommunityOptions>? communityOptions = null) : IWineVintageService
+    IOptions<CommunityOptions>? communityOptions = null,
+    IUserVintageImageRepository? userVintageImageRepository = null,
+    IImageRepository? imageRepository = null,
+    IImageStorage? imageStorage = null) : IWineVintageService
 {
     public async Task<WineVintageResponseDto> GetByIdAsync(int wineId, int vintageId, Actor? actor = null, CancellationToken ct = default)
     {
@@ -257,12 +261,15 @@ public class WineVintageService(
         await vintageRepository.DeleteAsync(vintageId, ct);
     }
 
-    public async Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
+    public async Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, string? sort, CancellationToken ct = default)
     {
         if (pageNumber <= 0)
             throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is < 1 or > 100)
             throw new ValidationException("pageSize debe estar entre 1 y 100.");
+
+        if (!string.IsNullOrWhiteSpace(sort) && !string.Equals(sort, "users", StringComparison.OrdinalIgnoreCase) && !string.Equals(sort, "date", StringComparison.OrdinalIgnoreCase))
+            throw new ValidationException($"Parámetro 'sort' inválido: '{sort}'. Valores permitidos: 'users', 'date'.");
 
         int? statusValue = null;
         if (!string.IsNullOrWhiteSpace(status))
@@ -272,8 +279,63 @@ public class WineVintageService(
             statusValue = (int)parsedStatus;
         }
 
-        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        var rows = string.IsNullOrWhiteSpace(sort)
+            ? await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct)
+            : await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, sort, ct);
         return rows.ToListItemDtoList();
+    }
+
+    public Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default) =>
+        GetPagedForAdminAsync(pageNumber, pageSize, status, null, ct);
+
+    public async Task<IEnumerable<VintageContributionDto>> GetContributionsAsync(int vintageId, CancellationToken ct = default)
+    {
+        var exists = await vintageRepository.ExistsByIdAsync(vintageId, ct);
+        if (!exists)
+            throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada.");
+
+        return await vintageRepository.GetContributionsAsync(vintageId, ct);
+    }
+
+    public async Task<PromoteVintageImageResponseDto> PromoteImageAsync(int vintageId, int userId, Actor actor, CancellationToken ct = default)
+    {
+        if (!actor.IsAdmin)
+            throw new ForbiddenException("Solo un administrador puede promover imágenes de cosechas.");
+
+        var vintage = await vintageRepository.GetByIdAsync(vintageId, ct)
+            ?? throw new NotFoundException($"Cosecha con ID {vintageId} no encontrada.");
+
+        if (userVintageImageRepository is null)
+            throw new InvalidOperationException("UserVintageImageRepository no está configurado.");
+
+        var personalImageId = await userVintageImageRepository.GetImageIdAsync(userId, vintageId, ct);
+        if (!personalImageId.HasValue)
+            throw new NotFoundException($"El usuario con ID {userId} no tiene una foto personal para la cosecha {vintageId}.");
+
+        var oldImageId = vintage.ImageId;
+        await vintageRepository.UpdateImageIdAsync(vintageId, personalImageId.Value, ct);
+
+        if (oldImageId.HasValue && oldImageId.Value != personalImageId.Value)
+        {
+            try
+            {
+                if (imageRepository != null && !await imageRepository.IsReferencedAsync(oldImageId.Value, ct))
+                {
+                    var oldImg = await imageRepository.GetByIdAsync(oldImageId.Value, ct);
+                    await imageRepository.DeleteAsync(oldImageId.Value, ct);
+                    if (oldImg != null && imageStorage != null)
+                    {
+                        await imageStorage.DeleteAsync(oldImg.ExternalId, ct);
+                    }
+                }
+            }
+            catch
+            {
+                // Best-effort delete of previous public image
+            }
+        }
+
+        return new PromoteVintageImageResponseDto(vintageId, personalImageId.Value);
     }
 
     // El "ownership check" (wineId de la URL vs. wine_id real del vintage) evita que alguien
