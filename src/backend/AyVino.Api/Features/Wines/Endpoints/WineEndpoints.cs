@@ -3,6 +3,8 @@ using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Wines.DTOs;
+using AyVino.Api.Features.Wines.Enums;
+using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Wines.Services;
 
 namespace AyVino.Api.Features.Wines.Endpoints;
@@ -60,6 +62,12 @@ public static class WineEndpoints
             .RequireAuthorization()
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
+
+        group.MapGet("/match", async (string? name, string? wineryName, string? wineType, int? year, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.MatchAsync(name, wineryName, wineType, year, ct)))
+            .RequireAuthorization()
+            .WithName("MatchWine")
+            .WithSummary("Busca coincidencia exacta por etiqueta normalizada y año para adopción comunitaria.");
 
         group.MapGet("/search", async (string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.SearchAsync(name, winery, year, wineType, pageNumber, pageSize, user.GetActorOrNull(), ct)))
