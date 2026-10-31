@@ -21,6 +21,7 @@ public interface IWineRepository
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
     Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default);
+    Task<WineUsageCounts> GetUsageCountsAsync(int id, int? excludeUserId, CancellationToken ct = default) => GetUsageCountsAsync(id, ct);
     Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default);
     Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default);
 

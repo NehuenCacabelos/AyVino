@@ -245,17 +245,27 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
-    public async Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default)
+    public Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
+        GetUsageCountsAsync(id, null, ct);
+
+    public async Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, int? excludeUserId, CancellationToken ct = default)
     {
         const string sql = """
             SELECT 
-                (SELECT COUNT(*) FROM user_wines WHERE wine_vintage_id = @Id) AS UserWinesCount,
-                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemsCount,
-                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id) AS ReviewsCount;
+                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemCount,
+                (SELECT COUNT(*) FROM user_vintage_images uvi
+                 JOIN wine_vintages wv ON wv.id = uvi.wine_vintage_id
+                 WHERE uvi.wine_vintage_id = @Id
+                   AND (wv.uploaded_by_user_id IS NULL OR uvi.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserImagesCount,
+                (SELECT COUNT(*) FROM user_activities ua
+                 JOIN wine_vintages wv ON wv.id = ua.wine_vintage_id
+                 WHERE ua.wine_vintage_id = @Id
+                   AND (wv.uploaded_by_user_id IS NULL OR ua.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserActivitiesCount;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleAsync<WineVintageUsageCounts>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, ExcludeUserId = excludeUserId }, cancellationToken: ct));
     }
 
         public Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>

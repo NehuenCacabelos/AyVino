@@ -538,30 +538,32 @@ public class WineRepository(
 
 
 
-    public async Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default)
+    public Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
+        GetUsageCountsAsync(id, null, ct);
 
+    public async Task<WineUsageCounts> GetUsageCountsAsync(int id, int? excludeUserId, CancellationToken ct = default)
     {
-
         const string sql = """
-
             SELECT
-
                 (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
-
                 (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
-
                 (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
-
-                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount;
-
+                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount,
+                (SELECT COUNT(*) FROM user_vintage_images uvi
+                 JOIN wine_vintages wv ON wv.id = uvi.wine_vintage_id
+                 WHERE wv.wine_id = @Id
+                   AND (wv.uploaded_by_user_id IS NULL OR uvi.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserImagesCount,
+                (SELECT COUNT(*) FROM user_activities ua
+                 LEFT JOIN wine_vintages wv ON wv.id = ua.wine_vintage_id
+                 WHERE ua.wine_id = @Id
+                   AND (
+                       (ua.wine_vintage_id IS NOT NULL AND (wv.uploaded_by_user_id IS NULL OR ua.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id)))
+                       OR (ua.wine_vintage_id IS NULL AND (@ExcludeUserId IS NOT NULL ? ua.user_id != @ExcludeUserId : ua.user_id NOT IN (SELECT uploaded_by_user_id FROM wine_vintages WHERE wine_id = @Id)))
+                   )) AS OtherUserActivitiesCount;
             """;
-
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-
         return await connection.QuerySingleAsync<WineUsageCounts>(
-
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
-
+            new CommandDefinition(sql, new { Id = id, ExcludeUserId = excludeUserId }, cancellationToken: ct));
     }
 
 
@@ -680,7 +682,30 @@ public class WineRepository(
 
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
 
-                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+                OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv_pub
+                    WHERE wv_pub.wine_id = w.id
+                      AND (
+                        wv_pub.approval_status = 2
+                        OR (@CurrentUserId IS NOT NULL AND (
+                            wv_pub.uploaded_by_user_id = @CurrentUserId
+                            OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id AND c.user_id = @CurrentUserId)
+                            OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = wv_pub.id AND r.user_id = @CurrentUserId)
+                            OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = wv_pub.id AND uvi.user_id = @CurrentUserId)
+                        ))
+                        OR (wv_pub.approval_status = 1 AND (
+                            SELECT COUNT(DISTINCT u.user_id) FROM (
+                                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = wv_pub.id AND uploaded_by_user_id IS NOT NULL
+                                UNION
+                                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id
+                                UNION
+                                SELECT user_id FROM reviews WHERE wine_vintage_id = wv_pub.id
+                                UNION
+                                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = wv_pub.id
+                            ) u
+                        ) >= @MinUsers)
+                      )
+                )
 
             )
 
