@@ -1,3 +1,4 @@
+using System.Data;
 using NSubstitute;
 using AyVino.Api.Features.Locations.Services;
 using AyVino.Api.Features.Users.Services;
@@ -279,6 +280,10 @@ public class WineOptimizationTests
 
         public Task<AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
             Task.FromResult(new AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));
+
+        public Task<Wine?> GetByLabelKeyAsync(string labelKey, CancellationToken ct = default) => Task.FromResult<Wine?>(null);
+        public Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, CancellationToken ct = default) => Task.FromResult(0);
     }
 
     private sealed class FakeWineryRepo : IWineryRepository

@@ -1,3 +1,5 @@
+using AyVino.Api.Features.Wineries.Enums;
+using System.Data;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security;
@@ -387,14 +389,25 @@ public class WineServiceTests
         public WineUsageCounts UsageCountsResult { get; set; } = new(0, 0, 0, 0);
         public Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(UsageCountsResult);
+
+        public Wine? WineByLabelKey { get; set; }
+        public Task<Wine?> GetByLabelKeyAsync(string labelKey, CancellationToken ct = default) =>
+            Task.FromResult(WineByLabelKey != null && WineByLabelKey.LabelKey == labelKey ? WineByLabelKey : (ExistingWine?.LabelKey == labelKey ? ExistingWine : null));
+
+        public Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) =>
+            Task.FromResult(0);
+
+        public Task<int> UpdateLabelKeysForWineryAsync(int wineryId, string newWineryName, CancellationToken ct = default) =>
+            Task.FromResult(0);
     }
 
     private sealed class FakeWineryRepository : IWineryRepository
     {
         public int? ExistingWineryId { get; set; }
 
+        public string? WineryName { get; set; } = "Bodega Falsa";
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
-            Task.FromResult<Winery?>(null);
+            Task.FromResult(ExistingWineryId == id ? new Winery { Id = id, Name = WineryName ?? "Bodega Falsa", Status = WineryStatus.Approved } : null);
 
         public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
             Task.FromResult<Winery?>(null);
