@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -6,6 +6,7 @@ import {
   Wine,
   History,
   Bookmark,
+  Building2,
   UserPlus,
   UserCheck,
   Star,
@@ -13,6 +14,9 @@ import {
   Loader2,
   ExternalLink,
   Plus,
+  MapPin,
+  AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import ProfileTopBar from '../components/layout/ProfileTopBar';
@@ -27,14 +31,22 @@ import {
   getMyCellarsApi,
   getCellarItemsApi,
   getMyUserWinesApi,
+  getMyHistoryApi,
+  getMyFollowingWineriesApi,
   type PublicUserProfileDto,
   type PublicCellarItemDto,
   type CellarItemDto,
   type UserWineListItemDto,
+  type HistoryItemDto,
+  type FollowingWineryDto,
 } from '../features/users';
+import { unfollowWinery } from '../features/winery/api/wineryApi';
 import { cn } from '../lib/utils';
 import WineBottleSilhouette from '../features/wines/components/WineBottleSilhouette';
+import ConfirmDialog from '../features/admin/components/ConfirmDialog';
 import { getBannerThemeByUsername } from '../constants/bannerThemes';
+
+const PAGE_SIZE = 12;
 
 function ShowcaseWineBottle({ src, alt }: { src?: string | null; alt: string }) {
   const [hasError, setHasError] = useState(false);
@@ -56,7 +68,34 @@ function ShowcaseWineBottle({ src, alt }: { src?: string | null; alt: string }) 
   );
 }
 
-type OwnerTab = 'cava' | 'historial' | 'deseados';
+type OwnerTab = 'cava' | 'historial' | 'deseados' | 'bodegas';
+
+const ACTIVITY_TYPE_META: Record<string, { label: string; badgeClass: string }> = {
+  Uncorked: {
+    label: 'Descorchó',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-800/40',
+  },
+  Reviewed: {
+    label: 'Reseñó',
+    badgeClass: 'bg-rose-950/60 text-rose-300 border-rose-800/40',
+  },
+  AddedToCellar: {
+    label: 'Agregó a su cava',
+    badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40',
+  },
+  WineContributed: {
+    label: 'Cargó un vino',
+    badgeClass: 'bg-purple-950/60 text-purple-300 border-purple-800/40',
+  },
+};
+
+const HISTORY_FILTER_CHIPS = [
+  { label: 'Todos', value: '' },
+  { label: 'Descorchados', value: 'Uncorked' },
+  { label: 'Reseñas', value: 'Reviewed' },
+  { label: 'Cava', value: 'AddedToCellar' },
+  { label: 'Cargados', value: 'WineContributed' },
+];
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -76,9 +115,34 @@ export default function ProfilePage() {
   // Vista owner: pestañas & datos
   const [activeTab, setActiveTab] = useState<OwnerTab>('cava');
   const [ownerCellarItems, setOwnerCellarItems] = useState<CellarItemDto[]>([]);
-  const [ownerTriedWines, setOwnerTriedWines] = useState<UserWineListItemDto[]>([]);
   const [ownerFavWines, setOwnerFavWines] = useState<UserWineListItemDto[]>([]);
   const [ownerDataLoading, setOwnerDataLoading] = useState(false);
+
+  // Historial del owner (GET /api/users/me/history)
+  const [historyItems, setHistoryItems] = useState<HistoryItemDto[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [historyTypeFilter, setHistoryTypeFilter] = useState('');
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+
+  // Bodegas que sigo del owner (GET /api/users/me/following-wineries)
+  const [followingWineries, setFollowingWineries] = useState<FollowingWineryDto[]>([]);
+  const [wineriesPage, setWineriesPage] = useState(1);
+  const [hasMoreWineries, setHasMoreWineries] = useState(false);
+  const [wineriesLoadingMore, setWineriesLoadingMore] = useState(false);
+  const [wineriesError, setWineriesError] = useState<string | null>(null);
+  const [unfollowTarget, setUnfollowTarget] = useState<FollowingWineryDto | null>(null);
+  const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
+
+  // Toast / feedback contextual
+  const [toastMessage, setToastMessage] = useState<{ message: string; isError?: boolean } | null>(null);
+
+  const showToast = useCallback((message: string, isError = false) => {
+    setToastMessage({ message, isError });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }, []);
 
   const isOwner = Boolean(
     currentUser &&
@@ -149,7 +213,7 @@ export default function ProfilePage() {
     };
   }, [username, currentUser, navigate]);
 
-  // Cargar vinos públicos si es visitante (vigilando únicamente el identificador primitivo estable)
+  // Cargar vinos públicos si es visitante
   const profileUsername = profile?.username;
 
   useEffect(() => {
@@ -176,8 +240,9 @@ export default function ProfilePage() {
   }, [profileUsername, isOwner]);
 
   // Cargar datos del owner según pestaña activa
+  const profileId = profile?.id;
   useEffect(() => {
-    if (!isOwner || !profile) return;
+    if (!isOwner || !profileId) return;
 
     let isMounted = true;
     async function loadOwnerData() {
@@ -192,8 +257,16 @@ export default function ProfilePage() {
             if (isMounted) setOwnerCellarItems([]);
           }
         } else if (activeTab === 'historial') {
-          const tried = await getMyUserWinesApi({ tried: true });
-          if (isMounted) setOwnerTriedWines(tried);
+          setHistoryPage(1);
+          const history = await getMyHistoryApi({
+            pageNumber: 1,
+            pageSize: PAGE_SIZE,
+            type: historyTypeFilter || undefined,
+          });
+          if (isMounted) {
+            setHistoryItems(history);
+            setHasMoreHistory(history.length === PAGE_SIZE);
+          }
         } else if (activeTab === 'deseados') {
           const [wanted, fav] = await Promise.all([
             getMyUserWinesApi({ wanted: true }),
@@ -204,9 +277,22 @@ export default function ProfilePage() {
           wanted.forEach((w) => combinedMap.set(w.wineId, w));
           fav.forEach((w) => combinedMap.set(w.wineId, w));
           if (isMounted) setOwnerFavWines(Array.from(combinedMap.values()));
+        } else if (activeTab === 'bodegas') {
+          setWineriesPage(1);
+          setWineriesError(null);
+          const wineries = await getMyFollowingWineriesApi({
+            pageNumber: 1,
+            pageSize: PAGE_SIZE,
+          });
+          if (isMounted) {
+            setFollowingWineries(wineries);
+            setHasMoreWineries(wineries.length === PAGE_SIZE);
+          }
         }
       } catch {
-        // En caso de fallo de red, mantener estados previos
+        if (activeTab === 'bodegas' && isMounted) {
+          setWineriesError('Error al cargar las bodegas que seguís.');
+        }
       } finally {
         if (isMounted) setOwnerDataLoading(false);
       }
@@ -216,7 +302,82 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [isOwner, profile, activeTab]);
+  }, [isOwner, profileId, activeTab, historyTypeFilter]);
+
+  // Cargar más actividades del historial
+  const handleLoadMoreHistory = async () => {
+    if (historyLoadingMore || !hasMoreHistory) return;
+    setHistoryLoadingMore(true);
+    const nextPage = historyPage + 1;
+
+    try {
+      const more = await getMyHistoryApi({
+        pageNumber: nextPage,
+        pageSize: PAGE_SIZE,
+        type: historyTypeFilter || undefined,
+      });
+      setHistoryItems((prev) => [...prev, ...more]);
+      setHistoryPage(nextPage);
+      setHasMoreHistory(more.length === PAGE_SIZE);
+    } catch {
+      showToast('Error al cargar más actividades.', true);
+    } finally {
+      setHistoryLoadingMore(false);
+    }
+  };
+
+  // Cargar más bodegas
+  const handleLoadMoreWineries = async () => {
+    if (wineriesLoadingMore || !hasMoreWineries) return;
+    setWineriesLoadingMore(true);
+    const nextPage = wineriesPage + 1;
+
+    try {
+      const more = await getMyFollowingWineriesApi({
+        pageNumber: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+      setFollowingWineries((prev) => [...prev, ...more]);
+      setWineriesPage(nextPage);
+      setHasMoreWineries(more.length === PAGE_SIZE);
+    } catch {
+      showToast('Error al cargar más bodegas.', true);
+    } finally {
+      setWineriesLoadingMore(false);
+    }
+  };
+
+  // Dejar de seguir bodega con actualización optimista y rollback
+  const handleConfirmUnfollowWinery = async () => {
+    if (!unfollowTarget) return;
+
+    const target = unfollowTarget;
+    setUnfollowTarget(null);
+    setUnfollowingId(target.wineryId);
+
+    // Snapshot para rollback
+    const previousWineries = [...followingWineries];
+
+    // Actualización optimista inmediata
+    setFollowingWineries((prev) => prev.filter((w) => w.wineryId !== target.wineryId));
+    setProfile((prev) =>
+      prev ? { ...prev, followingCount: Math.max(0, prev.followingCount - 1) } : null
+    );
+
+    try {
+      await unfollowWinery(target.wineryId);
+      showToast(`Dejaste de seguir a ${target.name}.`);
+    } catch {
+      // Revertir optimismo
+      setFollowingWineries(previousWineries);
+      setProfile((prev) =>
+        prev ? { ...prev, followingCount: prev.followingCount + 1 } : null
+      );
+      showToast(`No se pudo dejar de seguir a ${target.name}. Por favor intentá de nuevo.`, true);
+    } finally {
+      setUnfollowingId(null);
+    }
+  };
 
   // "Joyas de la Cava": selección curada de las mejores botellas (hasta 8)
   const ownerShowcaseWines = useMemo(() => {
@@ -264,7 +425,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#0b0b0e] text-neutral-100 font-sans flex flex-col justify-between selection:bg-rose-900 selection:text-white">
-      {/* 1. Top Bar Contextual Slim (reemplaza al Navbar global) */}
+      {/* 1. Top Bar Contextual Slim */}
       <ProfileTopBar
         backTo="/dashboard"
         backLabel="Volver a Explorar"
@@ -294,7 +455,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* BANNER DINÁMICO CON GRADIENTE VITIVINÍCOLA DETERMINISTA */}
+            {/* BANNER DINÁMICO */}
             <div
               className={cn(
                 'relative w-full h-28 sm:h-32 md:h-36 overflow-hidden transition-colors duration-300',
@@ -307,17 +468,15 @@ export default function ProfilePage() {
                   activeTheme.radialOverlayClass
                 )}
               />
-              {/* Fade-out degradado inferior para fundir con el fondo de la app */}
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0b0e] to-transparent pointer-events-none" />
             </div>
 
-            {/* CABECERA EXPANSIVA DE PERFIL CON AVATAR CIRCULAR SUPERPUESTO */}
+            {/* CABECERA EXPANSIVA DE PERFIL */}
             <header className="w-full bg-[#0b0b0e] border-b border-white/10 pb-8">
               <div className="max-w-7xl mx-auto px-6">
                 <div className="relative z-10 -mt-12 sm:-mt-14 flex flex-col md:flex-row md:items-start justify-between gap-6">
-                  {/* Bloque Izquierdo: Avatar Circular superpuesto + Nombre Serif + Bio */}
+                  {/* Bloque Izquierdo: Avatar + Nombre + Bio */}
                   <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
-                    {/* Avatar Circular con aro aislante */}
                     <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden ring-4 ring-[#0b0b0e] shadow-2xl border border-white/15 bg-[#17151a] shrink-0">
                       <img
                         src={getAvatarUrl({ avatarImageId: profile.avatarImageId, photo: profile.photo, username: profile.username })}
@@ -330,7 +489,6 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    {/* Identidad y Metadatos */}
                     <div className="max-w-2xl pt-1 sm:pt-2">
                       <h1 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-white">
                         {profile.username}
@@ -344,7 +502,6 @@ export default function ProfilePage() {
                         })}
                       </p>
 
-                      {/* Biografía en su propio bloque tipográfico con margen superior explícito */}
                       <div className="mt-3.5 max-w-xl">
                         <p className="text-sm text-zinc-300 leading-relaxed font-sans">
                           {profile.bio && profile.bio.trim().length > 0 ? (
@@ -357,9 +514,8 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Bloque Derecho: Acciones Contextuales y Métricas Consolidadas con espaciado respirable */}
+                  {/* Bloque Derecho: Acciones y Métricas Consolidadas */}
                   <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end justify-end gap-3.5 pt-1 sm:pt-2">
-                    {/* Botón Acción (Configuración para dueño / Seguir para visitante) */}
                     {isOwner ? (
                       <Link
                         to="/cuenta"
@@ -397,7 +553,6 @@ export default function ProfilePage() {
                       </button>
                     )}
 
-                    {/* Métricas Numéricas Reales en Card Sobria */}
                     <div className="bg-[#17151a]/90 border border-white/10 rounded-md px-5 py-2.5 flex items-center gap-6 sm:gap-7 shadow-sm">
                       <div className="text-center sm:text-right">
                         <div className="text-xl sm:text-2xl font-bold text-white font-mono leading-none">
@@ -434,10 +589,11 @@ export default function ProfilePage() {
             {/* ÁREA PRINCIPAL DE CONTENIDO */}
             <main className="max-w-7xl mx-auto px-6 py-10 w-full flex-1">
               {isOwner ? (
-                /* VISTA PROPIETARIO: Pestañas Segmentadas en Cápsula Flotante */
+                /* VISTA PROPIETARIO: 4 Pestañas */
                 <div className="space-y-8">
                   {/* Barra de Pestañas Segmentadas */}
                   <div className="inline-flex p-1 bg-[#17151a] border border-white/10 rounded-md gap-1 overflow-x-auto max-w-full">
+                    {/* 1. Joyas de la Cava */}
                     <button
                       type="button"
                       onClick={() => setActiveTab('cava')}
@@ -465,6 +621,7 @@ export default function ProfilePage() {
                       </span>
                     </button>
 
+                    {/* 2. Historial de Actividad */}
                     <button
                       type="button"
                       onClick={() => setActiveTab('historial')}
@@ -481,9 +638,10 @@ export default function ProfilePage() {
                           activeTab === 'historial' ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
                         )}
                       />
-                      <span>Historial de Catas</span>
+                      <span>Historial</span>
                     </button>
 
+                    {/* 3. Deseados & Favoritos */}
                     <button
                       type="button"
                       onClick={() => setActiveTab('deseados')}
@@ -500,7 +658,47 @@ export default function ProfilePage() {
                           activeTab === 'deseados' ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
                         )}
                       />
-                      <span>Deseados & Favoritos</span>
+                      <span>Deseados</span>
+                      {ownerFavWines.length > 0 && (
+                        <span
+                          className={cn(
+                            'text-xs font-mono px-1.5 py-0.5 rounded-sm',
+                            activeTab === 'deseados' ? 'bg-black/25 text-rose-100' : 'bg-[#0f0e13] text-zinc-400'
+                          )}
+                        >
+                          {ownerFavWines.length}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* 4. Bodegas que sigo */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('bodegas')}
+                      className={cn(
+                        'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
+                        activeTab === 'bodegas'
+                          ? 'bg-[#6e1a24] text-white font-semibold shadow-sm'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 font-medium'
+                      )}
+                    >
+                      <Building2
+                        className={cn(
+                          'w-4 h-4 shrink-0 transition-colors',
+                          activeTab === 'bodegas' ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
+                        )}
+                      />
+                      <span>Bodegas</span>
+                      {profile.followingCount > 0 && (
+                        <span
+                          className={cn(
+                            'text-xs font-mono px-1.5 py-0.5 rounded-sm',
+                            activeTab === 'bodegas' ? 'bg-black/25 text-rose-100' : 'bg-[#0f0e13] text-zinc-400'
+                          )}
+                        >
+                          {profile.followingCount}
+                        </span>
+                      )}
                     </button>
                   </div>
 
@@ -510,6 +708,7 @@ export default function ProfilePage() {
                       <Loader2 className="w-6 h-6 text-rose-500 animate-spin" />
                     </div>
                   ) : activeTab === 'cava' ? (
+                    /* PESTAÑA CAVA (INTACTA) */
                     <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
@@ -522,7 +721,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <Link
-                            to="/dashboard#catalogo"
+                            to="/catalogo"
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm bg-[#17151a] border border-white/15 hover:border-white/25 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors"
                           >
                             <Plus className="w-3.5 h-3.5 text-rose-400" />
@@ -538,12 +737,10 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Empty State / Grilla para el Dueño con slots interactivos punteados */}
                       {ownerCellarItems.length === 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                          {/* Slot Principal Interactivo (+) */}
                           <Link
-                            to="/dashboard#catalogo"
+                            to="/catalogo"
                             className="group border-2 border-dashed border-rose-500/30 hover:border-rose-400/70 bg-[#17151a]/40 hover:bg-[#17151a]/70 rounded-md p-6 flex flex-col items-center justify-center text-center transition-all min-h-[260px] shadow-sm"
                           >
                             <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-800/50 flex items-center justify-center text-rose-400 group-hover:scale-110 group-hover:bg-rose-900/80 transition-all mb-4">
@@ -557,11 +754,10 @@ export default function ProfilePage() {
                             </p>
                           </Link>
 
-                          {/* Placeholders secundarios atenuados */}
                           {[1, 2, 3].map((slotIndex) => (
                             <Link
                               key={slotIndex}
-                              to="/dashboard#catalogo"
+                              to="/catalogo"
                               className="hidden sm:flex group border-2 border-dashed border-zinc-800/60 bg-[#17151a]/10 rounded-md p-6 flex-col items-center justify-center text-center opacity-40 hover:opacity-75 transition-opacity min-h-[260px]"
                             >
                               <div className="w-10 h-10 rounded-full bg-white/[0.02] border border-zinc-800/60 flex items-center justify-center text-zinc-600 group-hover:text-zinc-400 transition-colors mb-3">
@@ -614,10 +810,9 @@ export default function ProfilePage() {
                               </article>
                             ))}
 
-                            {/* Slot punteado interactivo adicional si hay pocas botellas */}
                             {ownerShowcaseWines.length < 4 && (
                               <Link
-                                to="/dashboard#catalogo"
+                                to="/catalogo"
                                 className="group border-2 border-dashed border-rose-500/25 hover:border-rose-400/60 bg-[#17151a]/30 hover:bg-[#17151a]/60 rounded-md p-6 flex flex-col items-center justify-center text-center transition-all min-h-[220px]"
                               >
                                 <div className="w-10 h-10 rounded-full bg-rose-950/40 border border-rose-800/40 text-rose-400 group-hover:scale-110 group-hover:bg-rose-900/60 transition-all flex items-center justify-center mb-3">
@@ -633,7 +828,6 @@ export default function ProfilePage() {
                             )}
                           </div>
 
-                          {/* CTA Ver Cava Completa */}
                           <div className="pt-4 flex justify-center">
                             <Link
                               to="/cava"
@@ -647,63 +841,160 @@ export default function ProfilePage() {
                       )}
                     </div>
                   ) : activeTab === 'historial' ? (
+                    /* PESTAÑA HISTORIAL (GET /api/users/me/history) */
                     <div className="space-y-6">
-                      <div>
-                        <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white">
-                          Historial de Catas
-                        </h2>
-                        <p className="text-sm text-zinc-300 font-sans mt-0.5">
-                          Vinos que registraste como probados y descorchados.
-                        </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white">
+                            Historial de Actividad
+                          </h2>
+                          <p className="text-sm text-zinc-300 font-sans mt-0.5">
+                            Registro cronológico de tus descorches, reseñas, botellas guardadas y vinos cargados.
+                          </p>
+                        </div>
+
+                        {/* Filtros por tipo de actividad con estilo de chips */}
+                        <div role="group" aria-label="Filtro de actividades" className="flex flex-wrap items-center gap-2">
+                          {HISTORY_FILTER_CHIPS.map((chip) => {
+                            const isSelected = historyTypeFilter === chip.value;
+                            return (
+                              <button
+                                key={chip.label}
+                                type="button"
+                                aria-pressed={isSelected}
+                                onClick={() => setHistoryTypeFilter(chip.value)}
+                                className={`rounded-full px-3.5 py-1 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm'
+                                    : 'bg-neutral-900/60 border border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                                }`}
+                              >
+                                {chip.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {ownerTriedWines.length === 0 ? (
+                      {historyItems.length === 0 ? (
                         <div className="border border-white/10 bg-[#17151a] rounded-md p-14 text-center space-y-3">
                           <History className="w-8 h-8 text-neutral-500 mx-auto" />
-                          <h3 className="font-serif text-lg font-medium text-white">Sin historial registrado</h3>
+                          <h3 className="font-serif text-lg font-medium text-white">Sin actividad registrada</h3>
                           <p className="text-sm text-zinc-300 font-sans max-w-sm mx-auto">
-                            Aún no registraste vinos probados en tu historial.
+                            {historyTypeFilter
+                              ? 'No hay actividades para el filtro seleccionado.'
+                              : 'Aún no registraste actividades en tu historial.'}
                           </p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                          {ownerTriedWines.map((wine) => (
-                            <div
-                              key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-2 flex flex-col justify-between hover:border-rose-900/30 transition-all"
-                            >
-                              <div>
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-xs font-mono font-medium uppercase tracking-wide text-zinc-300">
-                                    {wine.wineType}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded-sm text-xs font-mono bg-amber-950/60 text-amber-300 border border-amber-800/40">
-                                    Probado
-                                  </span>
-                                </div>
-                                <h3 className="text-base font-bold text-white truncate font-sans">{wine.name}</h3>
-                                <p className="text-sm text-zinc-300 truncate font-sans">{wine.wineryNameText || 'Bodega'}</p>
-                              </div>
+                        <div className="space-y-8">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                            {historyItems.map((item) => {
+                              const meta = ACTIVITY_TYPE_META[item.type] || {
+                                label: item.type,
+                                badgeClass: 'bg-neutral-800 text-neutral-300 border-neutral-700',
+                              };
 
-                              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-300">
-                                {wine.averageRating ? (
-                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-sm">
-                                    <Star className="w-3.5 h-3.5 fill-amber-400" />
-                                    <span>{wine.averageRating}</span>
+                              // Prioridad de imagen: personal -> pública de cosecha -> silueta
+                              const imageSrc = item.personalImageId
+                                ? imageUrl(item.personalImageId, 'bottle')
+                                : item.vintage?.imageId
+                                ? imageUrl(item.vintage.imageId, 'bottle')
+                                : null;
+
+                              return (
+                                <Link
+                                  key={item.id}
+                                  to={`/vinos/${item.wine.id}`}
+                                  className="group p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/40 hover:bg-[#1c1920] transition-all cursor-pointer shadow-sm hover:-translate-y-0.5"
+                                >
+                                  <div>
+                                    {/* Cabecera de tarjeta: Tipo de vino y Rótulo de acción */}
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                      <span className="text-xs font-mono font-medium uppercase tracking-wide text-zinc-300">
+                                        {item.wine.wineType}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          'px-2 py-0.5 rounded-sm text-xs font-mono border',
+                                          meta.badgeClass
+                                        )}
+                                      >
+                                        {meta.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Imagen de Botella */}
+                                    <div className="w-full h-36 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-2 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
+                                      <ShowcaseWineBottle src={imageSrc} alt={item.wine.name} />
+                                    </div>
+
+                                    {/* Nombre, Bodega y Año de Cosecha */}
+                                    <h3 className="text-base font-bold text-white truncate font-sans group-hover:text-rose-400 transition-colors">
+                                      {item.wine.name}
+                                    </h3>
+                                    <p className="text-sm text-zinc-300 truncate font-sans">
+                                      {item.wine.wineryName || 'Bodega'} <span className="text-zinc-500">·</span>{' '}
+                                      {item.vintage?.year ? item.vintage.year : 'Sin añada'}
+                                    </p>
+
+                                    {/* Puntaje propio (estrellas) y comentario opcional */}
+                                    {item.rating && (
+                                      <div className="mt-2 pt-2 border-t border-white/5">
+                                        <div className="flex items-center gap-1 text-amber-400">
+                                          {Array.from({ length: item.rating }).map((_, i) => (
+                                            <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
+                                          ))}
+                                          <span className="font-mono text-xs font-bold text-neutral-200 ml-1">
+                                            {item.rating}/5
+                                          </span>
+                                        </div>
+                                        {item.comment && (
+                                          <p className="text-xs text-zinc-400 italic line-clamp-2 mt-1 font-sans">
+                                            &ldquo;{item.comment}&rdquo;
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
+
+                                  {/* Pie de tarjeta: Fecha del evento */}
+                                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
+                                    <span>{new Date(item.occurredAt).toLocaleDateString('es-AR')}</span>
+                                    <span className="text-rose-400/90 group-hover:text-rose-300 text-xs font-medium">
+                                      Ver ficha &rarr;
+                                    </span>
+                                  </div>
+                                </Link>
+                              );
+                            })}
+                          </div>
+
+                          {/* Botón Cargar Más Historial */}
+                          {hasMoreHistory && (
+                            <div className="text-center pt-2">
+                              <button
+                                type="button"
+                                onClick={handleLoadMoreHistory}
+                                disabled={historyLoadingMore}
+                                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-[#141417] border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow-md"
+                              >
+                                {historyLoadingMore ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                                    <span>Cargando más...</span>
+                                  </>
                                 ) : (
-                                  <span className="text-xs text-zinc-400">Sin calificar</span>
+                                  <span>Cargar más</span>
                                 )}
-                                <span className="text-xs text-zinc-400">
-                                  {new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}
-                                </span>
-                              </div>
+                              </button>
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) : activeTab === 'deseados' ? (
+                    /* PESTAÑA DESEADOS (SIN averageRating) */
                     <div className="space-y-6">
                       <div>
                         <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white">
@@ -719,15 +1010,16 @@ export default function ProfilePage() {
                           <Bookmark className="w-8 h-8 text-neutral-500 mx-auto" />
                           <h3 className="font-serif text-lg font-medium text-white">Sin deseados o favoritos</h3>
                           <p className="text-sm text-zinc-300 font-sans max-w-sm mx-auto">
-                            No tienes vinos en tu lista de deseos o favoritos.
+                            No tenés vinos en tu lista de deseos o favoritos.
                           </p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                           {ownerFavWines.map((wine) => (
-                            <div
+                            <Link
                               key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-2 flex flex-col justify-between hover:border-rose-900/30 transition-all"
+                              to={`/vinos/${wine.wineId}`}
+                              className="group p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/40 hover:bg-[#1c1920] transition-all cursor-pointer shadow-sm hover:-translate-y-0.5"
                             >
                               <div>
                                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -747,25 +1039,207 @@ export default function ProfilePage() {
                                     )}
                                   </div>
                                 </div>
-                                <h3 className="text-base font-bold text-white truncate font-sans">{wine.name}</h3>
-                                <p className="text-sm text-zinc-300 truncate font-sans">{wine.wineryNameText || 'Bodega'}</p>
+                                <h3 className="text-base font-bold text-white truncate font-sans group-hover:text-rose-400 transition-colors">
+                                  {wine.name}
+                                </h3>
+                                <p className="text-sm text-zinc-300 truncate font-sans">
+                                  {wine.wineryNameText || 'Bodega'}
+                                </p>
                               </div>
 
-                              {wine.averageRating && (
-                                <div className="pt-2 border-t border-white/10 flex items-center gap-1 text-sm font-mono text-amber-400 font-bold">
-                                  <Star className="w-3.5 h-3.5 fill-amber-400" />
-                                  <span>{wine.averageRating} ({wine.reviewCount} reseñas)</span>
-                                </div>
-                              )}
-                            </div>
+                              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
+                                <span>{new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}</span>
+                                <span className="text-rose-400/90 group-hover:text-rose-300 text-xs font-medium">
+                                  Ver ficha &rarr;
+                                </span>
+                              </div>
+                            </Link>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* PESTAÑA BODEGAS QUE SIGO (GET /api/users/me/following-wineries) */
+                    <div className="space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white">
+                            Bodegas que sigo
+                          </h2>
+                          <p className="text-sm text-zinc-300 font-sans mt-0.5">
+                            Seguí las novedades, nuevas cosechas y lanzamientos de tus bodegas favoritas.
+                          </p>
+                        </div>
+                        <Link
+                          to="/catalogo"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm bg-[#17151a] border border-white/15 hover:border-white/25 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors self-start sm:self-auto"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Descubrir Bodegas</span>
+                        </Link>
+                      </div>
+
+                      {/* Error al cargar bodegas */}
+                      {wineriesError && (
+                        <div className="p-6 rounded-md bg-rose-950/20 border border-rose-900/50 text-center space-y-3">
+                          <AlertTriangle className="w-6 h-6 text-rose-400 mx-auto" />
+                          <p className="text-sm text-neutral-200">{wineriesError}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('cava');
+                              setTimeout(() => setActiveTab('bodegas'), 10);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-rose-900/60 border border-rose-700/60 text-white text-xs font-semibold uppercase tracking-wider hover:bg-rose-900 transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Reintentar</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {!wineriesError && followingWineries.length === 0 ? (
+                        <div className="border border-white/10 bg-[#17151a] rounded-md p-14 text-center space-y-4 max-w-xl mx-auto shadow-sm">
+                          <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-zinc-400">
+                            <Building2 className="w-6 h-6 text-rose-400/80" />
+                          </div>
+                          <div className="space-y-1">
+                            <h3 className="font-serif text-xl font-medium text-white">
+                              Todavía no seguís ninguna bodega
+                            </h3>
+                            <p className="text-sm text-zinc-300 font-sans leading-relaxed">
+                              Explorá el catálogo de productores para descubrir terruños y recibir actualizaciones de añadas.
+                            </p>
+                          </div>
+                          <div className="pt-2">
+                            <Link
+                              to="/catalogo"
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[#221f26] hover:bg-[#2a2630] border border-white/15 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors"
+                            >
+                              <span>Explorar catálogo de vinos</span>
+                            </Link>
+                          </div>
+                        </div>
+                      ) : !wineriesError && (
+                        <div className="space-y-8">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                            {followingWineries.map((winery) => {
+                              const locationStr = [winery.regionName, winery.stateName]
+                                .filter(Boolean)
+                                .join(', ');
+
+                              return (
+                                <article
+                                  key={winery.wineryId}
+                                  className="group p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/40 hover:bg-[#1c1920] transition-all shadow-sm"
+                                >
+                                  <div>
+                                    {/* Cabecera: Logo y Datos principales */}
+                                    <div className="flex items-start gap-3 mb-3">
+                                      <div className="w-12 h-12 rounded-full bg-[#0f0e13] border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+                                        {winery.logoImageId ? (
+                                          <img
+                                            src={imageUrl(winery.logoImageId, 'logo') || undefined}
+                                            alt={winery.name}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="font-serif font-bold text-rose-400 text-lg">
+                                            {winery.name.charAt(0)}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex-1 min-w-0">
+                                        <Link
+                                          to={`/bodegas/${winery.wineryId}`}
+                                          className="text-base font-bold text-white hover:text-rose-400 transition-colors truncate block font-sans"
+                                        >
+                                          {winery.name}
+                                        </Link>
+                                        {locationStr && (
+                                          <p className="text-xs text-zinc-400 flex items-center gap-1 mt-0.5 truncate font-sans">
+                                            <MapPin className="w-3 h-3 text-rose-400/80 shrink-0" />
+                                            <span>{locationStr}</span>
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Métricas: Cantidad de vinos y Seguidores */}
+                                    <div className="flex items-center gap-3 text-xs font-sans text-zinc-300 py-2 border-y border-white/5">
+                                      <span>
+                                        {winery.labelsCount} {winery.labelsCount === 1 ? 'vino' : 'vinos'}
+                                      </span>
+                                      <span className="text-zinc-600">·</span>
+                                      <span>
+                                        {winery.followersCount} {winery.followersCount === 1 ? 'seguidor' : 'seguidores'}
+                                      </span>
+                                    </div>
+
+                                    {/* Siguiendo desde */}
+                                    <p className="text-xs text-zinc-400 font-sans pt-1">
+                                      Siguiendo desde{' '}
+                                      {new Date(winery.followedAt).toLocaleDateString('es-AR', {
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })}
+                                    </p>
+                                  </div>
+
+                                  {/* Acción: Dejar de seguir */}
+                                  <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                                    <Link
+                                      to={`/bodegas/${winery.wineryId}`}
+                                      className="text-xs text-zinc-300 hover:text-white font-medium transition-colors"
+                                    >
+                                      Ver bodega &rarr;
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      disabled={unfollowingId === winery.wineryId}
+                                      onClick={() => setUnfollowTarget(winery)}
+                                      className="px-2.5 py-1 rounded-sm border border-white/10 hover:border-rose-700/60 hover:bg-rose-950/30 text-xs font-sans text-zinc-400 hover:text-rose-200 transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                      {unfollowingId === winery.wineryId ? (
+                                        <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                                      ) : (
+                                        'Dejar de seguir'
+                                      )}
+                                    </button>
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+
+                          {/* Botón Cargar Más Bodegas */}
+                          {hasMoreWineries && (
+                            <div className="text-center pt-2">
+                              <button
+                                type="button"
+                                onClick={handleLoadMoreWineries}
+                                disabled={wineriesLoadingMore}
+                                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-[#141417] border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow-md"
+                              >
+                                {wineriesLoadingMore ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                                    <span>Cargando más...</span>
+                                  </>
+                                ) : (
+                                  <span>Cargar más</span>
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
                 </div>
               ) : (
-                /* VISTA VISITANTE: Joyas de la Cava en Mosaico Sobrio */
+                /* VISTA VISITANTE (INTACTA) */
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-3 border-b border-white/15">
                     <div>
@@ -786,7 +1260,6 @@ export default function ProfilePage() {
                       <Loader2 className="w-6 h-6 text-rose-500 animate-spin" />
                     </div>
                   ) : publicWines.length === 0 ? (
-                    /* Empty state sobrio para el visitante: NO slots punteados ni dropzones */
                     <div className="border border-white/10 bg-[#17151a] rounded-md p-12 text-center space-y-4 max-w-xl mx-auto shadow-sm">
                       <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-zinc-400">
                         <Wine className="w-6 h-6 text-rose-400/80" />
@@ -799,7 +1272,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
                         <Link
-                          to="/dashboard#catalogo"
+                          to="/catalogo"
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[#221f26] hover:bg-[#2a2630] border border-white/15 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors"
                         >
                           <span>Explorar catálogo de vinos</span>
@@ -857,6 +1330,42 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Cuadro de Diálogo de Confirmación para Dejar de Seguir Bodega */}
+      <ConfirmDialog
+        open={Boolean(unfollowTarget)}
+        title="¿Dejar de seguir bodega?"
+        message={
+          unfollowTarget
+            ? `¿Estás seguro de que querés dejar de seguir a "${unfollowTarget.name}"? Dejarás de recibir sus novedades en tu feed.`
+            : ''
+        }
+        confirmLabel="Dejar de seguir"
+        tone="danger"
+        onConfirm={handleConfirmUnfollowWinery}
+        onCancel={() => setUnfollowTarget(null)}
+      />
+
+      {/* Toast Flotante Contextual */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div
+            className={cn(
+              'px-4 py-3 rounded-lg border shadow-xl flex items-center gap-3 max-w-sm text-sm',
+              toastMessage.isError
+                ? 'bg-rose-950/95 border-rose-800 text-rose-200'
+                : 'bg-[#17151a]/95 border-white/20 text-white'
+            )}
+          >
+            {toastMessage.isError ? (
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            ) : (
+              <Wine className="w-4 h-4 text-rose-400 shrink-0" />
+            )}
+            <span className="leading-snug">{toastMessage.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

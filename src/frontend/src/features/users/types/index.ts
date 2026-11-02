@@ -64,3 +64,43 @@ export interface CellarItemDto {
   lastChangeAt: string;
 }
 
+/**
+ * Entidades para el historial de actividad de usuario (C# HistoryItemDto).
+ */
+export interface HistoryWineDto {
+  id: number;
+  name: string;
+  wineryName?: string | null;
+  wineType: string;
+}
+
+export interface HistoryVintageDto {
+  id: number;
+  year?: number | null;
+  imageId?: string | null;
+}
+
+export interface HistoryItemDto {
+  id: number;
+  type: 'Uncorked' | 'Reviewed' | 'AddedToCellar' | 'WineContributed' | string;
+  occurredAt: string;
+  wine: HistoryWineDto;
+  vintage?: HistoryVintageDto | null;
+  personalImageId?: string | null;
+  rating?: number | null;
+  comment?: string | null;
+}
+
+/**
+ * Entidad de bodega seguida por el usuario (C# FollowWineryResponseDto ampliado en Bloque 12).
+ */
+export interface FollowingWineryDto {
+  wineryId: number;
+  name: string;
+  followedAt: string;
+  logoImageId?: string | null;
+  stateName?: string | null;
+  regionName?: string | null;
+  labelsCount: number;
+  followersCount: number;
+}

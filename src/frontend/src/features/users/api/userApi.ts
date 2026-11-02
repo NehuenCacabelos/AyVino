@@ -10,6 +10,8 @@ import type {
   UserWineListItemDto,
   CellarDto,
   CellarItemDto,
+  HistoryItemDto,
+  FollowingWineryDto,
 } from '../types';
 
 /**
@@ -150,3 +152,36 @@ export async function getCellarItemsApi(cellarId: number): Promise<CellarItemDto
   return response.data;
 }
 
+/**
+ * Obtiene el historial cronológico de actividades del usuario autenticado actual.
+ */
+export async function getMyHistoryApi(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  type?: string;
+}): Promise<HistoryItemDto[]> {
+  const response = await apiClient.get<HistoryItemDto[]>('/users/me/history', {
+    params: {
+      pageNumber: params?.pageNumber ?? 1,
+      pageSize: params?.pageSize ?? 12,
+      type: params?.type || undefined,
+    },
+  });
+  return response.data;
+}
+
+/**
+ * Obtiene la lista paginada de bodegas seguidas por el usuario autenticado actual.
+ */
+export async function getMyFollowingWineriesApi(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+}): Promise<FollowingWineryDto[]> {
+  const response = await apiClient.get<FollowingWineryDto[]>('/users/me/following-wineries', {
+    params: {
+      pageNumber: params?.pageNumber ?? 1,
+      pageSize: params?.pageSize ?? 12,
+    },
+  });
+  return response.data;
+}
