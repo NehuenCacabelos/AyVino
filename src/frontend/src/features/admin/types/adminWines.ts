@@ -27,4 +27,7 @@ export interface MergeWinesResultDto {
   movedReviews: number;
   discardedReviews: number;
   movedCellarItems: number;
+  movedUserImages: number;
+  discardedUserImages: number;
+  movedActivities: number;
 }

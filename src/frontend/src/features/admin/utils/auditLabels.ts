@@ -17,6 +17,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   WineDeleted: 'Eliminación de vino',
   ReviewDeletedByAdmin: 'Eliminación de reseña por admin',
   WineMerged: 'Fusión de vinos',
+  VintageImagePromoted: 'Foto pública elegida de un aporte',
 };
 
 export const AUDIT_ENTITY_LABELS: Record<string, string> = {

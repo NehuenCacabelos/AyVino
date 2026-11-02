@@ -1,4 +1,9 @@
-import type { ApprovalStatus, WineType, WineVintageResponseDto } from '../../winery/types/wine';
+import type {
+  ApprovalStatus,
+  WineType,
+  WineVintageResponseDto,
+  UpdateWineVintageRequestDto,
+} from '../../winery/types/wine';
 
 export interface AdminWineVintageListItem {
   vintageId: number;
@@ -15,12 +20,26 @@ export interface AdminWineVintageListItem {
   uploadedByUserId: number;
   uploadedByUsername: string | null;
   registerDate: string;
+  communityUsers: number;
 }
 
 export interface GetAdminVintagesParams {
   pageNumber: number;
   pageSize: number;
   status?: ApprovalStatus;
+  sort?: 'users' | 'date';
 }
 
-export type { WineVintageResponseDto };
+export interface VintageContributionDto {
+  userId: number;
+  username: string;
+  personalImageId: string | null;
+  isUploader: boolean;
+}
+
+export interface PromoteVintageImageResponseDto {
+  vintageId: number;
+  imageId: string;
+}
+
+export type { WineVintageResponseDto, UpdateWineVintageRequestDto };

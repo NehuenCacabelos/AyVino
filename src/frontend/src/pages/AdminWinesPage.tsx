@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Eye, Pen, Trash2, X, AlertTriangle, Wine, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   getAdminWines,
@@ -6,7 +7,7 @@ import {
   deleteWine,
   mergeWines,
 } from '../features/admin/api/adminWinesApi';
-import { getWineVintages } from '../features/winery/api/wineApi';
+import { getWineVintages, getWineById } from '../features/winery/api/wineApi';
 import { getWineries } from '../features/winery/api/wineryApi';
 import type { WineResponseDto } from '../features/admin/types/adminWines';
 import type { WineVintageResponseDto } from '../features/winery/types/wine';
@@ -36,6 +37,9 @@ const WINE_TYPES = [
 
 export default function AdminWinesPage() {
   const toast = useAdminToast();
+  const [searchParams] = useSearchParams();
+  const focusWineId = searchParams.get('focusWineId');
+  const handledFocusRef = useRef<string | null>(null);
 
   // Filtros de búsqueda
   const [searchName, setSearchName] = useState('');
@@ -138,6 +142,32 @@ export default function AdminWinesPage() {
     });
     setEditError(null);
   };
+
+  useEffect(() => {
+    if (!focusWineId || handledFocusRef.current === focusWineId) return;
+    const wineIdNum = Number(focusWineId);
+    if (!wineIdNum) return;
+    handledFocusRef.current = focusWineId;
+
+    let isMounted = true;
+    void Promise.resolve().then(async () => {
+      const existing = wines.find((w) => w.id === wineIdNum);
+      if (existing) {
+        if (isMounted) handleOpenEdit(existing);
+        return;
+      }
+      try {
+        const fetched = await getWineById(wineIdNum);
+        if (isMounted) handleOpenEdit(fetched);
+      } catch {
+        // Silencioso si no se encuentra el vino a enfocar
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [focusWineId, wines]);
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,7 +283,7 @@ export default function AdminWinesPage() {
     try {
       const res = await mergeWines(selectedTargetWine.id, mergeDuplicateWine.id);
       toast.success(
-        `Fusión exitosa: ${res.movedVintages} cosechas movidas, ${res.mergedVintages} fusionadas. ${res.movedReviews} reseñas movidas, ${res.discardedReviews} descartadas.`
+        `Fusión exitosa: ${res.movedVintages} cosechas movidas, ${res.mergedVintages} fusionadas. ${res.movedReviews} reseñas movidas, ${res.discardedReviews} descartadas. ${res.movedUserImages} fotos personales migradas, ${res.discardedUserImages} descartadas, ${res.movedActivities} actividades migradas.`
       );
       setMergeDuplicateWine(null);
       await reload();
