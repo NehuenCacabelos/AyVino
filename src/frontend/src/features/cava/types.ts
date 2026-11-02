@@ -76,14 +76,16 @@ export interface SommelierRecommendation {
 }
 
 export interface TastingLogEntry {
-  id: string;
+  id: string | number;
+  wineId?: number;
   wineName: string;
-  criticScore: string; // "CATA PRIVADA 97 PTS"
-  uncorkDate: string; // "DESCORCHADO EL 14 DE MARZO, 2025"
-  notes: string;
-  sight: string;
-  agingRemaining: string;
-  ratingValue: number;
+  wineryName?: string | null;
+  vintageYear?: number | null;
+  uncorkDate: string;
+  notes?: string | null;
+  ratingValue?: number | null;
+  personalImageId?: string | null;
+  vintageImageId?: string | null;
 }
 
 export interface QuickAddBottlePayload {

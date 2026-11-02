@@ -18,6 +18,7 @@ export default function TechnicalSheetModal({
   onClose,
   onBottleUpdated,
   onBottleRemoved,
+  onUncork,
 }: TechnicalSheetModalProps) {
   // Estado para modal interno de edición
   const [isEditing, setIsEditing] = useState(false);
@@ -337,19 +338,16 @@ export default function TechnicalSheetModal({
                 Cerrar
               </button>
 
-              {/* Botón Registrar Cata / Descorchar deshabilitado con Próximamente */}
               <button
                 type="button"
-                disabled
-                title="Próximamente"
-                aria-label="Registrar Cata / Descorchar (Próximamente)"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-neutral-800/80 text-neutral-400 opacity-60 cursor-not-allowed text-xs font-semibold border border-neutral-700/50"
+                onClick={() => {
+                  onClose();
+                  onUncork?.(wine);
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-[#800020] hover:bg-[#990026] text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
               >
-                <Award className="w-3.5 h-3.5 text-neutral-400" />
+                <Award className="w-3.5 h-3.5 text-[#fbbf24]" />
                 <span>Registrar Cata / Descorchar</span>
-                <span className="text-[9px] uppercase font-mono px-1 rounded bg-white/10 text-neutral-400">
-                  Próx.
-                </span>
               </button>
             </div>
           </div>

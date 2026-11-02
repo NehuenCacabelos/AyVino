@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Wine, AlertTriangle, Clock, RefreshCw, X, Plus } from 'lucide-react';
 import { useAuth } from '../features/auth';
-import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
+import { DashboardNavbar, UncorkDialog, type UncorkTargetWine } from '../features/dashboard';
 import {
   VaultHeader,
   VaultVitals,
@@ -11,7 +11,6 @@ import {
   VaultLogbookModule,
   TechnicalSheetModal,
   QuickAddBottleModal,
-  initialTastingLog,
   getCellarsApi,
   getCellarItemsApi,
   createCellarApi,
@@ -24,8 +23,36 @@ import {
   type VaultTab,
   type TastingLogEntry,
 } from '../features/cava';
-import type { CellarDto } from '../features/users/types';
-import type { DashboardWine } from '../types/wine';
+import { getMyHistoryApi } from '../features/users/api/userApi';
+import type { CellarDto, HistoryItemDto } from '../features/users/types';
+
+function formatHistoryDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat('es-AR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(d);
+  } catch {
+    return dateStr;
+  }
+}
+
+function mapHistoryItemToTastingLog(item: HistoryItemDto): TastingLogEntry {
+  return {
+    id: item.id,
+    wineId: item.wine?.id,
+    wineName: item.wine?.name ?? 'Vino',
+    wineryName: item.wine?.wineryName,
+    vintageYear: item.vintage?.year,
+    uncorkDate: formatHistoryDate(item.occurredAt),
+    notes: item.comment,
+    ratingValue: item.rating,
+    personalImageId: item.personalImageId,
+    vintageImageId: item.vintage?.imageId,
+  };
+}
 
 /**
  * CavaPage Component (/cava)
@@ -92,11 +119,83 @@ export default function CavaPage() {
 
   // 7. Modales de Botellas
   const [selectedDetailsWine, setSelectedDetailsWine] = useState<CellarWine | null>(null);
-  const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
+  const [uncorkingWine, setUncorkingWine] = useState<UncorkTargetWine | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Bitácora de catas (módulo complementario)
-  const [tastingLog] = useState<TastingLogEntry[]>(initialTastingLog);
+  // Bitácora de catas (alimentada por historial real de descorches)
+  const [logbookEntries, setLogbookEntries] = useState<TastingLogEntry[]>([]);
+  const [logbookPage, setLogbookPage] = useState(1);
+  const [hasMoreLogbook, setHasMoreLogbook] = useState(false);
+  const [logbookLoadingMore, setLogbookLoadingMore] = useState(false);
+  const [reloadLogbookKey, setReloadLogbookKey] = useState(0);
+
+  const loadLogbook = useCallback(() => {
+    setLogbookPage(1);
+    setReloadLogbookKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    getMyHistoryApi({ pageNumber: 1, pageSize: 20, type: 'Uncorked' })
+      .then((items) => {
+        if (!isMounted) return;
+        setLogbookEntries(items.map(mapHistoryItemToTastingLog));
+        setHasMoreLogbook(items.length === 20);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setLogbookEntries([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reloadLogbookKey]);
+
+  const handleLoadMoreLogbook = async () => {
+    if (logbookLoadingMore || !hasMoreLogbook) return;
+    setLogbookLoadingMore(true);
+    const nextPage = logbookPage + 1;
+    try {
+      const more = await getMyHistoryApi({
+        pageNumber: nextPage,
+        pageSize: 20,
+        type: 'Uncorked',
+      });
+      setLogbookEntries((prev) => [...prev, ...more.map(mapHistoryItemToTastingLog)]);
+      setLogbookPage(nextPage);
+      setHasMoreLogbook(more.length === 20);
+    } catch {
+      // Ignorar error al cargar más
+    } finally {
+      setLogbookLoadingMore(false);
+    }
+  };
+
+  const handleOpenUncork = (wine: CellarWine) => {
+    if (!wine.wineId || !wine.wineVintageId) return;
+    setUncorkingWine({
+      wineId: wine.wineId,
+      wineVintageId: wine.wineVintageId,
+      name: wine.name,
+      winery: wine.winery,
+      year: wine.vintage,
+      imageUrl: wine.imageUrl,
+      wineType: wine.varietal,
+      bottle: wine.bottle,
+      cellarId: wine.cellarId ?? selectedCellarId ?? undefined,
+      availableUnits: wine.units,
+    });
+  };
+
+  const handleUncorkDone = () => {
+    const wineName = uncorkingWine?.name ?? 'Vino';
+    setUncorkingWine(null);
+    showNotification(`Descorche registrado: «${wineName}»`);
+    loadCellars();
+    loadCellarItems();
+    loadLogbook();
+  };
 
   const showNotification = (msg: string) => {
     clearTimeout(notificationTimerRef.current);
@@ -502,6 +601,7 @@ export default function CavaPage() {
                         key={wine.id}
                         wine={wine}
                         onOpenDetails={(w) => setSelectedDetailsWine(w)}
+                        onUncork={handleOpenUncork}
                       />
                     ))}
                   </div>
@@ -511,7 +611,12 @@ export default function CavaPage() {
 
             {/* Bitácora de Catas (Conserva su contenido actual) */}
             <div className="pt-2">
-              <VaultLogbookModule entries={tastingLog} />
+              <VaultLogbookModule
+                entries={logbookEntries}
+                hasMore={hasMoreLogbook}
+                onLoadMore={handleLoadMoreLogbook}
+                isLoadingMore={logbookLoadingMore}
+              />
             </div>
           </>
         )}
@@ -523,6 +628,7 @@ export default function CavaPage() {
         onClose={() => setSelectedDetailsWine(null)}
         onBottleUpdated={handleBottleMutated}
         onBottleRemoved={handleBottleMutated}
+        onUncork={handleOpenUncork}
       />
 
       {/* Modal Crear Cava */}
@@ -711,7 +817,7 @@ export default function CavaPage() {
       <UncorkDialog
         wine={uncorkingWine}
         onClose={() => setUncorkingWine(null)}
-        onSave={() => setUncorkingWine(null)}
+        onDone={handleUncorkDone}
       />
 
       {/* 4. Footer Editorial */}

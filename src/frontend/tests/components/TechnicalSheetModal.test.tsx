@@ -82,10 +82,9 @@ describe('TechnicalSheetModal Component (Vista 3A: Ficha de Botella)', () => {
     const link = screen.getByRole('link', { name: /Ver ficha del vino/i });
     expect(link).toHaveAttribute('href', '/vinos/55');
 
-    // Descorche is disabled
+    // Descorche is enabled (Vista 6)
     const uncorkBtn = screen.getByRole('button', { name: /Registrar Cata \/ Descorchar/i });
-    expect(uncorkBtn).toBeDisabled();
-    expect(uncorkBtn).toHaveAttribute('title', 'Próximamente');
+    expect(uncorkBtn).toBeEnabled();
   });
 
   it('hides missing fields and shows "Sin añada" when optional data is null', () => {

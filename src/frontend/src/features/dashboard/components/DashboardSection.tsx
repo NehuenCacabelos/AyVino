@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import StockCarousel from './StockCarousel';
 import OnboardingBanner from './OnboardingBanner';
-import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
+import type { DashboardWine } from '../../../types/wine';
 
 type ViewMode = 'stock' | 'new';
 
@@ -11,7 +11,7 @@ const viewOptions: { id: ViewMode; label: string }[] = [
 ];
 
 interface DashboardSectionProps {
-  onUncorkSaved?: (data: UncorkSubmission) => void;
+  onUncorkSaved?: (data: unknown) => void;
   onUncorkRequested?: (wine: DashboardWine) => void;
   onAddBottleRequested?: () => void;
 }

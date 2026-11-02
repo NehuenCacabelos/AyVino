@@ -7,7 +7,7 @@ interface VaultWineCardProps {
   onUncork?: (wine: CellarWine) => void;
 }
 
-export default function VaultWineCard({ wine, onOpenDetails }: VaultWineCardProps) {
+export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWineCardProps) {
   const isOptimal = wine.agingStatus === 'optimal';
   const vintageDisplay = wine.vintage != null ? `Cosecha ${wine.vintage}` : 'Sin añada';
 
@@ -111,15 +111,10 @@ export default function VaultWineCard({ wine, onOpenDetails }: VaultWineCardProp
         </button>
         <button
           type="button"
-          disabled
-          title="Próximamente"
-          aria-label="Registrar Cata (Próximamente)"
-          className="w-full bg-neutral-800/50 text-neutral-400 opacity-60 cursor-not-allowed text-center font-sans font-semibold text-xs py-2 rounded border border-neutral-700/30 flex items-center justify-center gap-1"
+          onClick={() => onUncork?.(wine)}
+          className="w-full bg-[#1c1b22] hover:bg-[#800020]/30 hover:border-[#800020]/60 text-neutral-200 hover:text-white text-center font-sans font-semibold text-xs py-2 rounded border border-neutral-700/60 transition-colors cursor-pointer flex items-center justify-center gap-1"
         >
           <span>Registrar Cata</span>
-          <span className="text-[9px] uppercase font-mono px-1 rounded bg-white/10 text-neutral-400">
-            Próx.
-          </span>
         </button>
       </div>
     </article>

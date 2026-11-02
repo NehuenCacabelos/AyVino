@@ -144,14 +144,3 @@ export interface CellarMetrics {
   wishlistCount: number;
   locationsCount: number;
 }
-
-/**
- * Registro de cata / descorche de una botella.
- */
-export interface UncorkSubmission {
-  wine: DashboardWine;
-  rating: number;
-  date: string;
-  occasion: string;
-  tastingNotes: string;
-}

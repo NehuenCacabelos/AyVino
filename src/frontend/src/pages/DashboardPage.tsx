@@ -7,10 +7,9 @@ import {
   FilterChips,
   SectionHeading,
   WineryBlock,
-  UncorkDialog,
 } from '../features/dashboard';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
-import type { DashboardWine, UncorkSubmission } from '../types/wine';
+import type { DashboardWine } from '../types/wine';
 import type { AppOutletContext } from '../components/layout/AppLayout';
 
 const catenaWines: DashboardWine[] = [
@@ -219,7 +218,7 @@ export default function DashboardPage() {
   });
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
-  const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
+
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isAutoScrollingRef = useRef(false);
   const lastScrollYRef = useRef(0);
@@ -279,10 +278,6 @@ export default function DashboardPage() {
     }, 3500);
   };
 
-  const handleUncorkSaved = (data: UncorkSubmission) => {
-    setStockCount((prev) => Math.max(0, prev - 1));
-    showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
-  };
 
   const handleAddToCellar = (wine: DashboardWine) => {
     setStockCount((prev) => prev + 1);
@@ -450,7 +445,7 @@ export default function DashboardPage() {
                 const catalogEl = document.getElementById('catalogo');
                 catalogEl?.scrollIntoView({ behavior: 'smooth' });
               }}
-              onUncorkSpotlight={(wine) => setUncorkingWine(wine)}
+
             />
           </div>
 
@@ -586,11 +581,6 @@ export default function DashboardPage() {
       </div>
 
       {/* Modal Profesional de Descorche y Ficha Técnica */}
-      <UncorkDialog
-        wine={uncorkingWine}
-        onClose={() => setUncorkingWine(null)}
-        onSave={handleUncorkSaved}
-      />
     </div>
   );
 }

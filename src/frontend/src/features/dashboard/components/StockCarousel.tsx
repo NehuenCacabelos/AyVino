@@ -6,7 +6,7 @@ import type { DashboardWine } from '../../../types/wine';
 
 export interface StockCarouselProps {
   wines?: DashboardWine[];
-  onUncork: (wine: DashboardWine) => void;
+  onUncork?: (wine: DashboardWine) => void;
 }
 
 const defaultStock: DashboardWine[] = [
@@ -83,7 +83,7 @@ const defaultStock: DashboardWine[] = [
  * Carrusel horizontal de botellas con tarjetas oscuras (#121214), bordes sutiles de 1px
  * border-neutral-800, micro-datos técnicos y botón de descorche en bordó (#722F37).
  */
-export default function StockCarousel({ wines = defaultStock, onUncork }: StockCarouselProps) {
+export default function StockCarousel({ wines = defaultStock }: StockCarouselProps) {
   const trackRef = useRef<HTMLUListElement>(null);
 
   const scroll = (direction: 1 | -1) => {
@@ -199,10 +199,15 @@ export default function StockCarousel({ wines = defaultStock, onUncork }: StockC
 
                 <button
                   type="button"
-                  onClick={() => onUncork(wine)}
-                  className="flex h-10 w-full items-center justify-center rounded-md bg-[#722F37] hover:bg-[#5c1d24] text-neutral-100 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                  disabled
+                  title="Próximamente"
+                  aria-label="Descorchar (Próximamente)"
+                  className="flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#722F37]/50 text-neutral-400 opacity-60 cursor-not-allowed text-xs font-semibold uppercase tracking-wider"
                 >
-                  Descorchar
+                  <span>Descorchar</span>
+                  <span className="text-[9px] uppercase font-mono px-1 rounded bg-white/10 text-neutral-400">
+                    Próx.
+                  </span>
                 </button>
               </div>
 

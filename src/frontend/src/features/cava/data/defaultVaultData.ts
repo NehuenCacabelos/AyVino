@@ -3,7 +3,6 @@ import type {
   CellarVitals,
   CellarTelemetry,
   SommelierRecommendation,
-  TastingLogEntry,
 } from '../types';
 
 import piedraInfinitaImg from '../../../assets/wines/curated/PiedraInfinita-removebg-preview.png';
@@ -274,28 +273,4 @@ export const initialSommelierRecommendation: SommelierRecommendation = {
   intelTag: 'SOMMELIER INTEL: AAS / MASTER ARCHIVE',
 };
 
-export const initialTastingLog: TastingLogEntry[] = [
-  {
-    id: 'log-1',
-    wineName: 'Cheval des Andes 2016',
-    criticScore: 'CATA PRIVADA 97 PTS',
-    uncorkDate: 'DESCORCHADO EL 14 DE MARZO, 2025',
-    notes:
-      'Nariz con increíble profundidad de violetas, tabaco rubio y sándalo. En boca, la seda del Malbec armoniza a la perfección con la columna vertebral del Cabernet Sauvignon de Las Compuertas. Servido en copas Riedel Burdeos a 17°C tras 1 hora en decantador.',
-    sight: 'Granate profundo con ribete teja tenue',
-    agingRemaining: 'Guarda estimada de resto: 10 años más',
-    ratingValue: 5,
-  },
-  {
-    id: 'log-2',
-    wineName: 'Catena Zapata Adrianna Vineyard River Stones 2018',
-    criticScore: 'CATA PRIVADA 99 PTS',
-    uncorkDate: 'DESCORCHADO EL 28 DE DICIEMBRE, 2024',
-    notes:
-      'Mineralidad descarnada, pura tiza y pedernal. Una tensión ácida asombrosa que despierta cada rincón de la boca. Acabado salino interminable.',
-    sight: 'Rojo púrpura vivaz con ribete violeta eléctrico',
-    agingRemaining: 'En plenitud ascendente',
-    ratingValue: 5,
-  },
-];
 

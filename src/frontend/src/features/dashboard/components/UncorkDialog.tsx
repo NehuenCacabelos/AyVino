@@ -1,33 +1,115 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { Star, X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react';
+import { Star, X, Wine as WineIcon, Sparkles, Heart, AlertTriangle } from 'lucide-react';
 import BottleVector from './BottleVector';
-import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
+import type { BottleKind } from '../../../types/wine';
+import {
+  createUncork,
+  formatUncorkDate,
+  type UncorkResponse,
+} from '../../cava/api/uncorkApi';
+import {
+  getMyWineMarks,
+  markWineAsFavorite,
+  unmarkWineAsFavorite,
+} from '../../userWines';
+import { extractCellarErrorMessage } from '../../cava/api/cellarApi';
 
-interface UncorkDialogProps {
-  wine: DashboardWine | null;
-  onClose: () => void;
-  onSave?: (data: UncorkSubmission) => void;
+export interface UncorkTargetWine {
+  wineId: number;
+  wineVintageId: number;
+  name: string;
+  winery?: string;
+  year: number | null;
+  imageUrl?: string;
+  wineType?: string;
+  bottle?: BottleKind;
+  cellarId?: number;
+  availableUnits?: number;
 }
 
-/**
- * UncorkDialog Component (Ficha Técnica y Modal de Descorche — Inspiración Imagen 1)
- * Modal estructurado como tarjeta de cata profesional:
- * - Columna Izquierda: Escaparate de botella sobre fondo oscuro con reflejos y badge de stock.
- * - Columna Derecha: Título en Serif, valoración de estrellas, tabla técnica estructurada
- *   (añada, color, varietal, denominación, formato y servicio), selector de cantidad [- 01 +]
- *   y notas de cata con botón de descorche en borgoña.
- */
-export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProps) {
-  const [rating, setRating] = useState(5);
+export interface UncorkDialogProps {
+  wine: UncorkTargetWine | null;
+  onClose: () => void;
+  onDone?: (response: UncorkResponse) => void;
+  /** @deprecated mantenido por compatibilidad */
+  onSave?: (data: unknown) => void;
+}
+
+const WINE_TYPE_LABELS: Record<string, string> = {
+  Red: 'Tinto',
+  White: 'Blanco',
+  Rose: 'Rosado',
+  Sparkling: 'Espumoso',
+  Orange: 'Naranjo',
+};
+
+export default function UncorkDialog({
+  wine,
+  onClose,
+  onDone,
+  onSave,
+}: UncorkDialogProps) {
+  // Puntaje: estrellas enteras 1 a 5, sin valor por defecto (arranca en null)
+  const [rating, setRating] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [occasion, setOccasion] = useState('Cena en casa');
-  const [tastingNotes, setTastingNotes] = useState('');
-  const [isSaved, setIsSaved] = useState(false);
+
+  // Comentario / Notas de cata: hasta 1000 caracteres, solo con puntaje
+  const [comment, setComment] = useState('');
+
+  // Fecha: opcional, por defecto hoy, máximo hoy
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [date, setDate] = useState(todayStr);
+
+  // Favorito: estado inicial desde GET /api/wines/{wineId}/my-marks
   const [isFav, setIsFav] = useState(false);
+  const initialFavRef = useRef(false);
+
+  // Estados de envío y feedback
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [favWarning, setFavWarning] = useState<string | null>(null);
+
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const [prevWineVintageId, setPrevWineVintageId] = useState<number | null>(null);
+
+  if (wine && wine.wineVintageId !== prevWineVintageId) {
+    setPrevWineVintageId(wine.wineVintageId);
+    setRating(null);
+    setHover(0);
+    setComment('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setIsSaved(false);
+    setErrorMessage(null);
+    setFavWarning(null);
+  } else if (!wine && prevWineVintageId !== null) {
+    setPrevWineVintageId(null);
+  }
+
+  // Cargar marcas iniciales (Favorito)
+  const wineId = wine?.wineId;
+  useEffect(() => {
+    if (!wineId) return;
+    let isMounted = true;
+
+    getMyWineMarks(wineId)
+      .then((marks) => {
+        if (!isMounted) return;
+        const fav = marks?.isFavorite ?? false;
+        setIsFav(fav);
+        initialFavRef.current = fav;
+      })
+      .catch(() => {
+        // Silencioso si falla la lectura de marcas
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [wineId]);
+
+  // Manejo de tecla Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && wine) {
@@ -51,25 +133,82 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
 
   if (!wine) return null;
 
-  const currentHoverOrRating = hover || rating;
-  const currentUnits = wine.units ?? 1;
+  const currentHoverOrRating = hover || rating || 0;
+  const currentUnits = wine.availableUnits ?? 1;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleRatingClick = (val: number) => {
+    // Si toca la misma estrella ya seleccionada, se deselecciona (queda sin puntuar)
+    if (rating === val) {
+      setRating(null);
+      setComment(''); // regla: no hay comentario sin puntaje
+    } else {
+      setRating(val);
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
+    if (isSubmitting || isSaved) return;
 
-    onSave?.({
-      wine,
-      rating,
-      date,
-      occasion,
-      tastingNotes,
-    });
+    if (!rating && comment.trim()) {
+      setErrorMessage('No se puede enviar un comentario sin puntaje.');
+      return;
+    }
 
-    closeTimerRef.current = setTimeout(() => {
-      setIsSaved(false);
-      onClose();
-    }, 900);
+    if (comment.length > 1000) {
+      setErrorMessage('El comentario no puede superar los 1000 caracteres.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setFavWarning(null);
+
+    try {
+      const occurredAtIso = formatUncorkDate(date);
+
+      const response = await createUncork({
+        wineVintageId: wine.wineVintageId,
+        cellarId: wine.cellarId,
+        rating: rating ?? null,
+        comment: rating && comment.trim() ? comment.trim() : null,
+        occurredAt: occurredAtIso ?? null,
+      });
+
+      // Si cambió el estado de favorito, actualizarlo tras el descorche exitoso
+      if (isFav !== initialFavRef.current) {
+        try {
+          if (isFav) {
+            await markWineAsFavorite(wine.wineId);
+          } else {
+            await unmarkWineAsFavorite(wine.wineId);
+          }
+        } catch {
+          setFavWarning('El descorche se guardó, pero no se pudo actualizar el estado de favorito.');
+        }
+      }
+
+      setIsSaved(true);
+      setIsSubmitting(false);
+
+      onDone?.(response);
+      onSave?.(response);
+
+      closeTimerRef.current = setTimeout(() => {
+        setIsSaved(false);
+        onClose();
+      }, 900);
+    } catch (err: unknown) {
+      setIsSubmitting(false);
+      const anyErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      if (anyErr?.response?.status === 409 || anyErr?.response?.status === 404) {
+        setErrorMessage('Ya no quedan botellas de este vino en la cava.');
+      } else {
+        setErrorMessage(
+          extractCellarErrorMessage(err, 'Ocurrió un error al registrar el descorche.')
+        );
+      }
+    }
   };
 
   return (
@@ -85,9 +224,8 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Contenedor Modal Dividido (Estilo Ficha Imagen 1) */}
+      {/* Contenedor Modal Dividido */}
       <div className="relative w-full max-w-4xl rounded-3xl border border-stone-800 bg-[#160408] text-cream-50 shadow-2xl z-10 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
-        
         {/* Botón de Cierre Flotante */}
         <button
           type="button"
@@ -98,18 +236,16 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
           <X className="h-5 w-5" />
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
-          
+        <div className="grid grid-cols-1 md:grid-cols-12 min-h-[540px]">
           {/* ========================================================
               COLUMNA IZQUIERDA (5 cols): Exhibición Gráfica de Botella
               ======================================================== */}
           <div className="md:col-span-5 bg-gradient-to-b from-[#1b050b] via-[#120206] to-[#0d0104] p-8 flex flex-col justify-between items-center relative border-b md:border-b-0 md:border-r border-stone-800/80">
-            
             {/* Cabecera superior izquierda: Badge y Favorito */}
             <div className="w-full flex items-center justify-between z-10">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-wine-950/80 border border-wine-800 text-[11px] font-bold uppercase tracking-wider text-amber-300">
                 <WineIcon className="h-3 w-3" />
-                Cava Privada
+                {wine.cellarId ? 'Cava Privada' : 'Descorche Directo'}
               </span>
 
               <button
@@ -126,41 +262,57 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
               </button>
             </div>
 
-            {/* Ilustración de Botella en Gran Escala con Sombra y Luz Cenital */}
+            {/* Ilustración de Botella o Imagen Real */}
             <div className="relative my-8 flex flex-col items-center justify-center">
-              {/* Halos de luz tenue detrás del vidrio */}
               <div className="absolute inset-0 h-64 w-48 rounded-full bg-wine-800/25 blur-3xl pointer-events-none" />
 
-              <div className="relative z-10">
-                <BottleVector kind={wine.bottle} className="h-64 sm:h-72 w-auto drop-shadow-2xl" alt={wine.name} />
+              <div className="relative z-10 flex items-center justify-center h-64 sm:h-72">
+                {wine.imageUrl ? (
+                  <img
+                    src={wine.imageUrl}
+                    alt={wine.name}
+                    className="max-h-64 sm:max-h-72 w-auto object-contain drop-shadow-2xl"
+                  />
+                ) : (
+                  <BottleVector
+                    kind={wine.bottle || 'red-burgundy'}
+                    className="h-64 sm:h-72 w-auto drop-shadow-2xl"
+                    alt={wine.name}
+                  />
+                )}
               </div>
 
-              {/* Sombra de apoyo */}
               <div className="w-24 h-4 bg-black/80 rounded-full blur-[3px] -mt-1 pointer-events-none" />
             </div>
 
-            {/* Badge de Stock Disponible */}
+            {/* Inventario Disponible */}
             <div className="w-full text-center z-10">
-              <p className="text-xs text-stone-400 uppercase tracking-widest font-sans">
-                Inventario actual:
-              </p>
-              <p className="font-serif text-base font-bold text-amber-300 mt-0.5">
-                {`${currentUnits} ${currentUnits === 1 ? 'botella' : 'botellas'} en cava`}
-              </p>
+              {wine.cellarId ? (
+                <>
+                  <p className="text-xs text-stone-400 uppercase tracking-widest font-sans">
+                    Inventario en cava:
+                  </p>
+                  <p className="font-serif text-base font-bold text-amber-300 mt-0.5">
+                    {`${currentUnits} ${currentUnits === 1 ? 'botella' : 'botellas'}`}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-stone-400 font-sans">
+                  Registrando descorche directo
+                </p>
+              )}
             </div>
-
           </div>
 
           {/* ========================================================
               COLUMNA DERECHA (7 cols): Ficha Técnica y Formulario
               ======================================================== */}
           <div className="md:col-span-7 p-6 sm:p-8 flex flex-col justify-between gap-6 bg-[#160408]">
-            
             {/* 1. Encabezado de la Etiqueta */}
             <div>
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-400">
-                  {wine.winery}
+                  {wine.winery || 'Bodega'}
                 </span>
 
                 {/* Estrellas de Puntuación */}
@@ -171,7 +323,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
                       type="button"
                       aria-label={`${val} de 5 estrellas`}
                       onMouseEnter={() => setHover(val)}
-                      onClick={() => setRating(val)}
+                      onClick={() => handleRatingClick(val)}
                       className="p-0.5 hover:scale-110 transition-transform cursor-pointer"
                     >
                       <Star
@@ -184,156 +336,137 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
                     </button>
                   ))}
                   <span className="ml-1.5 text-xs font-bold text-amber-300 font-mono">
-                    {currentHoverOrRating}.0
+                    {rating !== null ? `${rating}.0` : 'Sin puntuar'}
                   </span>
                 </div>
               </div>
 
-              <h2 id="uncork-modal-title" className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight mt-1">
+              <h2
+                id="uncork-modal-title"
+                className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight mt-1"
+              >
                 {wine.name}
               </h2>
-              
-              <p className="text-xs text-stone-400 font-sans mt-0.5">
-                {wine.region}
-              </p>
             </div>
 
-            {/* 2. Tabla Técnica Estructurada (Inspiración Imagen 1) */}
+            {/* 2. Cuadro Técnico: sólo lo que se conoce */}
             <div className="rounded-2xl border border-stone-800 bg-white/[0.03] p-4 text-xs font-sans">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Añada</span>
-                  <span className="font-semibold text-stone-200">{wine.vintage}</span>
+                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">
+                    Añada
+                  </span>
+                  <span className="font-semibold text-stone-200">
+                    {wine.year ?? 'Sin añada'}
+                  </span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Varietal</span>
-                  <span className="font-semibold text-stone-200">{wine.varietal}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Formato</span>
-                  <span className="font-semibold text-stone-200">750 ml</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Servicio</span>
-                  <span className="font-semibold text-stone-200">16°–18° C</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Guarda</span>
-                  <span className="font-semibold text-stone-200">Ventana Óptima</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">Ubicación</span>
-                  <span className="font-semibold text-stone-200 truncate block">{wine.location || 'Cava Principal'}</span>
+                  <span className="block text-[10px] uppercase font-bold text-stone-500 tracking-wider">
+                    Tipo de vino
+                  </span>
+                  <span className="font-semibold text-stone-200">
+                    {wine.wineType
+                      ? WINE_TYPE_LABELS[wine.wineType] || wine.wineType
+                      : '—'}
+                  </span>
                 </div>
               </div>
             </div>
+
+            {/* Alerta de Error */}
+            {errorMessage && (
+              <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Alerta de Favorito */}
+            {favWarning && (
+              <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{favWarning}</span>
+              </div>
+            )}
 
             {/* 3. Formulario de Descorche */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              
-              {/* Selector de Cantidad, Ocasión y Fecha */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                
-                {/* Selector Numérico [- 01 +] (Estilo Imagen 1) */}
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-                    Botellas
-                  </label>
-                  <div className="inline-flex items-center rounded-full border border-stone-700 bg-white/5 p-1 w-full justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      disabled={quantity <= 1}
-                      aria-label="Restar una botella"
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-stone-300 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-
-                    <span className="text-center font-mono font-bold text-xs text-white">
-                      {quantity < 10 ? `0${quantity}` : quantity}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => Math.min(currentUnits, q + 1))}
-                      disabled={quantity >= currentUnits}
-                      aria-label="Sumar una botella"
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-stone-300 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Selector de Ocasión */}
-                <div>
-                  <label htmlFor="uncork-occasion" className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-                    Ocasión
-                  </label>
-                  <select
-                    id="uncork-occasion"
-                    value={occasion}
-                    onChange={(e) => setOccasion(e.target.value)}
-                    className="w-full rounded-full border border-stone-700 bg-[#210910] px-3 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none cursor-pointer"
-                  >
-                    <option value="Cena en casa">Cena en casa</option>
-                    <option value="Con amigos">Con amigos</option>
-                    <option value="Celebración especial">Celebración</option>
-                    <option value="Maridaje de domingo">Maridaje</option>
-                    <option value="Cata técnica">Cata técnica</option>
-                  </select>
-                </div>
-
-                {/* Fecha */}
-                <div>
-                  <label htmlFor="uncork-date" className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-                    Fecha
-                  </label>
-                  <input
-                    id="uncork-date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-full border border-stone-700 bg-[#210910] px-3 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none cursor-pointer"
-                  />
-                </div>
-
-              </div>
-
-              {/* Notas de Cata Sensoriales */}
+              {/* Fecha del descorche */}
               <div>
-                <label htmlFor="uncork-notes" className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-                  Notas de cata e impresiones
+                <label
+                  htmlFor="uncork-date"
+                  className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5"
+                >
+                  Fecha del descorche
                 </label>
-                <textarea
-                  id="uncork-notes"
-                  rows={2}
-                  value={tastingNotes}
-                  onChange={(e) => setTastingNotes(e.target.value)}
-                  placeholder="Aromas predominantes, maridaje elegido, evolución en copa..."
-                  className="w-full resize-none rounded-2xl border border-stone-800 bg-white/[0.04] p-3 text-xs text-stone-200 placeholder:text-stone-500 focus:border-amber-400 focus:outline-none font-sans"
+                <input
+                  id="uncork-date"
+                  type="date"
+                  max={todayStr}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full rounded-xl border border-stone-700 bg-[#210910] px-3.5 py-2 text-xs text-white focus:border-amber-400 focus:outline-none cursor-pointer"
                 />
               </div>
 
-              {/* Botón Principal en Borgoña Sólido (Estilo Imagen 1) */}
+              {/* Notas de Cata / Comentario */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="uncork-notes"
+                    className="block text-[11px] font-bold uppercase tracking-wider text-stone-400"
+                  >
+                    Notas de cata e impresiones
+                  </label>
+                  <span className="text-[10px] font-mono text-stone-500">
+                    {comment.length}/1000
+                  </span>
+                </div>
+                <textarea
+                  id="uncork-notes"
+                  rows={2}
+                  maxLength={1000}
+                  disabled={rating === null}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder={
+                    rating === null
+                      ? 'Para dejar un comentario, puntuá primero el vino'
+                      : 'Aromas predominantes, maridaje elegido, evolución en copa...'
+                  }
+                  className={`w-full resize-none rounded-2xl border border-stone-800 p-3 text-xs text-stone-200 placeholder:text-stone-500 focus:border-amber-400 focus:outline-none font-sans ${
+                    rating === null
+                      ? 'bg-neutral-900/40 opacity-60 cursor-not-allowed'
+                      : 'bg-white/[0.04]'
+                  }`}
+                />
+                {rating === null && (
+                  <p className="text-[11px] text-stone-500 mt-1 italic">
+                    Para dejar un comentario, puntuá primero el vino
+                  </p>
+                )}
+              </div>
+
+              {/* Botón Principal */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSaved}
+                  disabled={isSubmitting || isSaved}
                   className="w-full inline-flex h-12 items-center justify-center gap-2 rounded-full bg-wine-700 hover:bg-wine-600 text-white text-xs font-bold uppercase tracking-[0.16em] shadow-xl shadow-wine-950/80 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-75"
                 >
                   <Sparkles className="h-4 w-4 text-amber-300" />
-                  <span>{isSaved ? '¡Descorche Registrado!' : 'REGISTRAR DESCORCHE'}</span>
+                  <span>
+                    {isSaved
+                      ? '¡Descorche Registrado!'
+                      : isSubmitting
+                      ? 'Registrando...'
+                      : 'REGISTRAR DESCORCHE'}
+                  </span>
                 </button>
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       </div>
     </div>
   );
