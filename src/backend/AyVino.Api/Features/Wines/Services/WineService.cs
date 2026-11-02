@@ -34,7 +34,7 @@ public class WineService(
         return wine.ToResponseDto();
     }
 
-    public async Task<IEnumerable<WineResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
+    public async Task<IEnumerable<WineListItemDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
@@ -42,7 +42,7 @@ public class WineService(
             throw new ValidationException("'yearFrom' cannot be greater than 'yearTo'.");
 
         var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, actor?.IsAdmin == true, ct);
-        return wines.Select(w => w.ToResponseDto());
+        return wines.Select(w => w.ToListItemDto());
     }
 
     public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default)
@@ -337,7 +337,7 @@ public class WineService(
             throw new ValidationException("The sum of the grape percentages cannot exceed 100%.");
     }
 
-    public async Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
+    public async Task<IEnumerable<WineListItemDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
@@ -353,7 +353,7 @@ public class WineService(
         }
 
         var wines = await wineRepository.SearchAsync(name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
-        return wines.Select(w => w.ToResponseDto());
+        return wines.Select(w => w.ToListItemDto());
     }
 
     public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default)

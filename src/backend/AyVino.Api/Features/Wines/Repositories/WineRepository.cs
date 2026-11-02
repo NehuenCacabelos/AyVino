@@ -41,6 +41,35 @@ public class WineRepository(
     ILogger<WineRepository>? logger = null) : IWineRepository
 
 {
+    /// <summary>
+    /// Genera la condición SQL para determinar si una cosecha ({vintageAlias}) es visible para el actor consultante.
+    /// Unifica las reglas de: Admin, dueño de la bodega ({wineryAlias}), Approved, participante/uploader, o Pending con >= @MinUsers.
+    /// </summary>
+    public static string BuildVintageVisibilityCondition(string vintageAlias = "wv", string wineryAlias = "wy") => $"""
+        (
+            @IsAdmin = TRUE
+            OR (@CurrentUserId IS NOT NULL AND {wineryAlias}.user_id = @CurrentUserId)
+            OR {vintageAlias}.approval_status = 2
+            OR (@CurrentUserId IS NOT NULL AND (
+                {vintageAlias}.uploaded_by_user_id = @CurrentUserId
+                OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = {vintageAlias}.id AND c.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = {vintageAlias}.id AND r.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = {vintageAlias}.id AND uvi.user_id = @CurrentUserId)
+            ))
+            OR ({vintageAlias}.approval_status = 1 AND (
+                SELECT COUNT(DISTINCT u.user_id) FROM (
+                    SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = {vintageAlias}.id AND uploaded_by_user_id IS NOT NULL
+                    UNION
+                    SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = {vintageAlias}.id
+                    UNION
+                    SELECT user_id FROM reviews WHERE wine_vintage_id = {vintageAlias}.id
+                    UNION
+                    SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = {vintageAlias}.id
+                ) u
+            ) >= @MinUsers)
+        )
+        """;
+
 
     private const string SelectColumns = """
 
@@ -159,129 +188,54 @@ public class WineRepository(
 
 
     public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
-
     {
-
-        const string sql = """
-
+        var sql = $"""
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
-
-                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
-
+                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count,
+                   ref_v.thumbnail_image_id, ref_v.reference_vintage_year
             FROM wines w
-
             LEFT JOIN wineries wy ON wy.id = w.winery_id
-
+            LEFT JOIN LATERAL (
+                SELECT ref_wv.image_id AS thumbnail_image_id, ref_wv.year AS reference_vintage_year
+                FROM wine_vintages ref_wv
+                WHERE ref_wv.wine_id = w.id
+                  AND {BuildVintageVisibilityCondition("ref_wv", "wy")}
+                ORDER BY (CASE WHEN ref_wv.image_id IS NOT NULL THEN 0 ELSE 1 END),
+                         ref_wv.year DESC NULLS LAST,
+                         ref_wv.id DESC
+                LIMIT 1
+            ) ref_v ON TRUE
             WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
-
               AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
-
               AND (
-
                 @IsAdmin = TRUE
-
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-
                 OR (w.winery_id IS NULL OR wy.status = 2)
-
               )
-
               AND (
-
                 @IsAdmin = TRUE
-
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-
                 OR EXISTS (
-
                     SELECT 1 FROM wine_vintages wv_pub
-
                     WHERE wv_pub.wine_id = w.id
-
-                      AND (
-
-                        wv_pub.approval_status = 2
-
-                        OR (@CurrentUserId IS NOT NULL AND (
-
-                            wv_pub.uploaded_by_user_id = @CurrentUserId
-
-                            OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id AND c.user_id = @CurrentUserId)
-
-                            OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = wv_pub.id AND r.user_id = @CurrentUserId)
-
-                            OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = wv_pub.id AND uvi.user_id = @CurrentUserId)
-
-                        ))
-
-                        OR (wv_pub.approval_status = 1 AND (
-
-                            SELECT COUNT(DISTINCT u.user_id) FROM (
-
-                                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = wv_pub.id AND uploaded_by_user_id IS NOT NULL
-
-                                UNION
-
-                                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id
-
-                                UNION
-
-                                SELECT user_id FROM reviews WHERE wine_vintage_id = wv_pub.id
-
-                                UNION
-
-                                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = wv_pub.id
-
-                            ) u
-
-                        ) >= @MinUsers)
-
-                      )
-
+                      AND {BuildVintageVisibilityCondition("wv_pub", "wy")}
                 )
-
               )
-
               AND (@GrapeId IS NULL OR EXISTS (
-
                     SELECT 1 FROM wine_vintages wv
-
                     JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
-
                     WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId
-
-                      AND (@IsAdmin = TRUE
-
-                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
-
-                           OR wv.approval_status = 2)))
-
+                      AND {BuildVintageVisibilityCondition("wv", "wy")}))
               AND (
-
                     (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
-
                         SELECT 1 FROM wine_vintages wv2
-
                         WHERE wv2.wine_id = w.id
-
                           AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
-
                           AND (@YearTo IS NULL OR wv2.year <= @YearTo)
-
-                          AND (@IsAdmin = TRUE
-
-                               OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
-
-                               OR wv2.approval_status = 2)
-
-                    )
-
+                          AND {BuildVintageVisibilityCondition("wv2", "wy")})
                   )
-
             ORDER BY w.id
-
             OFFSET @Offset LIMIT @PageSize;
-
             """;
 
         var offset = (pageNumber - 1) * pageSize;
@@ -651,114 +605,61 @@ public class WineRepository(
 
 
     public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default)
-
     {
-
-        const string sql = """
-
+        var sql = $"""
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
-
-                w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
-
+                w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count,
+                ref_v.thumbnail_image_id, ref_v.reference_vintage_year
             FROM wines w
-
             LEFT JOIN wineries wy ON wy.id = w.winery_id
-
+            LEFT JOIN LATERAL (
+                SELECT ref_wv.image_id AS thumbnail_image_id, ref_wv.year AS reference_vintage_year
+                FROM wine_vintages ref_wv
+                WHERE ref_wv.wine_id = w.id
+                  AND {BuildVintageVisibilityCondition("ref_wv", "wy")}
+                ORDER BY (CASE WHEN ref_wv.image_id IS NOT NULL THEN 0 ELSE 1 END),
+                         ref_wv.year DESC NULLS LAST,
+                         ref_wv.id DESC
+                LIMIT 1
+            ) ref_v ON TRUE
             WHERE (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
-
               AND (
-
                 @IsAdmin = TRUE
-
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-
                 OR (w.winery_id IS NULL OR wy.status = 2)
-
             )
-
             AND (
-
                 @IsAdmin = TRUE
-
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-
                 OR EXISTS (
                     SELECT 1 FROM wine_vintages wv_pub
                     WHERE wv_pub.wine_id = w.id
-                      AND (
-                        wv_pub.approval_status = 2
-                        OR (@CurrentUserId IS NOT NULL AND (
-                            wv_pub.uploaded_by_user_id = @CurrentUserId
-                            OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id AND c.user_id = @CurrentUserId)
-                            OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = wv_pub.id AND r.user_id = @CurrentUserId)
-                            OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = wv_pub.id AND uvi.user_id = @CurrentUserId)
-                        ))
-                        OR (wv_pub.approval_status = 1 AND (
-                            SELECT COUNT(DISTINCT u.user_id) FROM (
-                                SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = wv_pub.id AND uploaded_by_user_id IS NOT NULL
-                                UNION
-                                SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = wv_pub.id
-                                UNION
-                                SELECT user_id FROM reviews WHERE wine_vintage_id = wv_pub.id
-                                UNION
-                                SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = wv_pub.id
-                            ) u
-                        ) >= @MinUsers)
-                      )
+                      AND {BuildVintageVisibilityCondition("wv_pub", "wy")}
                 )
-
             )
-
             AND (@Name IS NULL
-
                 OR w.name ILIKE @NamePattern
-
                 OR similarity(w.name, @Name) > @Threshold)
-
             AND (@Winery IS NULL
-
                 OR w.winery_name_text ILIKE @WineryPattern
-
                 OR wy.name ILIKE @WineryPattern
-
                 OR similarity(COALESCE(w.winery_name_text, ''), @Winery) > @Threshold
-
                 OR similarity(COALESCE(wy.name, ''), @Winery) > @Threshold)
-
             AND (@WineType IS NULL OR w.wine_type = @WineType)
-
             AND (@Year IS NULL OR EXISTS (
-
                     SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
-
-                    AND (@IsAdmin = TRUE
-
-                         OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
-
-                         OR wv.approval_status = 2)
-
+                    AND {BuildVintageVisibilityCondition("wv", "wy")}
                 ))
-
             ORDER BY
-
             GREATEST(
-
                 CASE WHEN @Name IS NULL THEN 0 ELSE similarity(w.name, @Name) END,
-
                 CASE WHEN @Winery IS NULL THEN 0 ELSE GREATEST(
-
                     similarity(COALESCE(w.winery_name_text, ''), @Winery),
-
                     similarity(COALESCE(wy.name, ''), @Winery)
-
                 ) END
-
             ) DESC,
-
             w.id
-
             OFFSET @Offset LIMIT @PageSize;
-
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);

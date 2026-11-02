@@ -16,4 +16,6 @@ public record Wine
     public int RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public string? LabelKey { get; init; }
+    public Guid? ThumbnailImageId { get; init; }
+    public int? ReferenceVintageYear { get; init; }
 }
