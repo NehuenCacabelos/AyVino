@@ -118,7 +118,7 @@ En concordancia con la constitución del proyecto ([[AGENTS.md]]):
 - **Decisión**:
   - **Follows**: Relaciones unidireccionales para seguir usuarios o bodegas aprobadas.
   - **UserWines**: Marcas `wanted`, `tried` (no desmarcable) y `favorite` con persistencia `ON CONFLICT` e higiene de base de datos.
-  - **Cellars**: Gestión multi-cava privada (casa, oficina) con control de stock y prevención de borrado con botellas existentes (409 Conflict).
+  - **Cellars**: Gestión multi-cava privada (máximo configurable por usuario `Cellars:MaxPerUser`, por defecto 3, con bloqueo transaccional `pg_advisory_xact_lock`), control de stock y prevención de borrado con botellas existentes (409 Conflict).
   - **WineCare**: Motor de cálculo de temperatura óptima, decantado y ventana de guarda combinando datos declarados por bodegas con heurísticas enológicas basadas en uvas y añadas.
 
 ---

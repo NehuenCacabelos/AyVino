@@ -1,12 +1,17 @@
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.DTOs;
+using AyVino.Api.Features.Cellars.Options;
 using AyVino.Api.Features.Cellars.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace AyVino.Api.Features.Cellars.Services;
 
-public class CellarService(ICellarRepository cellarRepository) : ICellarService
+public class CellarService(
+    ICellarRepository cellarRepository,
+    IOptions<CellarOptions>? cellarOptions = null) : ICellarService
 {
     private const int MaxNameLength = 100;
+    private int MaxPerUser => cellarOptions?.Value?.MaxPerUser ?? 3;
 
     public async Task<IReadOnlyList<CellarResponseDto>> GetAllByUserAsync(int userId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
@@ -26,11 +31,16 @@ public class CellarService(ICellarRepository cellarRepository) : ICellarService
     public async Task<CellarResponseDto> CreateAsync(int userId, CreateCellarRequestDto request, CancellationToken ct = default)
     {
         var name = NormalizeName(request.Name);
+        var maxPerUser = MaxPerUser;
+
+        var count = await cellarRepository.CountByUserAsync(userId, ct);
+        if (count >= maxPerUser)
+            throw new ConflictException($"Alcanzaste el máximo de {maxPerUser} cavas. Borrá una para crear otra.");
 
         if (await cellarRepository.ExistsByNameAsync(userId, name, null, ct))
             throw new ConflictException($"Ya tenés una cava llamada '{name}'.");
 
-        var id = await cellarRepository.CreateAsync(userId, name, ct);
+        var id = await cellarRepository.CreateAsync(userId, name, maxPerUser, ct);
         return await GetByIdAsync(userId, id, ct);
     }
 

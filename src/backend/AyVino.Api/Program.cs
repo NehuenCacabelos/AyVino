@@ -218,6 +218,7 @@ using AyVino.Api.Features.Cellars.Repositories;
 
 
 
+using AyVino.Api.Features.Cellars.Options;
 using AyVino.Api.Features.Cellars.Services;
 
 
@@ -1082,7 +1083,8 @@ builder.Services.AddScoped<IWineVintageService, WineVintageService>();
 
 
 
-builder.Services.Configure<CommunityOptions>(builder.Configuration.GetSection(CommunityOptions.SectionName));
+builder.Services.Configure<CommunityOptions>(builder.Configuration.GetSection(CommunityOptions.SectionName));
+builder.Services.Configure<CellarOptions>(builder.Configuration.GetSection(CellarOptions.SectionName));
 
 
 

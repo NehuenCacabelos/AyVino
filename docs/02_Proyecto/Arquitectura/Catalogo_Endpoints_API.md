@@ -776,7 +776,7 @@ Administración de cavas virtuales del usuario (ej. Cava Hogar, Cava Quincho) y 
 
 | :--- | :--- | :--- | :--- | :--- | :--- |
 
-| `POST` | `/api/cellars` | Autenticado | Crea una nueva cava para el usuario autenticado. | `CreateCellarRequestDto` | `201 Created` (`CellarResponseDto`) |
+| `POST` | `/api/cellars` | Autenticado | Crea una nueva cava para el usuario autenticado. Devuelve `409 Conflict` si ya alcanzó el límite configurado (`Cellars:MaxPerUser`, por defecto 3) o si el nombre ya existe para el usuario. | `CreateCellarRequestDto` | `201 Created` (`CellarResponseDto`) |
 
 | `GET` | `/api/cellars/me` | Autenticado | Lista paginada de cavas del usuario con recuento de botellas y cosechas. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<CellarResponseDto>`) |
 

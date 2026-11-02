@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Data;
+using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.Models;
 using Dapper;
 
@@ -81,16 +82,44 @@ public class CellarRepository(IDbConnectionFactory connectionFactory) : ICellarR
             new CommandDefinition(sql, new { CellarId = cellarId }, cancellationToken: ct));
     }
 
-    public async Task<int> CreateAsync(int userId, string name, CancellationToken ct = default)
+    public async Task<int> CountByUserAsync(int userId, CancellationToken ct = default)
     {
+        const string sql = "SELECT COUNT(*) FROM cellars WHERE user_id = @UserId;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
+
+    public async Task<int> CreateAsync(int userId, string name, int? maxPerUser = null, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        const string lockSql = "SELECT pg_advisory_xact_lock(@UserId);";
+        await connection.ExecuteAsync(new CommandDefinition(lockSql, new { UserId = userId }, transaction, cancellationToken: ct));
+
+        if (maxPerUser.HasValue)
+        {
+            const string countSql = "SELECT COUNT(*) FROM cellars WHERE user_id = @UserId;";
+            var count = await connection.ExecuteScalarAsync<int>(
+                new CommandDefinition(countSql, new { UserId = userId }, transaction, cancellationToken: ct));
+
+            if (count >= maxPerUser.Value)
+            {
+                throw new ConflictException($"Alcanzaste el máximo de {maxPerUser.Value} cavas. Borrá una para crear otra.");
+            }
+        }
+
         const string sql = """
             INSERT INTO cellars (user_id, name)
             VALUES (@UserId, @Name)
             RETURNING id;
             """;
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteScalarAsync<int>(
-            new CommandDefinition(sql, new { UserId = userId, Name = name }, cancellationToken: ct));
+        var id = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new { UserId = userId, Name = name }, transaction, cancellationToken: ct));
+
+        await transaction.CommitAsync(ct);
+        return id;
     }
 
     public async Task<bool> UpdateNameAsync(int cellarId, int userId, string name, CancellationToken ct = default)
