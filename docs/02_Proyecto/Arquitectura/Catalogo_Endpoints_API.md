@@ -1146,6 +1146,8 @@ Gestión integral de descorches de vino en una única transacción atómica ACID
 
   - `Comment` (string?, opcional, máximo 1000): Comentario o nota de cata (requiere obligatoriamente un `Rating`).
 
+  - `OccurredAt` (DateTimeOffset?, opcional): Fecha y hora en la que ocurrió el descorche (UTC o con offset). Si no se provee, se registra el momento actual. No puede ser futura (tolerancia de 5 minutos por desfase de reloj) ni anterior al 1 de enero de 1900. Se asigna idéntica marca de tiempo a las actividades `Uncorked` y `Reviewed` para respetar el orden cronológico del historial.
+
 
 
 - **`UncorkResponseDto`**:

@@ -10,4 +10,5 @@ public record UncorkRequestDto(
     [property: Range(1, 5, ErrorMessage = "El puntaje debe estar entre 1 y 5.")]
     int? Rating = null,
     [property: StringLength(1000, ErrorMessage = "El comentario no puede superar los 1000 caracteres.")]
-    string? Comment = null);
+    string? Comment = null,
+    DateTimeOffset? OccurredAt = null);

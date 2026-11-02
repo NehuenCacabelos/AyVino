@@ -15,6 +15,18 @@ public class UncorkTransactionRunner(
     IReviewRepository reviewRepository,
     IActivityRecorder activityRecorder) : IUncorkTransactionRunner
 {
+    public Task<UncorkExecutionResult> ExecuteAsync(
+        int userId,
+        int wineId,
+        int wineVintageId,
+        int? cellarId,
+        int? rating,
+        string? comment,
+        CancellationToken ct = default)
+    {
+        return ExecuteAsync(userId, wineId, wineVintageId, cellarId, rating, comment, occurredAt: null, ct);
+    }
+
     public async Task<UncorkExecutionResult> ExecuteAsync(
         int userId,
         int wineId,
@@ -22,6 +34,7 @@ public class UncorkTransactionRunner(
         int? cellarId,
         int? rating,
         string? comment,
+        DateTimeOffset? occurredAt,
         CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -93,16 +106,17 @@ public class UncorkTransactionRunner(
             }
 
             // (d) Registrar actividades (Uncorked siempre, Reviewed solo si la reseña fue creada)
-            var activityId = await activityRecorder.RecordAsync(userId, ActivityType.Uncorked, wineId, wineVintageId, connection, transaction, ct);
+            var activityTimestamp = occurredAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
+            var activityId = await activityRecorder.RecordAsync(userId, ActivityType.Uncorked, wineId, wineVintageId, connection, transaction, activityTimestamp, ct);
 
             if (reviewCreated)
             {
-                await activityRecorder.RecordAsync(userId, ActivityType.Reviewed, wineId, wineVintageId, connection, transaction, ct);
+                await activityRecorder.RecordAsync(userId, ActivityType.Reviewed, wineId, wineVintageId, connection, transaction, activityTimestamp, ct);
             }
 
             await transaction.CommitAsync(ct);
 
-            return new UncorkExecutionResult(activityId, remainingQuantity, reviewId, reviewCreated);
+            return new UncorkExecutionResult(activityId, remainingQuantity, reviewId, reviewCreated, activityTimestamp.UtcDateTime);
         }
         catch
         {

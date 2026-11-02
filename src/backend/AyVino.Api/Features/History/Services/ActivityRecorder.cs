@@ -7,17 +7,27 @@ namespace AyVino.Api.Features.History.Services;
 
 public class ActivityRecorder(IDbConnectionFactory connectionFactory) : IActivityRecorder
 {
-    public async Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, CancellationToken ct = default)
+    public Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, CancellationToken ct = default)
     {
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await RecordAsync(userId, type, wineId, wineVintageId, connection, null, ct);
+        return RecordAsync(userId, type, wineId, wineVintageId, occurredAt: null, ct);
     }
 
-    public async Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    public async Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, DateTimeOffset? occurredAt, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await RecordAsync(userId, type, wineId, wineVintageId, connection, null, occurredAt, ct);
+    }
+
+    public Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        return RecordAsync(userId, type, wineId, wineVintageId, connection, transaction, occurredAt: null, ct);
+    }
+
+    public async Task<long> RecordAsync(int userId, ActivityType type, int wineId, int? wineVintageId, IDbConnection connection, IDbTransaction? transaction, DateTimeOffset? occurredAt, CancellationToken ct = default)
     {
         const string sql = """
             INSERT INTO user_activities (user_id, type, wine_id, wine_vintage_id, occurred_at)
-            VALUES (@UserId, @Type, @WineId, @WineVintageId, NOW())
+            VALUES (@UserId, @Type, @WineId, @WineVintageId, COALESCE(@OccurredAt, NOW()))
             RETURNING id;
             """;
 
@@ -27,7 +37,8 @@ public class ActivityRecorder(IDbConnectionFactory connectionFactory) : IActivit
                 UserId = userId,
                 Type = (short)type,
                 WineId = wineId,
-                WineVintageId = wineVintageId
+                WineVintageId = wineVintageId,
+                OccurredAt = occurredAt?.ToUniversalTime()
             }, transaction: transaction, cancellationToken: ct));
     }
 }

@@ -29,6 +29,17 @@ public class UncorkService(
         if (request.Comment != null && request.Comment.Length > 1000)
             throw new ValidationException("El comentario no puede superar los 1000 caracteres.");
 
+        if (request.OccurredAt.HasValue)
+        {
+            var nowWithTolerance = DateTimeOffset.UtcNow.AddMinutes(5);
+            if (request.OccurredAt.Value > nowWithTolerance)
+                throw new ValidationException("La fecha del descorche no puede estar en el futuro.");
+
+            var minDate = new DateTimeOffset(1900, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            if (request.OccurredAt.Value < minDate)
+                throw new ValidationException("La fecha del descorche no puede ser anterior al 1 de enero de 1900.");
+        }
+
         // 2. Existencia y estado de la cosecha (Pending permitida, Rejected rechazada)
         var vintage = await vintageRepository.GetByIdAsync(request.WineVintageId, ct)
             ?? throw new NotFoundException($"Cosecha con ID {request.WineVintageId} no encontrada.");
@@ -45,18 +56,32 @@ public class UncorkService(
         }
 
         // 4. Ejecución atómica en transacción
-        var result = await transactionRunner.ExecuteAsync(
-            userId,
-            vintage.WineId,
-            request.WineVintageId,
-            request.CellarId,
-            request.Rating,
-            request.Comment,
-            ct);
+        var result = request.OccurredAt.HasValue
+            ? await transactionRunner.ExecuteAsync(
+                userId,
+                vintage.WineId,
+                request.WineVintageId,
+                request.CellarId,
+                request.Rating,
+                request.Comment,
+                request.OccurredAt,
+                ct)
+            : await transactionRunner.ExecuteAsync(
+                userId,
+                vintage.WineId,
+                request.WineVintageId,
+                request.CellarId,
+                request.Rating,
+                request.Comment,
+                ct);
+
+        var responseDate = result.OccurredAt != default
+            ? result.OccurredAt
+            : (request.OccurredAt?.UtcDateTime ?? DateTime.UtcNow);
 
         return new UncorkResponseDto(
             result.ActivityId,
-            DateTime.UtcNow,
+            responseDate,
             result.RemainingQuantity,
             result.ReviewId);
     }
