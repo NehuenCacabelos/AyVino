@@ -11,36 +11,42 @@ export interface CellarVitals {
   redsCount: number;
   whitesCount: number;
   sparklingCount: number;
-  optimalCount: number;
-  dominantVarietal: string;
-  dominantVarietalPercentage: number;
-  oldestVintage: number;
-  oldestVintageAgingYears: number;
+  optimalCount?: number | null;
+  dominantVarietal?: string | null;
+  dominantVarietalPercentage?: number | null;
+  oldestVintage?: number | null;
+  oldestVintageAgingYears?: number | null;
 }
 
 export interface CellarWine {
   id: string;
+  cellarId?: number;
+  wineId?: number;
+  wineVintageId?: number;
   name: string;
   winery: string;
-  region: string;
-  varietal: string;
-  vintage: number;
-  rating: number; // Critic score or user rating, e.g. 99, 100
-  criticBadge?: string; // e.g. "RP 99", "WA 100", "JS 98"
+  region?: string;
+  varietal?: string;
+  vintage: number | null;
+  rating?: number | null; // Promedio de 1 a 5, o null si no hay
+  criticBadge?: string;
   units: number;
-  location: string; // e.g. "A1 · ESTANTE SUP."
-  temperatureConst?: string; // e.g. "16°C CONSTANTE"
-  terroirNote?: string; // e.g. "Malbec Parcela Única · Calcáreo extremo a 1.450m"
-  agingStatus: BottleAgingState;
-  agingStatusLabel: string; // e.g. "En Guarda hasta 2028", "Ventana Óptima (2024–32)", "En Pleno Apogeo"
+  location?: string;
+  temperatureConst?: string;
+  terroirNote?: string;
+  agingStatus?: BottleAgingState;
+  agingStatusLabel?: string;
   isJewel: boolean;
   bottle: BottleKind;
   imageUrl?: string;
-  // Ficha técnica extendida
-  altitude?: string; // e.g. "1.450 msnm"
-  soilType?: string; // e.g. "Calcáreo de grava aluvional"
-  oakAging?: string; // e.g. "18 meses en barricas de roble francés"
-  alcoholContent?: string; // e.g. "14.5% ABV"
+  purchaseDate?: string | null;
+  notes?: string | null;
+  lastChangeAt?: string;
+  // Ficha técnica extendida (opcional)
+  altitude?: string;
+  soilType?: string;
+  oakAging?: string;
+  alcoholContent?: string;
   tastingNotes?: {
     sight: string;
     nose: string;
@@ -91,4 +97,3 @@ export interface QuickAddBottlePayload {
   isJewel: boolean;
   bottle: BottleKind;
 }
-

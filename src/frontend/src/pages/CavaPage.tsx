@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { CheckCircle2, Wine } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { CheckCircle2, Wine, AlertTriangle, Clock, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
 import {
@@ -10,124 +11,92 @@ import {
   VaultLogbookModule,
   TechnicalSheetModal,
   QuickAddBottleModal,
-  initialVaultWines,
   initialTastingLog,
+  getCellarsApi,
+  getCellarItemsApi,
+  createCellarApi,
+  renameCellarApi,
+  deleteCellarApi,
+  mapCellarItemToCellarWine,
+  extractCellarErrorMessage,
   type CellarWine,
   type WineSortOption,
-  type QuickAddBottlePayload,
+  type VaultTab,
   type TastingLogEntry,
 } from '../features/cava';
-import { apiClient } from '../services/apiClient';
-import { imageUrl } from '../lib/image';
-import type { DashboardWine, UncorkSubmission } from '../types/wine';
+import type { CellarDto } from '../features/users/types';
+import type { DashboardWine } from '../types/wine';
 
 /**
  * CavaPage Component (/cava)
- * Réplica de alta fidelidad de la experiencia editorial:
- * "Perfil — La Cava Privada del Coleccionista" del proyecto AyVino.
- *
- * Adaptada a la cava personal:
- * - Identidad limpia sin píldoras redundantes y métricas esenciales (Total, Varietal, Añada más antigua).
- * - Sección "Tus botellas" con listado integral y ordenamiento ágil por cosecha.
- * - Módulos complementarios: Sommelier Inteligente, Telemetría Térmica/UV y Bitácora de Catas.
- * - Modales interactivos: Ficha Técnica Enológica, Ingreso Rápido de Botella y Registro de Descorche.
+ * Conexión completa y multi-cava real:
+ * - Soporte para hasta 3 cavas con persistencia en URL (?cava=<id>).
+ * - Carga real sin datos inventados ni persistencia local de botellas.
+ * - Gestión completa de cavas: creación, renombrado y eliminación con manejo de 409.
+ * - Ficha técnica de botellas con edición de cantidad/fecha/notas y eliminación.
  */
 export default function CavaPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // 1. Colección y Datos de Bóveda (Resiliente con persistencia local o fallback curado)
-  const [wines, setWines] = useState<CellarWine[]>(() => {
-    const saved = localStorage.getItem('ayvino_vault_wines');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return initialVaultWines;
-      }
+  // 1. Estado de Cavas
+  const [cellars, setCellars] = useState<CellarDto[]>([]);
+  const [cellarsLoading, setCellarsLoading] = useState(true);
+  const [cellarsError, setCellarsError] = useState<string | null>(null);
+
+  // 2. Cava Activa
+  const cavaParam = searchParams.get('cava');
+  const selectedCellarId = useMemo(() => {
+    if (cellars.length === 0) return null;
+    if (cavaParam) {
+      const match = cellars.find((c) => c.id === Number(cavaParam));
+      if (match) return match.id;
     }
-    return initialVaultWines;
-  });
+    return cellars[0].id;
+  }, [cellars, cavaParam]);
 
-  const [tastingLog, setTastingLog] = useState<TastingLogEntry[]>(() => {
-    const saved = localStorage.getItem('ayvino_vault_logbook');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return initialTastingLog;
-      }
+  // Sincronizar parámetro en URL si falta o difiere
+  useEffect(() => {
+    if (selectedCellarId && cavaParam !== String(selectedCellarId)) {
+      setSearchParams({ cava: String(selectedCellarId) }, { replace: true });
     }
-    return initialTastingLog;
-  });
+  }, [selectedCellarId, cavaParam, setSearchParams]);
 
+  // 3. Ítems de la Cava Activa
+  const [items, setItems] = useState<CellarWine[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+
+  // 4. Pestaña y Ordenamiento
+  const [activeTab, setActiveTab] = useState<VaultTab>('all');
   const [sortOption, setSortOption] = useState<WineSortOption>('default');
-  const [notification, setNotification] = useState<string | null>(null);
 
-  // Modales
+  // 5. Notificación flotante
+  const [notification, setNotification] = useState<string | null>(null);
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // 6. Modales de Gestión de Cavas
+  const [isCreateCellarOpen, setIsCreateCellarOpen] = useState(false);
+  const [createCellarName, setCreateCellarName] = useState('');
+  const [createCellarError, setCreateCellarError] = useState<string | null>(null);
+  const [isCreatingCellar, setIsCreatingCellar] = useState(false);
+
+  const [isRenameCellarOpen, setIsRenameCellarOpen] = useState(false);
+  const [renameCellarName, setRenameCellarName] = useState('');
+  const [renameCellarError, setRenameCellarError] = useState<string | null>(null);
+  const [isRenamingCellar, setIsRenamingCellar] = useState(false);
+
+  const [isDeleteCellarOpen, setIsDeleteCellarOpen] = useState(false);
+  const [deleteCellarError, setDeleteCellarError] = useState<string | null>(null);
+  const [isDeletingCellar, setIsDeletingCellar] = useState(false);
+
+  // 7. Modales de Botellas
   const [selectedDetailsWine, setSelectedDetailsWine] = useState<CellarWine | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  // Sincronización en LocalStorage
-  useEffect(() => {
-    localStorage.setItem('ayvino_vault_wines', JSON.stringify(wines));
-  }, [wines]);
-
-  useEffect(() => {
-    localStorage.setItem('ayvino_vault_logbook', JSON.stringify(tastingLog));
-  }, [tastingLog]);
-
-  useEffect(() => {
-    return () => {
-      clearTimeout(notificationTimerRef.current);
-    };
-  }, []);
-
-  // Carga resiliente desde backend .NET si existen cavas activas
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchBackendCellar() {
-      try {
-        const response = await apiClient.get('/cellars/me');
-        const cellars = response.data;
-        if (Array.isArray(cellars) && cellars.length > 0 && cellars[0].id) {
-          const itemsResponse = await apiClient.get(`/cellars/${cellars[0].id}/items`);
-          const items = itemsResponse.data;
-          if (Array.isArray(items) && items.length > 0 && isMounted) {
-            // Mapeo de items de API a CellarWine
-            const mapped: CellarWine[] = items.map((item, idx) => ({
-              id: `api-item-${item.wineVintageId || idx}`,
-              name: item.name || 'Etiqueta de Colección',
-              winery: item.wineryNameText || 'Bodega Argentina',
-              region: 'Mendoza, Argentina',
-              varietal: item.wineType || 'Malbec',
-              vintage: item.year || 2020,
-              rating: item.averageRating ? Math.round(Number(item.averageRating) * 20) : 95,
-              criticBadge: item.averageRating ? `AY ${Math.round(Number(item.averageRating) * 20)}` : undefined,
-              units: item.quantity || 1,
-              location: `ESTANTE #${idx + 1}`,
-              temperatureConst: '15°C CONSTANTE',
-              agingStatus: item.year && item.year <= 2019 ? 'optimal' : 'aging',
-              agingStatusLabel: item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
-              isJewel: (item.averageRating && Number(item.averageRating) >= 4.5) || false,
-              bottle: item.wineType === 'White' ? 'white' : 'red-burgundy',
-              imageUrl: (item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl) || undefined,
-            }));
-            setWines(mapped);
-          }
-        }
-      } catch {
-        // Fallback resiliente silencioso a colección curada local
-      }
-    }
-
-    fetchBackendCellar();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // Bitácora de catas (módulo complementario)
+  const [tastingLog] = useState<TastingLogEntry[]>(initialTastingLog);
 
   const showNotification = (msg: string) => {
     clearTimeout(notificationTimerRef.current);
@@ -137,176 +106,235 @@ export default function CavaPage() {
     }, 4000);
   };
 
-  // 2. Cálculo reactivo de Métricas Vitales de la Cava
+  useEffect(() => {
+    return () => {
+      clearTimeout(notificationTimerRef.current);
+    };
+  }, []);
+
+  const [reloadCellarsKey, setReloadCellarsKey] = useState(0);
+  const [reloadItemsKey, setReloadItemsKey] = useState(0);
+
+  // Cargar lista de cavas del usuario
+  useEffect(() => {
+    let isMounted = true;
+    getCellarsApi()
+      .then((data) => {
+        if (!isMounted) return;
+        setCellars(data);
+        setCellarsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        setCellarsError(extractCellarErrorMessage(err, 'No se pudieron cargar tus cavas.'));
+        setCellarsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reloadCellarsKey]);
+
+  // Cargar ítems de la cava seleccionada
+  useEffect(() => {
+    if (!selectedCellarId) {
+      return;
+    }
+
+    let isMounted = true;
+    getCellarItemsApi(selectedCellarId)
+      .then((rawItems) => {
+        if (!isMounted) return;
+        const mapped = rawItems.map((item) => mapCellarItemToCellarWine(item, selectedCellarId));
+        setItems(mapped);
+        setItemsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        setItemsError(extractCellarErrorMessage(err, 'No se pudieron cargar las botellas de esta cava.'));
+        setItemsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCellarId, reloadItemsKey]);
+
+  // Recargas manuales
+  const loadCellars = useCallback(() => {
+    setCellarsLoading(true);
+    setCellarsError(null);
+    setReloadCellarsKey((k) => k + 1);
+  }, []);
+
+  const loadCellarItems = useCallback(() => {
+    setItemsLoading(true);
+    setItemsError(null);
+    setReloadItemsKey((k) => k + 1);
+  }, []);
+
+  // Recarga combinada tras cambios en botellas
+  const handleBottleMutated = () => {
+    loadCellarItems();
+    loadCellars();
+  };
+
+  // Creación de Cava
+  const handleCreateCellarSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = createCellarName.trim();
+    if (!trimmed) {
+      setCreateCellarError('El nombre de la cava es obligatorio.');
+      return;
+    }
+    if (trimmed.length > 100) {
+      setCreateCellarError('El nombre no puede superar los 100 caracteres.');
+      return;
+    }
+
+    setIsCreatingCellar(true);
+    setCreateCellarError(null);
+
+    try {
+      const created = await createCellarApi({ name: trimmed });
+      setIsCreateCellarOpen(false);
+      setCreateCellarName('');
+      await loadCellars();
+      setSearchParams({ cava: String(created.id) }, { replace: true });
+      showNotification(`¡Cava «${created.name}» creada exitosamente!`);
+    } catch (err: unknown) {
+      setCreateCellarError(extractCellarErrorMessage(err, 'No se pudo crear la cava.'));
+    } finally {
+      setIsCreatingCellar(false);
+    }
+  };
+
+  // Renombrado de Cava
+  const handleOpenRename = () => {
+    const current = cellars.find((c) => c.id === selectedCellarId);
+    if (!current) return;
+    setRenameCellarName(current.name);
+    setRenameCellarError(null);
+    setIsRenameCellarOpen(true);
+  };
+
+  const handleRenameCellarSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCellarId) return;
+    const trimmed = renameCellarName.trim();
+    if (!trimmed) {
+      setRenameCellarError('El nombre de la cava es obligatorio.');
+      return;
+    }
+    if (trimmed.length > 100) {
+      setRenameCellarError('El nombre no puede superar los 100 caracteres.');
+      return;
+    }
+
+    setIsRenamingCellar(true);
+    setRenameCellarError(null);
+
+    try {
+      const updated = await renameCellarApi(selectedCellarId, { name: trimmed });
+      setIsRenameCellarOpen(false);
+      await loadCellars();
+      showNotification(`Cava renombrada a «${updated.name}».`);
+    } catch (err: unknown) {
+      setRenameCellarError(extractCellarErrorMessage(err, 'No se pudo renombrar la cava.'));
+    } finally {
+      setIsRenamingCellar(false);
+    }
+  };
+
+  // Eliminación de Cava
+  const handleDeleteCellarSubmit = async () => {
+    if (!selectedCellarId) return;
+    setIsDeletingCellar(true);
+    setDeleteCellarError(null);
+
+    try {
+      await deleteCellarApi(selectedCellarId);
+      setIsDeleteCellarOpen(false);
+      const remaining = cellars.filter((c) => c.id !== selectedCellarId);
+      await loadCellars();
+      if (remaining.length > 0) {
+        setSearchParams({ cava: String(remaining[0].id) }, { replace: true });
+      } else {
+        setSearchParams({}, { replace: true });
+      }
+      showNotification('Cava eliminada exitosamente.');
+    } catch (err: unknown) {
+      setDeleteCellarError(extractCellarErrorMessage(err, 'No se pudo eliminar la cava.'));
+    } finally {
+      setIsDeletingCellar(false);
+    }
+  };
+
+  // Indicadores Vitales Derivados de la Cava Activa
   const vitals = useMemo(() => {
-    const totalBottles = wines.reduce((acc, curr) => acc + curr.units, 0);
+    const totalBottles = items.reduce((acc, curr) => acc + curr.units, 0);
 
     let redsCount = 0;
     let whitesCount = 0;
     let sparklingCount = 0;
-    let optimalCount = 0;
-    let oldestVintage = 2030;
-    const varietalCounts: Record<string, number> = {};
+    let oldestVintage: number | null = null;
 
-    wines.forEach((w) => {
-      const v = (w.varietal || '').toLowerCase();
-      if (v.includes('blanco') || v.includes('chardonnay') || v.includes('torrontés') || w.bottle.includes('white')) {
-        whitesCount += w.units;
-      } else if (v.includes('espumante') || v.includes('champagne') || w.bottle === 'sparkling') {
-        sparklingCount += w.units;
+    items.forEach((item) => {
+      if (item.bottle === 'white' || item.bottle === 'white-flute') {
+        whitesCount += item.units;
+      } else if (item.bottle === 'sparkling') {
+        sparklingCount += item.units;
       } else {
-        redsCount += w.units;
+        redsCount += item.units;
       }
 
-      if (w.agingStatus === 'optimal') {
-        optimalCount += 1;
-      }
-
-      if (w.vintage && w.vintage < oldestVintage) {
-        oldestVintage = w.vintage;
-      }
-
-      const mainVarietal = w.varietal || 'Malbec';
-      varietalCounts[mainVarietal] = (varietalCounts[mainVarietal] || 0) + w.units;
-    });
-
-    if (oldestVintage === 2030) oldestVintage = 2017;
-
-    // Calcular varietal dominante
-    let dominantVarietal = 'Malbec';
-    let maxCount = 0;
-    Object.entries(varietalCounts).forEach(([name, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        dominantVarietal = name;
+      if (item.vintage != null) {
+        if (oldestVintage === null || item.vintage < oldestVintage) {
+          oldestVintage = item.vintage;
+        }
       }
     });
-
-    const dominantVarietalPercentage = totalBottles > 0
-      ? Math.round((maxCount / totalBottles) * 100)
-      : 55;
 
     const currentYear = new Date().getFullYear();
-    const oldestVintageAgingYears = Math.max(1, currentYear - oldestVintage);
+    const oldestVintageAgingYears = oldestVintage != null ? Math.max(0, currentYear - oldestVintage) : null;
 
     return {
       totalBottles,
       redsCount,
       whitesCount,
       sparklingCount,
-      optimalCount,
-      dominantVarietal,
-      dominantVarietalPercentage,
+      optimalCount: null,
+      dominantVarietal: null,
+      dominantVarietalPercentage: null,
       oldestVintage,
       oldestVintageAgingYears,
     };
-  }, [wines]);
+  }, [items]);
 
-  // 3. Ordenamiento de botellas
+  // Filtrado y Ordenamiento
+  const jewelsCount = useMemo(() => items.filter((w) => w.isJewel).length, [items]);
+
   const displayedWines = useMemo(() => {
-    const list = [...wines];
+    let list = [...items];
+    if (activeTab === 'jewels') {
+      list = list.filter((w) => w.isJewel);
+    }
+
     if (sortOption === 'vintage-desc') {
-      return list.sort((a, b) => b.vintage - a.vintage);
+      return list.sort((a, b) => (b.vintage ?? -1) - (a.vintage ?? -1));
     }
     if (sortOption === 'vintage-asc') {
-      return list.sort((a, b) => a.vintage - b.vintage);
+      return list.sort((a, b) => (a.vintage ?? 9999) - (b.vintage ?? 9999));
     }
     return list;
-  }, [wines, sortOption]);
+  }, [items, activeTab, sortOption]);
 
-  // Conversión a DashboardWine para compatibilidad con UncorkDialog
-  const mapCellarWineToDashboardWine = (w: CellarWine): DashboardWine => ({
-    id: w.id,
-    name: w.name,
-    winery: w.winery,
-    region: w.region,
-    varietal: w.varietal,
-    vintage: w.vintage,
-    rating: w.rating > 5 ? Number((w.rating / 20).toFixed(1)) : w.rating,
-    units: w.units,
-    location: w.location,
-    bottle: w.bottle,
-    imageUrl: w.imageUrl,
-  });
-
-  const handleUncorkRequested = (w: CellarWine) => {
-    setUncorkingWine(mapCellarWineToDashboardWine(w));
-  };
-
-  const handleUncorkSaved = (data: UncorkSubmission) => {
-    // 1. Reducir stock de la botella
-    setWines((prev) =>
-      prev
-        .map((w) => {
-          if (w.name === data.wine.name || w.id === data.wine.id) {
-            return { ...w, units: Math.max(0, w.units - 1) };
-          }
-          return w;
-        })
-        .filter((w) => w.units > 0)
-    );
-
-    // 2. Registrar en la bitácora de cata
-    const newEntry: TastingLogEntry = {
-      id: `log-${Date.now()}`,
-      wineName: `${data.wine.name} (${data.wine.vintage})`,
-      criticScore: `CATA PRIVADA ${data.rating * 20} PTS`,
-      uncorkDate: `DESCORCHADO EL ${new Date().toLocaleDateString('es-AR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).toUpperCase()}`,
-      notes:
-        data.tastingNotes ||
-        `Ocasión: ${data.occasion || 'Degustación personal'}. Calificado con ${data.rating} estrellas en cata confidencial.`,
-      sight: 'Gran concentración cromática con ribete de evolución noble',
-      agingRemaining: 'Consumido en ventana óptima de expresión',
-      ratingValue: data.rating,
-    };
-
-    setTastingLog((prev) => [newEntry, ...prev]);
-    showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
-  };
-
-  const handleAddBottle = (payload: QuickAddBottlePayload) => {
-    const newWine: CellarWine = {
-      id: `vault-${Date.now()}`,
-      name: payload.name,
-      winery: payload.winery,
-      region: payload.region,
-      varietal: payload.varietal,
-      vintage: payload.vintage,
-      rating: payload.isJewel ? 98 : 93,
-      criticBadge: payload.isJewel ? 'GR 98' : undefined,
-      units: payload.units,
-      location: payload.location,
-      temperatureConst: '15°C CONSTANTE',
-      terroirNote: `${payload.varietal} · Cosecha ${payload.vintage} · ${payload.winery}`,
-      agingStatus: payload.isJewel ? 'aging' : 'optimal',
-      agingStatusLabel: payload.isJewel ? 'En Guarda hasta 2028+' : 'Listo para Descorchar',
-      isJewel: payload.isJewel,
-      bottle: payload.bottle,
-      altitude: '1.300 msnm',
-      oakAging: 'Crianza en barricas seleccionadas',
-      alcoholContent: '14.2% ABV',
-      tastingNotes: {
-        sight: 'Límpido, denso y brillante con matices vivos.',
-        nose: 'Aromas francos de tipicidad varietal y notas tostadas.',
-        mouth: 'Equilibrio sedoso, taninos maduros y gran persistencia.',
-        pairing: 'Carnes asadas, pastas rellenas o quesos de maduración media.',
-      },
-    };
-
-    setWines((prev) => [newWine, ...prev]);
-    showNotification(`¡Etiqueta ${newWine.name} ingresada exitosamente a la bóveda!`);
-  };
-
-  // Nombre personalizado del sommelier/usuario
-  const displayName = user?.username || user?.email?.split('@')[0] || 'Nehuen';
+  const activeCellar = cellars.find((c) => c.id === selectedCellarId);
+  const displayName = user?.username || user?.email?.split('@')[0] || 'Coleccionista';
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between relative overflow-hidden">
-      {/* Halo ambiental vinícola superior de fondo (Atmospheric Background Halo) */}
+      {/* Halo ambiental vinícola superior */}
       <div
         className="absolute -top-36 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] rounded-full pointer-events-none opacity-25 blur-[140px] bg-gradient-to-b from-[#722F37] via-[#201f21] to-transparent z-0"
         aria-hidden="true"
@@ -324,81 +352,350 @@ export default function CavaPage() {
         </aside>
       )}
 
-      {/* 1. Navbar Superior Persistente */}
+      {/* 1. Navbar Superior */}
       <DashboardNavbar stockCount={vitals.totalBottles} />
 
-      {/* 2. Contenido Principal de Cava Privada */}
+      {/* 2. Contenido Principal */}
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 sm:gap-10 px-4 sm:px-6 lg:px-8 pb-24 pt-24 sm:pt-28 relative z-10">
-        {/* Encabezado Editorial de Bóveda */}
+        {/* Encabezado y Selector de Cavas */}
         <VaultHeader
           userName={displayName}
+          cellars={cellars}
+          selectedCellarId={selectedCellarId}
+          onSelectCellar={(id) => setSearchParams({ cava: String(id) }, { replace: true })}
+          onOpenCreateCellar={() => {
+            setCreateCellarName('');
+            setCreateCellarError(null);
+            setIsCreateCellarOpen(true);
+          }}
+          onOpenRenameCellar={handleOpenRename}
+          onOpenDeleteCellar={() => {
+            setDeleteCellarError(null);
+            setIsDeleteCellarOpen(true);
+          }}
           onAddBottle={() => setIsQuickAddOpen(true)}
         />
 
-        {/* Matriz de Métricas Enológicas Vitales (Reorganizada en 3 cards) */}
-        <VaultVitals vitals={vitals} />
-
-        {/* Encabezado y Barra de Control de Tus Botellas */}
-        <VaultTabs
-          totalCount={wines.length}
-          sortOption={sortOption}
-          onSortChange={setSortOption}
-        />
-
-        {/* Grilla / Mosaico de Botellas */}
-        <section className="space-y-4">
-          {displayedWines.length === 0 ? (
-            <div className="p-12 text-center rounded-xl bg-[#121216] border border-neutral-800 space-y-3">
-              <Wine className="w-10 h-10 text-neutral-500 mx-auto" />
-              <h3 className="font-serif text-xl text-neutral-200">No hay etiquetas registradas</h3>
-              <p className="text-xs text-neutral-400 max-w-md mx-auto">
-                Agregá tus botellas personales para guardarlas bajo registro de estiba y consultarlas cuando quieras descorchar.
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsQuickAddOpen(true)}
-                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#722F37] text-white text-xs font-semibold"
-              >
-                Ingresar Botella
-              </button>
+        {/* Estado de Error de Cavas */}
+        {cellarsError && (
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-between text-rose-300 text-xs">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{cellarsError}</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-              {displayedWines.map((wine) => (
-                <VaultWineCard
-                  key={wine.id}
-                  wine={wine}
-                  onOpenDetails={(w) => setSelectedDetailsWine(w)}
-                  onUncork={(w) => handleUncorkRequested(w)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+            <button
+              type="button"
+              onClick={loadCellars}
+              className="inline-flex items-center gap-1 text-white underline hover:no-underline font-medium"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reintentar</span>
+            </button>
+          </div>
+        )}
 
-        {/* Bitácora de Catas / Última Reseña Registrada */}
-        <div className="pt-2">
-          <VaultLogbookModule entries={tastingLog} />
-        </div>
+        {/* Estado Vacío Sin Cavas (solo si no hay error) */}
+        {!cellarsLoading && !cellarsError && cellars.length === 0 ? (
+          <section className="p-12 text-center rounded-2xl bg-[#121216] border border-neutral-800 space-y-4 max-w-xl mx-auto my-8">
+            <div className="w-14 h-14 rounded-2xl bg-stone-900 border border-white/10 text-rose-300 flex items-center justify-center mx-auto shadow-sm">
+              <Wine className="w-7 h-7" />
+            </div>
+            <h2 className="font-serif text-2xl font-semibold text-neutral-100">
+              Crear tu primera cava
+            </h2>
+            <p className="text-xs text-neutral-400 font-sans leading-relaxed max-w-md mx-auto">
+              Organizá tus botellas personales asignándolas a un espacio específico (por ejemplo, «Cava Principal», «Heladera Cava» o «Depto»).
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setCreateCellarName('');
+                setCreateCellarError(null);
+                setIsCreateCellarOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#722F37] hover:bg-[#85222e] text-white text-xs font-semibold tracking-wide transition-all shadow-md cursor-pointer"
+            >
+              Crear mi primera cava
+            </button>
+          </section>
+        ) : (
+          <>
+            {/* Matriz de Métricas Enológicas Vitales */}
+            <VaultVitals vitals={vitals} />
+
+            {/* Pestañas y Controles de Tus Botellas */}
+            <VaultTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              totalCount={items.length}
+              jewelsCount={jewelsCount}
+              sortOption={sortOption}
+              onSortChange={setSortOption}
+            />
+
+            {/* Error de Carga de Ítems */}
+            {itemsError && (
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-between text-rose-300 text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{itemsError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadCellarItems()}
+                  className="inline-flex items-center gap-1 text-white underline hover:no-underline font-medium"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reintentar</span>
+                </button>
+              </div>
+            )}
+
+            {/* Pestañas 'optimal' o 'guard' -> Cartel Próximamente */}
+            {activeTab === 'optimal' || activeTab === 'guard' ? (
+              <div className="p-12 text-center rounded-2xl bg-[#121216] border border-white/5 space-y-3 max-w-lg mx-auto my-6">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <h3 className="font-serif text-xl font-semibold text-neutral-100">
+                  Próximamente
+                </h3>
+                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+                  Próximamente se mostrará la ventana óptima de consumo de cada botella basada en su potencial de guarda y curva de evolución.
+                </p>
+              </div>
+            ) : (
+              /* Grilla de Botellas Reales */
+              <section className="space-y-4">
+                {itemsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 animate-pulse">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-96 bg-[#121216] border border-neutral-800 rounded-xl" />
+                    ))}
+                  </div>
+                ) : displayedWines.length === 0 ? (
+                  <div className="p-12 text-center rounded-2xl bg-[#121216] border border-neutral-800 space-y-3">
+                    <Wine className="w-10 h-10 text-neutral-500 mx-auto" />
+                    <h3 className="font-serif text-xl text-neutral-200">
+                      {activeTab === 'jewels' ? 'No tenés joyas en esta cava' : 'Tu cava está vacía'}
+                    </h3>
+                    <p className="text-xs text-neutral-400 max-w-md mx-auto leading-relaxed">
+                      {activeTab === 'jewels'
+                        ? 'Las joyas son aquellas botellas con un puntaje promedio de 4,5 o superior.'
+                        : 'Todavía no agregaste botellas a esta cava. Guardalas para llevar su registro de estiba.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+                    {displayedWines.map((wine) => (
+                      <VaultWineCard
+                        key={wine.id}
+                        wine={wine}
+                        onOpenDetails={(w) => setSelectedDetailsWine(w)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Bitácora de Catas (Conserva su contenido actual) */}
+            <div className="pt-2">
+              <VaultLogbookModule entries={tastingLog} />
+            </div>
+          </>
+        )}
       </main>
 
-      {/* 3. Modales Interactivos */}
+      {/* 3. Modal de Ficha Técnica de Botella */}
       <TechnicalSheetModal
         wine={selectedDetailsWine}
         onClose={() => setSelectedDetailsWine(null)}
-        onUncork={(w) => handleUncorkRequested(w)}
+        onBottleUpdated={handleBottleMutated}
+        onBottleRemoved={handleBottleMutated}
       />
 
+      {/* Modal Crear Cava */}
+      {isCreateCellarOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="bg-[#16161b] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <h3 className="font-serif text-lg font-semibold text-neutral-100">Nueva Cava</h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateCellarOpen(false)}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {createCellarError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{createCellarError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCellarSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                  Nombre de la cava <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  required
+                  placeholder="Ej: Cava Subterránea, Casa de Playa..."
+                  value={createCellarName}
+                  onChange={(e) => setCreateCellarName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-neutral-900 border border-white/10 rounded-xl text-neutral-100 text-sm focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateCellarOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingCellar}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-rose-900 text-white text-xs font-medium hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {isCreatingCellar ? 'Creando...' : 'Crear cava'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Renombrar Cava */}
+      {isRenameCellarOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="bg-[#16161b] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <h3 className="font-serif text-lg font-semibold text-neutral-100">Renombrar Cava</h3>
+              <button
+                type="button"
+                onClick={() => setIsRenameCellarOpen(false)}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {renameCellarError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{renameCellarError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRenameCellarSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                  Nuevo nombre <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  required
+                  value={renameCellarName}
+                  onChange={(e) => setRenameCellarName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-neutral-900 border border-white/10 rounded-xl text-neutral-100 text-sm focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRenameCellarOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRenamingCellar}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-700 to-rose-900 text-white text-xs font-medium hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {isRenamingCellar ? 'Guardando...' : 'Guardar nombre'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Eliminar Cava */}
+      {isDeleteCellarOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="bg-[#16161b] border border-white/10 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl">
+            <h3 className="font-serif text-lg font-semibold text-neutral-100">
+              ¿Eliminar esta cava?
+            </h3>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Vas a eliminar la cava <span className="text-white font-medium">«{activeCellar?.name}»</span>.
+              Recordá que la cava debe estar vacía para poder ser eliminada.
+            </p>
+
+            {deleteCellarError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{deleteCellarError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteCellarOpen(false)}
+                className="px-4 py-2 rounded-xl border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingCellar}
+                onClick={handleDeleteCellarSubmit}
+                className="px-5 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isDeletingCellar ? 'Eliminando...' : 'Eliminar cava'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ingresar Botella (Próximamente en Vista 3B) */}
       <QuickAddBottleModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
-        onAddBottle={handleAddBottle}
+        onAddBottle={() => setIsQuickAddOpen(false)}
       />
 
+      {/* Modal Descorche */}
       <UncorkDialog
         wine={uncorkingWine}
         onClose={() => setUncorkingWine(null)}
-        onSave={handleUncorkSaved}
+        onSave={() => setUncorkingWine(null)}
       />
 
       {/* 4. Footer Editorial */}

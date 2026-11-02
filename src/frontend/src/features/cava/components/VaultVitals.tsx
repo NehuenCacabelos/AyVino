@@ -5,6 +5,8 @@ interface VaultVitalsProps {
 }
 
 export default function VaultVitals({ vitals }: VaultVitalsProps) {
+  const hasOldestVintage = vitals.oldestVintage != null;
+
   return (
     <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-4">
       {/* Stat 1: Total en Cava */}
@@ -16,7 +18,9 @@ export default function VaultVitals({ vitals }: VaultVitalsProps) {
           <span className="font-serif text-3xl sm:text-4xl text-neutral-100 font-semibold tracking-tight">
             {vitals.totalBottles}
           </span>
-          <span className="text-xs sm:text-sm text-neutral-400 font-sans">botellas</span>
+          <span className="text-xs sm:text-sm text-neutral-400 font-sans">
+            {vitals.totalBottles === 1 ? 'botella' : 'botellas'}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 text-neutral-500 font-mono text-[10px] sm:text-[11px] pt-0.5">
           <span className="text-[#ffb2b8] font-medium">{vitals.redsCount} Tintos</span>
@@ -27,36 +31,22 @@ export default function VaultVitals({ vitals }: VaultVitalsProps) {
         </div>
       </div>
 
-      {/* Stat 2: Varietal Dominante */}
+      {/* Stat 2: Varietal Dominante (No presente en el backend -> Muestra "—") */}
       <div className="bg-[#121216] border border-neutral-800/70 rounded-xl p-4 sm:p-5 shadow-sm space-y-2 relative overflow-hidden group hover:border-neutral-700/80 transition-colors">
         <span className="font-mono text-[11px] tracking-widest text-neutral-400 block uppercase">
           Varietal Dominante
         </span>
         <div className="flex items-baseline justify-between gap-1.5">
           <span className="font-serif text-2xl sm:text-3xl text-neutral-100 font-medium">
-            {vitals.dominantVarietal}
+            {vitals.dominantVarietal ?? '—'}
           </span>
-          <span className="font-mono text-xs sm:text-sm text-[#ffb2b8] font-bold">
-            {vitals.dominantVarietalPercentage}%
+          <span className="font-mono text-xs sm:text-sm text-neutral-500 font-bold">
+            {vitals.dominantVarietalPercentage != null ? `${vitals.dominantVarietalPercentage}%` : '—'}
           </span>
         </div>
-        <div className="w-full bg-[#201f25] rounded-full h-1.5 overflow-hidden flex mt-2">
-          <div
-            className="bg-[#722F37] h-full transition-all duration-500"
-            style={{ width: `${vitals.dominantVarietalPercentage}%` }}
-            title={`Malbec: ${vitals.dominantVarietalPercentage}%`}
-          />
-          <div
-            className="bg-[#fbbf24] h-full"
-            style={{ width: '22%' }}
-            title="Cabernet: 22%"
-          />
-          <div
-            className="bg-neutral-600 h-full"
-            style={{ width: '20%' }}
-            title="Otros: 20%"
-          />
-        </div>
+        <p className="text-xs text-neutral-500 font-sans">
+          Varietal no provisto en el archivo de estiba
+        </p>
       </div>
 
       {/* Stat 3: Añada Más Antigua */}
@@ -66,14 +56,18 @@ export default function VaultVitals({ vitals }: VaultVitalsProps) {
         </span>
         <div className="flex items-baseline gap-2">
           <span className="font-serif text-3xl sm:text-4xl text-neutral-100 font-semibold tracking-tight">
-            {vitals.oldestVintage}
+            {hasOldestVintage ? vitals.oldestVintage : '—'}
           </span>
-          <span className="font-mono text-[10px] text-[#ffb2b8] font-semibold tracking-wider">
-            GRAN RESERVA
-          </span>
+          {hasOldestVintage && (
+            <span className="font-mono text-[10px] text-[#ffb2b8] font-semibold tracking-wider">
+              ESTIBA
+            </span>
+          )}
         </div>
         <p className="text-xs text-neutral-400 font-sans">
-          {vitals.oldestVintageAgingYears} años de estiba impecable
+          {hasOldestVintage && vitals.oldestVintageAgingYears != null
+            ? `${vitals.oldestVintageAgingYears} ${vitals.oldestVintageAgingYears === 1 ? 'año' : 'años'} de estiba registrada`
+            : 'Sin cosechas fechadas en esta cava'}
         </p>
       </div>
     </section>

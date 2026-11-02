@@ -1,4 +1,6 @@
 export * from './types';
+export * from './constants';
+export * from './api/cellarApi';
 export * from './data/defaultVaultData';
 export { default as VaultHeader } from './components/VaultHeader';
 export { default as VaultVitals } from './components/VaultVitals';
@@ -9,4 +11,3 @@ export { default as VaultTelemetryModule } from './components/VaultTelemetryModu
 export { default as VaultLogbookModule } from './components/VaultLogbookModule';
 export { default as TechnicalSheetModal } from './components/TechnicalSheetModal';
 export { default as QuickAddBottleModal } from './components/QuickAddBottleModal';
-

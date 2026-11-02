@@ -251,8 +251,24 @@ export default function ProfilePage() {
         if (activeTab === 'cava') {
           const cellars = await getMyCellarsApi();
           if (cellars.length > 0) {
-            const items = await getCellarItemsApi(cellars[0].id);
-            if (isMounted) setOwnerCellarItems(items);
+            const itemsArrays = await Promise.all(
+              cellars.map((c) => getCellarItemsApi(c.id).catch(() => [] as CellarItemDto[]))
+            );
+            const mergedMap = new Map<number, CellarItemDto>();
+            for (const items of itemsArrays) {
+              for (const item of items) {
+                const existing = mergedMap.get(item.wineVintageId);
+                if (existing) {
+                  mergedMap.set(item.wineVintageId, {
+                    ...existing,
+                    quantity: existing.quantity + item.quantity,
+                  });
+                } else {
+                  mergedMap.set(item.wineVintageId, { ...item });
+                }
+              }
+            }
+            if (isMounted) setOwnerCellarItems(Array.from(mergedMap.values()));
           } else {
             if (isMounted) setOwnerCellarItems([]);
           }

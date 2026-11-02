@@ -4,29 +4,36 @@ import type { CellarWine } from '../types';
 interface VaultWineCardProps {
   wine: CellarWine;
   onOpenDetails: (wine: CellarWine) => void;
-  onUncork: (wine: CellarWine) => void;
+  onUncork?: (wine: CellarWine) => void;
 }
 
-export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWineCardProps) {
+export default function VaultWineCard({ wine, onOpenDetails }: VaultWineCardProps) {
   const isOptimal = wine.agingStatus === 'optimal';
+  const vintageDisplay = wine.vintage != null ? `Cosecha ${wine.vintage}` : 'Sin añada';
 
   return (
     <article className="bg-[#121216] border border-neutral-800/80 rounded-xl p-4 sm:p-5 shadow-lg flex flex-col justify-between group hover:border-[#fbbf24]/30 hover:bg-[#15151b] transition-all duration-300">
       <div className="space-y-3">
-        {/* Header badges: Shelf Location & Score */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[11px] text-[#fbbf24] tracking-wider uppercase truncate">
-            {wine.location}
-          </span>
-          {wine.criticBadge ? (
-            <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)]">
-              {wine.criticBadge}
+        {/* Header badges: Ubicación en cava y Puntaje / Rating sobre 5 */}
+        <div className="flex items-center justify-between gap-2 min-h-6">
+          {wine.location ? (
+            <span className="font-mono text-[11px] text-[#fbbf24] tracking-wider uppercase truncate">
+              {wine.location}
             </span>
           ) : (
-            <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-300 font-mono text-[11px]">
-              {wine.rating} PTS
-            </span>
+            <span />
           )}
+
+          {wine.rating != null ? (
+            <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)] flex items-center gap-1">
+              <span>{wine.rating.toFixed(1).replace('.', ',')}</span>
+              <span className="text-amber-400">★</span>
+            </span>
+          ) : wine.criticBadge ? (
+            <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20">
+              {wine.criticBadge}
+            </span>
+          ) : null}
         </div>
 
         {/* Bottle Imagery Viewport with Dark Cellar Radial Vignette */}
@@ -46,10 +53,12 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
             </div>
           )}
 
-          {/* Temperature Badge */}
-          <span className="absolute bottom-2.5 left-2.5 font-mono text-[10px] text-neutral-300 bg-[#0c0c0e]/85 border border-neutral-800/80 px-2 py-0.5 rounded backdrop-blur-sm z-10">
-            {wine.temperatureConst || '15°C CONSTANTE'}
-          </span>
+          {/* Temperature Badge (si está disponible) */}
+          {wine.temperatureConst && (
+            <span className="absolute bottom-2.5 left-2.5 font-mono text-[10px] text-neutral-300 bg-[#0c0c0e]/85 border border-neutral-800/80 px-2 py-0.5 rounded backdrop-blur-sm z-10">
+              {wine.temperatureConst}
+            </span>
+          )}
 
           {/* Units indicator if > 1 */}
           {wine.units > 1 && (
@@ -61,30 +70,34 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
 
         {/* Metadata & Title */}
         <div className="pt-1 space-y-1.5">
-          <span className="font-mono text-[11px] text-[#ffb2b8] block tracking-wide uppercase">
-            {wine.region}
-          </span>
+          {wine.region && (
+            <span className="font-mono text-[11px] text-[#ffb2b8] block tracking-wide uppercase">
+              {wine.region}
+            </span>
+          )}
           <h3 className="font-serif text-lg sm:text-xl text-neutral-100 font-medium leading-snug line-clamp-2 group-hover:text-[#fde68a] transition-colors">
             {wine.name}
           </h3>
           <p className="text-xs text-neutral-400 font-sans line-clamp-2 leading-relaxed">
-            {wine.terroirNote || `${wine.varietal} · Cosecha ${wine.vintage} · ${wine.winery}`}
+            {wine.terroirNote || `${vintageDisplay} · ${wine.winery}`}
           </p>
         </div>
 
-        {/* Status Pill */}
-        <div
-          className={`rounded p-2 flex items-center justify-between font-mono text-[11px] border ${
-            isOptimal
-              ? 'bg-[#fbbf24]/10 border-[#fbbf24]/30 text-[#fbbf24]'
-              : 'bg-[#1a1a22] border-neutral-800 text-neutral-400'
-          }`}
-        >
-          <span className="text-[10px] uppercase text-neutral-400">Estado</span>
-          <span className={`font-medium ${isOptimal ? 'text-[#fbbf24]' : 'text-[#ffb2b8]'}`}>
-            {wine.agingStatusLabel}
-          </span>
-        </div>
+        {/* Status Pill (si está disponible) */}
+        {wine.agingStatusLabel && (
+          <div
+            className={`rounded p-2 flex items-center justify-between font-mono text-[11px] border ${
+              isOptimal
+                ? 'bg-[#fbbf24]/10 border-[#fbbf24]/30 text-[#fbbf24]'
+                : 'bg-[#1a1a22] border-neutral-800 text-neutral-400'
+            }`}
+          >
+            <span className="text-[10px] uppercase text-neutral-400">Estado</span>
+            <span className={`font-medium ${isOptimal ? 'text-[#fbbf24]' : 'text-[#ffb2b8]'}`}>
+              {wine.agingStatusLabel}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -92,19 +105,23 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
         <button
           type="button"
           onClick={() => onOpenDetails(wine)}
-          className="w-full bg-[#1c1b22] hover:bg-[#25242c] text-neutral-200 hover:text-white text-center font-sans font-semibold text-xs py-2 rounded border border-neutral-700/60 transition-colors"
+          className="w-full bg-[#1c1b22] hover:bg-[#25242c] text-neutral-200 hover:text-white text-center font-sans font-semibold text-xs py-2 rounded border border-neutral-700/60 transition-colors cursor-pointer"
         >
           Ficha Técnica
         </button>
         <button
           type="button"
-          onClick={() => onUncork(wine)}
-          className="w-full bg-[#722F37] hover:bg-[#5C1D24] text-white text-center font-sans font-semibold text-xs py-2 rounded shadow-sm border border-rose-500/25 transition-colors"
+          disabled
+          title="Próximamente"
+          aria-label="Registrar Cata (Próximamente)"
+          className="w-full bg-neutral-800/50 text-neutral-400 opacity-60 cursor-not-allowed text-center font-sans font-semibold text-xs py-2 rounded border border-neutral-700/30 flex items-center justify-center gap-1"
         >
-          Registrar Cata
+          <span>Registrar Cata</span>
+          <span className="text-[9px] uppercase font-mono px-1 rounded bg-white/10 text-neutral-400">
+            Próx.
+          </span>
         </button>
       </div>
     </article>
   );
 }
-
