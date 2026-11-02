@@ -1,5 +1,6 @@
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Follows.Models;
+using AyVino.Api.Features.WineryCatalog.Repositories;
 using Dapper;
 
 namespace AyVino.Api.Features.Follows.Repositories;
@@ -103,10 +104,23 @@ public class FollowRepository(IDbConnectionFactory connectionFactory) : IFollowR
 
     public async Task<IEnumerable<FollowWineryItem>> GetFollowingWineriesAsync(int followerId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
-        const string sql = """
-            SELECT w.id AS WineryId, w.name AS Name, wf.created_at AS FollowedAt
+        var sql = $"""
+            SELECT 
+                w.id AS WineryId, 
+                w.name AS Name, 
+                wf.created_at AS FollowedAt,
+                w.logo_image_id AS LogoImageId,
+                s.name AS StateName,
+                c.name AS RegionName,
+                COALESCE((
+                    {string.Format(WineryCatalogSqlFragments.ApprovedWineryLabelsCountSubquery, "w")}
+                ), 0) AS LabelsCount,
+                COALESCE((
+                    {string.Format(WineryCatalogSqlFragments.FollowersCountSubquery, "w")}
+                ), 0) AS FollowersCount
             FROM winery_follows wf
             JOIN wineries w ON w.id = wf.winery_id
+            {string.Format(WineryCatalogSqlFragments.LocationJoins, "w")}
             WHERE wf.follower_id = @FollowerId
               AND w.status = 2
             ORDER BY wf.created_at DESC, w.id

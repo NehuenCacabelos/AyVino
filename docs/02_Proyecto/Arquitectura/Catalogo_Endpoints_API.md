@@ -724,7 +724,7 @@ Seguimiento unidireccional entre usuarios y hacia bodegas aprobadas. Protegido c
 
 | `GET` | `/api/wineries/{id}/followers` | Autenticado | Lista paginada de usuarios seguidores de una bodega aprobada. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowUserResponseDto>`) |
 
-| `GET` | `/api/users/me/following-wineries` | Autenticado | Lista paginada de bodegas que sigue el usuario actual. | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowWineryResponseDto>`) |
+| `GET` | `/api/users/me/following-wineries` | Autenticado | Lista paginada de bodegas que sigue el usuario actual (incluye `logoImageId`, `stateName`, `regionName`, `labelsCount` y `followersCount`). | Query params: `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IReadOnlyList<FollowWineryResponseDto>`) |
 
 
 
