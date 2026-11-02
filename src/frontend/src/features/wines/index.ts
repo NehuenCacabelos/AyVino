@@ -19,5 +19,4 @@ export {
   type WinePairingItem,
   type WineWineryInfo,
 } from './data/editorialWines';
-
-
+export * from './api/userVintageImageApi';
