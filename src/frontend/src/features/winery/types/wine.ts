@@ -31,6 +31,15 @@ export interface WineResponseDto {
 }
 
 /**
+ * Contrato de respuesta para listados y búsquedas de catálogo (C# WineListItemDto).
+ * Extiende WineResponseDto con los datos de cosecha de referencia calculados por el backend.
+ */
+export interface WineListItemDto extends WineResponseDto {
+  thumbnailImageId?: string | null;
+  referenceVintageYear?: number | null;
+}
+
+/**
  * Contrato de porcentaje varietal por añada (C# WineGrapeResponseDto).
  */
 export interface WineGrapeResponseDto {
@@ -121,4 +130,3 @@ export interface UpdateWineVintageRequestDto {
 export interface ClaimWinesRequestDto {
   wineIds: number[];
 }
-

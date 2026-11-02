@@ -1,6 +1,7 @@
 import apiClient from '../../../services/apiClient';
 import type {
   WineResponseDto,
+  WineListItemDto,
   WineVintageResponseDto,
   CreateWineRequestDto,
   UpdateWineRequestDto,
@@ -30,8 +31,8 @@ export interface WineSearchParams {
 /**
  * Lista paginada de etiquetas de vino con filtros opcionales por bodega, cepa o rango de años.
  */
-export async function getWines(params?: WineQueryParams): Promise<WineResponseDto[]> {
-  const response = await apiClient.get<WineResponseDto[]>('/wines', {
+export async function getWines(params?: WineQueryParams, signal?: AbortSignal): Promise<WineListItemDto[]> {
+  const response = await apiClient.get<WineListItemDto[]>('/wines', {
     params: {
       pageNumber: params?.pageNumber ?? 1,
       pageSize: params?.pageSize ?? 10,
@@ -40,6 +41,7 @@ export async function getWines(params?: WineQueryParams): Promise<WineResponseDt
       yearFrom: params?.yearFrom,
       yearTo: params?.yearTo,
     },
+    signal,
   });
   return response.data;
 }
@@ -62,7 +64,7 @@ export async function createWine(data: CreateWineRequestDto): Promise<WineRespon
 }
 
 /**
- * Actualiza los metadatos de la etiqueta (nombre, tipo, bodega, ubicación, descripción).
+ * Actualiza los datos de una etiqueta de vino (Admin).
  */
 export async function updateWine(id: number, data: UpdateWineRequestDto): Promise<WineResponseDto> {
   const response = await apiClient.put<WineResponseDto>(`/wines/${id}`, data);
@@ -99,8 +101,8 @@ export async function claimWines(
 /**
  * Búsqueda difusa de vinos por nombre, bodega, año o tipo.
  */
-export async function searchWines(params: WineSearchParams): Promise<WineResponseDto[]> {
-  const response = await apiClient.get<WineResponseDto[]>('/wines/search', {
+export async function searchWines(params: WineSearchParams, signal?: AbortSignal): Promise<WineListItemDto[]> {
+  const response = await apiClient.get<WineListItemDto[]>('/wines/search', {
     params: {
       pageNumber: params.pageNumber ?? 1,
       pageSize: params.pageSize ?? 10,
@@ -109,6 +111,7 @@ export async function searchWines(params: WineSearchParams): Promise<WineRespons
       year: params.year,
       wineType: params.wineType,
     },
+    signal,
   });
   return response.data;
 }
@@ -159,4 +162,3 @@ export async function updateWineVintage(
   );
   return response.data;
 }
-

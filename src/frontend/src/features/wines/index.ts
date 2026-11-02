@@ -3,10 +3,16 @@
  * Exporta componentes, datos de muestra curada y utilidades de dominio vinícola.
  */
 export { default as WineCard } from './components/WineCard';
+export { default as WineTypeFilterChips } from './components/WineTypeFilterChips';
 export { default as WineDetailModal } from './components/WineDetailModal';
 export { default as WineBottleSilhouette } from './components/WineBottleSilhouette';
 export { default as WineBottleMock } from './components/WineBottleMock';
-export { mapApiWineToCuratedWine } from './utils/wineMapper';
+export {
+  mapApiWineToCuratedWine,
+  mapWineListItemToCuratedWine,
+  translateWineType,
+  WINE_TYPE_LABELS,
+} from './utils/wineMapper';
 export { CURATED_WINES } from './data/curatedWines';
 export {
   getEditorialWine,

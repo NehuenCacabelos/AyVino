@@ -41,6 +41,11 @@ export interface WineApiDto {
   reviewCount: number;
 }
 
+export interface WineListItemDto extends WineApiDto {
+  thumbnailImageId?: string | null;
+  referenceVintageYear?: number | null;
+}
+
 export interface WineVintageApiDto {
   id: number;
   wineId: number;

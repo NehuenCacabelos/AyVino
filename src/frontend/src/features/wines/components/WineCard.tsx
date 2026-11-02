@@ -9,8 +9,9 @@ interface WineCardProps {
 
 /**
  * WineCard Component
- * Tarjeta de vino editorial a dos columnas para escaneo visual rápido en la Landing.
+ * Tarjeta de vino editorial a dos columnas para escaneo visual rápido en la Landing y el Catálogo.
  * Escala tipográfica generosa, alto contraste y sin cápsulas/badges.
+ * Soporta renderizado condicional si región o puntaje no están presentes.
  */
 export default function WineCard({ wine, onSelect }: WineCardProps) {
   const {
@@ -27,13 +28,14 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
   } = wine;
 
   const isWineryOfficial = sourceType === 'Official' || sourceType === 'winery' || isOfficial;
+  const headerParts = [grape, vintage].filter(Boolean);
 
   return (
     <article
       onClick={() => onSelect?.(wine)}
       className="group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl"
     >
-      {/* Columna Izquierda: Espacio para botella con imagen real */}
+      {/* Columna Izquierda: Espacio para botella con imagen real o silueta */}
       <div className="w-full sm:w-40 h-52 sm:h-auto bg-[#0d0d0f] sm:border-r border-b sm:border-b-0 border-white/[0.08] flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#141417] relative overflow-hidden">
         {imageUrl ? (
           <img
@@ -53,10 +55,10 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
       {/* Columna Derecha: Información técnica esencial y escaneo rápido */}
       <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between">
         <div>
-          {/* Cabecera: Varietal, Añada y Leyenda tipográfica pura sin píldoras */}
+          {/* Cabecera: Tipo/Varietal, Añada y Leyenda tipográfica pura sin píldoras */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-xs font-sans font-medium uppercase tracking-wider text-neutral-400">
-              {grape} · {vintage}
+              {headerParts.join(' · ')}
             </span>
 
             <span
@@ -75,22 +77,34 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
             {name}
           </h4>
 
-          {/* Bodega y Región con mayor jerarquía */}
+          {/* Bodega y Región con mayor jerarquía (región opcional si no existe) */}
           <p className="text-sm text-neutral-300 font-normal leading-relaxed mt-1">
-            {winery} <span className="text-neutral-500">·</span> {region}
+            {winery}
+            {region ? (
+              <>
+                <span className="text-neutral-500"> · </span>
+                {region}
+              </>
+            ) : null}
           </p>
         </div>
 
-        {/* Pie: Calificación y Enlace "VER FICHA →" */}
+        {/* Pie: Calificación (si está disponible) y Enlace "VER FICHA →" */}
         <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
-            <span className="text-sm font-medium text-neutral-200">
-              {rating !== null ? rating.toFixed(1) : 'S/C'}
-            </span>
-            <span className="text-xs font-medium text-neutral-400">
-              ({reviewCount})
-            </span>
+          <div className="flex items-center gap-1.5 min-h-[1.5rem]">
+            {rating !== null && rating !== undefined ? (
+              <>
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
+                <span className="text-sm font-medium text-neutral-200">
+                  {rating.toFixed(1)}
+                </span>
+                {reviewCount !== undefined && reviewCount > 0 && (
+                  <span className="text-xs font-medium text-neutral-400">
+                    ({reviewCount})
+                  </span>
+                )}
+              </>
+            ) : null}
           </div>
 
           <button
