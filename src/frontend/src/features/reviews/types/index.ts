@@ -29,3 +29,4 @@ export interface UpdateReviewRequestDto {
   rating: number; // 1 a 5 entero
   comment?: string | null;
 }
+

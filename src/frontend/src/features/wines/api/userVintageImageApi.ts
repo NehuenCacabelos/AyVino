@@ -63,3 +63,4 @@ export async function deleteMyVintageImage(
 ): Promise<void> {
   await apiClient.delete<void>(`/wines/${wineId}/vintages/${vintageId}/my-image`);
 }
+

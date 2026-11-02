@@ -35,3 +35,4 @@ export interface UserWineQueryParams {
   tried?: boolean;
   favorite?: boolean;
 }
+

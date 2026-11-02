@@ -50,3 +50,4 @@ export async function updateReview(
 export async function deleteReview(id: number): Promise<void> {
   await apiClient.delete<void>(`/reviews/${id}`);
 }
+
