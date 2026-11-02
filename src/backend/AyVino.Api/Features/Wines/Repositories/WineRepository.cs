@@ -52,21 +52,14 @@ public class WineRepository(
             OR {vintageAlias}.approval_status = 2
             OR (@CurrentUserId IS NOT NULL AND (
                 {vintageAlias}.uploaded_by_user_id = @CurrentUserId
-                OR EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = {vintageAlias}.id AND c.user_id = @CurrentUserId)
-                OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = {vintageAlias}.id AND r.user_id = @CurrentUserId)
-                OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = {vintageAlias}.id AND uvi.user_id = @CurrentUserId)
+                OR ({vintageAlias}.approval_status != 3 AND (
+                    EXISTS (SELECT 1 FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = {vintageAlias}.id AND c.user_id = @CurrentUserId)
+                    OR EXISTS (SELECT 1 FROM reviews r WHERE r.wine_vintage_id = {vintageAlias}.id AND r.user_id = @CurrentUserId)
+                    OR EXISTS (SELECT 1 FROM user_vintage_images uvi WHERE uvi.wine_vintage_id = {vintageAlias}.id AND uvi.user_id = @CurrentUserId)
+                    OR EXISTS (SELECT 1 FROM user_activities ua WHERE ua.wine_vintage_id = {vintageAlias}.id AND ua.user_id = @CurrentUserId)
+                ))
             ))
-            OR ({vintageAlias}.approval_status = 1 AND (
-                SELECT COUNT(DISTINCT u.user_id) FROM (
-                    SELECT uploaded_by_user_id AS user_id FROM wine_vintages WHERE id = {vintageAlias}.id AND uploaded_by_user_id IS NOT NULL
-                    UNION
-                    SELECT c.user_id FROM cellar_items ci JOIN cellars c ON c.id = ci.cellar_id WHERE ci.wine_vintage_id = {vintageAlias}.id
-                    UNION
-                    SELECT user_id FROM reviews WHERE wine_vintage_id = {vintageAlias}.id
-                    UNION
-                    SELECT user_id FROM user_vintage_images WHERE wine_vintage_id = {vintageAlias}.id
-                ) u
-            ) >= @MinUsers)
+            OR ({vintageAlias}.approval_status = 1 AND {CommunityVintageSql.CommunityUsersCountSubquery(vintageAlias)} >= @MinUsers)
         )
         """;
 

@@ -163,15 +163,16 @@ Para salvaguardar la integridad de las experiencias y registros de los usuarios 
 ### 8.1. Visibilidad Comunitaria por Umbral de Usuarios ($N$ Configurable)
 Para potenciar la inteligencia colectiva y la catalogación comunitaria sin comprometer la calidad del catálogo:
 - **Umbral Configurable**: Mediante `Community:MinUsersForPublicVisibility` (por defecto `2`), se establece el número mínimo de usuarios independientes necesarios para que una cosecha comunitaria en estado `Pending` adquiera visibilidad pública general.
-- **Conjunto de Usuarios Participantes**: Se define como el conjunto disjunto de:
+- **Conjunto de Usuarios Participantes**: Se define como la unión distinta de:
   1. El creador/uploader original (`uploaded_by_user_id`).
   2. Usuarios que tienen al menos una botella de esa cosecha en su cava personal (`cellar_items`).
   3. Usuarios que han publicado una reseña sobre esa cosecha (`reviews`).
   4. Usuarios que han subido una foto personal de esa cosecha (`user_vintage_images`).
+  5. Usuarios que registraron cualquier actividad sobre esa cosecha en su historial (`user_activities` con `wine_vintage_id` no nulo, como un descorche directo sin cava ni reseña).
 - **Estados de Visibilidad**:
   - `Approved`: Visible públicamente para cualquier usuario o visitante anónimo.
-  - `Pending`: Visible para el público general si y solo si la cantidad de usuarios distintos $\ge N$. Antes de alcanzar dicho umbral, es visible únicamente para los administradores, el dueño de la bodega y los propios usuarios participantes. En la interfaz se rotula como *"Sin verificar"* hasta su aprobación editorial.
-  - `Rejected`: Se oculta de inmediato para el público general y participantes ordinarios; únicamente visible para administradores, el dueño de la bodega y el uploader original.
+  - `Pending`: Visible para el público general si y solo si la cantidad de usuarios distintos $\ge N$. Antes de alcanzar dicho umbral, es visible únicamente para los administradores, el dueño de la bodega y los propios usuarios participantes (incluyendo quienes solo tienen actividades registradas). En la interfaz se rotula como *"Sin verificar"* hasta su aprobación editorial.
+  - `Rejected`: Se oculta de inmediato para el público general y participantes ordinarios (no se vuelve visible por actividades ni otros usos); únicamente visible para administradores, el dueño de la bodega y el uploader original.
 
 ### 8.2. Coincidencia de Etiquetas y Prevención de Duplicados
 - **Normalizador de Etiquetas (`WineLabelNormalizer`)**: Genera una clave determinista `label_key` normalizando:
