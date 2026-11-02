@@ -2933,6 +2933,45 @@
               ]
             },
             {
+              "name": "Upload My Vintage Image",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/wines/{{wineId}}/vintages/{{vintageId}}/my-image",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wines",
+                    "{{wineId}}",
+                    "vintages",
+                    "{{vintageId}}",
+                    "my-image"
+                  ]
+                },
+                "description": "Sube o actualiza la foto personal del usuario autenticado para la cosecha dada. Si es el creador original y la cosecha no tenía foto pública, también se establece automáticamente como foto pública de la cosecha."
+              },
+              "response": []
+            },
+            {
               "name": "Get My Vintage Image",
               "request": {
                 "method": "GET",
