@@ -1,4 +1,5 @@
 import apiClient from '../../../services/apiClient';
+import { uploadMyVintageImage } from '../../wines/api/userVintageImageApi';
 import type {
   WineResponseDto,
   WineListItemDto,
@@ -8,6 +9,9 @@ import type {
   CreateWineVintageRequestDto,
   UpdateWineVintageRequestDto,
   ClaimWinesRequestDto,
+  WineMatchParams,
+  WineMatchResult,
+  ConflictWineExtensions,
 } from '../types';
 
 export interface WineQueryParams {
@@ -161,4 +165,61 @@ export async function updateWineVintage(
     data,
   );
   return response.data;
+}
+
+/**
+ * Consulta la coincidencia en vivo de un vino y cosecha según nombre, bodega, tipo y año.
+ * GET /api/wines/match
+ */
+export async function matchWine(
+  params: WineMatchParams,
+  signal?: AbortSignal,
+): Promise<WineMatchResult> {
+  const query: Record<string, string | number> = {
+    name: params.name,
+    wineryName: params.wineryName,
+    wineType: params.wineType,
+  };
+  if (params.year !== undefined && params.year !== null) {
+    query.year = params.year;
+  }
+  const response = await apiClient.get<WineMatchResult>('/wines/match', {
+    params: query,
+    signal,
+  });
+  return response.data;
+}
+
+/**
+ * Re-export de la subida de foto personal del usuario para una cosecha puntual.
+ */
+export const putMyVintageImage = uploadMyVintageImage;
+
+/**
+ * Extrae las extensiones de conflicto 409 (existingWineId y existingVintageId)
+ * tanto si vienen en la raíz del Problem Details como dentro del objeto extensions.
+ */
+export function extractConflictWineExtensions(error: unknown): ConflictWineExtensions {
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return {};
+  }
+  const res = (error as { response?: { data?: Record<string, unknown> } }).response;
+  const data = res?.data;
+  if (!data || typeof data !== 'object') {
+    return {};
+  }
+  const exts = (data.extensions && typeof data.extensions === 'object')
+    ? (data.extensions as Record<string, unknown>)
+    : null;
+
+  const rawWineId = data.existingWineId ?? exts?.existingWineId;
+  const rawVintageId = data.existingVintageId ?? exts?.existingVintageId;
+
+  const existingWineId = rawWineId !== undefined && rawWineId !== null ? Number(rawWineId) : null;
+  const existingVintageId = rawVintageId !== undefined && rawVintageId !== null ? Number(rawVintageId) : null;
+
+  return {
+    existingWineId: Number.isNaN(existingWineId) ? null : existingWineId,
+    existingVintageId: Number.isNaN(existingVintageId) ? null : existingVintageId,
+  };
 }

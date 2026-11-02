@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { Sparkles, Search, SlidersHorizontal, RotateCcw, AlertTriangle, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Sparkles, Search, SlidersHorizontal, RotateCcw, AlertTriangle, X, Plus } from 'lucide-react';
+import WineCreateModal from '../features/winery/components/WineCreateModal';
 import axios from 'axios';
 import { searchWines } from '../features/winery/api/wineApi';
 import type { WineListItemDto } from '../features/winery/types/wine';
@@ -61,6 +62,8 @@ export default function CatalogPage() {
   const [debouncedYear, setDebouncedYear] = useState(yearFilter);
 
   // Estados de datos
+  const [isCreateWineModalOpen, setIsCreateWineModalOpen] = useState(false);
+  const [createWineInitialName, setCreateWineInitialName] = useState('');
   const [wines, setWines] = useState<WineListItemDto[]>([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -257,6 +260,19 @@ export default function CatalogPage() {
               <span className="w-2 h-2 rounded-full bg-rose-500 ml-0.5" />
             )}
           </button>
+
+          {/* Botón discreto para cargar un vino colaborativo */}
+          <button
+            type="button"
+            onClick={() => {
+              setCreateWineInitialName('');
+              setIsCreateWineModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider border border-white/10 bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Cargar un vino</span>
+          </button>
         </div>
 
         {/* Panel Plegable de Filtros Adicionales */}
@@ -377,16 +393,29 @@ export default function CatalogPage() {
           <p className="text-sm text-neutral-400 max-w-md font-sans">
             Probá ajustando o quitando los términos de búsqueda, la bodega o la añada seleccionada.
           </p>
-          {hasActiveFilters && (
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
             <button
               type="button"
-              onClick={handleClearFilters}
-              className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 text-neutral-200 text-xs font-semibold uppercase tracking-wider hover:border-neutral-500 hover:text-white transition-colors cursor-pointer"
+              onClick={() => {
+                setCreateWineInitialName(searchTerm);
+                setIsCreateWineModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-gradient-to-r from-rose-700 to-rose-900 text-white text-xs font-semibold uppercase tracking-wider hover:brightness-110 transition-all shadow-md cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Limpiar filtros</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Agregar vino</span>
             </button>
-          )}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 text-neutral-200 text-xs font-semibold uppercase tracking-wider hover:border-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Limpiar filtros</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -425,6 +454,17 @@ export default function CatalogPage() {
           )}
         </div>
       )}
+      {/* Modal colaborativo de creación de vino */}
+      <WineCreateModal
+        mode="user"
+        isOpen={isCreateWineModalOpen}
+        onClose={() => setIsCreateWineModalOpen(false)}
+        initialName={createWineInitialName}
+        onResolved={(result) => {
+          setIsCreateWineModalOpen(false);
+          navigate(`/vinos/${result.wine.id}`);
+        }}
+      />
     </main>
   );
 }

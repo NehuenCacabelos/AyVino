@@ -130,3 +130,36 @@ export interface UpdateWineVintageRequestDto {
 export interface ClaimWinesRequestDto {
   wineIds: number[];
 }
+
+/**
+ * DTOs para coincidencia en vivo de vinos (C# WineMatchResultDto).
+ */
+export interface MatchedWineDto {
+  id: number;
+  name: string;
+  winery: string;
+  type: string;
+}
+
+export interface MatchedVintageDto {
+  id: number;
+  year: number | null;
+  approvalStatus: string;
+}
+
+export interface WineMatchResult {
+  wine: MatchedWineDto | null;
+  vintage: MatchedVintageDto | null;
+}
+
+export interface WineMatchParams {
+  name: string;
+  wineryName: string;
+  wineType: string;
+  year?: number | null;
+}
+
+export interface ConflictWineExtensions {
+  existingWineId?: number | null;
+  existingVintageId?: number | null;
+}

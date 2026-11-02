@@ -211,7 +211,6 @@ const colomeWines: DashboardWine[] = [
 export default function DashboardPage() {
   const { stockCount, setStockCount } = useOutletContext<AppOutletContext>();
   const [activeFilter, setActiveFilter] = useState('Todos');
-  const [searchQuery, setSearchQuery] = useState('');
   const [heroFilters, setHeroFilters] = useState<HeroFilterState>({
     query: '',
     varietal: 'Todos',
@@ -333,17 +332,7 @@ export default function DashboardPage() {
           }
         }
 
-        // 4. Búsqueda por texto (query)
-        const effectiveQuery = searchQuery.trim() || heroFilters.query.trim();
-        if (effectiveQuery !== '') {
-          const q = effectiveQuery.toLowerCase();
-          const matches =
-            wine.name.toLowerCase().includes(q) ||
-            wine.winery.toLowerCase().includes(q) ||
-            wine.varietal.toLowerCase().includes(q) ||
-            wine.region.toLowerCase().includes(q);
-          if (!matches) return false;
-        }
+        // Búsqueda de hero desacoplada de maquetas (Vista 4)
 
         // 5. Chips de filtros rápidos inferiores
         if (activeFilter !== 'Todos') {
@@ -375,7 +364,7 @@ export default function DashboardPage() {
         return true;
       });
     },
-    [heroFilters, searchQuery, activeFilter],
+    [heroFilters, activeFilter],
   );
 
   const filteredCatena = useMemo(
@@ -450,17 +439,14 @@ export default function DashboardPage() {
           {/* Contenido Central: Saludo, Titular, Subtítulo, Buscador y Filtros */}
           <div className="my-auto w-full py-1 sm:py-2 px-4 sm:px-6 lg:px-8">
             <QuickActions
-              onSearch={(query) => setSearchQuery(query)}
               onFilterChange={(filters) => {
                 setHeroFilters(filters);
-                setSearchQuery(filters.query);
               }}
               onRegisterBottle={() =>
                 showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
               }
               onSelectSpotlightWine={(wineName) => {
-                setSearchQuery(wineName);
-                showNotification(`Filtrando catálogo por "${wineName}".`);
+                showNotification(`Etiqueta seleccionada: "${wineName}".`);
                 const catalogEl = document.getElementById('catalogo');
                 catalogEl?.scrollIntoView({ behavior: 'smooth' });
               }}
@@ -578,7 +564,6 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => {
                         setActiveFilter('Todos');
-                        setSearchQuery('');
                         setHeroFilters({
                           query: '',
                           varietal: 'Todos',

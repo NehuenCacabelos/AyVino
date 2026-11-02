@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CatalogPage from '@/pages/CatalogPage';
 import * as wineApiModule from '@/features/winery/api/wineApi';
 import type { WineListItemDto } from '@/features/winery/types/wine';
 
 const mockNavigate = vi.fn();
 
-vi.mock('react-router', async (importOriginal) => {
+vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,

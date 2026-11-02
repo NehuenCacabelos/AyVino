@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import WineCreateModal from '@/features/winery/components/WineCreateModal';
 import * as grapeApi from '@/features/winery/components/../api/grapeApi';
 import * as wineApi from '@/features/winery/components/../api/wineApi';
@@ -12,6 +13,8 @@ vi.mock('@/features/winery/api/grapeApi', () => ({
 vi.mock('@/features/winery/api/wineApi', () => ({
   createWine: vi.fn(),
 }));
+
+const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('WineCreateModal', () => {
   const mockGrapes: GrapeResponseDto[] = [
@@ -50,7 +53,7 @@ describe('WineCreateModal', () => {
   });
 
   it('renders nothing when isOpen is false', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <WineCreateModal
         isOpen={false}
         onClose={vi.fn()}
@@ -64,7 +67,7 @@ describe('WineCreateModal', () => {
   });
 
   it('renders form and loads grapes catalog when isOpen is true', async () => {
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
@@ -83,7 +86,7 @@ describe('WineCreateModal', () => {
   });
 
   it('validates that wine name is required on submit', async () => {
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
@@ -121,7 +124,7 @@ describe('WineCreateModal', () => {
     vi.mocked(wineApi.createWine).mockResolvedValue(mockCreatedWine);
     const onWineCreatedMock = vi.fn();
 
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
@@ -157,7 +160,7 @@ describe('WineCreateModal', () => {
   });
 
   it('initializes grape percentage as empty and disallows selecting duplicated grapes', async () => {
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
@@ -192,7 +195,7 @@ describe('WineCreateModal', () => {
   it('renders editorial message when grapes catalog is empty', async () => {
     vi.mocked(grapeApi.getGrapes).mockResolvedValue([]);
 
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
@@ -212,7 +215,7 @@ describe('WineCreateModal', () => {
   });
 
   it('validates blend percentages when sum exceeds 100%', async () => {
-    render(
+    renderWithRouter(
       <WineCreateModal
         isOpen={true}
         onClose={vi.fn()}
