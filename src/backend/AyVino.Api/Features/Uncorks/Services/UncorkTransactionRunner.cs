@@ -49,43 +49,49 @@ public class UncorkTransactionRunner(
             // (a) Descuento de cava, si corresponde
             if (cellarId.HasValue)
             {
-                const string deductSql = """
-                    UPDATE cellar_items
-                    SET quantity = quantity - 1, updated_at = NOW()
-                    WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId AND quantity > 0
-                    RETURNING quantity;
+                const string selectSql = """
+                    SELECT quantity
+                    FROM cellar_items
+                    WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId
+                    FOR UPDATE;
                     """;
 
-                var remaining = await connection.ExecuteScalarAsync<int?>(
-                    new CommandDefinition(deductSql, new
+                var currentQty = await connection.ExecuteScalarAsync<int?>(
+                    new CommandDefinition(selectSql, new
                     {
                         CellarId = cellarId.Value,
                         WineVintageId = wineVintageId
                     }, transaction, cancellationToken: ct));
 
-                if (remaining is null)
+                if (currentQty is null)
+                    throw new NotFoundException($"La cosecha {wineVintageId} no se encuentra en la cava {cellarId.Value}.");
+
+                if (currentQty <= 0)
+                    throw new ValidationException("No quedan botellas disponibles en la cava para descorchar.");
+
+                if (currentQty.Value == 1)
                 {
-                    const string checkSql = "SELECT quantity FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId;";
-                    var qty = await connection.ExecuteScalarAsync<int?>(
-                        new CommandDefinition(checkSql, new
+                    const string deleteSql = "DELETE FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId;";
+                    await connection.ExecuteAsync(
+                        new CommandDefinition(deleteSql, new
                         {
                             CellarId = cellarId.Value,
                             WineVintageId = wineVintageId
                         }, transaction, cancellationToken: ct));
 
-                    if (qty is null)
-                        throw new NotFoundException($"La cosecha {wineVintageId} no se encuentra en la cava {cellarId.Value}.");
-
-                    throw new ValidationException("No quedan botellas disponibles en la cava para descorchar.");
+                    remainingQuantity = 0;
                 }
-
-                remainingQuantity = remaining.Value;
-
-                if (remaining.Value == 0)
+                else
                 {
-                    const string deleteSql = "DELETE FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId;";
-                    await connection.ExecuteAsync(
-                        new CommandDefinition(deleteSql, new
+                    const string deductSql = """
+                        UPDATE cellar_items
+                        SET quantity = quantity - 1, updated_at = NOW()
+                        WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId
+                        RETURNING quantity;
+                        """;
+
+                    remainingQuantity = await connection.ExecuteScalarAsync<int>(
+                        new CommandDefinition(deductSql, new
                         {
                             CellarId = cellarId.Value,
                             WineVintageId = wineVintageId

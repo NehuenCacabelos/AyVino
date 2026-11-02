@@ -15,12 +15,12 @@ public class HistoryRepository(IDbConnectionFactory connectionFactory) : IHistor
         int WineId,
         string WineName,
         string? WineryName,
-        int WineType,
+        short WineType,
         int? VintageId,
         int? VintageYear,
         Guid? VintageImageId,
         Guid? PersonalImageId,
-        int? ReviewRating,
+        short? ReviewRating,
         string? ReviewComment);
 
     public async Task<IReadOnlyList<HistoryItemDto>> GetUserHistoryAsync(
@@ -82,7 +82,7 @@ public class HistoryRepository(IDbConnectionFactory connectionFactory) : IHistor
                 ? new HistoryVintageDto(r.VintageId.Value, r.VintageYear, r.VintageImageId)
                 : null,
             r.PersonalImageId,
-            r.ReviewRating,
+            (int?)r.ReviewRating,
             r.ReviewComment
         )).ToList();
     }

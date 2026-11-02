@@ -252,13 +252,13 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
     {
         const string sql = """
             SELECT 
-                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id) AS ReviewCount,
-                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemCount,
-                (SELECT COUNT(*) FROM user_vintage_images uvi
+                (SELECT COUNT(*)::int FROM reviews WHERE wine_vintage_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*)::int FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemCount,
+                (SELECT COUNT(*)::int FROM user_vintage_images uvi
                  JOIN wine_vintages wv ON wv.id = uvi.wine_vintage_id
                  WHERE uvi.wine_vintage_id = @Id
                    AND (wv.uploaded_by_user_id IS NULL OR uvi.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserImagesCount,
-                (SELECT COUNT(*) FROM user_activities ua
+                (SELECT COUNT(*)::int FROM user_activities ua
                  JOIN wine_vintages wv ON wv.id = ua.wine_vintage_id
                  WHERE ua.wine_vintage_id = @Id
                    AND (wv.uploaded_by_user_id IS NULL OR ua.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserActivitiesCount;

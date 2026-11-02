@@ -8,6 +8,11 @@ public sealed record WineUsageCounts(
     int OtherUserImagesCount = 0,
     int OtherUserActivitiesCount = 0)
 {
+    public WineUsageCounts(long duplicateWinesCount, long reviewCount, long userWineCount, long cellarItemCount, long otherUserImagesCount = 0, long otherUserActivitiesCount = 0)
+        : this((int)duplicateWinesCount, (int)reviewCount, (int)userWineCount, (int)cellarItemCount, (int)otherUserImagesCount, (int)otherUserActivitiesCount)
+    {
+    }
+
     public bool HasDuplicates => DuplicateWinesCount > 0;
     public bool HasUserHistory => ReviewCount > 0 
         || UserWineCount > 0 

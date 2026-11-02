@@ -492,15 +492,15 @@ public class WineRepository(
     {
         const string sql = """
             SELECT
-                (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
-                (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
-                (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
-                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount,
-                (SELECT COUNT(*) FROM user_vintage_images uvi
+                (SELECT COUNT(*)::int FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
+                (SELECT COUNT(*)::int FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
+                (SELECT COUNT(*)::int FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
+                (SELECT COUNT(*)::int FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount,
+                (SELECT COUNT(*)::int FROM user_vintage_images uvi
                  JOIN wine_vintages wv ON wv.id = uvi.wine_vintage_id
                  WHERE wv.wine_id = @Id
                    AND (wv.uploaded_by_user_id IS NULL OR uvi.user_id != COALESCE(@ExcludeUserId, wv.uploaded_by_user_id))) AS OtherUserImagesCount,
-                (SELECT COUNT(*) FROM user_activities ua
+                (SELECT COUNT(*)::int FROM user_activities ua
                  LEFT JOIN wine_vintages wv ON wv.id = ua.wine_vintage_id
                  WHERE ua.wine_id = @Id
                    AND (
