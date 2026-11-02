@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Wine, AlertTriangle, Clock, RefreshCw, X } from 'lucide-react';
+import { CheckCircle2, Wine, AlertTriangle, Clock, RefreshCw, X, Plus } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
 import {
@@ -484,6 +484,16 @@ export default function CavaPage() {
                         ? 'Las joyas son aquellas botellas con un puntaje promedio de 4,5 o superior.'
                         : 'Todavía no agregaste botellas a esta cava. Guardalas para llevar su registro de estiba.'}
                     </p>
+                    {activeTab !== 'jewels' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsQuickAddOpen(true)}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#722F37] hover:bg-[#85222e] text-white text-xs font-semibold tracking-wide transition-all shadow-md cursor-pointer mt-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Ingresar botella</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
@@ -684,11 +694,17 @@ export default function CavaPage() {
         </div>
       )}
 
-      {/* Modal Ingresar Botella (Próximamente en Vista 3B) */}
+      {/* Modal Ingresar Botella (Vista 3B) */}
       <QuickAddBottleModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
-        onAddBottle={() => setIsQuickAddOpen(false)}
+        defaultCellarId={selectedCellarId ?? undefined}
+        onBottleAdded={({ cellarId }) => {
+          setIsQuickAddOpen(false);
+          setSearchParams({ cava: cellarId.toString() });
+          loadCellars();
+          loadCellarItems();
+        }}
       />
 
       {/* Modal Descorche */}

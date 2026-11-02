@@ -36,6 +36,28 @@ export async function deleteCellarApi(cellarId: number): Promise<void> {
 }
 
 /**
+ * Agrega una cosecha a una cava (POST /api/cellars/{cellarId}/items).
+ */
+export async function addCellarItemApi(
+  cellarId: number,
+  data: {
+    wineVintageId: number;
+    quantity: number;
+    purchaseDate?: string | null;
+    notes?: string | null;
+  }
+): Promise<CellarItemDto> {
+  const payload = {
+    wineVintageId: data.wineVintageId,
+    quantity: data.quantity,
+    purchaseDate: data.purchaseDate ? data.purchaseDate : null,
+    notes: data.notes?.trim() ? data.notes.trim() : null,
+  };
+  const response = await apiClient.post<CellarItemDto>(`/cellars/${cellarId}/items`, payload);
+  return response.data;
+}
+
+/**
  * Obtiene los ítems de una cava (GET /api/cellars/{cellarId}/items).
  */
 export async function getCellarItemsApi(cellarId: number): Promise<CellarItemDto[]> {
@@ -124,6 +146,5 @@ export function mapCellarItemToCellarWine(item: CellarItemDto, cellarId: number)
     purchaseDate: item.purchaseDate ?? null,
     notes: item.notes ?? null,
     lastChangeAt: item.lastChangeAt,
-    // región, uva, ubicación, temperatura, terroir, altitud, suelo, crianza, etc. quedan indefinidos.
   };
 }

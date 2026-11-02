@@ -41,6 +41,7 @@ import {
   deleteReview,
   type ReviewResponseDto,
 } from '../features/reviews';
+import AddToCellarForm from '../features/cava/components/AddToCellarForm';
 import {
   getMyWineMarks,
   markWineAsWanted,
@@ -308,6 +309,9 @@ export default function WineDetailPage() {
   const [reviewFormError, setReviewFormError] = useState<string | null>(null);
   const [isDeletingReview, setIsDeletingReview] = useState<boolean>(false);
   const [showDeleteReviewConfirm, setShowDeleteReviewConfirm] = useState<boolean>(false);
+
+  // Modal Guardar en Cava
+  const [isAddToCellarOpen, setIsAddToCellarOpen] = useState(false);
 
   // Notificaciones Toast
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -854,18 +858,20 @@ export default function WineDetailPage() {
             {/* Botones de Acción Principales */}
             <div className="space-y-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* Guardar en cava: visible pero deshabilitado con 'Próximamente' */}
+                {/* Guardar en cava */}
                 <button
                   type="button"
-                  disabled
-                  title="Disponible en la próxima etapa de integración de Cava"
-                  className="h-10 px-4 text-xs font-medium uppercase tracking-wider rounded-sm bg-neutral-900/50 border border-neutral-800 text-neutral-500 flex items-center justify-center gap-2 w-full cursor-not-allowed opacity-60 select-none"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      showToast('Iniciá sesión para guardar este vino en tu cava.', undefined, undefined, true);
+                      return;
+                    }
+                    setIsAddToCellarOpen(true);
+                  }}
+                  className="h-10 px-4 text-xs font-medium uppercase tracking-wider rounded-sm bg-[#722F37] hover:bg-[#85222e] border border-rose-500/40 text-white flex items-center justify-center gap-2 w-full transition-colors cursor-pointer shadow-sm"
                 >
-                  <BookmarkPlus className="w-4 h-4 text-neutral-500" />
+                  <BookmarkPlus className="w-4 h-4 text-white" />
                   <span>Guardar en cava</span>
-                  <span className="text-[9px] font-mono lowercase bg-neutral-800 px-1 py-0.5 rounded text-neutral-400">
-                    próximamente
-                  </span>
                 </button>
 
                 {/* Escribir / Editar reseña */}
@@ -1488,6 +1494,52 @@ export default function WineDetailPage() {
             )}
           </div>
         </section>
+
+        {/* Modal Guardar en Cava */}
+        {isAddToCellarOpen && activeVintage && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+          >
+            <div className="bg-[#16161b] border border-neutral-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                <h3 className="font-serif text-lg font-semibold text-neutral-100">
+                  Guardar en mi Cava
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsAddToCellarOpen(false)}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                  aria-label="Cerrar modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <AddToCellarForm
+                wine={{
+                  wineId: wine.id,
+                  wineVintageId: activeVintage.id,
+                  wineName: wine.name,
+                  vintageYear: activeVintage.year,
+                  wineryName: wine.wineryNameText || winery?.name,
+                  wineType: wine.wineType,
+                  approvalStatus: activeVintage.approvalStatus,
+                }}
+                onDone={(res) => {
+                  setIsAddToCellarOpen(false);
+                  showToast(
+                    `Agregaste ${res.quantityAdded} ${res.quantityAdded === 1 ? 'botella' : 'botellas'} a «${res.cellarName}»`,
+                    'Ver mi cava',
+                    `/cava?cava=${res.cellarId}`
+                  );
+                }}
+                onCancel={() => setIsAddToCellarOpen(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Notificación Toast Flotante */}
         {toast && (

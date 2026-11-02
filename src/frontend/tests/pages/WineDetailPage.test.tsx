@@ -389,7 +389,7 @@ describe('WineDetailPage Component (Vista 1: Ficha de Vino)', () => {
     });
   });
 
-  it('el botón "Guardar en cava" permanece deshabilitado con el rótulo Próximamente', async () => {
+  it('el botón "Guardar en cava" está habilitado y abre el modal Guardar en mi Cava (Vista 3B)', async () => {
     renderComponent('101');
 
     await waitFor(() => {
@@ -397,7 +397,11 @@ describe('WineDetailPage Component (Vista 1: Ficha de Vino)', () => {
     });
 
     const vaultBtn = screen.getByRole('button', { name: /guardar en cava/i });
-    expect(vaultBtn).toBeDisabled();
-    expect(screen.getByText(/próximamente/i)).toBeInTheDocument();
+    expect(vaultBtn).not.toBeDisabled();
+    expect(screen.queryByText(/próximamente/i)).not.toBeInTheDocument();
+
+    fireEvent.click(vaultBtn);
+
+    expect(await screen.findByText('Guardar en mi Cava')).toBeInTheDocument();
   });
 });

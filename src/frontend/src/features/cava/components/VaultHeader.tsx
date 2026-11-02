@@ -21,6 +21,7 @@ export default function VaultHeader({
   onOpenCreateCellar,
   onOpenRenameCellar,
   onOpenDeleteCellar,
+  onAddBottle,
 }: VaultHeaderProps) {
   const isMaxCellarsReached = cellars.length >= MAX_CELLARS;
   const currentCellar = cellars.find((c) => c.id === selectedCellarId) ?? cellars[0];
@@ -32,29 +33,21 @@ export default function VaultHeader({
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-neutral-100 font-semibold tracking-tight leading-tight">
             Bóveda Personal de {userName}
           </h1>
-
-          <p className="text-sm sm:text-base text-neutral-400 font-sans max-w-xl leading-relaxed">
-            Archivo enológico confidencial, curva de evolución y custodia térmica de partidas selectas.
+          <p className="text-xs sm:text-sm text-neutral-400 font-sans leading-relaxed">
+            Gestión inteligente de estiba y colecciones privadas.
           </p>
         </div>
 
-        {/* Botón de ingreso de botellas: deshabilitado con "Próximamente" hasta Vista 3B */}
+        {/* Botón de ingreso de botellas */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative group">
-            <button
-              type="button"
-              disabled
-              title="Próximamente"
-              aria-label="Ingresar Lote / Botella (Próximamente)"
-              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-neutral-800/80 text-neutral-400 text-xs sm:text-sm font-semibold tracking-wide border border-neutral-700/50 opacity-60 cursor-not-allowed select-none"
-            >
-              <Plus className="w-4 h-4 text-neutral-400" />
-              <span>Ingresar Lote / Botella</span>
-              <span className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-neutral-300">
-                Próximamente
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onAddBottle}
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-[#722F37] hover:bg-[#85222e] text-white text-xs sm:text-sm font-semibold tracking-wide border border-rose-500/40 shadow-sm transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Ingresar Lote / Botella</span>
+          </button>
         </div>
       </div>
 
@@ -99,17 +92,17 @@ export default function VaultHeader({
                   <button
                     type="button"
                     onClick={onOpenDeleteCellar}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 text-neutral-300 hover:text-rose-400 text-xs font-medium transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 hover:text-rose-200 text-xs font-medium transition-colors cursor-pointer"
                     title="Eliminar esta cava"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-neutral-400 hover:text-rose-400" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                     <span>Eliminar</span>
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <span className="text-neutral-400 text-xs italic">No tenés ninguna cava creada</span>
+            <span className="text-xs text-neutral-500 italic">Sin cavas configuradas</span>
           )}
         </div>
 

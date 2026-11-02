@@ -44,6 +44,12 @@ export interface WineCreationResult {
   photoUploaded: boolean;
 }
 
+export interface UserModeInitialValues {
+  name?: string;
+  wineryName?: string;
+  wineType?: WineType | '';
+}
+
 export interface WineryModeProps {
   mode?: 'winery';
   isOpen: boolean;
@@ -52,6 +58,7 @@ export interface WineryModeProps {
   locationId?: number | null;
   onWineCreated: (newWine: WineResponseDto) => void;
   initialName?: never;
+  initialValues?: never;
   onResolved?: never;
 }
 
@@ -60,6 +67,7 @@ export interface UserModeProps {
   isOpen: boolean;
   onClose: () => void;
   initialName?: string;
+  initialValues?: UserModeInitialValues;
   onResolved: (result: WineCreationResult) => void;
   wineryId?: never;
   locationId?: never;
@@ -97,9 +105,11 @@ export default function WineCreateModal(props: WineCreateModalProps) {
   const [approvedWineries, setApprovedWineries] = useState<WineryResponseDto[]>([]);
 
   // Datos básicos del Vino
-  const [name, setName] = useState(props.initialName ?? '');
-  const [wineryName, setWineryName] = useState('');
-  const [wineType, setWineType] = useState<WineType | ''>(isUserMode ? '' : 'Red');
+  const [name, setName] = useState(props.initialValues?.name ?? props.initialName ?? '');
+  const [wineryName, setWineryName] = useState(props.initialValues?.wineryName ?? '');
+  const [wineType, setWineType] = useState<WineType | ''>(
+    props.initialValues?.wineType ?? (isUserMode ? '' : 'Red')
+  );
   const [description, setDescription] = useState('');
 
   // Cosecha
@@ -138,11 +148,19 @@ export default function WineCreateModal(props: WineCreateModalProps) {
     photoWarning?: string;
   } | null>(null);
 
-  // Sincronizar initialName si cambia externamente (patrón React: ajustar estado durante el render)
+  // Sincronizar initialName / initialValues si cambia externamente (patrón React: ajustar estado durante el render)
   const [prevInitialName, setPrevInitialName] = useState(props.initialName);
   if (props.initialName !== prevInitialName) {
     setPrevInitialName(props.initialName);
     setName(props.initialName ?? '');
+  }
+
+  const [prevInitialValues, setPrevInitialValues] = useState(props.initialValues);
+  if (props.initialValues !== prevInitialValues) {
+    setPrevInitialValues(props.initialValues);
+    if (props.initialValues?.name !== undefined) setName(props.initialValues.name);
+    if (props.initialValues?.wineryName !== undefined) setWineryName(props.initialValues.wineryName);
+    if (props.initialValues?.wineType !== undefined) setWineType(props.initialValues.wineType);
   }
 
   // Cargar catálogo de cepas al abrir
