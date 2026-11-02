@@ -171,12 +171,14 @@ describe('WineCreateModal - Modo Usuario (Vista 4)', () => {
     fireEvent.click(adoptBtn);
 
     await waitFor(() => {
-      expect(onResolvedMock).toHaveBeenCalledWith({
-        outcome: 'adopted',
-        wine: { id: 77, name: 'Malbec Argentino' },
-        vintageId: 88,
-        photoUploaded: false,
-      });
+      expect(onResolvedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'adopted',
+          wine: { id: 77, name: 'Malbec Argentino' },
+          vintageId: 88,
+          photoUploaded: false,
+        })
+      );
     });
 
     expect(await screen.findByText(/Este vino ya estaba cargado: lo usamos/i, {}, { timeout: 3000 })).toBeInTheDocument();
@@ -217,12 +219,14 @@ describe('WineCreateModal - Modo Usuario (Vista 4)', () => {
 
     await waitFor(() => {
       expect(wineApi.createWineVintage).toHaveBeenCalledWith(77, expect.objectContaining({ year: 2024 }));
-      expect(onResolvedMock).toHaveBeenCalledWith({
-        outcome: 'vintage-added',
-        wine: { id: 77, name: 'Malbec Argentino' },
-        vintageId: 99,
-        photoUploaded: false,
-      });
+      expect(onResolvedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'vintage-added',
+          wine: { id: 77, name: 'Malbec Argentino' },
+          vintageId: 99,
+          photoUploaded: false,
+        })
+      );
     });
 
     expect(await screen.findByText(/Se agregó la cosecha a «Malbec Argentino»/i, {}, { timeout: 3000 })).toBeInTheDocument();
@@ -309,12 +313,14 @@ describe('WineCreateModal - Modo Usuario (Vista 4)', () => {
     fireEvent.click(createBtn);
 
     await waitFor(() => {
-      expect(onResolvedMock).toHaveBeenCalledWith({
-        outcome: 'adopted',
-        wine: { id: 200, name: 'Vino Duplicado' },
-        vintageId: 300,
-        photoUploaded: false,
-      });
+      expect(onResolvedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'adopted',
+          wine: { id: 200, name: 'Vino Duplicado' },
+          vintageId: 300,
+          photoUploaded: false,
+        })
+      );
     });
   });
 

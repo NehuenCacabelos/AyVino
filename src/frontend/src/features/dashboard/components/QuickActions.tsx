@@ -17,7 +17,7 @@ import type { WineListItemDto } from '../../winery/types/wine';
 import { searchWines } from '../../winery/api/wineApi';
 import { imageUrl } from '../../../lib/image';
 import { cn } from '../../../lib/utils';
-import WineCreateModal from '../../winery/components/WineCreateModal';
+import WineCreationFlow from '../../wines/components/WineCreationFlow';
 
 export interface HeroFilterState {
   query: string;
@@ -592,16 +592,11 @@ export default function QuickActions({
         </div>
       </div>
 
-      {/* Modal integrado de carga de vino en modo usuario */}
-      <WineCreateModal
-        mode="user"
+      {/* Flujo integrado de creación/adopción de vino en modo usuario */}
+      <WineCreationFlow
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         initialName={createModalInitialName}
-        onResolved={(result) => {
-          setIsCreateModalOpen(false);
-          navigate(`/vinos/${result.wine.id}`);
-        }}
       />
     </div>
   );

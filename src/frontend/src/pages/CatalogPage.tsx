@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Search, SlidersHorizontal, RotateCcw, AlertTriangle, X, Plus } from 'lucide-react';
-import WineCreateModal from '../features/winery/components/WineCreateModal';
+import WineCreationFlow from '../features/wines/components/WineCreationFlow';
 import axios from 'axios';
 import { searchWines } from '../features/winery/api/wineApi';
 import type { WineListItemDto } from '../features/winery/types/wine';
@@ -454,16 +454,11 @@ export default function CatalogPage() {
           )}
         </div>
       )}
-      {/* Modal colaborativo de creación de vino */}
-      <WineCreateModal
-        mode="user"
+      {/* Flujo colaborativo de creación de vino */}
+      <WineCreationFlow
         isOpen={isCreateWineModalOpen}
         onClose={() => setIsCreateWineModalOpen(false)}
         initialName={createWineInitialName}
-        onResolved={(result) => {
-          setIsCreateWineModalOpen(false);
-          navigate(`/vinos/${result.wine.id}`);
-        }}
       />
     </main>
   );

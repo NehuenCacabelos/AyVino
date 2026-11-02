@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   Settings,
@@ -112,8 +112,38 @@ export default function ProfilePage() {
   const [publicWines, setPublicWines] = useState<PublicCellarItemDto[]>([]);
   const [publicWinesLoading, setPublicWinesLoading] = useState(false);
 
-  // Vista owner: pestañas & datos
-  const [activeTab, setActiveTab] = useState<OwnerTab>('cava');
+  // Vista owner: pestañas & datos (soporta ?tab=historial por URL)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab: OwnerTab =
+    tabParam === 'historial' || tabParam === 'deseados' || tabParam === 'bodegas' || tabParam === 'cava'
+      ? tabParam
+      : 'cava';
+  const [activeTab, setActiveTab] = useState<OwnerTab>(initialTab);
+
+  useEffect(() => {
+    if (tabParam === 'historial' || tabParam === 'deseados' || tabParam === 'bodegas' || tabParam === 'cava') {
+      let isMounted = true;
+      void Promise.resolve().then(() => {
+        if (isMounted) setActiveTab(tabParam);
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [tabParam]);
+
+  const handleSelectTab = (tab: OwnerTab) => {
+    setActiveTab(tab);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', tab);
+        return next;
+      },
+      { replace: true }
+    );
+  };
   const [ownerCellarItems, setOwnerCellarItems] = useState<CellarItemDto[]>([]);
   const [ownerFavWines, setOwnerFavWines] = useState<UserWineListItemDto[]>([]);
   const [ownerDataLoading, setOwnerDataLoading] = useState(false);
@@ -612,7 +642,7 @@ export default function ProfilePage() {
                     {/* 1. Joyas de la Cava */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('cava')}
+                      onClick={() => handleSelectTab('cava')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'cava'
@@ -640,7 +670,7 @@ export default function ProfilePage() {
                     {/* 2. Historial de Actividad */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('historial')}
+                      onClick={() => handleSelectTab('historial')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'historial'
@@ -660,7 +690,7 @@ export default function ProfilePage() {
                     {/* 3. Deseados & Favoritos */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('deseados')}
+                      onClick={() => handleSelectTab('deseados')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'deseados'
@@ -690,7 +720,7 @@ export default function ProfilePage() {
                     {/* 4. Bodegas que sigo */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('bodegas')}
+                      onClick={() => handleSelectTab('bodegas')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'bodegas'

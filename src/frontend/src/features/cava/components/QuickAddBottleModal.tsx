@@ -459,6 +459,7 @@ export default function QuickAddBottleModal({
           initialName={createModalInitialName}
           initialValues={createModalInitialValues}
           onResolved={handleWineCreatedOrAdopted}
+          onResolvedBehavior="delegate"
         />
       )}
     </>

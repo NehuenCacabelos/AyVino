@@ -7,6 +7,8 @@ export { default as WineTypeFilterChips } from './components/WineTypeFilterChips
 export { default as WineDetailModal } from './components/WineDetailModal';
 export { default as WineBottleSilhouette } from './components/WineBottleSilhouette';
 export { default as WineBottleMock } from './components/WineBottleMock';
+export { default as WineCreationFlow } from './components/WineCreationFlow';
+export type { WineCreationFlowProps, FlowStep } from './components/WineCreationFlow';
 export {
   mapApiWineToCuratedWine,
   mapWineListItemToCuratedWine,

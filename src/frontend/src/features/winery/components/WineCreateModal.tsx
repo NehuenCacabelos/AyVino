@@ -42,6 +42,10 @@ export interface WineCreationResult {
   wine: { id: number; name: string };
   vintageId: number;
   photoUploaded: boolean;
+  winery: string;
+  wineType: string;
+  year: number | null;
+  personalImageId?: string | null;
 }
 
 export interface UserModeInitialValues {
@@ -60,6 +64,7 @@ export interface WineryModeProps {
   initialName?: never;
   initialValues?: never;
   onResolved?: never;
+  onResolvedBehavior?: never;
 }
 
 export interface UserModeProps {
@@ -69,6 +74,7 @@ export interface UserModeProps {
   initialName?: string;
   initialValues?: UserModeInitialValues;
   onResolved: (result: WineCreationResult) => void;
+  onResolvedBehavior?: 'show-success' | 'delegate';
   wineryId?: never;
   locationId?: never;
   onWineCreated?: never;
@@ -518,14 +524,42 @@ export default function WineCreateModal(props: WineCreateModalProps) {
       // Subida opcional de imagen personal
       let photoUploaded = false;
       let photoWarning: string | undefined;
+      let personalImageId: string | null = null;
 
       if (selectedFile && resolvedVintageId > 0) {
         try {
-          await putMyVintageImage(resolvedWineId, resolvedVintageId, selectedFile);
+          personalImageId = await putMyVintageImage(resolvedWineId, resolvedVintageId, selectedFile);
           photoUploaded = true;
         } catch {
           photoWarning = 'El vino se cargó pero la foto no se pudo subir; podés agregarla desde la ficha.';
         }
+      }
+
+      const resolvedWinery = wineryName.trim() || (matchResult?.wine?.winery ?? '');
+      const resolvedWineType = wineType || (matchResult?.wine?.type ?? '');
+      const resolvedYear = isNoVintage
+        ? null
+        : year.trim()
+          ? Number(year)
+          : (matchResult?.vintage?.year ?? null);
+
+      const resultPayload: WineCreationResult = {
+        outcome: finalOutcome,
+        wine: { id: resolvedWineId, name: resolvedWineName },
+        vintageId: resolvedVintageId,
+        photoUploaded,
+        winery: resolvedWinery,
+        wineType: resolvedWineType,
+        year: resolvedYear,
+        personalImageId: personalImageId ?? null,
+      };
+
+      const behavior = (props as UserModeProps).onResolvedBehavior ?? 'show-success';
+
+      if (behavior === 'delegate') {
+        props.onClose();
+        props.onResolved(resultPayload);
+        return;
       }
 
       // Guardar resultado y notificar
@@ -536,12 +570,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
         photoWarning,
       });
 
-      props.onResolved({
-        outcome: finalOutcome,
-        wine: { id: resolvedWineId, name: resolvedWineName },
-        vintageId: resolvedVintageId,
-        photoUploaded,
-      });
+      props.onResolved(resultPayload);
     } catch (err: unknown) {
       let detail: string | undefined;
       if (isAxiosError<{ detail?: string; title?: string }>(err)) {
