@@ -18,7 +18,10 @@ import UncorkDialog from '../../dashboard/components/UncorkDialog';
 import AddToCellarForm from '../../cava/components/AddToCellarForm';
 import WineBottleSilhouette from './WineBottleSilhouette';
 import { imageUrl } from '../../../lib/image';
+import { getCellarsApi, createCellarApi, addCellarItemApi } from '../../cava/api/cellarApi';
+import { decidePostWineCreationAction, type WineNextActionDecision } from '../utils/creationFlowUtils';
 
+export type { WineNextActionDecision };
 export type FlowStep = 'creating' | 'choosing' | 'uncorking' | 'cellar' | 'closing' | 'dismissed';
 
 interface LastActionInfo {
@@ -145,9 +148,32 @@ export default function WineCreationFlow({
           initialName={initialName}
           initialValues={initialValues}
           onResolvedBehavior="delegate"
-          onResolved={(result) => {
+          onResolved={async (result) => {
             setCreationResult(result);
             onWineCreated?.(result);
+
+            const decision = await decidePostWineCreationAction(getCellarsApi);
+            if (decision === 'auto-add') {
+              try {
+                const newCellar = await createCellarApi({ name: 'Mi cava' });
+                await addCellarItemApi(newCellar.id, {
+                  wineVintageId: result.vintageId,
+                  quantity: 1,
+                });
+                setLastAction({
+                  type: 'cellar',
+                  cellarId: newCellar.id,
+                  cellarName: newCellar.name,
+                  quantityAdded: 1,
+                });
+                setStep('closing');
+                return;
+              } catch {
+                setStep('choosing');
+                return;
+              }
+            }
+
             setStep('choosing');
           }}
         />
@@ -168,7 +194,7 @@ export default function WineCreationFlow({
                   Acción Posterior
                 </span>
                 <h2 id="choosing-title" className="font-serif text-xl font-bold text-zinc-100">
-                  ¿Lo vas a tomar o lo agregás a tu cava?
+                  ¿Qué querés hacer con este vino?
                 </h2>
               </div>
               <button
@@ -225,24 +251,24 @@ export default function WineCreationFlow({
               </div>
             )}
 
-            {/* Tres botones de acción */}
+            {/* Tres opciones: Agregar a una cava, Descorchar ahora, y Solo guardarlo / Ahora no */}
             <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setStep('uncorking')}
-                className="w-full py-3 px-4 rounded-xl bg-[#6b1d28] hover:bg-[#832232] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md hover:shadow-rose-950/40"
-              >
-                <GlassWater className="w-4 h-4" />
-                <span>Lo voy a tomar</span>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setStep('cellar')}
                 className="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-200 font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Wine className="w-4 h-4 text-rose-400" />
-                <span>Agregar a mi cava</span>
+                <span>Agregar a una cava</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep('uncorking')}
+                className="w-full py-3 px-4 rounded-xl bg-[#6b1d28] hover:bg-[#832232] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md hover:shadow-rose-950/40"
+              >
+                <GlassWater className="w-4 h-4" />
+                <span>Descorchar ahora</span>
               </button>
 
               <div className="pt-2 text-center">
@@ -251,7 +277,7 @@ export default function WineCreationFlow({
                   onClick={handleAhoraNo}
                   className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer py-1 px-3"
                 >
-                  Ahora no
+                  Solo guardarlo / Ahora no
                 </button>
               </div>
             </div>
@@ -379,14 +405,25 @@ export default function WineCreationFlow({
               )}
 
               {lastAction?.type === 'cellar' && (
-                <Link
-                  to={`/cava?cava=${lastAction.cellarId}`}
-                  onClick={handleCloseFlow}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#6b1d28] hover:bg-[#832232] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-sm"
-                >
-                  <Wine className="w-4 h-4" />
-                  <span>Ver mi cava</span>
-                </Link>
+                <>
+                  <Link
+                    to={`/cava?cava=${lastAction.cellarId}`}
+                    onClick={handleCloseFlow}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#6b1d28] hover:bg-[#832232] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  >
+                    <Wine className="w-4 h-4" />
+                    <span>Ver mi cava</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => setStep('uncorking')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-200 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <GlassWater className="w-4 h-4 text-rose-400" />
+                    <span>Descorchar ahora</span>
+                  </button>
+                </>
               )}
 
               <button

@@ -557,7 +557,6 @@ export default function WineCreateModal(props: WineCreateModalProps) {
       const behavior = (props as UserModeProps).onResolvedBehavior ?? 'show-success';
 
       if (behavior === 'delegate') {
-        props.onClose();
         props.onResolved(resultPayload);
         return;
       }
@@ -726,12 +725,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
             {/* Aviso de Coincidencia en Vivo (Modo Usuario) */}
             {isUserMode && (
               <>
-                {matchStatus === 'checking' && (
-                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl text-neutral-300 text-xs flex items-center gap-2 animate-pulse">
-                    <Sparkles className="w-4 h-4 text-rose-400 animate-spin" />
-                    <span>Verificando si este vino ya existe en la comunidad...</span>
-                  </div>
-                )}
+
 
                 {matchStatus === 'matched' && isAdopted && (
                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
@@ -764,12 +758,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
                   </div>
                 )}
 
-                {matchStatus === 'error' && matchError && (
-                  <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-300 text-xs flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>{matchError}</span>
-                  </div>
-                )}
+
               </>
             )}
 
@@ -800,7 +789,21 @@ export default function WineCreateModal(props: WineCreateModalProps) {
                   placeholder="Ej: Gran Reserva Malbec"
                   className="w-full px-4 py-2.5 bg-neutral-900/60 border border-white/10 rounded-xl text-neutral-100 text-sm focus:outline-none focus:border-rose-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                 />
-                {errors.name && <p className="text-xs text-rose-400 mt-1">{errors.name}</p>}
+                <div className="min-h-[20px] mt-1 flex items-center">
+                  {errors.name ? (
+                    <p className="text-xs text-rose-400">{errors.name}</p>
+                  ) : isUserMode && matchStatus === 'checking' ? (
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-400" data-testid="wine-checking-indicator">
+                      <Sparkles className="w-3.5 h-3.5 text-rose-400 animate-spin shrink-0" />
+                      <span>Verificando si este vino ya existe...</span>
+                    </div>
+                  ) : isUserMode && matchStatus === 'error' && matchError ? (
+                    <div className="flex items-center gap-1.5 text-xs text-rose-400">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{matchError}</span>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               {/* Bodega (solo en modo usuario con autocomplete) */}

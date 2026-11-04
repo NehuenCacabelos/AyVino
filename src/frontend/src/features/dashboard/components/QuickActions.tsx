@@ -684,7 +684,17 @@ export default function QuickActions({
       {/* Flujo integrado de creación/adopción de vino en modo usuario */}
       <WineCreationFlow
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setSearchQuery('');
+          setSearchResults([]);
+          setIsDropdownOpen(false);
+        }}
+        onWineCreated={() => {
+          setSearchQuery('');
+          setSearchResults([]);
+          setIsDropdownOpen(false);
+        }}
         initialName={createModalInitialName}
       />
     </div>

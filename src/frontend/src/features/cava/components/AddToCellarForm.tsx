@@ -45,6 +45,8 @@ export default function AddToCellarForm({
   const [selectedCellarId, setSelectedCellarId] = useState<number | null>(defaultCellarId ?? null);
   const [createdCellarId, setCreatedCellarId] = useState<number | null>(null);
   const [createdCellarName, setCreatedCellarName] = useState<string | null>(null);
+  const [isCreatingNewCellar, setIsCreatingNewCellar] = useState(false);
+  const [newCellarName, setNewCellarName] = useState('');
 
   const [quantity, setQuantity] = useState<number>(1);
   const [purchaseDate, setPurchaseDate] = useState<string>('');
@@ -106,8 +108,23 @@ export default function AddToCellarForm({
       let targetCellarId: number;
       let targetCellarName: string;
 
-      // a) Si no tiene cavas: crear "Mi cava" (o reutilizar la creada previamente si falló el agregado)
-      if (cellars.length === 0) {
+      // a) Si el usuario eligió crear una cava nueva
+      if (isCreatingNewCellar) {
+        const trimmedNewName = newCellarName.trim();
+        if (!trimmedNewName) {
+          setSubmitError('Ingresá el nombre de la nueva cava.');
+          setIsSubmitting(false);
+          return;
+        }
+        const createdCellar = await createCellarApi({ name: trimmedNewName });
+        targetCellarId = createdCellar.id;
+        targetCellarName = createdCellar.name;
+        setCellars((prev) => [...prev, createdCellar]);
+        setSelectedCellarId(createdCellar.id);
+        setIsCreatingNewCellar(false);
+      }
+      // b) Si no tiene cavas: crear "Mi cava" (o reutilizar la creada previamente si falló el agregado)
+      else if (cellars.length === 0) {
         if (createdCellarId && createdCellarName) {
           targetCellarId = createdCellarId;
           targetCellarName = createdCellarName;
@@ -273,8 +290,15 @@ export default function AddToCellarForm({
             </label>
             <div className="relative">
               <select
-                value={selectedCellarId ?? ''}
-                onChange={(e) => setSelectedCellarId(Number(e.target.value))}
+                value={isCreatingNewCellar ? '__new__' : (selectedCellarId ?? '')}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    setIsCreatingNewCellar(true);
+                  } else {
+                    setIsCreatingNewCellar(false);
+                    setSelectedCellarId(Number(e.target.value));
+                  }
+                }}
                 aria-label="Seleccionar cava"
                 className="w-full appearance-none px-3.5 py-2.5 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-100 text-xs sm:text-sm rounded-xl pr-9 focus:outline-none focus:border-rose-500 transition-colors cursor-pointer"
               >
@@ -283,9 +307,29 @@ export default function AddToCellarForm({
                     {c.name} ({c.bottleCount} {c.bottleCount === 1 ? 'botella' : 'botellas'})
                   </option>
                 ))}
+                {cellars.length < 3 && (
+                  <option value="__new__" className="bg-[#16161a] text-rose-300 font-medium">
+                    + Crear cava nueva
+                  </option>
+                )}
               </select>
               <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
+            {isCreatingNewCellar && (
+              <div className="mt-2.5 space-y-1 animate-in fade-in">
+                <label className="block text-xs font-medium text-neutral-300">
+                  Nombre de la nueva cava <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newCellarName}
+                  onChange={(e) => setNewCellarName(e.target.value)}
+                  placeholder="Ej: Cava secundario, Cava de guarda..."
+                  maxLength={100}
+                  className="w-full px-3.5 py-2.5 bg-neutral-900 border border-neutral-800 text-neutral-100 text-xs sm:text-sm rounded-xl focus:outline-none focus:border-rose-500"
+                />
+              </div>
+            )}
           </div>
         )}
 

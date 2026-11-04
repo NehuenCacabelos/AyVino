@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineCreationFlow from '@/features/wines/components/WineCreationFlow';
+import WineCreationFlow, { decidePostWineCreationAction } from '@/features/wines/components/WineCreationFlow';
 import type { WineCreationResult } from '@/features/winery/components/WineCreateModal';
+import * as cellarApi from '@/features/cava/api/cellarApi';
+
+// Mock de cellarApi
+vi.mock('@/features/cava/api/cellarApi', () => ({
+  getCellarsApi: vi.fn(),
+  createCellarApi: vi.fn(),
+  addCellarItemApi: vi.fn(),
+}));
 
 // Mock de WineCreateModal
 vi.mock('@/features/winery/components/WineCreateModal', () => {
@@ -145,202 +153,246 @@ vi.mock('@/features/cava/components/AddToCellarForm', () => {
   };
 });
 
-describe('WineCreationFlow Coordinator Component (Vista 8)', () => {
+describe('WineCreationFlow Coordinator Component & Decision Logic (Bloque D)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('inicia en paso crear con WineCreateModal visible', () => {
-    const handleClose = vi.fn();
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByTestId('mock-wine-create-modal')).toBeInTheDocument();
-  });
-
-  it('avanza al paso "Elegir" al resolver vino nuevo y muestra tarjeta con 3 opciones', async () => {
-    const handleClose = vi.fn();
-    const handleWineCreated = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} onWineCreated={handleWineCreated} />
-      </MemoryRouter>
-    );
-
-    // Simular creación de vino
-    fireEvent.click(screen.getByText('Simular Vino Creado'));
-
-    expect(handleWineCreated).toHaveBeenCalledWith(
-      expect.objectContaining({
-        outcome: 'created',
-        wine: { id: 10, name: 'Malbec del Valle' },
-      })
-    );
-
-    // Modal de elección
-    expect(screen.getByText('¿Lo vas a tomar o lo agregás a tu cava?')).toBeInTheDocument();
-    expect(screen.getByText('Malbec del Valle')).toBeInTheDocument();
-    expect(screen.getByText('Bodega Andina')).toBeInTheDocument();
-    expect(screen.getByText('2021')).toBeInTheDocument();
-
-    // 3 botones
-    expect(screen.getByRole('button', { name: /lo voy a tomar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /agregar a mi cava/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ahora no' })).toBeInTheDocument();
-  });
-
-  it('muestra el aviso "Este vino ya estaba cargado" cuando el resultado es adopted', async () => {
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={vi.fn()} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Vino Adoptado'));
-
-    expect(screen.getByText('¿Lo vas a tomar o lo agregás a tu cava?')).toBeInTheDocument();
-    expect(screen.getByText('Este vino ya estaba cargado.')).toBeInTheDocument();
-    expect(screen.getByText('Sin añada')).toBeInTheDocument();
-  });
-
-  it('el botón "Ahora no" en vino created cierra el flujo y muestra aviso con enlace a la ficha', async () => {
-    const handleClose = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Vino Creado'));
-    expect(screen.getByText('¿Lo vas a tomar o lo agregás a tu cava?')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Ahora no' }));
-
-    expect(handleClose).toHaveBeenCalled();
-
-    // Aviso flotante de Ahora No con enlace
-    const notice = await screen.findByRole('status');
-    expect(within(notice).getByText(/cargaste «malbec del valle»/i)).toBeInTheDocument();
-    const fichaLink = within(notice).getByRole('link', { name: /ver ficha/i });
-    expect(fichaLink).toHaveAttribute('href', '/vinos/10');
-  });
-
-  it('el botón "Ahora no" en vino adopted cierra el flujo y muestra aviso sin enlace a la ficha', async () => {
-    const handleClose = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Vino Adoptado'));
-    fireEvent.click(screen.getByRole('button', { name: 'Ahora no' }));
-
-    expect(handleClose).toHaveBeenCalled();
-
-    const notice = await screen.findByRole('status');
-    expect(within(notice).getByText(/usamos «cabernet franc reserva», que ya estaba cargado/i)).toBeInTheDocument();
-    expect(within(notice).queryByRole('link', { name: /ver ficha/i })).not.toBeInTheDocument();
-  });
-
-  it('presionar Escape en el paso Elegir equivale a "Ahora no"', async () => {
-    const handleClose = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Cosecha Agregada'));
-    expect(screen.getByText('¿Lo vas a tomar o lo agregás a tu cava?')).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: 'Escape' });
-
-    expect(handleClose).toHaveBeenCalled();
-    const notice = await screen.findByRole('status');
-    expect(within(notice).getByText(/cargaste «chardonnay gran reserva»/i)).toBeInTheDocument();
-  });
-
-  it('flujo completo "Lo voy a tomar": abre UncorkDialog y tras confirmar avanza a cierre con historial', async () => {
-    const handleClose = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Vino Creado'));
-
-    // Seleccionar "Lo voy a tomar"
-    fireEvent.click(screen.getByRole('button', { name: /lo voy a tomar/i }));
-
-    // UncorkDialog visible (sin modales apilados)
-    expect(screen.queryByText('¿Lo vas a tomar o lo agregás a tu cava?')).not.toBeInTheDocument();
-    expect(screen.getByTestId('mock-uncork-dialog')).toBeInTheDocument();
-    expect(screen.getByText('Descorchando: Malbec del Valle')).toBeInTheDocument();
-
-    // Confirmar descorche
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Descorche' }));
-
-    // Paso de cierre
-    await waitFor(() => {
-      expect(screen.getByText('¡Descorche registrado!')).toBeInTheDocument();
-      expect(screen.getByText(/registraste el descorche de «malbec del valle»/i)).toBeInTheDocument();
+  describe('decidePostWineCreationAction (función pura)', () => {
+    it('devuelve "auto-add" cuando el usuario NO tiene ninguna cava (array vacío)', async () => {
+      const decision = await decidePostWineCreationAction(async () => []);
+      expect(decision).toBe('auto-add');
     });
 
-    const fichaLink = screen.getByRole('link', { name: /ver ficha/i });
-    expect(fichaLink).toHaveAttribute('href', '/vinos/10');
-
-    const historyLink = screen.getByRole('link', { name: /ver mi historial/i });
-    expect(historyLink).toHaveAttribute('href', '/perfil?tab=historial');
-
-    // Botón Cargar otro reinicia a creando
-    const reloadBtn = screen.getByRole('button', { name: /cargar otro/i });
-    fireEvent.click(reloadBtn);
-
-    expect(screen.getByTestId('mock-wine-create-modal')).toBeInTheDocument();
-  });
-
-  it('flujo completo "Agregar a mi cava": abre AddToCellarForm y tras confirmar avanza a cierre con cava', async () => {
-    const handleClose = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <WineCreationFlow isOpen={true} onClose={handleClose} />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByText('Simular Vino Creado'));
-
-    // Seleccionar "Agregar a mi cava"
-    fireEvent.click(screen.getByRole('button', { name: /agregar a mi cava/i }));
-
-    // AddToCellarForm visible
-    expect(screen.queryByText('¿Lo vas a tomar o lo agregás a tu cava?')).not.toBeInTheDocument();
-    expect(screen.getByTestId('mock-add-to-cellar-form')).toBeInTheDocument();
-    expect(screen.getByText('Agregando a cava: Malbec del Valle')).toBeInTheDocument();
-
-    // Guardar en cava
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar en Cava' }));
-
-    // Paso de cierre
-    await waitFor(() => {
-      expect(screen.getByText('¡Agregado a tu cava!')).toBeInTheDocument();
-      expect(screen.getByText(/se agregaron 2 botella\(s\) de «malbec del valle» a cava principal/i)).toBeInTheDocument();
+    it('devuelve "prompt" cuando el usuario ya tiene cavas registradas', async () => {
+      const decision = await decidePostWineCreationAction(async () => [
+        { id: 1, name: 'Mi Cava' },
+      ]);
+      expect(decision).toBe('prompt');
     });
 
-    const fichaLink = screen.getByRole('link', { name: /ver ficha/i });
-    expect(fichaLink).toHaveAttribute('href', '/vinos/10');
+    it('devuelve "prompt" como fallback seguro si la consulta falla', async () => {
+      const decision = await decidePostWineCreationAction(async () => {
+        throw new Error('Network error');
+      });
+      expect(decision).toBe('prompt');
+    });
+  });
 
-    const cavaLink = screen.getByRole('link', { name: /ver mi cava/i });
-    expect(cavaLink).toHaveAttribute('href', '/cava?cava=55');
+  describe('Comportamiento del flujo UI', () => {
+    it('inicia en paso crear con WineCreateModal visible', () => {
+      const handleClose = vi.fn();
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={handleClose} />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('mock-wine-create-modal')).toBeInTheDocument();
+    });
+
+    it('cuando el usuario NO tiene cavas: auto-crea "Mi cava", agrega el vino y muestra confirmación de cierre', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([]);
+      vi.mocked(cellarApi.createCellarApi).mockResolvedValueOnce({
+        id: 99,
+        name: 'Mi cava',
+        createdAt: '2026-11-04',
+        bottleCount: 0,
+      });
+      vi.mocked(cellarApi.addCellarItemApi).mockResolvedValueOnce({} as never);
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Creado'));
+
+      await waitFor(() => {
+        expect(cellarApi.createCellarApi).toHaveBeenCalledWith({ name: 'Mi cava' });
+        expect(cellarApi.addCellarItemApi).toHaveBeenCalledWith(99, {
+          wineVintageId: 100,
+          quantity: 1,
+        });
+      });
+
+      expect(await screen.findByText('¡Agregado a tu cava!')).toBeInTheDocument();
+      expect(screen.getByText(/Se agregaron 1 botella\(s\) de «Malbec del Valle» a Mi cava/i)).toBeInTheDocument();
+    });
+
+    it('cuando el usuario TIENE cavas: avanza al paso "¿Qué querés hacer con este vino?" con vino nuevo y 3 opciones', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Casa', createdAt: '2026-01-01', bottleCount: 5 },
+      ]);
+
+      const handleWineCreated = vi.fn();
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={vi.fn()} onWineCreated={handleWineCreated} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Creado'));
+
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+      expect(screen.getByText('Malbec del Valle')).toBeInTheDocument();
+      expect(screen.getByText('Bodega Andina')).toBeInTheDocument();
+      expect(screen.getByText('2021')).toBeInTheDocument();
+
+      // 3 opciones requeridas
+      expect(screen.getByRole('button', { name: /agregar a una cava/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /descorchar ahora/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /solo guardarlo \/ ahora no/i })).toBeInTheDocument();
+    });
+
+    it('cuando el usuario TIENE cavas con vino adoptado (existente): muestra aviso "Este vino ya estaba cargado" y las 3 opciones', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 12 },
+      ]);
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Adoptado'));
+
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+      expect(screen.getByText('Este vino ya estaba cargado.')).toBeInTheDocument();
+      expect(screen.getByText('Sin añada')).toBeInTheDocument();
+
+      expect(screen.getByRole('button', { name: /agregar a una cava/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /descorchar ahora/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /solo guardarlo \/ ahora no/i })).toBeInTheDocument();
+    });
+
+    it('el botón "Solo guardarlo / Ahora no" en vino created cierra el flujo y muestra aviso con enlace a la ficha', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 10 },
+      ]);
+      const handleClose = vi.fn();
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={handleClose} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Creado'));
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /solo guardarlo \/ ahora no/i }));
+
+      expect(handleClose).toHaveBeenCalled();
+
+      const notice = await screen.findByRole('status');
+      expect(within(notice).getByText(/cargaste «malbec del valle»/i)).toBeInTheDocument();
+      const fichaLink = within(notice).getByRole('link', { name: /ver ficha/i });
+      expect(fichaLink).toHaveAttribute('href', '/vinos/10');
+    });
+
+    it('el botón "Solo guardarlo / Ahora no" en vino adopted cierra el flujo y muestra aviso sin enlace a la ficha', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 10 },
+      ]);
+      const handleClose = vi.fn();
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={handleClose} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Adoptado'));
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /solo guardarlo \/ ahora no/i }));
+
+      expect(handleClose).toHaveBeenCalled();
+
+      const notice = await screen.findByRole('status');
+      expect(
+        within(notice).getByText(/usamos «cabernet franc reserva», que ya estaba cargado/i)
+      ).toBeInTheDocument();
+      expect(within(notice).queryByRole('link', { name: /ver ficha/i })).toBeNull();
+    });
+
+    it('presionar Escape en el paso "¿Qué querés hacer con este vino?" equivale a "Solo guardarlo / Ahora no"', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 10 },
+      ]);
+      const handleClose = vi.fn();
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={handleClose} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Cosecha Agregada'));
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      expect(handleClose).toHaveBeenCalled();
+    });
+
+    it('flujo "Descorchar ahora": abre UncorkDialog y tras confirmar avanza a cierre con opción de cava', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 10 },
+      ]);
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Creado'));
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /descorchar ahora/i }));
+
+      expect(screen.getByTestId('mock-uncork-dialog')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Confirmar Descorche'));
+
+      expect(await screen.findByText('¡Descorche registrado!')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /ver mi historial/i })).toHaveAttribute(
+        'href',
+        '/perfil?tab=historial'
+      );
+    });
+
+    it('flujo "Agregar a una cava": abre AddToCellarForm y tras confirmar avanza a cierre con opción de descorchar', async () => {
+      vi.mocked(cellarApi.getCellarsApi).mockResolvedValueOnce([
+        { id: 1, name: 'Cava Principal', createdAt: '2026-01-01', bottleCount: 10 },
+      ]);
+
+      render(
+        <MemoryRouter>
+          <WineCreationFlow isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByText('Simular Vino Creado'));
+      expect(await screen.findByText('¿Qué querés hacer con este vino?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /agregar a una cava/i }));
+
+      expect(screen.getByTestId('mock-add-to-cellar-form')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar en Cava' }));
+
+      expect(await screen.findByText('¡Agregado a tu cava!')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /ver mi cava/i })).toHaveAttribute(
+        'href',
+        '/cava?cava=55'
+      );
+      expect(screen.getByRole('button', { name: /descorchar ahora/i })).toBeInTheDocument();
+    });
   });
 });
