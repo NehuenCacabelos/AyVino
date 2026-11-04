@@ -332,19 +332,19 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="lg:col-span-4 flex flex-col gap-3 justify-center sm:flex-row lg:flex-col">
+            <div className="lg:col-span-4 flex flex-col items-center justify-center gap-3 pt-6 lg:pt-0 border-t border-white/5 lg:border-t-0">
               <Link
-                to="/para-bodegas"
-                className="w-full py-3.5 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer text-center"
+                to="/bodegas/registro"
+                className="w-full max-w-xs py-3.5 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer text-center"
               >
-                <span>Conocé el espacio para bodegas</span>
+                <span>Registrar mi bodega</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                to="/bodega/registro"
-                className="w-full py-3 px-6 rounded-xl border border-white/10 hover:border-white/20 text-neutral-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors text-center cursor-pointer"
+                to="/login"
+                className="text-xs text-neutral-400 hover:text-amber-200/90 transition-colors text-center font-mono py-1 cursor-pointer"
               >
-                Registrar bodega directamente
+                ¿Ya tenés cuenta? Ingresar
               </Link>
             </div>
           </div>
@@ -383,7 +383,7 @@ export default function Landing() {
                 Comunidad
               </button>
               <Link
-                to="/para-bodegas"
+                to="/bodegas/registro"
                 className="hover:text-amber-200/90 transition-colors cursor-pointer"
               >
                 Para Bodegas

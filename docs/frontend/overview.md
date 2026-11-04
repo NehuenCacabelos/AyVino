@@ -44,7 +44,7 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
 
 ### 3.1 Jerarquía de Layouts de Bodega
 1. **`WineryPublicLayout` (Rutas Públicas)**:
-   - Envuelve `/para-bodegas`.
+   - Envuelve `/bodegas/registro`.
    - Renderiza el `Navbar` superior compartido, `<Outlet />` para la vista hija y el footer institucional.
 2. **`WineryLayout` (Panel Protegido `/bodega/*`)**:
    - Reemplaza la antigua sidebar por `WineryNavbar`: barra superior persistente fija con logo "AyVino.", enlaces de navegación (`NavLink` con `isActive`), badge de estado institucional y menú desplegable con avatar/logo de bodega (`WineryLogo`), accesos a configuración, perfil público y cierre de sesión.
@@ -61,7 +61,7 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
    - Modo vista previa (`isPreview: true` para dueño o admin de bodega en revisión): cartel fijo explicativo y etiquetas marcadas como borrador. Estado 404 amable para bodegas no disponibles.
 
 ### 3.2 Vistas del Área de Bodega
-- **Propuesta de Valor Institucional (`ForWineriesPage.tsx` en `/para-bodegas`)**: Landing de bienvenida para bodegas con beneficios y pasos de certificación.
+- **Propuesta de Valor Institucional (`ForWineriesPage.tsx` en `/bodegas/registro`)**: Landing de bienvenida para bodegas con beneficios y pasos de certificación.
 - **Registro Unificado de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card inmersivo en 2 pasos con integración de `RegionPicker` y mapa Leaflet.
 - **Panel Principal (`WineryDashboardPage.tsx` en `/bodega/dashboard`)**: Cinta de 4 KPIs (`WineryKpiRibbon`), accesos rápidos (`WineryQuickActions`), checklist interactivo de puesta a punto institucional (`WineryChecklistCard`, con persistencia en `localStorage` por bodega, botón para descartar en cualquier momento y cartel celebratorio que se oculta permanentemente al alcanzar el 100% de progreso) y últimas etiquetas oficiales (`WineryRecentWines`).
 - **Configuración de la Bodega (`WineryConfigPage.tsx` en `/bodega/configuracion`)**: Clon visual inmersivo de `AccountPage` con sidebar izquierda (logo circular con `ring-4`, botones de subida/eliminación de logo, gestión de banner institucional 3:1 con `WineryBanner` e `ImageUploadField` en carpeta `banners`, navegación en `font-mono`) y 4 secciones independientes:
@@ -163,7 +163,7 @@ src/frontend/src/
 │   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
 │   ├── AdminVintagesPage.tsx  # Moderación de cosechas (/admin/cosechas)
 │   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
-│   ├── ForWineriesPage.tsx    # Landing para bodegas (/para-bodegas)
+│   ├── ForWineriesPage.tsx    # Landing para bodegas (/bodegas/registro)
 │   ├── WineryRegisterPage.tsx # Registro split-card (/bodega/registro)
 │   ├── WineryDashboardPage.tsx# Inicio del panel (/bodega/dashboard)
 │   ├── WineryConfigPage.tsx   # Configuración inmersiva (/bodega/configuracion)

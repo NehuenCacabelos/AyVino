@@ -167,14 +167,18 @@ export const router = createBrowserRouter([
         ),
         children: [
           {
-            path: '/para-bodegas',
+            path: '/bodegas/registro',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <ForWineriesPage />
               </Suspense>
             ),
           },
-          ],
+          {
+            path: '/para-bodegas',
+            element: <Navigate to="/bodegas/registro" replace />,
+          },
+        ],
       },
 
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado

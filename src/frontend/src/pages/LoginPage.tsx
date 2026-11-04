@@ -123,12 +123,12 @@ export default function LoginPage() {
         <div className="p-8 md:p-10 flex flex-col justify-between h-full overflow-y-auto lg:overflow-hidden bg-[#141416]">
           
           {/* Header Superior: Volver a la izquierda, Logo a la derecha */}
-          <div className="flex items-center justify-between">
+          <div className="relative z-20 flex items-center justify-between">
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 min-h-[44px] min-w-[44px] -ml-2 px-3 py-2 rounded-xl text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 transition-colors cursor-pointer select-none"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-4 h-4" />
               <span>Volver</span>
             </Link>
 
@@ -143,7 +143,7 @@ export default function LoginPage() {
           </div>
 
           {/* Cuerpo Central: Formulario */}
-          <div className="flex-1 flex flex-col justify-center pt-0 pb-2 -mt-5">
+          <div className="flex-1 flex flex-col justify-center pt-1 pb-2">
             {/* Cabecera Editorial */}
             <div className="mb-6">
               <span className="text-xs uppercase tracking-[0.25em] text-amber-200/60 font-sans block mb-2">
@@ -259,25 +259,29 @@ export default function LoginPage() {
           </div>
 
           {/* Footer Inferior Fijo */}
-          <div className="text-center text-xs text-zinc-400 space-y-1.5">
+          <div className="text-center text-xs text-zinc-400 space-y-2 pt-2">
             <p>
               ¿Todavía no tenés tu perfil?{' '}
               <Link
                 to="/register"
-                className="text-zinc-200 hover:text-white font-medium underline transition-colors"
+                className="text-zinc-200 hover:text-white font-medium underline underline-offset-2 transition-colors cursor-pointer"
               >
                 Creá tu cuenta acá
               </Link>
             </p>
-            <p className="text-[11px] text-zinc-500">
-              ¿Sos productor vitivinícola?{' '}
-              <Link
-                to="/bodega/registro"
-                className="text-rose-300/80 hover:text-rose-200 underline transition-colors"
-              >
-                Registrá tu bodega acá
-              </Link>
-            </p>
+            <div className="flex items-center justify-center gap-2 pt-1 border-t border-white/5">
+              <span className="h-px w-6 bg-white/10" aria-hidden="true" />
+              <p className="text-[11px] text-zinc-400 font-sans">
+                ¿Sos productor vitivinícola?{' '}
+                <Link
+                  to="/bodegas/registro"
+                  className="text-amber-200/90 hover:text-amber-100 font-medium hover:underline transition-colors cursor-pointer"
+                >
+                  Registrá tu bodega
+                </Link>
+              </p>
+              <span className="h-px w-6 bg-white/10" aria-hidden="true" />
+            </div>
           </div>
         </div>
 
