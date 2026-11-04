@@ -21,6 +21,16 @@ public static class UserEndpoints
         var publicGroup = app.MapGroup("/api/users")
                              .WithTags("Users");
 
+        publicGroup.MapGet("/username-available", async (string? username, IUserService userService, CancellationToken ct) =>
+        {
+            var available = await userService.IsUsernameAvailableAsync(username, ct);
+            return Results.Ok(new UsernameAvailabilityResponseDto(available));
+        })
+        .AllowAnonymous()
+        .RequireRateLimiting("AuthLimit")
+        .WithName("CheckUsernameAvailability")
+        .WithSummary("Verifica la disponibilidad de un nombre de usuario");
+
         publicGroup.MapPost("/", async (RegisterUserRequestDto request, IUserService userService, CancellationToken ct) =>
         {
             var createdUser = await userService.RegisterAsync(request.ToCreateDto(), ct);

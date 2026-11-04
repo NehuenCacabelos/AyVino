@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   User,
   Shield,
-  Upload,
   Trash2,
   Lock,
   Mail,
@@ -13,8 +12,10 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  Camera,
+  Calendar,
 } from 'lucide-react';
-import { useAuth } from '../features/auth';
+import { useAuth, type GenderType } from '../features/auth';
 import ProfileTopBar from '../components/layout/ProfileTopBar';
 import { getAvatarUrl } from '../lib/avatar';
 import {
@@ -66,6 +67,8 @@ export default function AccountPage() {
   // Estado del formulario de perfil
   const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [birthDate, setBirthDate] = useState(user?.birthDate ? user.birthDate.slice(0, 10) : '');
+  const [gender, setGender] = useState(user?.gender || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
@@ -97,6 +100,8 @@ export default function AccountPage() {
           updateUserContext(live);
           setUsername(live.username || '');
           setBio(live.bio || '');
+          setBirthDate(live.birthDate ? live.birthDate.slice(0, 10) : '');
+          setGender(live.gender || '');
         }
       } catch (err: unknown) {
         if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
@@ -198,6 +203,8 @@ export default function AccountPage() {
         username: trimmedUser,
         bio: bio.trim(),
         photo: user?.photo ?? null,
+        birthDate: birthDate ? birthDate : null,
+        gender: gender ? (gender as GenderType) : null,
       });
 
       updateUserContext(updated);
@@ -274,24 +281,53 @@ export default function AccountPage() {
           <div className="space-y-6">
             {/* Bloque de Usuario Jerarquizado */}
             <div className="flex flex-col items-center text-center">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                aria-label="Cargar foto de perfil"
+              />
+
               <div className="relative group mx-auto">
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg overflow-hidden bg-stone-950 flex items-center justify-center">
+                <button
+                  type="button"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Cambiar foto de perfil"
+                  disabled={isUploadingAvatar || isDeletingAvatar}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  className="relative block w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-rose-950/40 border border-white/10 shadow-lg overflow-hidden bg-stone-950 cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-[#121015] transition-all group"
+                >
                   <img
                     src={getAvatarUrl(user)}
                     alt={user?.username || 'Avatar'}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = getAvatarUrl({ username: user?.username });
                     }}
                   />
-                </div>
 
-                {(isUploadingAvatar || isDeletingAvatar) && (
-                  <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 text-rose-400 animate-spin" />
+                  {/* Capa hover/focus con ícono de cámara y texto */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity text-white text-xs font-medium">
+                    <Camera className="h-5 w-5 text-rose-300" />
+                    <span>Cambiar foto</span>
                   </div>
-                )}
+
+                  {(isUploadingAvatar || isDeletingAvatar) && (
+                    <div className="absolute inset-0 rounded-full bg-black/75 flex items-center justify-center z-10">
+                      <Loader2 className="h-6 w-6 text-rose-400 animate-spin" />
+                    </div>
+                  )}
+                </button>
               </div>
 
               {/* Nombre y correo jerarquizados */}
@@ -302,28 +338,9 @@ export default function AccountPage() {
                 {user?.email}
               </p>
 
-              {/* Controles de Foto compactos y sobrios */}
-              <div className="flex flex-col items-center gap-1.5 mt-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  aria-label="Cargar foto de perfil"
-                />
-
-                <button
-                  type="button"
-                  disabled={isUploadingAvatar || isDeletingAvatar}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-1.5 px-3 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Upload className="h-3 w-3 text-zinc-400" />
-                  <span>{user?.avatarImageId || user?.photo ? 'Cambiar foto' : 'Cargar foto'}</span>
-                </button>
-
-                {(user?.avatarImageId || user?.photo) && (
+              {/* Opción discreta para Quitar foto si existe avatar personalizado */}
+              {(user?.avatarImageId || user?.photo) && (
+                <div className="mt-2">
                   <button
                     type="button"
                     disabled={isUploadingAvatar || isDeletingAvatar}
@@ -331,10 +348,10 @@ export default function AccountPage() {
                     className="inline-flex items-center gap-1 text-[11px] text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/20 rounded-md py-1 px-2.5 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <Trash2 className="h-3 w-3" />
-                    <span>Eliminar foto</span>
+                    <span>Quitar foto</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Separador sutil */}
@@ -493,6 +510,44 @@ export default function AccountPage() {
                         className="w-full rounded-md bg-[#121015]/60 border border-white/5 pl-9 pr-3 py-2 text-xs sm:text-sm text-zinc-500 cursor-not-allowed select-none"
                       />
                     </div>
+                  </div>
+
+                  {/* Fecha de nacimiento (opcional) */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="birthdate-input" className="block text-xs font-medium text-zinc-300">
+                      Fecha de nacimiento <span className="text-zinc-500 font-normal">(opcional)</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                      <input
+                        id="birthdate-input"
+                        type="date"
+                        max={new Date().toISOString().split('T')[0]}
+                        min="1900-01-01"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        className="w-full rounded-md bg-[#121015] border border-white/10 pl-9 pr-3 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Género (opcional) */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="gender-input" className="block text-xs font-medium text-zinc-300">
+                      Género <span className="text-zinc-500 font-normal">(opcional)</span>
+                    </label>
+                    <select
+                      id="gender-input"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full rounded-md bg-[#121015] border border-white/10 px-3 py-2 text-xs sm:text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-rose-500/50 focus:border-rose-500/50 transition-colors"
+                    >
+                      <option value="">Prefiero no decir</option>
+                      <option value="Female">Femenino</option>
+                      <option value="Male">Masculino</option>
+                      <option value="Other">Otro</option>
+                      <option value="PreferNotToSay">Prefiero no decir</option>
+                    </select>
                   </div>
 
                   {/* Biografía en ancho completo (sm:col-span-2) */}

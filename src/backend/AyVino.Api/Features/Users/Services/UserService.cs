@@ -1,3 +1,4 @@
+using AyVino.Api.Features.Users.Enums;
 using System.Text.RegularExpressions;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Common.Security.Hashing;
@@ -18,6 +19,19 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
 
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex EmailRegex();
+
+    public async Task<bool> IsUsernameAvailableAsync(string? username, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+            return false;
+
+        var trimmed = username.Trim();
+        if (trimmed.Length is < 1 or > 100)
+            return false;
+
+        var exists = await userRepository.ExistsByUsernameAsync(trimmed, ct);
+        return !exists;
+    }
 
     public async Task<UserResponseDto> RegisterAsync(CreateUserRequestDto dto, CancellationToken ct = default)
     {
@@ -129,10 +143,14 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             throw new ConflictException($"El nombre de usuario '{dto.Username}' ya está en uso.");
         }
 
+        ValidateBirthDateAndGender(dto.BirthDate, dto.Gender);
+
         var updated = await userRepository.UpdateProfileAsync(
             id,
             normalizedUsername,
             dto.Bio?.Trim(),
+            dto.BirthDate,
+            dto.Gender,
             ct);
 
         if (!updated)
@@ -143,7 +161,9 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         var updatedUser = existingUser with
         {
             Username = normalizedUsername,
-            Bio = dto.Bio?.Trim()
+            Bio = dto.Bio?.Trim(),
+            BirthDate = dto.BirthDate,
+            Gender = dto.Gender
         };
 
         return updatedUser.ToResponseDto();
@@ -253,10 +273,30 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
             throw new ValidationException("La contraseña debe tener al menos 8 caracteres.");
         }
 
+        ValidateBirthDateAndGender(dto.BirthDate, dto.Gender);
+
         var role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim();
         if (!AllowedRoles.Contains(role))
         {
             throw new ValidationException($"El rol '{dto.Role}' no es válido. Roles permitidos: Admin, Winery, User.");
+        }
+    }
+
+
+    private static void ValidateBirthDateAndGender(DateOnly? birthDate, Gender? gender)
+    {
+        if (birthDate.HasValue)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (birthDate.Value > today)
+                throw new ValidationException("La fecha de nacimiento no puede ser futura.");
+            if (birthDate.Value.Year < 1900)
+                throw new ValidationException("La fecha de nacimiento no puede ser anterior a 1900.");
+        }
+
+        if (gender.HasValue && !Enum.IsDefined(typeof(Gender), gender.Value))
+        {
+            throw new ValidationException("El género especificado no es válido.");
         }
     }
 

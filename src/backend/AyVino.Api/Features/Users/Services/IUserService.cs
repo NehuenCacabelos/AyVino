@@ -4,6 +4,7 @@ namespace AyVino.Api.Features.Users.Services;
 
 public interface IUserService
 {
+    Task<bool> IsUsernameAvailableAsync(string? username, CancellationToken ct = default) => Task.FromResult(true);
     Task<UserResponseDto> RegisterAsync(CreateUserRequestDto dto, CancellationToken ct = default);
     Task<UserResponseDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<UserResponseDto> GetByEmailAsync(string email, CancellationToken ct = default);

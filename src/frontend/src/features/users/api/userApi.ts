@@ -17,6 +17,16 @@ import type {
 /**
  * Obtiene el perfil del usuario autenticado actual.
  */
+/**
+ * Verifica si un nombre de usuario está disponible.
+ */
+export async function checkUsernameAvailabilityApi(username: string): Promise<boolean> {
+  const response = await apiClient.get<{ available: boolean }>('/users/username-available', {
+    params: { username },
+  });
+  return response.data.available;
+}
+
 export async function getCurrentUserApi(): Promise<UserProfileDto> {
   const response = await apiClient.get<UserProfileDto>('/users/me');
   return response.data;

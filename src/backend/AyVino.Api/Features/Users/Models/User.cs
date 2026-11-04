@@ -1,3 +1,5 @@
+using AyVino.Api.Features.Users.Enums;
+
 namespace AyVino.Api.Features.Users.Models;
 
 public record User
@@ -10,4 +12,6 @@ public record User
     public bool IsActive { get; init; } = true;
     public Guid? AvatarImageId { get; init; }
     public string? Bio { get; init; }
+    public DateOnly? BirthDate { get; init; }
+    public Gender? Gender { get; init; }
 }

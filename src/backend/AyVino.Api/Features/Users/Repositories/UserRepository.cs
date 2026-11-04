@@ -10,7 +10,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 {
     private const string SelectUserColumns = """
         id, username, email, role, register_date AS RegisterDate, is_active AS IsActive,
-        avatar_image_id AS AvatarImageId, bio
+        avatar_image_id AS AvatarImageId, bio, birth_date AS BirthDate, gender::int AS Gender
         """;
 
     public async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -131,8 +131,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         try
         {
             const string insertUserSql = """
-                INSERT INTO users (username, email, role, register_date, is_active, avatar_image_id, bio)
-                VALUES (@Username, @Email, @Role, @RegisterDate, @IsActive, @AvatarImageId, @Bio)
+                INSERT INTO users (username, email, role, register_date, is_active, avatar_image_id, bio, birth_date, gender)
+                VALUES (@Username, @Email, @Role, @RegisterDate, @IsActive, @AvatarImageId, @Bio, @BirthDate, @Gender)
                 RETURNING id;
                 """;
 
@@ -165,18 +165,23 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         }
     }
 
-    public async Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default)
+    public Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default) =>
+        UpdateProfileAsync(id, username, bio, null, null, ct);
+
+    public async Task<bool> UpdateProfileAsync(int id, string username, string? bio, DateOnly? birthDate, AyVino.Api.Features.Users.Enums.Gender? gender, CancellationToken ct = default)
     {
         const string sql = """
             UPDATE users
             SET username = @Username,
-                bio = @Bio
+                bio = @Bio,
+                birth_date = @BirthDate,
+                gender = @Gender
             WHERE id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { Id = id, Username = username, Bio = bio }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id, Username = username, Bio = bio, BirthDate = birthDate, Gender = (short?)gender }, cancellationToken: ct));
 
         return rowsAffected > 0;
     }

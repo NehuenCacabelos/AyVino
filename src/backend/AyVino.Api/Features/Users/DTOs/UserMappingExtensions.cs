@@ -12,7 +12,9 @@ public static class UserMappingExtensions
             Email: dto.Email,
             Password: dto.Password,
             Role: AppRoles.User,
-            Bio: dto.Bio
+            Bio: dto.Bio,
+            BirthDate: dto.BirthDate,
+            Gender: dto.Gender
         );
     }
 
@@ -25,7 +27,9 @@ public static class UserMappingExtensions
             Role = string.IsNullOrWhiteSpace(dto.Role) ? "User" : dto.Role.Trim(),
             RegisterDate = DateTime.UtcNow,
             IsActive = true,
-            Bio = dto.Bio?.Trim()
+            Bio = dto.Bio?.Trim(),
+            BirthDate = dto.BirthDate,
+            Gender = dto.Gender
         };
     }
 
@@ -39,7 +43,9 @@ public static class UserMappingExtensions
             RegisterDate: user.RegisterDate,
             IsActive: user.IsActive,
             AvatarImageId: user.AvatarImageId,
-            Bio: user.Bio
+            Bio: user.Bio,
+            BirthDate: user.BirthDate,
+            Gender: user.Gender?.ToString()
         );
     }
 

@@ -4,6 +4,11 @@
 export type UserRole = 'Admin' | 'Winery' | 'User';
 
 /**
+ * Géneros disponibles en la plataforma.
+ */
+export type GenderType = 'Female' | 'Male' | 'Other' | 'PreferNotToSay';
+
+/**
  * Modos de formulario de autenticación para la UI.
  */
 export type AuthMode = 'login' | 'register';
@@ -34,6 +39,8 @@ export interface RegisterRequestDto {
   password: string;
   bio?: string | null;
   photo?: string | null;
+  birthDate?: string | null;
+  gender?: GenderType | string | null;
 }
 
 /**
@@ -49,6 +56,8 @@ export interface UserProfileDto {
   avatarImageId?: string | null;
   photo?: string | null;
   bio?: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
 }
 
 /**
@@ -93,6 +102,8 @@ export interface UpdateUserProfileRequestDto {
   username: string;
   bio?: string | null;
   photo?: string | null;
+  birthDate?: string | null;
+  gender?: GenderType | string | null;
 }
 
 /**
@@ -102,18 +113,3 @@ export interface ChangePasswordRequestDto {
   currentPassword: string;
   newPassword: string;
 }
-
-/**
- * Payload decodificado del JWT emitido por JwtTokenGenerator.
- * @deprecated Reservado para integración futura con decodificación de JWT en el cliente.
- */
-export interface UserTokenPayload {
-  sub: string;
-  email: string;
-  role: UserRole | string;
-  name?: string;
-  jti?: string;
-  exp?: number;
-  iat?: number;
-}
-

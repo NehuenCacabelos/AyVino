@@ -4,9 +4,11 @@ import { Eye, EyeOff } from 'lucide-react';
 export interface AuthFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   id: string;
   label: string;
+  helperText?: string;
   error?: string | null;
   icon?: ComponentType<{ className?: string }>;
   isPassword?: boolean;
+  rightExtra?: ReactNode;
   bottomExtra?: ReactNode;
 }
 
@@ -19,10 +21,12 @@ export interface AuthFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
 export default function AuthField({
   id,
   label,
+  helperText,
   type = 'text',
   error,
   icon: Icon,
   isPassword,
+  rightExtra,
   bottomExtra,
   className = '',
   disabled,
@@ -31,6 +35,7 @@ export default function AuthField({
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordField = isPassword ?? type === 'password';
   const effectiveType = isPasswordField ? (showPassword ? 'text' : 'password') : type;
+  const hasRightElement = Boolean(isPasswordField || rightExtra);
 
   return (
     <div>
@@ -61,7 +66,7 @@ export default function AuthField({
           disabled={disabled}
           className={`h-11 w-full bg-black/25 rounded-lg border text-zinc-100 placeholder:text-zinc-500 text-sm ${
             Icon ? 'pl-10' : 'pl-3.5'
-          } ${isPasswordField ? 'pr-10' : 'pr-3.5'} pt-1 focus:outline-none transition-colors ${
+          } ${hasRightElement ? 'pr-10' : 'pr-3.5'} pt-1 focus:outline-none transition-colors ${
             error
               ? 'border-rose-500/70 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50'
               : 'border-zinc-700/80 hover:border-zinc-500 focus:border-rose-800/90 focus:ring-1 focus:ring-rose-800/50'
@@ -69,8 +74,15 @@ export default function AuthField({
           {...rest}
         />
 
+        {/* Elemento derecho adicional (ej. indicador de disponibilidad) */}
+        {rightExtra && (
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center">
+            {rightExtra}
+          </div>
+        )}
+
         {/* Toggle de visibilidad para contraseñas */}
-        {isPasswordField && (
+        {isPasswordField && !rightExtra && (
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
@@ -86,6 +98,11 @@ export default function AuthField({
           </button>
         )}
       </div>
+
+      {/* Texto de ayuda opcional */}
+      {helperText && !error && (
+        <p className="text-[11px] text-zinc-400 mt-1 pl-1 leading-tight">{helperText}</p>
+      )}
 
       {/* Manejo de feedback de error y enlace o slot inferior */}
       {bottomExtra ? (
@@ -103,4 +120,3 @@ export default function AuthField({
     </div>
   );
 }
-

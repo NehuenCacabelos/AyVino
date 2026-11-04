@@ -1,23 +1,29 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { isAxiosError } from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wine, ArrowLeft, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Wine, ArrowLeft, AlertCircle, CheckCircle2, Check, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../features/auth';
+import { checkUsernameAvailabilityApi } from '../features/users';
 import authVineyardImg from '../assets/auth-vineyard.webp';
 
 /**
  * RegisterPage Component
  * Vista de registro (/register) con diseño Clean Dark y minimalista.
- * Inputs directos sin labels externas (solo placeholder amplio interior).
- * Botón primario y campos con curvas uniformes (rounded-xl h-12).
- * Columna derecha: Foto vertical con degradado hacia la columna izquierda.
+ * - Validación en vivo de disponibilidad de nombre de usuario en onBlur.
+ * - Campos opcionales de fecha de nacimiento y género.
+ * - Feedback inmediato de error 409 mapeado al campo.
  */
 export default function RegisterPage() {
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const checkReqIdRef = useRef(0);
+
   const [email, setEmail] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +59,37 @@ export default function RegisterPage() {
     }
   };
 
+  const handleUsernameBlur = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setUsernameStatus('idle');
+      return;
+    }
+    if (trimmed.length > 100) {
+      setUsernameStatus('invalid');
+      setErrors((prev) => ({ ...prev, name: 'El nombre de usuario no puede superar los 100 caracteres' }));
+      return;
+    }
+
+    const reqId = ++checkReqIdRef.current;
+    setUsernameStatus('checking');
+
+    try {
+      const isAvail = await checkUsernameAvailabilityApi(trimmed);
+      if (checkReqIdRef.current !== reqId) return;
+      if (isAvail) {
+        setUsernameStatus('available');
+        clearError('name');
+      } else {
+        setUsernameStatus('taken');
+        setErrors((prev) => ({ ...prev, name: 'Ese nombre de usuario ya existe, elegí otro' }));
+      }
+    } catch {
+      if (checkReqIdRef.current !== reqId) return;
+      setUsernameStatus('idle');
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -60,13 +97,25 @@ export default function RegisterPage() {
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = 'El nombre o apodo es requerido';
+      newErrors.name = 'El nombre de usuario es requerido';
+    } else if (usernameStatus === 'taken') {
+      newErrors.name = 'Ese nombre de usuario ya existe, elegí otro';
     }
 
     if (!email.trim()) {
       newErrors.email = 'El correo es requerido';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       newErrors.email = 'El formato del correo no es válido';
+    }
+
+    if (birthDate) {
+      const selected = new Date(birthDate);
+      const today = new Date();
+      if (selected > today) {
+        newErrors.birthDate = 'La fecha de nacimiento no puede ser futura';
+      } else if (selected.getFullYear() < 1900) {
+        newErrors.birthDate = 'La fecha de nacimiento no puede ser anterior a 1900';
+      }
     }
 
     if (!password) {
@@ -98,6 +147,8 @@ export default function RegisterPage() {
         username: name.trim(),
         email: email.trim(),
         password,
+        birthDate: birthDate ? birthDate : null,
+        gender: gender ? gender : null,
       });
 
       setIsSuccess(true);
@@ -112,7 +163,9 @@ export default function RegisterPage() {
         status = err.response?.status;
       }
       if (status === 409) {
-        setErrorMessage(detail ?? 'El correo electrónico o apodo ya se encuentra registrado.');
+        setUsernameStatus('taken');
+        setErrors((prev) => ({ ...prev, name: 'Ese nombre de usuario ya existe, elegí otro' }));
+        setErrorMessage(detail ?? 'Ese nombre de usuario ya existe, elegí otro.');
       } else {
         setErrorMessage(
           detail ?? 'No se pudo registrar la cuenta. Verificá los datos ingresados o la conexión con el servidor.'
@@ -126,13 +179,13 @@ export default function RegisterPage() {
   return (
     <div className="h-screen overflow-hidden bg-[#0e0e11] text-neutral-100 font-sans flex items-center justify-center p-4 selection:bg-[#6b1d2f] selection:text-white">
       {/* Tarjeta Central Flotante */}
-      <div className="relative w-full max-w-5xl h-[88vh] max-h-[640px] bg-[#141416] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/80 grid grid-cols-1 lg:grid-cols-2">
+      <div className="relative w-full max-w-5xl h-[92vh] max-h-[700px] bg-[#141416] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/80 grid grid-cols-1 lg:grid-cols-2">
         
         {/* Columna Izquierda: Formulario de Registro */}
-        <div className="p-8 md:p-10 flex flex-col justify-between h-full overflow-y-auto lg:overflow-hidden bg-[#141416]">
+        <div className="p-6 sm:p-8 md:p-10 flex flex-col justify-between h-full overflow-y-auto bg-[#141416]">
           
           {/* Header Superior: Volver a la izquierda, Logo a la derecha */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <Link
               to="/"
               className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
@@ -152,13 +205,13 @@ export default function RegisterPage() {
           </div>
 
           {/* Cuerpo Central: Formulario */}
-          <div className="flex-1 flex flex-col justify-center pt-0 pb-2 -mt-5">
+          <div className="flex-1 flex flex-col justify-center py-2">
             {/* Cabecera Editorial */}
-            <div className="mb-5">
-              <h1 className="font-serif text-3xl sm:text-4xl text-zinc-100 font-normal tracking-tight leading-tight">
+            <div className="mb-4">
+              <h1 className="font-serif text-2xl sm:text-3xl text-zinc-100 font-normal tracking-tight leading-tight">
                 Creá tu bodega personal
               </h1>
-              <p className="text-sm text-zinc-400 mt-2 font-sans font-light">
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1 font-sans font-light">
                 Comenzá a catalogar, calificar y organizar tus botellas.
               </p>
             </div>
@@ -189,27 +242,60 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {/* Formulario Clean Dark sin etiquetas externas */}
-                <form noValidate onSubmit={handleSubmit} className="space-y-3.5">
-                  {/* Nombre o Apodo */}
+                {/* Formulario Clean Dark */}
+                <form noValidate onSubmit={handleSubmit} className="space-y-3">
+                  {/* Nombre de usuario con disponibilidad en vivo */}
                   <div>
-                    <input
-                      id="register-name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        setName(e.target.value);
-                        clearError('name');
-                      }}
-                      placeholder="Nombre o apodo"
-                      autoComplete="name"
-                      aria-label="Nombre o apodo"
-                      className={`h-12 w-full rounded-xl px-4 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
-                        errors.name
-                          ? 'border-rose-500/70 focus:border-rose-500'
-                          : 'border-zinc-800/80 focus:border-zinc-500'
-                      }`}
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label htmlFor="register-name" className="block text-xs font-medium text-zinc-300">
+                        Nombre de usuario
+                      </label>
+                      <span className="text-[11px] text-zinc-500 font-normal">
+                        Así te van a ver en reseñas y comentarios
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        id="register-name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          clearError('name');
+                          setUsernameStatus('idle');
+                        }}
+                        onBlur={handleUsernameBlur}
+                        placeholder="Elegí tu nombre de usuario"
+                        autoComplete="username"
+                        aria-label="Nombre de usuario"
+                        className={`h-10 w-full rounded-xl pl-3.5 pr-10 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                          errors.name || usernameStatus === 'taken'
+                            ? 'border-rose-500/70 focus:border-rose-500'
+                            : usernameStatus === 'available'
+                            ? 'border-emerald-500/60 focus:border-emerald-500'
+                            : 'border-zinc-800/80 focus:border-zinc-500'
+                        }`}
+                      />
+
+                      {/* Indicador de estado a la derecha */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                        {usernameStatus === 'checking' && (
+                          <Loader2 className="h-4 w-4 text-zinc-400 animate-spin" />
+                        )}
+                        {usernameStatus === 'available' && (
+                          <Check className="h-4 w-4 text-emerald-400" />
+                        )}
+                        {usernameStatus === 'taken' && (
+                          <AlertCircle className="h-4 w-4 text-rose-400" />
+                        )}
+                      </div>
+                    </div>
+
+                    {usernameStatus === 'available' && !errors.name && (
+                      <p className="text-[11px] text-emerald-400 mt-1 pl-1">Nombre de usuario disponible</p>
+                    )}
+
                     {errors.name && (
                       <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.name}</p>
                     )}
@@ -228,7 +314,7 @@ export default function RegisterPage() {
                       placeholder="Correo electrónico"
                       autoComplete="email"
                       aria-label="Correo electrónico"
-                      className={`h-12 w-full rounded-xl px-4 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                      className={`h-10 w-full rounded-xl px-3.5 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
                         errors.email
                           ? 'border-rose-500/70 focus:border-rose-500'
                           : 'border-zinc-800/80 focus:border-zinc-500'
@@ -237,6 +323,50 @@ export default function RegisterPage() {
                     {errors.email && (
                       <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.email}</p>
                     )}
+                  </div>
+
+                  {/* Campos opcionales: Fecha de nacimiento y Género */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label htmlFor="register-birthdate" className="block text-[11px] font-medium text-zinc-400 mb-0.5">
+                        Fecha de nacimiento <span className="text-zinc-600 font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        id="register-birthdate"
+                        type="date"
+                        max={new Date().toISOString().split('T')[0]}
+                        min="1900-01-01"
+                        value={birthDate}
+                        onChange={(e) => {
+                          setBirthDate(e.target.value);
+                          clearError('birthDate');
+                        }}
+                        aria-label="Fecha de nacimiento"
+                        className="h-9 w-full rounded-xl px-3 text-xs font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 border border-zinc-800/80 focus:border-zinc-500 focus:outline-none focus:bg-zinc-900 transition-colors"
+                      />
+                      {errors.birthDate && (
+                        <p className="text-[10px] text-rose-400 mt-0.5 pl-1">{errors.birthDate}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="register-gender" className="block text-[11px] font-medium text-zinc-400 mb-0.5">
+                        Género <span className="text-zinc-600 font-normal">(opcional)</span>
+                      </label>
+                      <select
+                        id="register-gender"
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        aria-label="Género"
+                        className="h-9 w-full rounded-xl px-2.5 text-xs font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 border border-zinc-800/80 focus:border-zinc-500 focus:outline-none focus:bg-zinc-900 transition-colors"
+                      >
+                        <option value="" className="bg-[#141416] text-zinc-400">Seleccionar género</option>
+                        <option value="Female" className="bg-[#141416] text-zinc-100">Femenino</option>
+                        <option value="Male" className="bg-[#141416] text-zinc-100">Masculino</option>
+                        <option value="Other" className="bg-[#141416] text-zinc-100">Otro</option>
+                        <option value="PreferNotToSay" className="bg-[#141416] text-zinc-100">Prefiero no decirlo</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Contraseña */}
@@ -256,7 +386,7 @@ export default function RegisterPage() {
                         placeholder="Contraseña (mínimo 8 caracteres)"
                         autoComplete="new-password"
                         aria-label="Contraseña (mínimo 8 caracteres)"
-                        className={`h-12 w-full rounded-xl px-4 pr-11 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                        className={`h-10 w-full rounded-xl px-3.5 pr-10 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
                           errors.password
                             ? 'border-rose-500/70 focus:border-rose-500'
                             : 'border-zinc-800/80 focus:border-zinc-500'
@@ -265,7 +395,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer focus:outline-none"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer focus:outline-none"
                         aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                       >
                         {showPassword ? (
@@ -294,7 +424,7 @@ export default function RegisterPage() {
                         placeholder="Repetir contraseña"
                         autoComplete="new-password"
                         aria-label="Repetir contraseña"
-                        className={`h-12 w-full rounded-xl px-4 pr-11 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
+                        className={`h-10 w-full rounded-xl px-3.5 pr-10 text-sm font-sans bg-zinc-900/50 hover:bg-zinc-900/70 text-zinc-100 placeholder:text-zinc-500 border focus:outline-none focus:bg-zinc-900 transition-colors ${
                           errors.confirmPassword
                             ? 'border-rose-500/70 focus:border-rose-500'
                             : 'border-zinc-800/80 focus:border-zinc-500'
@@ -303,7 +433,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer focus:outline-none"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer focus:outline-none"
                         aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
                       >
                         {showConfirmPassword ? (
@@ -339,68 +469,67 @@ export default function RegisterPage() {
                           className="underline text-zinc-300 hover:text-white transition-colors"
                         >
                           términos y condiciones
-                        </Link>
+                        </Link>{' '}
+                        de AyVino.
                       </span>
                     </label>
                     {errors.terms && (
-                      <p className="text-[11px] text-rose-400 mt-1 pl-6">{errors.terms}</p>
+                      <p className="text-[11px] text-rose-400 mt-1 pl-1">{errors.terms}</p>
                     )}
                   </div>
 
-                  {/* Botón Principal Estilo Sello de Cava con rounded-xl h-12 */}
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="h-12 w-full rounded-xl bg-[#4f131f] hover:bg-[#5e1725] border border-rose-400/20 text-xs uppercase tracking-widest text-rose-100 font-medium transition-colors shadow-sm mt-2 inline-flex items-center justify-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <div className="h-4 w-4 border-2 border-rose-200/30 border-t-rose-100 rounded-full animate-spin" />
-                    ) : (
-                      <span>Crear cuenta</span>
-                    )}
-                  </button>
+                  {/* Botón de Envío */}
+                  <div className="pt-1">
+                    <button
+                      type="submit"
+                      disabled={isLoading || usernameStatus === 'checking' || usernameStatus === 'taken'}
+                      className="w-full h-11 rounded-xl bg-[#591624] hover:bg-[#6e1a2c] active:bg-[#48111c] text-white font-medium text-sm transition-colors shadow-lg shadow-black/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-rose-200" />
+                          <span>Creando tu cuenta...</span>
+                        </>
+                      ) : (
+                        <span>Registrarme</span>
+                      )}
+                    </button>
+                  </div>
                 </form>
               </>
             )}
           </div>
 
-          {/* Footer Inferior Fijo */}
-          <div className="text-center text-xs text-zinc-400">
-            <p>
-              ¿Ya tenés cuenta en AyVino?{' '}
-              <Link
-                to="/login"
-                className="text-zinc-200 hover:text-white font-medium underline transition-colors"
-              >
-                Iniciá sesión acá
-              </Link>
-            </p>
+          {/* Footer Inferior: Ya tenés cuenta */}
+          <div className="mt-2 text-center text-xs text-zinc-400 font-sans">
+            ¿Ya tenés una cuenta?{' '}
+            <Link
+              to="/login"
+              className="text-zinc-200 hover:text-white underline underline-offset-4 decoration-zinc-600 hover:decoration-white transition-colors"
+            >
+              Iniciá sesión acá
+            </Link>
           </div>
         </div>
 
-        {/* Columna Derecha: Foto Vertical con División Nítida Editorial */}
-        <div className="hidden lg:relative lg:flex lg:flex-col lg:justify-end p-8 md:p-10 overflow-hidden h-full border-l border-white/10">
-          {/* Imagen de Fondo vertical de viñedos y cordillera */}
+        {/* Columna Derecha: Imagen Editorial de Viñedo */}
+        <div className="hidden lg:block relative h-full w-full bg-zinc-950 overflow-hidden">
           <img
             src={authVineyardImg}
-            alt="Viñedos y cordillera en Valle de Uco, Mendoza"
-            loading="lazy"
-            decoding="async"
-            width={600}
-            height={900}
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            alt="Viñedo al atardecer en los Andes"
+            className="w-full h-full object-cover object-center filter brightness-90 contrast-105"
           />
+          {/* Degradado lateral suave para fusionar la imagen con el contenedor oscuro */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#141416] via-[#141416]/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#141416] via-transparent to-transparent opacity-60" />
 
-          {/* Tinte suave */}
-          <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-
-          {/* Sutil degradado inferior para legibilidad tipográfica */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-
-          {/* Texto tipográfico plano */}
-          <div className="relative z-10">
-            <p className="text-xs tracking-[0.3em] text-white/80 font-light uppercase">
-              VALLE DE UCO · MENDOZA
+          {/* Texto Editorial sobre la imagen */}
+          <div className="absolute bottom-8 left-8 right-8 text-white/90 space-y-2 pointer-events-none">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-rose-300/80">
+              Comunidad & Guarda
+            </span>
+            <p className="font-serif text-xl italic font-light leading-snug">
+              «El vino conecta momentos y personas a través del tiempo.»
             </p>
           </div>
         </div>

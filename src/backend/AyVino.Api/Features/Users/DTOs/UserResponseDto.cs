@@ -8,5 +8,7 @@ public record UserResponseDto(
     DateTime RegisterDate,
     bool IsActive,
     Guid? AvatarImageId,
-    string? Bio
+    string? Bio,
+    DateOnly? BirthDate = null,
+    string? Gender = null
 );
