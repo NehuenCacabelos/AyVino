@@ -20,6 +20,10 @@ public static class CellarEndpoints
             Results.Ok(await service.GetAllByUserAsync(user.GetUserId(), pageNumber, pageSize, ct)))
             .WithName("GetMyCellars").WithSummary("Mis cavas (paginado) con cantidad de cosechas y botellas");
 
+        group.MapGet("/me/summary", async (ClaimsPrincipal user, ICellarService service, CancellationToken ct) =>
+            Results.Ok(await service.GetGlobalSummaryAsync(user.GetUserId(), ct)))
+            .WithName("GetMyCellarSummary").WithSummary("Resumen global de botellas y varietal insignia de las cavas del usuario");
+
         group.MapGet("/{cellarId:int}", async (int cellarId, ClaimsPrincipal user, ICellarService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(user.GetUserId(), cellarId, ct)))
             .WithName("GetCellarById").WithSummary("Detalle de una cava propia");

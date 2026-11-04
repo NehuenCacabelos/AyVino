@@ -13,4 +13,6 @@ public interface ICellarRepository
     Task<int> CreateAsync(int userId, string name, int? maxPerUser = null, CancellationToken ct = default);
     Task<bool> UpdateNameAsync(int cellarId, int userId, string name, CancellationToken ct = default);
     Task<bool> DeleteAsync(int cellarId, int userId, CancellationToken ct = default);
+    Task<int> GetTotalBottlesByUserAsync(int userId, CancellationToken ct = default);
+    Task<IReadOnlyList<CellarGrapeBreakdownRow>> GetGrapeBreakdownByUserAsync(int userId, CancellationToken ct = default);
 }

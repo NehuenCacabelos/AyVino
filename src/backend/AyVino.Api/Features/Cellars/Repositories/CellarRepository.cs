@@ -143,4 +143,37 @@ public class CellarRepository(IDbConnectionFactory connectionFactory) : ICellarR
             new CommandDefinition(sql, new { CellarId = cellarId, UserId = userId }, cancellationToken: ct));
         return rowsAffected > 0;
     }
+
+    public async Task<int> GetTotalBottlesByUserAsync(int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT COALESCE(SUM(ci.quantity), 0)::int
+            FROM cellars c
+            JOIN cellar_items ci ON ci.cellar_id = c.id
+            WHERE c.user_id = @UserId;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<CellarGrapeBreakdownRow>> GetGrapeBreakdownByUserAsync(int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT g.id AS GrapeId,
+                   g.name AS GrapeName,
+                   COALESCE(SUM(ci.quantity * COALESCE(wg.percentage, 100.0)), 0) AS TotalWeight
+            FROM cellars c
+            JOIN cellar_items ci ON ci.cellar_id = c.id
+            JOIN wine_grapes wg ON wg.wine_vintage_id = ci.wine_vintage_id
+            JOIN grapes g ON g.id = wg.grape_id
+            WHERE c.user_id = @UserId AND ci.quantity > 0
+            GROUP BY g.id, g.name
+            ORDER BY TotalWeight DESC, g.name ASC;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<CellarGrapeBreakdownRow>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+        return rows.ToList();
+    }
 }

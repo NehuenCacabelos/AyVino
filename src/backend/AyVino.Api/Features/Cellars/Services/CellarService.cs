@@ -72,6 +72,29 @@ public class CellarService(
         if (!deleted) throw new NotFoundException($"Cava con ID {cellarId} no encontrada.");
     }
 
+    public async Task<CellarGlobalSummaryDto> GetGlobalSummaryAsync(int userId, CancellationToken ct = default)
+    {
+        var totalBottles = await cellarRepository.GetTotalBottlesByUserAsync(userId, ct);
+        if (totalBottles == 0)
+        {
+            return new CellarGlobalSummaryDto(0, null, null);
+        }
+
+        var grapes = await cellarRepository.GetGrapeBreakdownByUserAsync(userId, ct);
+        if (grapes.Count == 0)
+        {
+            return new CellarGlobalSummaryDto(totalBottles, null, null);
+        }
+
+        var topGrape = grapes[0];
+        var totalWeight = grapes.Sum(g => g.TotalWeight);
+        var percentage = totalWeight > 0
+            ? (int)Math.Round((topGrape.TotalWeight / totalWeight) * 100m, MidpointRounding.AwayFromZero)
+            : 0;
+
+        return new CellarGlobalSummaryDto(totalBottles, topGrape.GrapeName, percentage);
+    }
+
     private static string NormalizeName(string? name)
     {
         var trimmed = name?.Trim();

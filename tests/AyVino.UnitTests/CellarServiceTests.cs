@@ -137,4 +137,56 @@ public class CellarServiceTests
         // Assert
         await _cellarRepository.Received(1).DeleteAsync(5, 1, Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task GetGlobalSummaryAsync_UserHasNoBottles_ReturnsZeroBottlesAndNullVarietal()
+    {
+        // Arrange
+        _cellarRepository.GetTotalBottlesByUserAsync(1, Arg.Any<CancellationToken>()).Returns(0);
+
+        // Act
+        var result = await _cellarService.GetGlobalSummaryAsync(1);
+
+        // Assert
+        Assert.Equal(0, result.TotalBottles);
+        Assert.Null(result.DominantVarietal);
+        Assert.Null(result.DominantVarietalPercentage);
+    }
+
+    [Fact]
+    public async Task GetGlobalSummaryAsync_UserHasBottlesWithGrapes_ReturnsDominantVarietalAndCalculatedPercentage()
+    {
+        // Arrange
+        _cellarRepository.GetTotalBottlesByUserAsync(1, Arg.Any<CancellationToken>()).Returns(15);
+        var grapes = new List<CellarGrapeBreakdownRow>
+        {
+            new(1, "Malbec", 1000m),
+            new(2, "Cabernet Sauvignon", 500m)
+        };
+        _cellarRepository.GetGrapeBreakdownByUserAsync(1, Arg.Any<CancellationToken>()).Returns(grapes);
+
+        // Act
+        var result = await _cellarService.GetGlobalSummaryAsync(1);
+
+        // Assert
+        Assert.Equal(15, result.TotalBottles);
+        Assert.Equal("Malbec", result.DominantVarietal);
+        Assert.Equal(67, result.DominantVarietalPercentage); // 1000 / 1500 = 66.67% -> 67%
+    }
+
+    [Fact]
+    public async Task GetGlobalSummaryAsync_UserHasBottlesWithoutGrapes_ReturnsTotalBottlesAndNullVarietal()
+    {
+        // Arrange
+        _cellarRepository.GetTotalBottlesByUserAsync(1, Arg.Any<CancellationToken>()).Returns(5);
+        _cellarRepository.GetGrapeBreakdownByUserAsync(1, Arg.Any<CancellationToken>()).Returns(new List<CellarGrapeBreakdownRow>());
+
+        // Act
+        var result = await _cellarService.GetGlobalSummaryAsync(1);
+
+        // Assert
+        Assert.Equal(5, result.TotalBottles);
+        Assert.Null(result.DominantVarietal);
+        Assert.Null(result.DominantVarietalPercentage);
+    }
 }

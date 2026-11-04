@@ -2,28 +2,36 @@ import { Wine, Clock, Layers, Award } from 'lucide-react';
 
 export interface MetricsProps {
   customStats?: {
-    bottles?: number;
-    varietals?: string | number;
-    topRated?: string | number;
-    readyToDrink?: string | number;
-    dominantVarietal?: string;
+    bottles?: number | null;
+    varietals?: string | number | null;
+    topRated?: string | number | null;
+    readyToDrink?: string | number | null;
+    dominantVarietal?: string | null;
+    dominantVarietalPercentage?: number | null;
   };
 }
 
 /**
  * Metrics Component (Cava Strip - Barra de Métricas Horizontal Compacta)
  * Cierra la sección Hero con un diseño aireado, tipográfico y limpio:
- * - Total en Cava (Wine): 24 Botellas · Colección activa
- * - Listas para Descorchar (Clock): 3 Etiquetas · En ventana óptima (con punto verde)
- * - Varietal Insignia (Layers): Malbec (58%) · 8 cepas registradas
- * - Prestigio / Calificación (Award): 4.9 ★ · Nivel Gran Reserva
+ * - Total en Cava (Wine): Total real de botellas del usuario
+ * - Listas para Descorchar (Clock): -- (No definido aún)
+ * - Varietal Insignia (Layers): Uva más presente con porcentaje real, o -- si no hay
+ * - Prestigio / Calificación (Award): -- (No definido aún)
  */
 export default function Metrics({ customStats }: MetricsProps) {
-  const totalBottles = customStats?.bottles ?? 24;
-  const readyToDrink = customStats?.readyToDrink ?? 3;
-  const dominantVarietal = customStats?.dominantVarietal ?? 'Malbec (58%)';
-  const rawRating = customStats?.topRated ? String(customStats.topRated) : '4.9';
-  const cleanRating = rawRating.replace(' ★', '').split('/')[0].trim();
+  const totalBottles = customStats?.bottles ?? 0;
+  const readyToDrink = customStats?.readyToDrink ?? '--';
+
+  const dominantVarietal = customStats?.dominantVarietal
+    ? customStats.dominantVarietalPercentage != null
+      ? `${customStats.dominantVarietal} (${customStats.dominantVarietalPercentage}%)`
+      : customStats.dominantVarietal
+    : '--';
+
+  const cleanRating = customStats?.topRated
+    ? String(customStats.topRated).replace(' ★', '').split('/')[0].trim()
+    : '--';
 
   return (
     <div className="w-full max-w-5xl mx-auto pt-3 sm:pt-3.5 border-t border-white/5">
@@ -35,7 +43,7 @@ export default function Metrics({ customStats }: MetricsProps) {
             <span>Total en Cava</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
-            {totalBottles} Botellas
+            {totalBottles} {totalBottles === 1 ? 'Botella' : 'Botellas'}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
             Colección activa
@@ -49,11 +57,13 @@ export default function Metrics({ customStats }: MetricsProps) {
             <span>Listas para Descorchar</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
-            {readyToDrink} Etiquetas
+            {readyToDrink === '--' ? '--' : `${readyToDrink} Etiquetas`}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 flex items-center font-sans">
             <span
-              className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block mr-1 shrink-0"
+              className={`w-1.5 h-1.5 rounded-full inline-block mr-1 shrink-0 ${
+                readyToDrink === '--' ? 'bg-stone-500' : 'bg-emerald-500'
+              }`}
               aria-hidden="true"
             />
             <span>En ventana óptima</span>
@@ -66,11 +76,11 @@ export default function Metrics({ customStats }: MetricsProps) {
             <Layers className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
             <span>Varietal Insignia</span>
           </div>
-          <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
+          <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1 truncate">
             {dominantVarietal}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
-            8 cepas registradas
+            {dominantVarietal === '--' ? '--' : 'Mayor presencia en estiba'}
           </p>
         </div>
 
@@ -81,10 +91,10 @@ export default function Metrics({ customStats }: MetricsProps) {
             <span>Prestigio / Calificación</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-amber-200 mt-0.5 sm:mt-1">
-            {cleanRating} ★
+            {cleanRating === '--' ? '--' : `${cleanRating} ★`}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
-            Nivel Gran Reserva
+            {cleanRating === '--' ? '--' : 'Calificación promedio'}
           </p>
         </div>
       </div>

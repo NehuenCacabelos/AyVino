@@ -18,6 +18,7 @@ import { searchWines } from '../../winery/api/wineApi';
 import { imageUrl } from '../../../lib/image';
 import { cn } from '../../../lib/utils';
 import WineCreationFlow from '../../wines/components/WineCreationFlow';
+import { getCatalogFiltersApi, type CatalogFiltersResponse } from '../../catalog';
 
 export interface HeroFilterState {
   query: string;
@@ -35,9 +36,7 @@ interface QuickActionsProps {
   onOpenCreateWine?: (initialName?: string) => void;
 }
 
-const varietalOptions = ['Todos', 'Malbec', 'Cabernet Franc', 'Blancos', 'Blends'];
-const regionOptions = ['Todas', 'Mendoza', 'Salta', 'San Juan', 'Patagonia'];
-const wineryOptions = ['Todas', 'Catena Zapata', 'Zuccardi', 'El Enemigo', 'Colomé'];
+// Opciones de filtros alimentadas dinámicamente desde /api/catalog/filters
 
 /**
  * QuickActions Component (Hero de Dashboard / AyVino)
@@ -75,6 +74,57 @@ export default function QuickActions({
   const [selectedRegion, setSelectedRegion] = useState('Todas');
   const [selectedWinery, setSelectedWinery] = useState('Todas');
   const [activeDropdown, setActiveDropdown] = useState<'varietal' | 'region' | 'winery' | null>(null);
+
+  // Filtros vivos desde /api/catalog/filters
+  const [filtersData, setFiltersData] = useState<CatalogFiltersResponse>({
+    varietals: [],
+    regions: [],
+    wineries: [],
+  });
+  const [isLoadingFilters, setIsLoadingFilters] = useState(true);
+  const [filtersError, setFiltersError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchFilters() {
+      setIsLoadingFilters(true);
+      setFiltersError(false);
+      try {
+        const data = await getCatalogFiltersApi();
+        if (isMounted) {
+          setFiltersData(data);
+        }
+      } catch {
+        if (isMounted) {
+          setFiltersError(true);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFilters(false);
+        }
+      }
+    }
+    void fetchFilters();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const varietalOptions = [
+    ...(filtersData.varietals.length > 0 ? ['Todos', ...filtersData.varietals.map((v) => v.name)] : []),
+  ];
+
+  const regionOptions = [
+    ...(filtersData.regions.length > 0 ? ['Todas', ...filtersData.regions.map((r) => r.name)] : []),
+  ];
+
+  const wineryOptions = [
+    ...(filtersData.wineries.length > 0 ? ['Todas', ...filtersData.wineries.map((w) => w.name)] : []),
+  ];
+
+  const isVarietalDisabled = (!isLoadingFilters && varietalOptions.length === 0) || filtersError;
+  const isRegionDisabled = (!isLoadingFilters && regionOptions.length === 0) || filtersError;
+  const isWineryDisabled = (!isLoadingFilters && wineryOptions.length === 0) || filtersError;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const filterContainerRef = useRef<HTMLDivElement>(null);
@@ -433,18 +483,31 @@ export default function QuickActions({
         <div className="relative flex-1">
           <button
             type="button"
-            onClick={() => setActiveDropdown((prev) => (prev === 'varietal' ? null : 'varietal'))}
+            disabled={isVarietalDisabled}
+            onClick={() => {
+              if (varietalOptions.length > 0) {
+                setActiveDropdown((prev) => (prev === 'varietal' ? null : 'varietal'));
+              }
+            }}
             aria-expanded={activeDropdown === 'varietal'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
-              selectedVarietal !== 'Todos'
-                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
-                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all',
+              isVarietalDisabled
+                ? 'opacity-60 cursor-not-allowed text-stone-500'
+                : selectedVarietal !== 'Todos'
+                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm cursor-pointer'
+                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent cursor-pointer'
             )}
           >
             <Wine className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
-            <span className="truncate">{selectedVarietal !== 'Todos' ? selectedVarietal : 'Varietal'}</span>
+            <span className="truncate">
+              {isVarietalDisabled
+                ? 'Sin opciones aún'
+                : selectedVarietal !== 'Todos'
+                ? selectedVarietal
+                : 'Varietal'}
+            </span>
             <ChevronDown
               className={cn(
                 'w-3.5 h-3.5 text-stone-400 transition-transform duration-200 shrink-0',
@@ -454,11 +517,11 @@ export default function QuickActions({
             />
           </button>
 
-          {activeDropdown === 'varietal' && (
+          {activeDropdown === 'varietal' && varietalOptions.length > 0 && (
             <div
               role="listbox"
               aria-label="Filtro por varietal"
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95"
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95 max-h-60 overflow-y-auto"
             >
               {varietalOptions.map((opt) => (
                 <button
@@ -488,18 +551,31 @@ export default function QuickActions({
         <div className="relative flex-1">
           <button
             type="button"
-            onClick={() => setActiveDropdown((prev) => (prev === 'region' ? null : 'region'))}
+            disabled={isRegionDisabled}
+            onClick={() => {
+              if (regionOptions.length > 0) {
+                setActiveDropdown((prev) => (prev === 'region' ? null : 'region'));
+              }
+            }}
             aria-expanded={activeDropdown === 'region'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
-              selectedRegion !== 'Todas'
-                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
-                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all',
+              isRegionDisabled
+                ? 'opacity-60 cursor-not-allowed text-stone-500'
+                : selectedRegion !== 'Todas'
+                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm cursor-pointer'
+                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent cursor-pointer'
             )}
           >
             <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
-            <span className="truncate">{selectedRegion !== 'Todas' ? selectedRegion : 'Región'}</span>
+            <span className="truncate">
+              {isRegionDisabled
+                ? 'Sin opciones aún'
+                : selectedRegion !== 'Todas'
+                ? selectedRegion
+                : 'Región'}
+            </span>
             <ChevronDown
               className={cn(
                 'w-3.5 h-3.5 text-stone-400 transition-transform duration-200 shrink-0',
@@ -509,11 +585,11 @@ export default function QuickActions({
             />
           </button>
 
-          {activeDropdown === 'region' && (
+          {activeDropdown === 'region' && regionOptions.length > 0 && (
             <div
               role="listbox"
               aria-label="Filtro por región"
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95"
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95 max-h-60 overflow-y-auto"
             >
               {regionOptions.map((opt) => (
                 <button
@@ -543,18 +619,31 @@ export default function QuickActions({
         <div className="relative flex-1">
           <button
             type="button"
-            onClick={() => setActiveDropdown((prev) => (prev === 'winery' ? null : 'winery'))}
+            disabled={isWineryDisabled}
+            onClick={() => {
+              if (wineryOptions.length > 0) {
+                setActiveDropdown((prev) => (prev === 'winery' ? null : 'winery'));
+              }
+            }}
             aria-expanded={activeDropdown === 'winery'}
             aria-haspopup="listbox"
             className={cn(
-              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all cursor-pointer',
-              selectedWinery !== 'Todas'
-                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm'
-                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent'
+              'w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-medium tracking-wide rounded-full transition-all',
+              isWineryDisabled
+                ? 'opacity-60 cursor-not-allowed text-stone-500'
+                : selectedWinery !== 'Todas'
+                ? 'bg-rose-950/40 border border-rose-900/40 text-rose-200 shadow-sm cursor-pointer'
+                : 'text-stone-300 hover:text-white hover:bg-white/5 border border-transparent cursor-pointer'
             )}
           >
             <Building2 className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
-            <span className="truncate">{selectedWinery !== 'Todas' ? selectedWinery : 'Bodega'}</span>
+            <span className="truncate">
+              {isWineryDisabled
+                ? 'Sin opciones aún'
+                : selectedWinery !== 'Todas'
+                ? selectedWinery
+                : 'Bodega'}
+            </span>
             <ChevronDown
               className={cn(
                 'w-3.5 h-3.5 text-stone-400 transition-transform duration-200 shrink-0',
@@ -564,11 +653,11 @@ export default function QuickActions({
             />
           </button>
 
-          {activeDropdown === 'winery' && (
+          {activeDropdown === 'winery' && wineryOptions.length > 0 && (
             <div
               role="listbox"
               aria-label="Filtro por bodega"
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95"
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-stone-900 border border-white/10 shadow-2xl rounded-xl p-2 min-w-[200px] z-50 text-left animate-in fade-in zoom-in-95 max-h-60 overflow-y-auto"
             >
               {wineryOptions.map((opt) => (
                 <button

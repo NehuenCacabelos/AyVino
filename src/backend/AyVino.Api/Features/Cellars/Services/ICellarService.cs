@@ -9,4 +9,5 @@ public interface ICellarService
     Task<CellarResponseDto> CreateAsync(int userId, CreateCellarRequestDto request, CancellationToken ct = default);
     Task<CellarResponseDto> RenameAsync(int userId, int cellarId, UpdateCellarRequestDto request, CancellationToken ct = default);
     Task DeleteAsync(int userId, int cellarId, CancellationToken ct = default);
+    Task<CellarGlobalSummaryDto> GetGlobalSummaryAsync(int userId, CancellationToken ct = default);
 }

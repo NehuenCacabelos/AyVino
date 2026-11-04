@@ -4,6 +4,20 @@ import type { CellarDto, CellarItemDto } from '../../users/types';
 import type { BottleKind } from '../../../types/wine';
 import type { CellarWine } from '../types';
 
+export interface CellarGlobalSummaryDto {
+  totalBottles: number;
+  dominantVarietal: string | null;
+  dominantVarietalPercentage: number | null;
+}
+
+/**
+ * Obtiene el resumen global de botellas y varietal insignia del usuario (GET /api/cellars/me/summary).
+ */
+export async function getCellarGlobalSummaryApi(): Promise<CellarGlobalSummaryDto> {
+  const response = await apiClient.get<CellarGlobalSummaryDto>('/cellars/me/summary');
+  return response.data;
+}
+
 /**
  * Obtiene todas las cavas del usuario autenticado (GET /api/cellars/me).
  */
