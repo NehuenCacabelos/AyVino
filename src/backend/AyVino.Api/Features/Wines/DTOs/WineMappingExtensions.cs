@@ -30,7 +30,7 @@ public static class WineMappingExtensions
         LabelKey = labelKey
     };
 
-    public static WineResponseDto ToResponseDto(this Wine wine) => new(
+    public static WineResponseDto ToResponseDto(this Wine wine, bool? isApproximateMatch = null) => new(
         wine.Id,
         wine.WineryId,
         wine.WineryNameText,
@@ -41,7 +41,8 @@ public static class WineMappingExtensions
         wine.SourceType.ToString(),
         wine.DuplicateOfWineId,
         wine.ReviewCount >= 5 ? Math.Round((decimal)wine.RatingSum / wine.ReviewCount, 2) : null,
-        wine.ReviewCount);
+        wine.ReviewCount,
+        isApproximateMatch);
 
     public static WineListItemDto ToListItemDto(this Wine wine) => new(
         wine.Id,

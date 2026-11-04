@@ -28,6 +28,7 @@ export interface WineResponseDto {
   duplicateOfWineId: number | null;
   averageRating: number | null;
   reviewCount: number;
+  isApproximateMatch?: boolean | null;
 }
 
 /**

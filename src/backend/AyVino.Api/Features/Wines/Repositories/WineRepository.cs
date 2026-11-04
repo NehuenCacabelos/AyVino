@@ -546,6 +546,23 @@ public class WineRepository(
     }
 
 
+    public async Task<IEnumerable<Wine>> GetUnclaimedCommunityWinesAsync(CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT id, winery_id, winery_name_text, name, description, wine_type,
+                   location_id, source_type, duplicate_of_wine_id, rating_sum, review_count, label_key
+            FROM wines
+            WHERE winery_id IS NULL
+              AND duplicate_of_wine_id IS NULL
+              AND winery_name_text IS NOT NULL
+            ORDER BY id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Wine>(
+            new CommandDefinition(sql, cancellationToken: ct));
+    }
+
+
 
     public async Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default)
 

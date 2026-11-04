@@ -298,7 +298,7 @@ export default function WineryClaimPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md border ${badge.className}`}
                       >
@@ -307,11 +307,22 @@ export default function WineryClaimPage() {
                       <span className="text-[11px] font-mono text-neutral-500">
                         Cargado por aficionado
                       </span>
+                      {candidate.isApproximateMatch && (
+                        <span className="inline-block text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md border bg-amber-950/40 text-amber-300 border-amber-800/40 font-medium">
+                          Coincidencia aproximada
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="font-serif text-lg font-semibold text-neutral-100">
                       {candidate.name}
                     </h3>
+
+                    {candidate.wineryNameText && (
+                      <p className="text-xs text-neutral-400 font-sans">
+                        Bodega cargada: <span className="text-neutral-200 font-medium font-serif italic">«{candidate.wineryNameText}»</span>
+                      </p>
+                    )}
 
                     {candidate.description && (
                       <p className="text-xs text-neutral-400 font-sans line-clamp-1">

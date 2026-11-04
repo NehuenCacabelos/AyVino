@@ -11,4 +11,5 @@ public record WineResponseDto(
     string SourceType,
     int? DuplicateOfWineId,
     decimal? AverageRating,
-    int ReviewCount);
+    int ReviewCount,
+    bool? IsApproximateMatch = null);

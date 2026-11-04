@@ -123,4 +123,39 @@ describe('WineryClaimPage', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('renders "Coincidencia aproximada" badge and typed winery name for approximate matches', async () => {
+    const approxCandidates: WineResponseDto[] = [
+      {
+        id: 301,
+        name: 'Vino de Aficionado',
+        wineryId: null,
+        wineryNameText: 'Trapiche Wines',
+        description: 'Nota',
+        wineType: 'Red',
+        locationId: 1,
+        sourceType: 'Community',
+        duplicateOfWineId: null,
+        averageRating: 4.0,
+        reviewCount: 3,
+        isApproximateMatch: true,
+      },
+    ];
+
+    vi.mocked(wineryModule.useWinery).mockReturnValue(createMockUseWinery(mockApprovedWinery));
+    vi.mocked(wineryModule.getClaimCandidates).mockResolvedValue(approxCandidates);
+
+    render(
+      <MemoryRouter>
+        <WineryClaimPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Vino de Aficionado')).toBeInTheDocument();
+      expect(screen.getByText('Coincidencia aproximada')).toBeInTheDocument();
+      expect(screen.getByText(/Bodega cargada:/i)).toBeInTheDocument();
+      expect(screen.getByText('«Trapiche Wines»')).toBeInTheDocument();
+    });
+  });
 });

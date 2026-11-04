@@ -23,6 +23,7 @@ public interface IWineRepository
     Task<WineUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default);
     Task<WineUsageCounts> GetUsageCountsAsync(int id, int? excludeUserId, CancellationToken ct = default) => GetUsageCountsAsync(id, ct);
     Task<IEnumerable<Wine>> GetUnclaimedByNameLikeAsync(string nameFragment, CancellationToken ct = default);
+    Task<IEnumerable<Wine>> GetUnclaimedCommunityWinesAsync(CancellationToken ct = default) => GetUnclaimedByNameLikeAsync("", ct);
     Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default);
 
     Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default);

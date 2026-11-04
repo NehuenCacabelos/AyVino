@@ -24,8 +24,10 @@ public class WineService(
     IGrapeRepository grapeRepository,
     IWineVintageRepository? vintageRepository = null,
     IActivityRecorder? activityRecorder = null,
-    ILogger<WineService>? logger = null) : IWineService
+    ILogger<WineService>? logger = null,
+    IWineryNameMatcher? wineryNameMatcher = null) : IWineService
 {
+    private readonly IWineryNameMatcher _wineryNameMatcher = wineryNameMatcher ?? new WineryNameMatcher();
     public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
         var wine = await wineRepository.GetVisibleByIdAsync(id, actor?.UserId, actor?.IsAdmin == true, ct)
@@ -278,8 +280,26 @@ public class WineService(
                 throw new ForbiddenException("La bodega debe estar aprobada para reclamar vinos.");
         }
 
-        var candidates = await wineRepository.GetUnclaimedByNameLikeAsync(winery.Name, ct);
-        return candidates.Select(w => w.ToResponseDto());
+        var unclaimedWines = await wineRepository.GetUnclaimedCommunityWinesAsync(ct);
+        var scoredCandidates = new List<(Wine Wine, double Score, bool IsApproximate)>();
+
+        foreach (var wine in unclaimedWines)
+        {
+            if (string.IsNullOrWhiteSpace(wine.WineryNameText))
+                continue;
+
+            var score = _wineryNameMatcher.CalculateSimilarity(winery.Name, wine.WineryNameText);
+            if (score >= _wineryNameMatcher.DefaultThreshold)
+            {
+                var isExact = string.Equals(winery.Name.Trim(), wine.WineryNameText.Trim(), StringComparison.OrdinalIgnoreCase);
+                scoredCandidates.Add((wine, score, !isExact));
+            }
+        }
+
+        return scoredCandidates
+            .OrderByDescending(c => c.Score)
+            .ThenBy(c => c.Wine.Name)
+            .Select(c => c.Wine.ToResponseDto(isApproximateMatch: c.IsApproximate));
     }
 
     public async Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, Actor actor, CancellationToken ct = default)

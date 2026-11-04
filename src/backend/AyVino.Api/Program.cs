@@ -2134,6 +2134,7 @@ builder.Services.AddScoped<IWineRepository, WineRepository>();
 
 
 
+builder.Services.AddSingleton<IWineryNameMatcher, WineryNameMatcher>();
 builder.Services.AddScoped<IWineService, WineService>();
 
 
