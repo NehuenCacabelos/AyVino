@@ -64,9 +64,9 @@ export default function AdminCitiesPage() {
   // Filtro de estado desde URL
   const rawStatus = searchParams.get('status');
   const currentStatus: StatusFilter =
-    rawStatus === 'Approved' || rawStatus === 'Rejected' || rawStatus === 'All'
+    rawStatus === 'Approved' || rawStatus === 'Rejected' || rawStatus === 'Pending'
       ? rawStatus
-      : 'Pending';
+      : 'All';
 
   const statusParam = currentStatus === 'All' ? undefined : currentStatus;
 

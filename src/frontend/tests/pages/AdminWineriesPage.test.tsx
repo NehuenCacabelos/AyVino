@@ -57,7 +57,7 @@ describe('AdminWineriesPage Component', () => {
     vi.clearAllMocks();
   });
 
-  it('la carga inicial pide status Pending por defecto', async () => {
+  it('la carga inicial pide status All (undefined) por defecto', async () => {
     vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
 
     render(
@@ -72,7 +72,7 @@ describe('AdminWineriesPage Component', () => {
       expect(wineryApi.getWineries).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
-        status: 'Pending',
+        status: undefined,
       });
       expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
       expect(screen.getByText('Pendiente')).toBeInTheDocument();

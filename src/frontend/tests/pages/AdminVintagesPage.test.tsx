@@ -82,7 +82,7 @@ describe('AdminVintagesPage Component', () => {
     vi.mocked(adminVintagesApi.getVintageContributions).mockResolvedValue([]);
   });
 
-  it('la carga inicial pide status Pending y sort users por defecto y renderiza communityUsers', async () => {
+  it('la carga inicial pide status All (undefined) y sort date por defecto y renderiza communityUsers', async () => {
     vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
 
     render(
@@ -95,8 +95,8 @@ describe('AdminVintagesPage Component', () => {
       expect(adminVintagesApi.getAdminVintages).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
-        status: 'Pending',
-        sort: 'users',
+        status: undefined,
+        sort: 'date',
       });
       expect(screen.getByText('Malbec Reserva')).toBeInTheDocument();
       expect(screen.getByText('Chardonnay Estate')).toBeInTheDocument();

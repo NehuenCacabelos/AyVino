@@ -31,7 +31,7 @@ describe('AdminCitiesPage Component', () => {
     vi.mocked(locationApi.getStates).mockResolvedValue(mockStates);
   });
 
-  it('la carga inicial pide status Pending por defecto y muestra la provincia resuelta', async () => {
+  it('la carga inicial pide status All (undefined) por defecto y muestra la provincia resuelta', async () => {
     vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockPendingCities);
 
     render(
@@ -46,7 +46,7 @@ describe('AdminCitiesPage Component', () => {
       expect(adminCitiesApi.getCities).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
-        status: 'Pending',
+        status: undefined,
         stateId: undefined,
       });
       expect(screen.getByText('Chacras de Coria')).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('AdminCitiesPage Component', () => {
       expect(adminCitiesApi.getCities).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
-        status: 'Pending',
+        status: undefined,
         stateId: 2,
       });
     });
