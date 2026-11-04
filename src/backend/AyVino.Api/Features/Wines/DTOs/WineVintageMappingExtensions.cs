@@ -5,14 +5,14 @@ namespace AyVino.Api.Features.Wines.DTOs;
 
 public static class WineVintageMappingExtensions
 {
-    public static WineVintage ToEntity(this CreateWineVintageRequestDto dto, int userId, int wineId = 0) => new()
+    public static WineVintage ToEntity(this CreateWineVintageRequestDto dto, int userId, int wineId = 0, ApprovalStatus approvalStatus = ApprovalStatus.Pending) => new()
     {
         WineId = wineId,
         Year = dto.Year,
         AlcoholContent = dto.AlcoholContent,
         ServingTemperature = dto.ServingTemperature,
         AgingAdvice = dto.AgingAdvice,
-        ApprovalStatus = ApprovalStatus.Pending,
+        ApprovalStatus = approvalStatus,
         UploadedByUserId = userId,
         RegisterDate = DateTime.UtcNow
     };

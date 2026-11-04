@@ -48,6 +48,7 @@ public class WineService(
     public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default)
     {
         string wineryName;
+        bool isAutoApproved = false;
         if (dto.WineryId.HasValue)
         {
             var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct);
@@ -61,6 +62,12 @@ public class WineService(
 
                 if (!WineryAccessRules.CanPublish(winery, actor))
                     throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
+
+                isAutoApproved = true;
+            }
+            else
+            {
+                isAutoApproved = true;
             }
             wineryName = winery?.Name ?? dto.WineryNameText?.Trim() ?? string.Empty;
         }
@@ -71,6 +78,10 @@ public class WineService(
             if (dto.WineryNameText.Trim().Length > 150)
                 throw new ValidationException("El nombre de la bodega no puede superar los 150 caracteres.");
             wineryName = dto.WineryNameText.Trim();
+            if (actor.IsAdmin)
+            {
+                isAutoApproved = true;
+            }
         }
 
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
@@ -99,7 +110,8 @@ public class WineService(
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
         var wineEntity = dto.ToEntity(wineType, sourceType, labelKey);
-        var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId);
+        var firstVintageStatus = isAutoApproved ? ApprovalStatus.Approved : ApprovalStatus.Pending;
+        var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId, approvalStatus: firstVintageStatus);
 
         var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
 
@@ -341,8 +353,6 @@ public class WineService(
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
-        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(winery) && year is null && string.IsNullOrWhiteSpace(wineType))
-            throw new ValidationException("At least one search criterion (name, winery, year, or type) is required.");
 
         WineType? parsedType = null;
         if (!string.IsNullOrWhiteSpace(wineType))

@@ -1185,6 +1185,27 @@ async function run() {
       followedListAfter.filter(w => (w.wineryId || w.id) === registeredWineryId).length === 0
     );
 
+    // 4. Regresión A1: GET /api/reviews como admin deserializa correctamente con reseñas existentes (rating::int)
+    await request('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${userA.token}` },
+      body: JSON.stringify({
+        wineVintageId: vintageAId,
+        rating: 5,
+        comment: 'Excelente vino para test de regresión A1',
+      }),
+    });
+
+    const adminReviewsRes = await request('/reviews?pageNumber=1&pageSize=10', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    record(
+      'Regresión A1: GET /api/reviews como admin responde 200 sin error 500 al deserializar reseñas',
+      200,
+      adminReviewsRes.status,
+      adminReviewsRes.status === 200 && Array.isArray(adminReviewsRes.data)
+    );
+
   } catch (error) {
     console.error('\n💥 ERROR FATAL EN SUITE E2E:', error);
     failed++;

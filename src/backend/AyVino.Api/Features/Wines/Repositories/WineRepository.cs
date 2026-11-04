@@ -651,7 +651,8 @@ public class WineRepository(
                     similarity(COALESCE(wy.name, ''), @Winery)
                 ) END
             ) DESC,
-            w.id
+            w.name ASC,
+            w.id ASC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
@@ -1104,7 +1105,7 @@ public class WineRepository(
 
             const string getTargetWineDataSql = """
 
-                SELECT w.name, w.winery_id, w.winery_name_text, w.wine_type, wy.name as registered_winery_name
+                SELECT w.name, w.winery_id, w.winery_name_text, w.wine_type::int as wine_type, wy.name as registered_winery_name
 
                 FROM wines w
 
@@ -1268,7 +1269,7 @@ public class WineRepository(
 
     {
 
-        const string selectSql = "SELECT id, name, wine_type FROM wines WHERE winery_id = @WineryId;";
+        const string selectSql = "SELECT id, name, wine_type::int FROM wines WHERE winery_id = @WineryId;";
 
         var wines = (await connection.QueryAsync<(int Id, string Name, int WineType)>(
 

@@ -319,6 +319,117 @@ public class WineServiceTests
         Assert.Null(fakeWineRepo.ExistingWine);
     }
 
+    [Fact]
+    public async Task SearchAsync_WithoutCriteria_SucceedsAndDoesNotThrow()
+    {
+        var fakeWineRepo = new FakeWineRepository();
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        var result = await service.SearchAsync(null, null, null, null, 1, 10);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WineryOwner_AutoApprovesFirstVintage()
+    {
+        var fakeWineRepo = new FakeWineRepository();
+        var fakeWineryRepo = new FakeWineryRepository { ExistingWineryId = 10, WineryOwnerUserId = 42 };
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeGrapeRepo = new FakeGrapeRepository { ExistingGrapeId = 5 };
+        var service = new WineService(fakeWineRepo, fakeWineryRepo, fakeLocationRepo, fakeGrapeRepo);
+
+        var dto = new CreateWineRequestDto(
+            WineryId: 10,
+            WineryNameText: null,
+            Name: "Vino Oficial Bodega",
+            Description: null,
+            WineType: "Red",
+            LocationId: 1,
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2022, Grapes: [new WineGrapeRequestDto(5, 100)])
+        );
+
+        var actor = new Actor(42, AppRoles.Winery);
+        await service.CreateAsync(dto, actor);
+
+        Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
+        Assert.Equal(ApprovalStatus.Approved, fakeWineRepo.CapturedFirstVintage.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Admin_AutoApprovesFirstVintage()
+    {
+        var fakeWineRepo = new FakeWineRepository();
+        var fakeWineryRepo = new FakeWineryRepository { ExistingWineryId = 10, WineryOwnerUserId = 42 };
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeGrapeRepo = new FakeGrapeRepository { ExistingGrapeId = 5 };
+        var service = new WineService(fakeWineRepo, fakeWineryRepo, fakeLocationRepo, fakeGrapeRepo);
+
+        var dto = new CreateWineRequestDto(
+            WineryId: 10,
+            WineryNameText: null,
+            Name: "Vino Creado Por Admin",
+            Description: null,
+            WineType: "Red",
+            LocationId: 1,
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2022, Grapes: [new WineGrapeRequestDto(5, 100)])
+        );
+
+        var adminActor = new Actor(99, AppRoles.Admin);
+        await service.CreateAsync(dto, adminActor);
+
+        Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
+        Assert.Equal(ApprovalStatus.Approved, fakeWineRepo.CapturedFirstVintage.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CommunityUser_SetsApprovalStatusToPending()
+    {
+        var fakeWineRepo = new FakeWineRepository();
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeGrapeRepo = new FakeGrapeRepository { ExistingGrapeId = 5 };
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), fakeLocationRepo, fakeGrapeRepo);
+
+        var dto = new CreateWineRequestDto(
+            WineryId: null,
+            WineryNameText: "Bodega Comunitaria",
+            Name: "Vino Comunitario",
+            Description: null,
+            WineType: "Red",
+            LocationId: 1,
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2022, Grapes: [new WineGrapeRequestDto(5, 100)])
+        );
+
+        var userActor = new Actor(15, AppRoles.User);
+        await service.CreateAsync(dto, userActor);
+
+        Assert.NotNull(fakeWineRepo.CapturedFirstVintage);
+        Assert.Equal(ApprovalStatus.Pending, fakeWineRepo.CapturedFirstVintage.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NonOwner_ForOfficialWine_ThrowsForbiddenException()
+    {
+        var fakeWineRepo = new FakeWineRepository();
+        var fakeWineryRepo = new FakeWineryRepository { ExistingWineryId = 10, WineryOwnerUserId = 42 };
+        var fakeLocationRepo = new FakeLocationRepository { ExistingLocationId = 1 };
+        var fakeGrapeRepo = new FakeGrapeRepository { ExistingGrapeId = 5 };
+        var service = new WineService(fakeWineRepo, fakeWineryRepo, fakeLocationRepo, fakeGrapeRepo);
+
+        var dto = new CreateWineRequestDto(
+            WineryId: 10,
+            WineryNameText: null,
+            Name: "Intento Venta Ajena",
+            Description: null,
+            WineType: "Red",
+            LocationId: 1,
+            FirstVintage: new CreateWineVintageRequestDto(Year: 2022, Grapes: [new WineGrapeRequestDto(5, 100)])
+        );
+
+        var strangerActor = new Actor(88, AppRoles.User);
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateAsync(dto, strangerActor));
+    }
+
     #region Fakes
 
     private sealed class FakeWineRepository : IWineRepository
@@ -406,8 +517,9 @@ public class WineServiceTests
         public int? ExistingWineryId { get; set; }
 
         public string? WineryName { get; set; } = "Bodega Falsa";
+        public int? WineryOwnerUserId { get; set; }
         public Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default) =>
-            Task.FromResult(ExistingWineryId == id ? new Winery { Id = id, Name = WineryName ?? "Bodega Falsa", Status = WineryStatus.Approved } : null);
+            Task.FromResult(ExistingWineryId == id ? new Winery { Id = id, Name = WineryName ?? "Bodega Falsa", Status = WineryStatus.Approved, UserId = WineryOwnerUserId } : null);
 
         public Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default) =>
             Task.FromResult<Winery?>(null);

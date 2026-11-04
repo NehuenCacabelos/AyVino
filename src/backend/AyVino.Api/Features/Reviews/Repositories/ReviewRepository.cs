@@ -12,7 +12,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
     {
         const string sql = """
             SELECT id AS Id, user_id AS UserId, wine_vintage_id AS WineVintageId,
-                   rating AS Rating, comment AS Comment,
+                   rating::int AS Rating, comment AS Comment,
                    created_at AS CreatedAt, updated_at AS UpdatedAt
             FROM reviews
             WHERE id = @Id;
@@ -131,7 +131,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         var sql = $"""
             SELECT
                 r.id AS Id,
-                r.rating AS Rating,
+                r.rating::int AS Rating,
                 r.comment AS Comment,
                 r.created_at AS CreatedAt,
                 r.user_id AS UserId,

@@ -166,16 +166,30 @@ public class WineVintageService(
         if (wine is null)
             throw new NotFoundException($"Wine with ID {wineId} not found.");
 
-        if (wine.WineryId is int wineryId && !actor.IsAdmin)
+        bool isAutoApproved = false;
+        if (wine.WineryId is int wineryId)
         {
-            var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
-                ?? throw new ValidationException($"Winery with ID {wineryId} does not exist.");
+            if (actor.IsAdmin)
+            {
+                isAutoApproved = true;
+            }
+            else
+            {
+                var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
+                    ?? throw new ValidationException($"Winery with ID {wineryId} does not exist.");
 
-            if (!WineryAccessRules.IsOwner(winery, actor))
-                throw new ForbiddenException("Solo el dueño de la bodega puede crear cosechas a su nombre.");
+                if (!WineryAccessRules.IsOwner(winery, actor))
+                    throw new ForbiddenException("Solo el dueño de la bodega puede crear cosechas a su nombre.");
 
-            if (!WineryAccessRules.CanPublish(winery, actor))
-                throw new ForbiddenException("La bodega debe estar aprobada o pendiente para crear cosechas.");
+                if (!WineryAccessRules.CanPublish(winery, actor))
+                    throw new ForbiddenException("La bodega debe estar aprobada o pendiente para crear cosechas.");
+
+                isAutoApproved = true;
+            }
+        }
+        else if (actor.IsAdmin)
+        {
+            isAutoApproved = true;
         }
 
 
@@ -193,7 +207,8 @@ public class WineVintageService(
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var vintageEntity = dto.ToEntity(actor.UserId, wineId);
+        var vintageStatus = isAutoApproved ? ApprovalStatus.Approved : ApprovalStatus.Pending;
+        var vintageEntity = dto.ToEntity(actor.UserId, wineId, vintageStatus);
         var vintage = await vintageRepository.CreateAsync(vintageEntity, grapes, ct);
 
         if (activityRecorder != null)

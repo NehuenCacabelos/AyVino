@@ -642,6 +642,85 @@ public class WineVintageServiceAuthorizationTests
         await wineRepo.DidNotReceiveWithAnyArgs().GetVisibleByIdAsync(default, default, default, default);
     }
 
+    [Fact]
+    public async Task CreateAsync_WineryOwner_AutoApprovesVintage()
+    {
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5, status: WineryStatus.Approved);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        WineVintage? captured = null;
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.CreateAsync(Arg.Do<WineVintage>(v => captured = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(args => (WineVintage)args[0]);
+
+        var service = new WineVintageService(vintageRepo, wineRepo, Substitute.For<IGrapeRepository>(), wineryRepo);
+        var ownerActor = new Actor(5, AppRoles.Winery);
+
+        var result = await service.CreateAsync(1, new CreateWineVintageRequestDto(Year: 2022), ownerActor);
+
+        Assert.NotNull(result);
+        Assert.NotNull(captured);
+        Assert.Equal(ApprovalStatus.Approved, captured.ApprovalStatus);
+        Assert.Equal("Approved", result.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Admin_AutoApprovesVintage()
+    {
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5, status: WineryStatus.Approved);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        WineVintage? captured = null;
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.CreateAsync(Arg.Do<WineVintage>(v => captured = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(args => (WineVintage)args[0]);
+
+        var service = new WineVintageService(vintageRepo, wineRepo, Substitute.For<IGrapeRepository>(), wineryRepo);
+        var adminActor = new Actor(99, AppRoles.Admin);
+
+        var result = await service.CreateAsync(1, new CreateWineVintageRequestDto(Year: 2022), adminActor);
+
+        Assert.NotNull(result);
+        Assert.NotNull(captured);
+        Assert.Equal(ApprovalStatus.Approved, captured.ApprovalStatus);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CommunityWine_User_SetsPending()
+    {
+        var wine = CreateWine(id: 2, wineryId: null);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(wine);
+
+        WineVintage? captured = null;
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.CreateAsync(Arg.Do<WineVintage>(v => captured = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(args => (WineVintage)args[0]);
+
+        var service = new WineVintageService(vintageRepo, wineRepo, Substitute.For<IGrapeRepository>(), Substitute.For<IWineryRepository>());
+        var userActor = new Actor(12, AppRoles.User);
+
+        var result = await service.CreateAsync(2, new CreateWineVintageRequestDto(Year: 2022), userActor);
+
+        Assert.NotNull(result);
+        Assert.NotNull(captured);
+        Assert.Equal(ApprovalStatus.Pending, captured.ApprovalStatus);
+        Assert.Equal("Pending", result.ApprovalStatus);
+    }
+
     #endregion
 }
 
