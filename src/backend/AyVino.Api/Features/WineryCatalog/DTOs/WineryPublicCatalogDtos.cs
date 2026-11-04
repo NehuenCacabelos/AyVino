@@ -1,3 +1,5 @@
+using AyVino.Api.Features.Wineries.DTOs;
+
 namespace AyVino.Api.Features.WineryCatalog.DTOs;
 
 public record WineryPublicLocationDto(
@@ -27,7 +29,8 @@ public record WineryPublicProfileResponseDto(
     decimal? AverageRating,
     int ReviewCount,
     bool IsPreview,
-    bool IsOwner = false);
+    bool IsOwner = false,
+    WineryMapCenterDto? MapCenter = null);
 
 public record WineryPublicGrapeFilterDto(
     int Id,

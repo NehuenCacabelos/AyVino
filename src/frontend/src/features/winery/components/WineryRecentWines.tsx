@@ -52,23 +52,13 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-neutral-100 tracking-tight">
-            Etiquetas Registradas
-          </h2>
-          <p className="text-xs text-neutral-400 mt-0.5 font-sans">
-            Últimas botellas oficiales incorporadas al catálogo de AyVino.
-          </p>
-        </div>
-
-        <Link
-          to="/bodega/vinos"
-          className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 transition-colors font-medium"
-        >
-          <span>Ver todas ({wines.length})</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+      <div>
+        <h2 className="font-serif text-lg font-semibold text-neutral-100 tracking-tight">
+          Etiquetas Registradas
+        </h2>
+        <p className="text-xs text-neutral-400 mt-0.5 font-sans">
+          Últimas botellas oficiales incorporadas al catálogo de AyVino.
+        </p>
       </div>
 
       {isLoading ? (
@@ -109,61 +99,72 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
         </div>
       ) : (
         /* Grilla de Vinos Recientes */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {previewWines.map((wine) => (
-            <div
-              key={wine.id}
-              className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span
-                    className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${getWineTypeColor(
-                      typeof wine.wineType === 'string' ? wine.wineType : 'Vino',
-                    )}`}
-                  >
-                    {getWineTypeLabel(typeof wine.wineType === 'string' ? wine.wineType : undefined)}
-                  </span>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {previewWines.map((wine) => (
+              <div
+                key={wine.id}
+                className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span
+                      className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${getWineTypeColor(
+                        typeof wine.wineType === 'string' ? wine.wineType : 'Vino',
+                      )}`}
+                    >
+                      {getWineTypeLabel(typeof wine.wineType === 'string' ? wine.wineType : undefined)}
+                    </span>
 
-                  <div className="flex items-center gap-1 text-xs text-amber-200">
-                    <Star className="w-3.5 h-3.5 fill-amber-300/30 text-amber-300" />
-                    <span className="font-mono font-medium">
-                      {wine.averageRating ? wine.averageRating.toFixed(1) : '—'}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      ({wine.reviewCount})
-                    </span>
+                    <div className="flex items-center gap-1 text-xs text-amber-200">
+                      <Star className="w-3.5 h-3.5 fill-amber-300/30 text-amber-300" />
+                      <span className="font-mono font-medium">
+                        {wine.averageRating ? wine.averageRating.toFixed(1) : '—'}
+                      </span>
+                      <span className="text-[10px] text-neutral-500 font-mono">
+                        ({wine.reviewCount})
+                      </span>
+                    </div>
                   </div>
+
+                  <h3 className="font-serif text-lg font-semibold text-neutral-100 group-hover:text-rose-200 transition-colors truncate">
+                    {wine.name}
+                  </h3>
+
+                  {wine.description && (
+                    <p className="text-xs text-neutral-400 mt-1 line-clamp-2 font-sans leading-relaxed">
+                      {wine.description}
+                    </p>
+                  )}
                 </div>
 
-                <h3 className="font-serif text-lg font-semibold text-neutral-100 group-hover:text-rose-200 transition-colors truncate">
-                  {wine.name}
-                </h3>
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-neutral-500">
+                    {wine.sourceType === 'Official' ? 'Ficha Oficial' : 'Comunitaria'}
+                  </span>
 
-                {wine.description && (
-                  <p className="text-xs text-neutral-400 mt-1 line-clamp-2 font-sans leading-relaxed">
-                    {wine.description}
-                  </p>
-                )}
+                  <Link
+                    to="/bodega/vinos"
+                    className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-white transition-colors"
+                  >
+                    Gestionar →
+                  </Link>
+                </div>
               </div>
+            ))}
+          </div>
 
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-mono text-neutral-500">
-                  {wine.sourceType === 'Official' ? 'Ficha Oficial' : 'Comunitaria'}
-                </span>
-
-                <Link
-                  to="/bodega/vinos"
-                  className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-white transition-colors"
-                >
-                  Gestionar →
-                </Link>
-              </div>
-            </div>
-          ))}
+          <div className="flex justify-end pt-1">
+            <Link
+              to="/bodega/vinos"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 transition-colors font-medium"
+            >
+              <span>Ver todas ({wines.length})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       )}
     </div>
   );
 }
-

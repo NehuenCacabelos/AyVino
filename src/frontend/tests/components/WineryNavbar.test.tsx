@@ -73,7 +73,7 @@ describe('WineryNavbar Component', () => {
       '/bodega/perfil'
     );
 
-    expect(screen.getByText('Oficial')).toBeInTheDocument();
+    expect(screen.queryByText('Oficial')).not.toBeInTheDocument();
   });
 
   it('abre el menú desplegable institucional al hacer clic en el logo de la bodega', async () => {
@@ -97,10 +97,7 @@ describe('WineryNavbar Component', () => {
       'href',
       '/bodegas/42'
     );
-    expect(screen.getByRole('link', { name: /explorar como usuario/i })).toHaveAttribute(
-      'href',
-      '/dashboard'
-    );
+    expect(screen.queryByRole('link', { name: /explorar como usuario/i })).not.toBeInTheDocument();
   });
 
   it('ejecuta el cierre de sesión al hacer clic en Cerrar sesión', async () => {

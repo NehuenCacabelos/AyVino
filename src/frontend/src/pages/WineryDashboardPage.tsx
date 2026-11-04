@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   MapPin,
   Calendar,
-  ExternalLink,
   Plus,
   ShieldCheck,
   Clock,
@@ -220,9 +219,8 @@ export default function WineryDashboardPage() {
 
                 {/* Badge de Estado */}
                 {isApproved && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Bodega Oficial</span>
+                  <span title="Bodega verificada" className="inline-flex items-center">
+                    <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
                   </span>
                 )}
                 {isPending && (
@@ -263,18 +261,6 @@ export default function WineryDashboardPage() {
 
         {/* Acciones de Cabecera */}
         <div className="flex items-center gap-3 shrink-0">
-          {isApproved && winery?.id && (
-            <Link
-              to={`/bodegas/${winery.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200 hover:text-white px-4 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Ver vidriera</span>
-            </Link>
-          )}
-
           <Link
             to="/bodega/vinos"
             className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"

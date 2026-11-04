@@ -6,10 +6,12 @@ using AyVino.Api.Features.WineryCatalog.Constants;
 using AyVino.Api.Features.WineryCatalog.DTOs;
 using AyVino.Api.Features.WineryCatalog.Models;
 using AyVino.Api.Features.WineryCatalog.Repositories;
+using AyVino.Api.Features.Wineries.Services;
+using AyVino.Api.Features.Wineries.DTOs;
 
 namespace AyVino.Api.Features.WineryCatalog.Services;
 
-public class WineryCatalogService(IWineryCatalogRepository repository) : IWineryCatalogService
+public class WineryCatalogService(IWineryCatalogRepository repository, IWineryMapCenterResolver? mapCenterResolver = null) : IWineryCatalogService
 {
     private const int MaxCatalogWines = 200;
 
@@ -126,6 +128,13 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             location = new WineryPublicLocationDto(winery.StateName, winery.RegionName);
         }
 
+        WineryMapCenterDto? mapCenter = null;
+        if (mapCenterResolver != null)
+        {
+            mapCenter = await mapCenterResolver.ResolveMapCenterAsync(
+                winery.Latitude, winery.Longitude, winery.RegionName, winery.StateName, ct: ct);
+        }
+
         return new WineryPublicProfileResponseDto(
             Id: winery.Id,
             Name: winery.Name,
@@ -145,7 +154,8 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             AverageRating: averageRating,
             ReviewCount: ratingsAndTotals.ReviewCount,
             IsPreview: isPreview,
-            IsOwner: isOwner);
+            IsOwner: isOwner,
+            MapCenter: mapCenter);
     }
 
     public async Task<WineryPublicCatalogResponseDto> GetPublicCatalogAsync(

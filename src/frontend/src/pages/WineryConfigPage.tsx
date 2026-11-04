@@ -688,7 +688,7 @@ export default function WineryConfigPage() {
                     activeSection === 'account' ? 'text-rose-200' : 'text-zinc-400'
                   )}
                 />
-                <span>Cuenta del responsable</span>
+                <span>Tu cuenta</span>
               </button>
 
               <button
@@ -735,7 +735,7 @@ export default function WineryConfigPage() {
               <h1 className="font-serif text-3xl text-white">
                 {activeSection === 'info' && 'Identidad y Datos de la Bodega'}
                 {activeSection === 'region' && 'Ubicación Geográfica y Terruño'}
-                {activeSection === 'account' && 'Cuenta del Responsable Institucional'}
+                {activeSection === 'account' && 'Tu cuenta'}
                 {activeSection === 'security' && 'Seguridad y Acceso a la Cuenta'}
               </h1>
               <p className="text-zinc-400 text-sm mt-1 font-sans">
@@ -744,7 +744,7 @@ export default function WineryConfigPage() {
                 {activeSection === 'region' &&
                   'Certificá la procedencia de tus viñedos mediante el selector territorial o marcación en mapa.'}
                 {activeSection === 'account' &&
-                  'Información de acceso y credenciales del usuario titular de la bodega en AyVino.'}
+                  'Información de acceso y credenciales vinculadas a tu cuenta en AyVino.'}
                 {activeSection === 'security' &&
                   'Gestioná tu clave de acceso para resguardar la administración de tus etiquetas oficiales.'}
               </p>
@@ -1029,7 +1029,7 @@ export default function WineryConfigPage() {
 
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1.5">
-                      Correo electrónico registrado
+                      Correo electrónico
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1046,17 +1046,7 @@ export default function WineryConfigPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1.5">
-                      Rol institucional en AyVino
-                    </label>
-                    <div className="flex items-center gap-2 p-2.5 rounded-md bg-[#121015]/60 border border-white/5 text-xs text-zinc-300">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="font-mono font-medium">Productor Vitivinícola (Winery)</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1.5">
-                      Fecha de alta de la cuenta
+                      Activo desde
                     </label>
                     <div className="flex items-center gap-2 p-2.5 rounded-md bg-[#121015]/60 border border-white/5 text-xs text-zinc-300">
                       <Calendar className="w-4 h-4 text-amber-300 shrink-0" />
@@ -1075,9 +1065,7 @@ export default function WineryConfigPage() {
 
                 <div className="p-4 rounded-xl bg-stone-900/30 border border-white/5 text-xs text-zinc-400 leading-relaxed font-sans mt-4">
                   <p>
-                    El nombre de usuario y el correo electrónico del titular están vinculados a la personería
-                    institucional de la bodega. Para solicitar un cambio de correo electrónico de administración,
-                    comunicate con el equipo editorial de AyVino a través de los canales de asistencia para productores.
+                    El nombre de usuario y el correo están vinculados a la titularidad de la bodega. Para solicitar cambios, contactá al soporte editorial de AyVino.
                   </p>
                 </div>
               </div>

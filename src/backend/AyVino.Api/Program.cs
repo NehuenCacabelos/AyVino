@@ -2034,6 +2034,8 @@ builder.Services.AddScoped<IWineryRepository, WineryRepository>();
 
 
 
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IWineryMapCenterResolver, WineryMapCenterResolver>();
 builder.Services.AddScoped<IWineryService, WineryService>();
 
 

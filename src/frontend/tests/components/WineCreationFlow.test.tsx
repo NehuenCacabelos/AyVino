@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import WineCreationFlow, { decidePostWineCreationAction } from '@/features/wines/components/WineCreationFlow';
+import WineCreationFlow from '@/features/wines/components/WineCreationFlow';
+import { decidePostWineCreationAction } from '@/features/wines/utils/creationFlowUtils';
 import type { WineCreationResult } from '@/features/winery/components/WineCreateModal';
 import * as cellarApi from '@/features/cava/api/cellarApi';
 

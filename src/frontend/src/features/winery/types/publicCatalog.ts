@@ -1,3 +1,5 @@
+import type { WineryMapCenterDto } from './winery';
+
 export interface WineryPublicLocationDto {
   stateName?: string | null;
   regionName?: string | null;
@@ -30,6 +32,7 @@ export interface WineryPublicProfileResponseDto {
   reviewCount: number;
   isPreview: boolean;
   isOwner?: boolean;
+  mapCenter?: WineryMapCenterDto | null;
 }
 
 export interface WineryPublicGrapeFilterDto {

@@ -89,6 +89,129 @@ public class GeorefClient(HttpClient httpClient, ILogger<GeorefClient> logger) :
             MunicipalityName: muniName);
     }
 
+    public async Task<GeorefCoordinates?> GetDepartmentCentroidAsync(string? departmentId, string? departmentName, string? provinceName, CancellationToken ct = default)
+    {
+        string url;
+        if (!string.IsNullOrWhiteSpace(departmentId))
+        {
+            url = $"departamentos?id={Uri.EscapeDataString(departmentId)}&campos=centroide";
+        }
+        else if (!string.IsNullOrWhiteSpace(departmentName))
+        {
+            var provParam = string.IsNullOrWhiteSpace(provinceName) ? "" : $"&provincia={Uri.EscapeDataString(provinceName)}";
+            url = $"departamentos?nombre={Uri.EscapeDataString(departmentName)}{provParam}&campos=centroide";
+        }
+        else
+        {
+            return null;
+        }
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(4));
+
+                var httpResponse = await httpClient.GetAsync(url, cts.Token);
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("Respuesta no exitosa de Georef al consultar departamento ({StatusCode}) en intento {Attempt}", httpResponse.StatusCode, attempt);
+                    if (attempt == 1 && !ct.IsCancellationRequested)
+                    {
+                        await Task.Delay(250, ct);
+                        continue;
+                    }
+                    return null;
+                }
+
+                var data = await httpResponse.Content.ReadFromJsonAsync<GeorefCentroidResponse>(cts.Token);
+                var point = data?.Departamentos?.FirstOrDefault()?.Centroide;
+                if (point != null)
+                {
+                    return new GeorefCoordinates(point.Lat, point.Lon);
+                }
+                return null;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Fallo al comunicar con Georef al consultar departamento en intento {Attempt}", attempt);
+                if (attempt == 1 && !ct.IsCancellationRequested)
+                {
+                    await Task.Delay(250, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error inesperado al consultar centroide de departamento en Georef");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    public async Task<GeorefCoordinates?> GetProvinceCentroidAsync(string? provinceId, string? provinceName, CancellationToken ct = default)
+    {
+        string url;
+        if (!string.IsNullOrWhiteSpace(provinceId))
+        {
+            url = $"provincias?id={Uri.EscapeDataString(provinceId)}&campos=centroide";
+        }
+        else if (!string.IsNullOrWhiteSpace(provinceName))
+        {
+            url = $"provincias?nombre={Uri.EscapeDataString(provinceName)}&campos=centroide";
+        }
+        else
+        {
+            return null;
+        }
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(4));
+
+                var httpResponse = await httpClient.GetAsync(url, cts.Token);
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("Respuesta no exitosa de Georef al consultar provincia ({StatusCode}) en intento {Attempt}", httpResponse.StatusCode, attempt);
+                    if (attempt == 1 && !ct.IsCancellationRequested)
+                    {
+                        await Task.Delay(250, ct);
+                        continue;
+                    }
+                    return null;
+                }
+
+                var data = await httpResponse.Content.ReadFromJsonAsync<GeorefCentroidResponse>(cts.Token);
+                var point = data?.Provincias?.FirstOrDefault()?.Centroide;
+                if (point != null)
+                {
+                    return new GeorefCoordinates(point.Lat, point.Lon);
+                }
+                return null;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Fallo al comunicar con Georef al consultar provincia en intento {Attempt}", attempt);
+                if (attempt == 1 && !ct.IsCancellationRequested)
+                {
+                    await Task.Delay(250, ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error inesperado al consultar centroide de provincia en Georef");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
     private sealed record GeorefResponse(
         [property: JsonPropertyName("ubicacion")] GeorefUbicacion? Ubicacion);
 
@@ -101,5 +224,15 @@ public class GeorefClient(HttpClient httpClient, ILogger<GeorefClient> logger) :
     private sealed record GeorefNamedItem(
         [property: JsonPropertyName("id")] string? Id,
         [property: JsonPropertyName("nombre")] string? Nombre);
-}
 
+    private sealed record GeorefCentroidResponse(
+        [property: JsonPropertyName("departamentos")] List<GeorefCentroidItem>? Departamentos,
+        [property: JsonPropertyName("provincias")] List<GeorefCentroidItem>? Provincias);
+
+    private sealed record GeorefCentroidItem(
+        [property: JsonPropertyName("centroide")] GeorefCentroidPoint? Centroide);
+
+    private sealed record GeorefCentroidPoint(
+        [property: JsonPropertyName("lat")] decimal Lat,
+        [property: JsonPropertyName("lon")] decimal Lon);
+}

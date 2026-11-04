@@ -192,15 +192,15 @@ describe('WineryCatalogPage', () => {
     expect(screen.getByText(/Tu bodega está en revisión/i)).toBeInTheDocument();
   });
 
-  it('renders link to public profile view for users', () => {
+  it('does not render link to public profile view in catalog', () => {
     render(
       <MemoryRouter>
         <WineryCatalogPage />
       </MemoryRouter>
     );
 
-    const publicLink = screen.getByRole('link', { name: /Ver cómo lo ven los usuarios/i });
-    expect(publicLink).toHaveAttribute('href', '/bodegas/10');
+    const publicLink = screen.queryByRole('link', { name: /Ver cómo lo ven los usuarios/i });
+    expect(publicLink).not.toBeInTheDocument();
   });
 
   it('shows empty filter state when no wines match criteria', () => {

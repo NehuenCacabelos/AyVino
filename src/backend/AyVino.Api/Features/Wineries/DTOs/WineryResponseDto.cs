@@ -16,4 +16,5 @@ public record WineryResponseDto(
     decimal? Longitude = null,
     Guid? LogoImageId = null,
     Guid? BannerImageId = null,
-    WineryLocationSummaryDto? Location = null);
+    WineryLocationSummaryDto? Location = null,
+    WineryMapCenterDto? MapCenter = null);

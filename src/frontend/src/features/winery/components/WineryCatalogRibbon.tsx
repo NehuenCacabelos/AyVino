@@ -1,5 +1,6 @@
 import { Wine, Layers, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import type { WineryCatalogTotalsDto } from '../types/catalog';
+import { cn } from '../../../lib/utils';
 
 export interface WineryCatalogRibbonProps {
   totals: WineryCatalogTotalsDto;
@@ -11,7 +12,14 @@ export default function WineryCatalogRibbon({
   isWineryPending = false,
 }: WineryCatalogRibbonProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div
+      className={cn(
+        'grid gap-3',
+        isWineryPending
+          ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4'
+          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+      )}
+    >
       {/* 1. Etiquetas */}
       <div className="p-4 rounded-2xl bg-[#121015] border border-white/5 flex items-center justify-between shadow-sm">
         <div>
@@ -72,20 +80,22 @@ export default function WineryCatalogRibbon({
         </div>
       </div>
 
-      {/* 5. Borradores o Rechazadas */}
-      <div className="p-4 rounded-2xl bg-[#121015] border border-white/5 flex items-center justify-between shadow-sm col-span-2 sm:col-span-1">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">
-            {isWineryPending ? 'Borradores' : 'Rechazadas'}
-          </span>
-          <span className="font-serif text-2xl font-bold text-zinc-200">
-            {isWineryPending ? totals.vintagesPending : totals.vintagesRejected}
-          </span>
+      {/* 5. Rechazadas (solo para bodegas aprobadas / no pendientes) */}
+      {!isWineryPending && (
+        <div className="p-4 rounded-2xl bg-[#121015] border border-white/5 flex items-center justify-between shadow-sm col-span-2 sm:col-span-1">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">
+              Rechazadas
+            </span>
+            <span className="font-serif text-2xl font-bold text-zinc-200">
+              {totals.vintagesRejected}
+            </span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-neutral-400">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
         </div>
-        <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-neutral-400">
-          <AlertTriangle className="w-4 h-4" />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,14 @@ export interface WineryLocationSummaryDto {
 /**
  * Contrato de respuesta de una bodega (C# WineryResponseDto).
  */
+export type MapPrecision = 'exact' | 'locality' | 'province' | 'none';
+
+export interface WineryMapCenterDto {
+  latitude: number;
+  longitude: number;
+  precision: MapPrecision;
+}
+
 export interface WineryResponseDto {
   id: number;
   name: string;
@@ -31,6 +39,7 @@ export interface WineryResponseDto {
   logoUrl?: string | null;
   bannerUrl?: string | null;
   location?: WineryLocationSummaryDto | null;
+  mapCenter?: WineryMapCenterDto | null;
 }
 
 /**

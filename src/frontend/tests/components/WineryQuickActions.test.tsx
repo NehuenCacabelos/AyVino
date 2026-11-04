@@ -14,7 +14,7 @@ describe('WineryQuickActions', () => {
     expect(screen.getByText('Accesos Rápidos')).toBeInTheDocument();
     expect(screen.getByText('Publicar etiqueta')).toBeInTheDocument();
     expect(screen.getByText('Reclamar vinos comunitarios')).toBeInTheDocument();
-    expect(screen.getByText('Editar perfil de bodega')).toBeInTheDocument();
+    expect(screen.queryByText('Editar perfil de bodega')).not.toBeInTheDocument();
     expect(screen.getByText('Perfil público (en revisión)')).toBeInTheDocument();
     expect(screen.getByText('Disponible al aprobar')).toBeInTheDocument();
 
@@ -24,7 +24,7 @@ describe('WineryQuickActions', () => {
     const links = screen.getAllByRole('link');
     expect(links.some((l) => l.getAttribute('href') === '/bodega/vinos')).toBe(true);
     expect(links.some((l) => l.getAttribute('href') === '/bodega/reclamar')).toBe(true);
-    expect(links.some((l) => l.getAttribute('href') === '/bodega/perfil')).toBe(true);
+    expect(links.some((l) => l.getAttribute('href') === '/bodega/perfil')).toBe(false);
     expect(links.some((l) => l.getAttribute('href') === '/catalogo')).toBe(false);
   });
 

@@ -21,7 +21,8 @@ public class WineryService(
     ICityRepository cityRepository,
     IGeorefClient georefClient,
     IUserService userService,
-    IJwtTokenGenerator jwtTokenGenerator) : IWineryService
+    IJwtTokenGenerator jwtTokenGenerator,
+    IWineryMapCenterResolver? mapCenterResolver = null) : IWineryService
 {
     public async Task<WineryResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
@@ -36,7 +37,14 @@ public class WineryService(
             throw new NotFoundException($"Winery with ID {id} not found.");
         }
 
-        return winery.ToResponseDto();
+        var dto = winery.ToResponseDto();
+        if (mapCenterResolver != null)
+        {
+            var mapCenter = await mapCenterResolver.ResolveMapCenterAsync(
+                winery.Latitude, winery.Longitude, winery.RegionName, winery.StateName, ct: ct);
+            dto = dto with { MapCenter = mapCenter };
+        }
+        return dto;
     }
 
     public async Task<WineryResponseDto> GetByUserIdAsync(int userId, CancellationToken ct = default)
@@ -44,7 +52,14 @@ public class WineryService(
         if (userId <= 0) throw new NotFoundException($"Winery for user {userId} not found.");
         var winery = await wineryRepository.GetByUserIdAsync(userId, ct)
             ?? throw new NotFoundException($"Winery for user {userId} not found.");
-        return winery.ToResponseDto();
+        var dto = winery.ToResponseDto();
+        if (mapCenterResolver != null)
+        {
+            var mapCenter = await mapCenterResolver.ResolveMapCenterAsync(
+                winery.Latitude, winery.Longitude, winery.RegionName, winery.StateName, ct: ct);
+            dto = dto with { MapCenter = mapCenter };
+        }
+        return dto;
     }
 
     public async Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default)

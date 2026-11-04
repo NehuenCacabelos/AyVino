@@ -176,7 +176,7 @@ describe('WineCreateModal', () => {
 
     // Check first grape row: Malbec with empty percentage
     const pctInput = screen.getByPlaceholderText('%') as HTMLInputElement;
-    expect(pctInput.value).toBe('');
+    expect(pctInput.value).toBe('100');
 
     // Add second grape row
     const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
@@ -248,7 +248,7 @@ describe('WineCreateModal', () => {
     fireEvent.click(submitBtn);
 
     expect(
-      await screen.findByText('La suma del corte (110%) no puede superar el 100%.')
+      await screen.findByText('Completá el porcentaje de cada uva y asegurate de que sumen 100%')
     ).toBeInTheDocument();
   });
 });

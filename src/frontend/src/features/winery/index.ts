@@ -6,3 +6,5 @@ export * from './components';
 export * from './utils/wineryUtils';
 
 export * from './utils/catalogUtils';
+export * from './utils/grapeBlendUtils';
+export * from './utils/wineryMapUtils';

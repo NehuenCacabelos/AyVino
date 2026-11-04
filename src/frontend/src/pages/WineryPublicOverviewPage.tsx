@@ -97,10 +97,12 @@ export default function WineryPublicOverviewPage() {
               Ubicación Geográfica
             </h3>
 
-            {/* Mapa Leaflet de Solo Lectura con fallback elegante */}
+            {/* Mapa Leaflet de Solo Lectura con resolución progresiva */}
             <WineryReadOnlyMap
               latitude={profile.latitude}
               longitude={profile.longitude}
+              mapCenter={profile.mapCenter}
+              provinceName={profile.location?.stateName}
               locationLabel={locationLabel}
             />
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { cn } from '../../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import {
@@ -17,6 +18,12 @@ import {
   Camera,
 } from 'lucide-react';
 import { getGrapes } from '../api/grapeApi';
+import {
+  createNewBlendRow,
+  calculateBlendTotal,
+  validateGrapeBlend,
+  type BlendRow,
+} from '../utils/grapeBlendUtils';
 import {
   createWine,
   getWineVintages,
@@ -82,11 +89,7 @@ export interface UserModeProps {
 
 export type WineCreateModalProps = WineryModeProps | UserModeProps;
 
-interface BlendRow {
-  id: string;
-  grapeId: number | '';
-  percentage: number | '';
-}
+
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
   { value: 'Red', label: 'Tinto' },
@@ -183,7 +186,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
             if (prev.length > 0) return prev;
             const defaultGrape =
               data.find((g) => g.name.toLowerCase().includes('malbec')) ?? data[0];
-            return [{ id: `blend-${defaultGrape.id}-${Date.now()}`, grapeId: defaultGrape.id, percentage: '' }];
+            return [createNewBlendRow(defaultGrape.id, 0)];
           });
         }
       })
@@ -280,7 +283,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
     const nextGrape = remainingGrapes[0];
     setBlend((prev) => [
       ...prev,
-      { id: `blend-${nextGrape.id}-${Date.now()}-${Math.random()}`, grapeId: nextGrape.id, percentage: '' },
+      createNewBlendRow(nextGrape.id, prev.length),
     ]);
   };
 
@@ -308,9 +311,7 @@ export default function WineCreateModal(props: WineCreateModalProps) {
     if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
-  const totalPercentage = blend.reduce((acc, row) => {
-    return acc + (typeof row.percentage === 'number' ? row.percentage : 0);
-  }, 0);
+  const totalPercentage = calculateBlendTotal(blend);
 
   const isAddGrapeDisabled =
     blend.length >= 20 ||
@@ -360,18 +361,9 @@ export default function WineCreateModal(props: WineCreateModalProps) {
     }
 
     if (blend.length > 0) {
-      if (totalPercentage > 100) {
-        newErrors.blend = `La suma del corte (${totalPercentage}%) no puede superar el 100%.`;
-      }
-      const hasEmptyGrape = blend.some((b) => b.grapeId === '');
-      if (hasEmptyGrape) {
-        newErrors.blend = 'Elegí la cepa para todas las filas del corte.';
-      }
-      const hasInvalidPercentage = blend.some(
-        (b) => typeof b.percentage === 'number' && (b.percentage < 0.01 || b.percentage > 100)
-      );
-      if (hasInvalidPercentage) {
-        newErrors.blend = 'Cada porcentaje debe ser mayor a 0% y menor o igual a 100%.';
+      const validation = validateGrapeBlend(blend);
+      if (!validation.isValid) {
+        newErrors.blend = validation.errorMessage ?? 'Completá el porcentaje de cada uva y asegurate de que sumen 100%';
       }
     }
 
@@ -1149,8 +1141,8 @@ export default function WineCreateModal(props: WineCreateModalProps) {
                     <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 font-semibold block">
                       Composición Varietal (Corte)
                     </span>
-                    <span className="text-xs text-neutral-500 font-sans">
-                      Total: <strong className="text-neutral-300">{totalPercentage}%</strong> / 100%
+                    <span className={cn("text-xs font-sans", totalPercentage === 100 ? "text-emerald-400 font-medium" : "text-neutral-400")}>
+                      Total: {totalPercentage}% {totalPercentage === 100 && '✓'}
                     </span>
                   </div>
                   <button

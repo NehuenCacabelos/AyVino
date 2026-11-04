@@ -110,7 +110,7 @@ describe('WineryDashboardPage (/bodega/dashboard)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Bodega El Terruño')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Oficial')).toBeInTheDocument();
+      expect(screen.getByTitle('Bodega verificada')).toBeInTheDocument();
       expect(screen.getByText(/Panel Oficial de Cava/i)).toBeInTheDocument();
       expect(screen.getByText('donpedro')).toBeInTheDocument();
     });

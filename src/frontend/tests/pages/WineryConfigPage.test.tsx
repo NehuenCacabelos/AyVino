@@ -135,7 +135,7 @@ describe('WineryConfigPage (/bodega/configuracion)', () => {
     // Botones de pestañas
     expect(screen.getByRole('button', { name: /^datos de la bodega$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^región y terruño$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^cuenta del responsable$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^tu cuenta$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^seguridad y contraseña$/i })).toBeInTheDocument();
   });
 
@@ -198,10 +198,10 @@ describe('WineryConfigPage (/bodega/configuracion)', () => {
   it('permite alternar a la pestaña de cuenta del responsable y muestra usuario y correo en solo lectura', async () => {
     renderComponent();
 
-    const accTab = screen.getByRole('button', { name: /cuenta del responsable/i });
+    const accTab = screen.getByRole('button', { name: /tu cuenta/i });
     fireEvent.click(accTab);
 
-    expect(screen.getByText(/Cuenta del Responsable Institucional/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /Tu cuenta/i })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('don_alberto')).toBeInTheDocument();

@@ -16,6 +16,13 @@ import {
 import { getWineVintages, createWineVintage } from '../api/wineApi';
 import { uploadVintageImage } from '../api/imageApi';
 import { getGrapes } from '../api/grapeApi';
+import {
+  createNewBlendRow,
+  calculateBlendTotal,
+  validateGrapeBlend,
+  type BlendRow,
+} from '../utils/grapeBlendUtils';
+import { cn } from '../../../lib/utils';
 import ImageUploadField from './ImageUploadField';
 import { imageUrl } from '../../../lib/image';
 import type {
@@ -32,11 +39,7 @@ export interface WineVintagesModalProps {
   onVintageAdded?: () => void;
 }
 
-interface BlendRow {
-  id: string;
-  grapeId: number | '';
-  percentage: number | '';
-}
+
 
 /**
  * Modal de administración de cosechas (Añadas) de una etiqueta oficial.
@@ -100,7 +103,7 @@ export default function WineVintagesModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               grapesData.find((g) => g.name.toLowerCase().includes('malbec')) ?? grapesData[0];
-            return [{ id: `vintage-blend-${defaultGrape.id}-${Date.now()}`, grapeId: defaultGrape.id, percentage: '' }];
+            return [createNewBlendRow(defaultGrape.id, 0)];
           });
         }
       } catch {
@@ -132,7 +135,7 @@ export default function WineVintagesModal({
     const nextGrape = remainingGrapes[0];
     setBlend((prev) => [
       ...prev,
-      { id: `vintage-blend-${nextGrape.id}-${Date.now()}-${Math.random()}`, grapeId: nextGrape.id, percentage: '' },
+      createNewBlendRow(nextGrape.id, prev.length),
     ]);
   };
 
@@ -160,9 +163,7 @@ export default function WineVintagesModal({
     if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
-  const totalPercentage = blend.reduce((acc, row) => {
-    return acc + (typeof row.percentage === 'number' ? row.percentage : 0);
-  }, 0);
+  const totalPercentage = calculateBlendTotal(blend);
 
   const isAddGrapeDisabled =
     blend.length >= 20 ||
@@ -183,18 +184,9 @@ export default function WineVintagesModal({
     }
 
     if (blend.length > 0) {
-      if (totalPercentage > 100) {
-        newErrors.blend = `La suma del corte (${totalPercentage}%) no puede superar el 100%.`;
-      }
-      const hasEmpty = blend.some((b) => b.grapeId === '');
-      if (hasEmpty) {
-        newErrors.blend = 'Elegí la cepa en todas las filas del corte.';
-      }
-      const hasInvalidPercentage = blend.some(
-        (b) => typeof b.percentage === 'number' && (b.percentage < 0.01 || b.percentage > 100),
-      );
-      if (hasInvalidPercentage) {
-        newErrors.blend = 'Cada porcentaje debe ser mayor a 0% y menor o igual a 100%.';
+      const validation = validateGrapeBlend(blend);
+      if (!validation.isValid) {
+        newErrors.blend = validation.errorMessage ?? 'Completá el porcentaje de cada uva y asegurate de que sumen 100%';
       }
     }
 
@@ -422,13 +414,8 @@ export default function WineVintagesModal({
               {/* Blend */}
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-neutral-400">
-                    Corte de Varietales ({totalPercentage}%)
-                    {totalPercentage > 100 && (
-                      <span className="text-rose-400 ml-1.5 font-mono text-[10px]">
-                        (Supera el 100%)
-                      </span>
-                    )}
+                  <span className={cn("text-[11px] font-mono", totalPercentage === 100 ? "text-emerald-400 font-medium" : "text-neutral-400")}>
+                    Total: {totalPercentage}% {totalPercentage === 100 && '✓'}
                   </span>
                   <button
                     type="button"
