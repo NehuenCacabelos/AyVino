@@ -43,13 +43,6 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261004001` | `CreateUserWinesTable.cs` | `user_wines` | Marcas personales sobre vinos (`is_wanted`, `is_tried`, `is_favorite`) con constraint de existencia de al menos una marca. |
 | `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
 | `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
-| `20261022001` | `AddGeorefIdToStatesAndCities.cs` | `states`, `cities` | Códigos Georef oficiales para las 24 provincias argentinas e índice único para `georef_id` en departamentos. |
-| `20261022002` | `SeedDepartmentsAndLocations.cs` | `cities`, `locations` | Carga inicial de los 529 departamentos oficiales argentinos y generación de filas en `locations`. |
-| `20261022003` | `AddCoordinatesToWineries.cs` | `wineries` | Coordenadas geográficas (`latitude`, `longitude`, decimal(10, 7) nullable) para geolocalización de bodegas. |
-| `20261022004` | `SeedGrapes.cs` | `grapes` | Catálogo de 35 varietales tradicionales argentinos con tipado por color (tintas, blancas, rosadas). |
-| `20261022005` | `AddLogoUrlToWineries.cs` | `wineries` | Columna `logo_url` (`varchar(500)` nullable) para almacenar la imagen de identidad visual de la bodega alojada en Supabase Storage. |
-| `20261029001` | `CreateImagesTable.cs` | `images` | Tabla relacional para metadatos de imágenes en Cloudinary (`id` UUID, `provider`, `external_id`, `mime_type`, `size_bytes`, `width`, `height`, `created_at`) con índice único sobre `external_id`. |
-| `20261029002` | `AddImageReferencesToEntities.cs` | `users`, `wineries`, `wine_vintages` | Claves foráneas UUID hacia `images`: `users.avatar_image_id` (`ON DELETE SET NULL`), `wineries.logo_image_id` (`ON DELETE RESTRICT`), `wineries.banner_image_id` (`ON DELETE RESTRICT`), `wine_vintages.image_id` (`ON DELETE RESTRICT`). |
 
 ---
 
