@@ -121,8 +121,24 @@ Componente vectorial de siluetas de copas enológicas realistas y anatómicament
 ### `WitnessBottleList`
 Lista de etiquetas testigo estilizada con hover, truncado inteligente y link al catálogo.
 
-### `SuggestionsSection`
-Orquestador del tríptico: agrupa Afinidades, Contrastes y Alertas en layout 2+1 columnas.
+### `WineFoodPairingSection` (Rediseño "Cuaderno Enogastronómico")
+Grid temático de 3 columnas para recomendaciones gastronómicas en modo Cepa (`mode="wine"`):
+- **Desktop (`lg`+)**: Grid de 3 columnas simultáneas:
+  1. **Afinidad — Espejo Organoléptico**: Prioridad máxima, tarjeta fotográfica principal (`FeaturedPairingCard`) y fichas secundarias con porcentaje de afinidad (`SecondaryPairingCard`).
+  2. **Contraste — Corte & Balance**: Equilibrio sensorial, tarjeta fotográfica destacada (`FeaturedPairingCard`) con badge "LIMPIEZA DE PALADAR" y fichas secundarias de balance.
+  3. **Combinaciones a Evitar**: Alertas sommelier con badge "Alerta Química", explicación molecular del conflicto (`PairingAlertCard`) y chip con navegación directa hacia la cepa sugerida.
+- **Mobile/Tablet (`< lg`)**: Selector de pestañas interactivas tipo pill (`Afinidad` / `Contraste` / `Evitar`) para evitar scroll infinito en pantallas reducidas.
+
+### `FeaturedPairingCard` & `EditorialDishImage`
+- Tarjeta editorial con imagen gastronómica, efecto zoom en hover, gradiente nocturno de fusión (`bg-gradient-to-t from-[#0e0e10]`), badge flotante con glassmorphism ("MARIDAJE PERFECTO", "LIMPIEZA DE PALADAR"), título en `font-serif`, descripción organoléptica y métricas de comida (intensidad, grasa, efecto, textura).
+- `EditorialDishImage` incluye skeleton loader con pulso y fallback con micro-gradiente borravino.
+
+### `SecondaryPairingCard`
+- Ficha compacta con título, porcentaje en `font-mono` ámbar/esmeralda y descripción organoléptica.
+- Al hacer clic, navega bidireccionalmente a la ficha del plato correspondiente (`?mode=food&food={id}`).
+
+### `PairingAlertCard`
+- Tarjeta de conflicto químico (`border-rose-950/60 bg-[#171415]`) con ícono `Ban`, título en `font-serif`, fundamento de colisión (`Reacción férrica`, `Colapso de acidez`, `Multiplicador de fuego`) y botón de acción con redirección directa a la cepa alternativa recomendada.
 
 ### `SourceContextBanner`
 Banner de procedencia (cuando se llega desde un click bidireccional en otra vista).
@@ -153,11 +169,13 @@ Para reemplazar con imágenes propias: modificar las URLs en `src/data/pairingsD
         └── PairingDossierView
               ├── PairingHeroImage  ← foto inmersiva
               ├── TechBar ×3        ← acidez / cuerpo / taninos
-              ├── EditorialBlock    ← tip + fundamento
-              ├── SuggestionsSection
-              │     ├── PairingAffinityCard ×N (afinidades)
-              │     ├── PairingAffinityCard ×N (contrastes)
-              │     └── PairingClashCard ×N   (alertas)
+              ├── EditorialBlock    ← tip + fundamento (modo food)
+              ├── WineEditorialDualCards ← tip sommelier + fundamento bioquímico (modo wine)
+              ├── WineFoodPairingSection ← Grid de 3 columnas (Afinidad, Contraste, Evitar) (modo wine)
+              │     ├── FeaturedPairingCard (con EditorialDishImage)
+              │     ├── SecondaryPairingCard ×N
+              │     └── PairingAlertCard ×N
+              ├── SuggestionsSection ← afinidad, contraste y alertas en modo food
               └── WitnessBottleList
 ```
 

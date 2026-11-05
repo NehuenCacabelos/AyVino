@@ -15,13 +15,17 @@ import {
   detectGlassType,
   getGlassDisplayName,
 } from './WineGlassSilhouette';
-import type {
-  WineVarietyEntry,
-  DishPairingEntry,
-  FoodFamilyInfo,
-  WineStyleProfile,
-  WitnessBottle,
-  PairingLink,
+import { WineFoodPairingSection } from './WineFoodPairingSection';
+import {
+  type WineVarietyEntry,
+  type DishPairingEntry,
+  type FoodFamilyInfo,
+  type WineStyleProfile,
+  type WitnessBottle,
+  type PairingLink,
+  getEnrichedAffinities,
+  getEnrichedContrasts,
+  getEnrichedClashes,
 } from '../../../data/pairingsData';
 
 interface PairingDossierViewProps {
@@ -771,16 +775,14 @@ export default function PairingDossierView({
           wineName={wine.name}
         />
 
-        {/* 3. MARIDAJES GASTRONÓMICOS SUGERIDOS */}
-        <SuggestionsSection
-          affinities={activeStyle.affinities}
-          contrasts={activeStyle.contrasts}
-          clashes={activeStyle.clashes}
-          mode="wine"
-          currentName={wine.name}
+        {/* 3. MARIDAJES GASTRONÓMICOS SUGERIDOS (GRID EDITORIAL DE 3 COLUMNAS) */}
+        <WineFoodPairingSection
+          affinities={getEnrichedAffinities(activeStyle)}
+          contrasts={getEnrichedContrasts(activeStyle)}
+          clashes={getEnrichedClashes(activeStyle)}
+          wineName={wine.name}
           onSelectWine={onSelectWine}
           onSelectFood={onSelectFood}
-          titleLabel="Armonizaciones Gastronómicas Sugeridas"
         />
 
         {/* 4. ETIQUETAS DE LA CAVA */}

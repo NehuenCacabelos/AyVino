@@ -15,6 +15,23 @@ import syrahGrapeImg from '../assets/pairings/Sirah_Grapes.jpg';
 import merlotGrapeImg from '../assets/pairings/Merlot.jpg';
 import sauvignonBlancGrapeImg from '../assets/pairings/Sauvignon_Blanc.jpg';
 
+// Fotografía editorial de platos gastronómicos (assets locales)
+import asadoTiraFoodImg from '../assets/pairings/foods/asado_tira.png';
+import milanesaFritaFoodImg from '../assets/pairings/foods/milanesa_frita.png';
+import empanadasFoodImg from '../assets/pairings/foods/empanadas.png';
+import pastasFoodImg from '../assets/pairings/foods/pastas.png';
+import truchaFoodImg from '../assets/pairings/foods/trucha.png';
+import locroFoodImg from '../assets/pairings/foods/locro.png';
+
+export const LOCAL_FOOD_IMAGES = {
+  asadoTira: asadoTiraFoodImg,
+  milanesaFrita: milanesaFritaFoodImg,
+  empanadas: empanadasFoodImg,
+  pastas: pastasFoodImg,
+  trucha: truchaFoodImg,
+  locro: locroFoodImg,
+};
+
 export type WineCategoryId = 'tinto' | 'blanco' | 'rosado' | 'naranjo';
 
 export type FoodFamilyId =
@@ -42,6 +59,31 @@ export interface PairingLink {
 export interface PairingClash {
   target: string;
   reason: string;
+}
+
+export interface FoodRecommendationStat {
+  label: string;
+  value: string;
+}
+
+export interface EnrichedFoodRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  badge?: string;
+  stats?: FoodRecommendationStat[];
+  imageUrl?: string;
+  matchPercentage?: string;
+  styleAnchor?: string;
+  isFeatured?: boolean;
+}
+
+export interface EnrichedChemicalClash {
+  target: string;
+  chemicalTitle: string;
+  reason: string;
+  suggestedWineId?: string;
+  suggestedWineLabel?: string;
 }
 
 export interface ServiceTipMetadata {
@@ -73,6 +115,9 @@ export interface WineStyleProfile {
   affinities: PairingLink[];
   contrasts: PairingLink[];
   clashes: PairingClash[];
+  enrichedAffinities?: EnrichedFoodRecommendation[];
+  enrichedContrasts?: EnrichedFoodRecommendation[];
+  enrichedClashes?: EnrichedChemicalClash[];
   witnessBottles: WitnessBottle[];
 }
 
@@ -355,14 +400,98 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
           { id: 'bife-de-chorizo', label: 'Bife de chorizo' },
           { id: 'fideos-tuco-estofado', label: 'Fideos con tuco y estofado' },
         ],
+        enrichedAffinities: [
+          {
+            id: 'asado-tira',
+            title: 'Asado de tira a las brasas',
+            badge: 'MARIDAJE PERFECTO',
+            description:
+              'Costillar dorado a fuego lento sobre leña de quebracho colorado. La caramelización exterior (Reacción de Maillard) sella en paralelo con el tostado de roble francés del vino.',
+            stats: [
+              { label: 'Intensidad', value: 'Alta' },
+              { label: 'Grasa', value: '4/5' },
+            ],
+            imageUrl: LOCAL_FOOD_IMAGES.asadoTira,
+            isFeatured: true,
+          },
+          {
+            id: 'bife-de-chorizo',
+            title: 'Bife de chorizo con chimichurri suave',
+            description:
+              'Textura jugosa al corte inglés que potencia la dulzura de los taninos sin opacar notas de ciruela fresca.',
+            matchPercentage: 'Afinidad 94%',
+          },
+          {
+            id: 'fideos-tuco-estofado',
+            title: 'Fideos caseros con tuco y estofado de ternera',
+            description:
+              'Cocción lenta de 4 horas con hoja de laurel; la acidez del tomate maduro se ensambla con la estructura del Malbec.',
+            matchPercentage: 'Afinidad 90%',
+          },
+        ],
         contrasts: [
           { id: 'milanesa-frita', label: 'Milanesa frita tradicional' },
           { id: 'empanadas-carne-cuchillo', label: 'Empanadas de carne a cuchillo' },
+        ],
+        enrichedContrasts: [
+          {
+            id: 'milanesa-frita',
+            title: 'Milanesa frita tradicional',
+            badge: 'LIMPIEZA DE PALADAR',
+            description:
+              'El apanado crujiente y frito crea una capa lipídica en lengua; la frescura y moderada acidez del Malbec actúa como bisturí limpiador en cada bocado.',
+            stats: [
+              { label: 'Efecto', value: 'Corte de Fritura' },
+              { label: 'Textura', value: 'Crocante' },
+            ],
+            imageUrl: LOCAL_FOOD_IMAGES.milanesaFrita,
+            isFeatured: true,
+          },
+          {
+            id: 'empanadas-carne-cuchillo',
+            title: 'Empanadas mendocinas de carne a cuchillo',
+            description:
+              'Masa al horno de barro con comino, pimentón dulce y cebolla confitada. El jugo interno dialoga con la fruta roja del varietal.',
+            matchPercentage: 'Balance 95%',
+          },
+          {
+            id: 'tabla-quesos-duros',
+            title: 'Queso Reggianito madurado & frutos secos',
+            description:
+              'Los cristales de tirosina y la pasta dura realzan las notas de cuero y cacao del Malbec con crianza prolongada.',
+            matchPercentage: 'Salinidad 91%',
+          },
         ],
         clashes: [
           { target: 'Sushi y rolls crudos', reason: 'reacción férrica de taninos con el yodo que genera sabor metálico amargo' },
           { target: 'Ceviches cítricos', reason: 'el ácido ascórbico y acético anula la fruta y exacerba la astringencia' },
           { target: 'Comidas con picante extremo', reason: 'el alcohol amplifica la capsaicina generando sensación de ardor incontrolable' },
+        ],
+        enrichedClashes: [
+          {
+            target: 'Sushi & Pescados Crudos',
+            chemicalTitle: 'Reacción férrica',
+            reason:
+              'Los taninos interactúan de manera destructiva con los aceites de pescado y el yodo marino, generando una explosión metálica amarga e insípida en el fondo del paladar.',
+            suggestedWineId: 'pinot-noir',
+            suggestedWineLabel: 'Pinot Noir o Torrontés',
+          },
+          {
+            target: 'Ceviches cítricos y vinagretas punzantes',
+            chemicalTitle: 'Colapso de acidez',
+            reason:
+              'El ácido cítrico hiperconcentrado supera la estructura del tinto, apagando inmediatamente el bouquet frutal y dejando únicamente una sensación rasposa y seca.',
+            suggestedWineId: 'sauvignon-blanc',
+            suggestedWineLabel: 'Sauvignon Blanc de altura',
+          },
+          {
+            target: 'Currys picantes y chiles habaneros',
+            chemicalTitle: 'Multiplicador de fuego',
+            reason:
+              'La capsaicina amplifica la percepción alcohólica del Malbec (14.5%+), provocando una sensación de quemazón sofocante en vez de armonía.',
+            suggestedWineId: 'torrontes',
+            suggestedWineLabel: 'Torrontés Dulce Natural',
+          },
         ],
         witnessBottles: [
           { winery: 'Cadus Wines', label: 'Single Vineyard Finca Las Torcazas Malbec', region: 'Luján de Cuyo, Mendoza', vintage: '2021', catalogWineId: 101 },
@@ -1700,5 +1829,142 @@ export function getFoodFamily(id?: string | null): FoodFamilyInfo | undefined {
 
 export function getDishesByFamily(familyId: FoodFamilyId): DishPairingEntry[] {
   return Object.values(DISH_PAIRINGS).filter((dish) => dish.familyId === familyId);
+}
+
+/**
+ * Resuelve recomendaciones enriquecidas de afinidad con fallback automático
+ */
+export function getEnrichedAffinities(style: WineStyleProfile): EnrichedFoodRecommendation[] {
+  if (style.enrichedAffinities && style.enrichedAffinities.length > 0) {
+    return style.enrichedAffinities;
+  }
+
+  return style.affinities.map((link, idx) => {
+    const dish = DISH_PAIRINGS[link.id];
+    const isFeatured = idx === 0;
+
+    let fallbackImage = LOCAL_FOOD_IMAGES.asadoTira;
+    if (dish?.familyId === 'clasicos-urbanos') fallbackImage = LOCAL_FOOD_IMAGES.milanesaFrita;
+    else if (dish?.familyId === 'pastas') fallbackImage = LOCAL_FOOD_IMAGES.pastas;
+    else if (dish?.familyId === 'rio-y-mar') fallbackImage = LOCAL_FOOD_IMAGES.trucha;
+    else if (dish?.familyId === 'ollas-y-guisos') fallbackImage = LOCAL_FOOD_IMAGES.locro;
+
+    return {
+      id: link.id,
+      title: dish?.name ?? link.label,
+      description:
+        dish?.tagline ??
+        dish?.chemicalRationale ??
+        'Armonización organoléptica de alta fidelidad basada en perfiles cromáticos y de textura.',
+      badge: isFeatured ? 'MARIDAJE PERFECTO' : undefined,
+      stats: isFeatured
+        ? [
+            { label: 'Temperatura', value: dish?.servingTemperature ?? '16 °C' },
+            { label: 'Copa', value: dish?.glassware?.split(' ')[0] ?? 'Burdeos' },
+          ]
+        : undefined,
+      imageUrl: dish?.foodImageUrl ?? fallbackImage,
+      matchPercentage: isFeatured ? undefined : `Afinidad ${95 - idx * 3}%`,
+      styleAnchor: link.styleAnchor,
+      isFeatured,
+    };
+  });
+}
+
+/**
+ * Resuelve recomendaciones enriquecidas de contraste con fallback automático
+ */
+export function getEnrichedContrasts(style: WineStyleProfile): EnrichedFoodRecommendation[] {
+  if (style.enrichedContrasts && style.enrichedContrasts.length > 0) {
+    return style.enrichedContrasts;
+  }
+
+  return style.contrasts.map((link, idx) => {
+    const dish = DISH_PAIRINGS[link.id];
+    const isFeatured = idx === 0;
+
+    let fallbackImage = LOCAL_FOOD_IMAGES.milanesaFrita;
+    if (dish?.familyId === 'fuegos') fallbackImage = LOCAL_FOOD_IMAGES.asadoTira;
+    else if (dish?.familyId === 'pastas') fallbackImage = LOCAL_FOOD_IMAGES.pastas;
+    else if (dish?.familyId === 'rio-y-mar') fallbackImage = LOCAL_FOOD_IMAGES.trucha;
+    else if (dish?.familyId === 'ollas-y-guisos') fallbackImage = LOCAL_FOOD_IMAGES.locro;
+
+    return {
+      id: link.id,
+      title: dish?.name ?? link.label,
+      description:
+        dish?.tagline ??
+        dish?.chemicalRationale ??
+        'Corte de paladar y tensión ácida para restablecer la frescura gustativa.',
+      badge: isFeatured ? 'LIMPIEZA DE PALADAR' : undefined,
+      stats: isFeatured
+        ? [
+            { label: 'Efecto', value: 'Corte y Balance' },
+            { label: 'Textura', value: 'Equilibrio' },
+          ]
+        : undefined,
+      imageUrl: dish?.foodImageUrl ?? fallbackImage,
+      matchPercentage: isFeatured ? undefined : `Balance ${93 - idx * 2}%`,
+      styleAnchor: link.styleAnchor,
+      isFeatured,
+    };
+  });
+}
+
+/**
+ * Resuelve alertas químicas enriquecidas con fallback automático
+ */
+export function getEnrichedClashes(style: WineStyleProfile): EnrichedChemicalClash[] {
+  if (style.enrichedClashes && style.enrichedClashes.length > 0) {
+    return style.enrichedClashes;
+  }
+
+  return style.clashes.map((clash) => {
+    let chemicalTitle = 'Alerta Química';
+    let suggestedWineId = 'torrontes';
+    let suggestedWineLabel = 'Torrontés o Pinot Noir';
+
+    const lowerTarget = clash.target.toLowerCase();
+    const lowerReason = clash.reason.toLowerCase();
+
+    if (
+      lowerTarget.includes('pescado') ||
+      lowerTarget.includes('sushi') ||
+      lowerReason.includes('férric') ||
+      lowerReason.includes('óxido')
+    ) {
+      chemicalTitle = 'Reacción férrica';
+      suggestedWineId = 'pinot-noir';
+      suggestedWineLabel = 'Pinot Noir de clima frío';
+    } else if (
+      lowerTarget.includes('cítric') ||
+      lowerTarget.includes('ceviche') ||
+      lowerReason.includes('ácid')
+    ) {
+      chemicalTitle = 'Colapso de acidez';
+      suggestedWineId = 'sauvignon-blanc';
+      suggestedWineLabel = 'Sauvignon Blanc de altura';
+    } else if (
+      lowerTarget.includes('picante') ||
+      lowerReason.includes('capsaicina') ||
+      lowerReason.includes('ardor')
+    ) {
+      chemicalTitle = 'Multiplicador de fuego';
+      suggestedWineId = 'torrontes';
+      suggestedWineLabel = 'Torrontés o Blanco Dulce';
+    } else if (lowerTarget.includes('dulce') || lowerReason.includes('azúcar')) {
+      chemicalTitle = 'Choque de azúcares';
+      suggestedWineId = 'chardonnay';
+      suggestedWineLabel = 'Espumante Brut Nature';
+    }
+
+    return {
+      target: clash.target,
+      chemicalTitle,
+      reason: clash.reason,
+      suggestedWineId,
+      suggestedWineLabel,
+    };
+  });
 }
 
