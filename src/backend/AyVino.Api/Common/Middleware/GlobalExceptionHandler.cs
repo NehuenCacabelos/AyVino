@@ -60,6 +60,14 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             }
         };
 
+        if (exception is AppException { Extensions: not null } domainEx)
+        {
+            foreach (var (key, value) in domainEx.Extensions)
+            {
+                problemDetails.Extensions[key] = value;
+            }
+        }
+
         httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
 

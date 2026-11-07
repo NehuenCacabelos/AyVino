@@ -12,17 +12,25 @@ import {
   AlertTriangle,
   AlertCircle,
   Save,
+  Pencil,
 } from 'lucide-react';
-import { getWineVintages, createWineVintage } from '../api/wineApi';
-import { uploadVintageImage } from '../api/imageApi';
+import { getWineVintages, createWineVintage, updateWineVintage } from '../api/wineApi';
+import { uploadVintageImage, deleteVintageImage } from '../api/imageApi';
 import { getGrapes } from '../api/grapeApi';
 import ImageUploadField from './ImageUploadField';
 import { imageUrl } from '../../../lib/image';
+import {
+  createNewBlendRow,
+  calculateTotalPercentage,
+  validateGrapeBlend,
+  type BlendRow,
+} from '../utils/grapeBlendUtils';
 import type {
   WineResponseDto,
   WineVintageResponseDto,
   GrapeResponseDto,
   CreateWineVintageRequestDto,
+  UpdateWineVintageRequestDto,
 } from '../types';
 
 export interface WineVintagesModalProps {
@@ -30,12 +38,6 @@ export interface WineVintagesModalProps {
   onClose: () => void;
   wine: WineResponseDto | null;
   onVintageAdded?: () => void;
-}
-
-interface BlendRow {
-  id: string;
-  grapeId: number | '';
-  percentage: number | '';
 }
 
 /**
@@ -67,6 +69,19 @@ export default function WineVintagesModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estados para Edición de Cosecha Existente
+  const [editingVintageId, setEditingVintageId] = useState<number | null>(null);
+  const [editYear, setEditYear] = useState<string>('');
+  const [editAlcohol, setEditAlcohol] = useState<string>('');
+  const [editServingTemp, setEditServingTemp] = useState<string>('');
+  const [editAgingAdvice, setEditAgingAdvice] = useState<string>('');
+  const [editBlend, setEditBlend] = useState<BlendRow[]>([]);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editServerError, setEditServerError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   // Auto-dismiss del mensaje de éxito con limpieza estricta de timer
   useEffect(() => {
@@ -251,6 +266,182 @@ export default function WineVintagesModal({
       setServerError(detail ?? 'No se pudo registrar la nueva cosecha.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleStartEditVintage = (v: WineVintageResponseDto) => {
+    setEditingVintageId(v.id);
+    setEditYear(v.year ? v.year.toString() : '');
+    setEditAlcohol(v.alcoholContent ? v.alcoholContent.toString() : '');
+    setEditServingTemp(v.servingTemperature ? v.servingTemperature.toString() : '');
+    setEditAgingAdvice(v.agingAdvice ?? '');
+    setEditErrors({});
+    setEditServerError(null);
+    setEditSelectedFile(null);
+    setEditPreviewUrl(v.imageId ? imageUrl(v.imageId, 'bottle') : (v.imageUrl ?? null));
+
+    if (v.grapes && v.grapes.length > 0) {
+      setEditBlend(
+        v.grapes.map((g, idx) => ({
+          id: `edit-blend-${g.grapeId}-${idx}`,
+          grapeId: g.grapeId,
+          percentage: typeof g.percentage === 'number' ? g.percentage : '',
+        }))
+      );
+    } else if (grapesCatalog.length > 0) {
+      const defaultGrape =
+        grapesCatalog.find((g) => g.name.toLowerCase().includes('malbec')) ?? grapesCatalog[0];
+      setEditBlend([createNewBlendRow(defaultGrape.id, 0, 'edit-blend')]);
+    } else {
+      setEditBlend([]);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (editPreviewUrl && editPreviewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(editPreviewUrl);
+    }
+    setEditingVintageId(null);
+    setEditSelectedFile(null);
+    setEditPreviewUrl(null);
+    setEditErrors({});
+    setEditServerError(null);
+  };
+
+  const handleAddEditGrape = () => {
+    if (grapesCatalog.length === 0 || editBlend.length >= 20) return;
+    const remainingGrapes = grapesCatalog.filter(
+      (g) => !editBlend.some((b) => b.grapeId === g.id),
+    );
+    if (remainingGrapes.length === 0) return;
+    const nextGrape = remainingGrapes[0];
+    const newRow = createNewBlendRow(nextGrape.id, editBlend.length, 'edit-blend');
+    setEditBlend((prev) => [...prev, newRow]);
+  };
+
+  const handleRemoveEditGrape = (id: string) => {
+    setEditBlend((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  const handleEditGrapeChange = (id: string, grapeId: number) => {
+    setEditBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, grapeId } : row))
+    );
+  };
+
+  const handleEditPercentageChange = (id: string, val: string) => {
+    let cleanVal: number | '' = '';
+    if (val !== '') {
+      const num = Number(val);
+      if (!isNaN(num)) {
+        cleanVal = Math.max(0, Math.min(100, num));
+      }
+    }
+    setEditBlend((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, percentage: cleanVal } : row))
+    );
+    if (editErrors.blend) setEditErrors((prev) => ({ ...prev, blend: '' }));
+  };
+
+  const totalEditPercentage = calculateTotalPercentage(editBlend);
+
+  const isAddEditGrapeDisabled =
+    editBlend.length >= 20 ||
+    grapesCatalog.length === 0 ||
+    editBlend.length >= grapesCatalog.length;
+
+  const validateEdit = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!editYear.trim()) {
+      newErrors.year = 'El año de cosecha es requerido.';
+    } else {
+      const y = Number(editYear);
+      const curYear = new Date().getFullYear();
+      if (isNaN(y) || y < 1900 || y > curYear + 1) {
+        newErrors.year = `Año inválido (1900-${curYear + 1}).`;
+      }
+    }
+
+    if (editAlcohol.trim()) {
+      const alc = Number(editAlcohol);
+      if (isNaN(alc) || alc < 5 || alc > 25) {
+        newErrors.alcoholContent = 'Graduación alcohólica inválida (5.0 a 25.0).';
+      }
+    }
+
+    if (editServingTemp.trim()) {
+      const temp = Number(editServingTemp);
+      if (isNaN(temp) || temp < 0 || temp > 30) {
+        newErrors.servingTemperature = 'Temperatura inválida (0 a 30 °C).';
+      }
+    }
+
+    if (editBlend.length > 0) {
+      const blendResult = validateGrapeBlend(editBlend);
+      if (!blendResult.isValid && blendResult.errorMessage) {
+        newErrors.blend = blendResult.errorMessage;
+      }
+    }
+
+    setEditErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveEditVintage = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingVintageId || !wine) return;
+    setEditServerError(null);
+
+    if (!validateEdit()) return;
+
+    setIsSavingEdit(true);
+
+    try {
+      const validGrapes = editBlend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const payload: UpdateWineVintageRequestDto = {
+        Year: Number(editYear),
+        AlcoholContent: editAlcohol ? Number(editAlcohol) : null,
+        ServingTemperature: editServingTemp ? Number(editServingTemp) : null,
+        AgingAdvice: editAgingAdvice.trim() || null,
+        Grapes: validGrapes.length > 0 ? validGrapes : null,
+      };
+
+      await updateWineVintage(wine.id, editingVintageId, payload);
+
+      if (editSelectedFile) {
+        try {
+          await uploadVintageImage(wine.id, editingVintageId, editSelectedFile);
+        } catch {
+          // Fallo no crítico de imagen
+        }
+      }
+
+      const updatedVintages = await getWineVintages(wine.id);
+      setVintages(updatedVintages);
+      setSuccessMessage('¡Cosecha actualizada con éxito!');
+      handleCancelEdit();
+      onVintageAdded?.();
+    } catch (err: unknown) {
+      if (isAxiosError<{ code?: string; detail?: string; title?: string }>(err)) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        if (status === 409 || data?.code === 'WINE_VINTAGE_DUPLICATE') {
+          setEditServerError(`Ya existe una cosecha con el año ${editYear} para esta etiqueta.`);
+        } else {
+          setEditServerError(data?.detail ?? data?.title ?? 'No se pudo actualizar la cosecha.');
+        }
+      } else {
+        setEditServerError('No se pudo actualizar la cosecha.');
+      }
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -529,98 +720,344 @@ export default function WineVintagesModal({
             </div>
           ) : (
             <div className="space-y-3">
-              {vintages.map((v) => (
-                <div
-                  key={v.id}
-                  className="p-4 rounded-2xl bg-[#121015] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/20 transition-colors"
-                >
-                  <div className="flex items-start sm:items-center gap-4">
-                    {/* Miniatura de Cosecha */}
-                    {(v.imageId || v.imageUrl) && (
-                      <div className="w-14 h-20 rounded-xl overflow-hidden bg-stone-900 border border-white/10 shrink-0">
-                        <img
-                          src={imageUrl(v.imageId, 'bottle') ?? v.imageUrl!}
-                          alt={`Cosecha ${v.year ?? ''}`}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
+              {vintages.map((v) =>
+                editingVintageId === v.id ? (
+                  <form
+                    key={v.id}
+                    onSubmit={handleSaveEditVintage}
+                    className="p-5 rounded-2xl bg-[#141217] border border-rose-900/40 space-y-4 animate-in fade-in"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Pencil className="w-4 h-4 text-rose-400" />
+                        <h4 className="font-serif text-sm font-semibold text-zinc-100">
+                          Editar Cosecha {v.year ?? ''}
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="text-xs text-neutral-400 hover:text-white cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+
+                    {editServerError && (
+                      <div
+                        role="alert"
+                        className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200 text-xs font-sans"
+                      >
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>{editServerError}</span>
                       </div>
                     )}
 
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2.5">
-                        <span className="font-serif text-2xl font-semibold text-neutral-100">
-                          {v.year ?? 'S/A'}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-mono uppercase tracking-wider text-neutral-300 mb-1">
+                          Año de Cosecha <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={editYear}
+                          onChange={(e) => setEditYear(e.target.value)}
+                          placeholder="2022"
+                          className="h-10 w-full rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                        />
+                        {editErrors.year && (
+                          <p className="text-[10px] text-rose-400 mt-1">{editErrors.year}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-mono uppercase tracking-wider text-neutral-300 mb-1">
+                          Graduación (% vol)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={editAlcohol}
+                          onChange={(e) => setEditAlcohol(e.target.value)}
+                          placeholder="14.0"
+                          className="h-10 w-full rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                        />
+                        {editErrors.alcoholContent && (
+                          <p className="text-[10px] text-rose-400 mt-1">{editErrors.alcoholContent}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-mono uppercase tracking-wider text-neutral-300 mb-1">
+                          Temperatura (°C)
+                        </label>
+                        <input
+                          type="number"
+                          value={editServingTemp}
+                          onChange={(e) => setEditServingTemp(e.target.value)}
+                          placeholder="16"
+                          className="h-10 w-full rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                        />
+                        {editErrors.servingTemperature && (
+                          <p className="text-[10px] text-rose-400 mt-1">{editErrors.servingTemperature}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono uppercase tracking-wider text-neutral-300 mb-1">
+                        Consejo de Guarda y Crianza
+                      </label>
+                      <input
+                        type="text"
+                        value={editAgingAdvice}
+                        onChange={(e) => setEditAgingAdvice(e.target.value)}
+                        placeholder="Ej: 12 meses en barrica, guarda de 5 años."
+                        className="h-10 w-full rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                      />
+                    </div>
+
+                    {/* Imagen de la Cosecha */}
+                    <div>
+                      <ImageUploadField
+                        value={editPreviewUrl}
+                        variant="bottle"
+                        aspectRatio="bottle"
+                        onUpload={async (file: File) => {
+                          setEditSelectedFile(file);
+                          const objectUrl = URL.createObjectURL(file);
+                          setEditPreviewUrl(objectUrl);
+                          return objectUrl;
+                        }}
+                        onDelete={async () => {
+                          setEditSelectedFile(null);
+                          setEditPreviewUrl(null);
+                          if (v.imageId) {
+                            try {
+                              await deleteVintageImage(wine.id, v.id);
+                            } catch {
+                              // Fallo no crítico
+                            }
+                          }
+                        }}
+                        folder="vintages"
+                        label="Foto de la cosecha o etiqueta"
+                        helperText="Subí una foto nítida de la botella o etiqueta (JPG, PNG o WEBP, máx. 5 MB)."
+                      />
+                    </div>
+
+                    {/* Corte de Uvas */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono text-neutral-400">
+                          Corte de Varietales — Total:{' '}
+                          <strong
+                            className={
+                              totalEditPercentage === 100
+                                ? 'text-emerald-400 font-mono'
+                                : totalEditPercentage > 100
+                                  ? 'text-rose-400 font-mono'
+                                  : 'text-amber-300 font-mono'
+                            }
+                          >
+                            {totalEditPercentage}%
+                          </strong>
                         </span>
-
-                        {/* Badge de Aprobación */}
-                        {v.approvalStatus === 'Approved' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Aprobada</span>
-                          </span>
-                        )}
-                        {v.approvalStatus === 'Pending' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/40">
-                            <Clock className="w-3 h-3" />
-                            <span>En Revisión</span>
-                          </span>
-                        )}
-                        {v.approvalStatus === 'Rejected' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-950/40 text-rose-300 border border-rose-800/40">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Rechazada</span>
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={handleAddEditGrape}
+                          disabled={isAddEditGrapeDisabled}
+                          className="text-[11px] text-rose-300 hover:text-rose-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          + Cepa
+                        </button>
                       </div>
+                      {editErrors.blend && (
+                        <p className="text-[10px] text-rose-400">{editErrors.blend}</p>
+                      )}
 
-                      {/* Ficha Rápida: Graduación, Temperatura, Guarda */}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400 font-sans">
-                        {v.alcoholContent && (
-                          <span>
-                            <strong className="text-neutral-200">{v.alcoholContent}%</strong> alc.
-                          </span>
-                        )}
-                        {v.servingTemperature && (
-                          <span>
-                            Servicio: <strong className="text-neutral-200">{v.servingTemperature} °C</strong>
-                          </span>
-                        )}
-                        {v.agingAdvice && (
-                          <span className="text-neutral-500 truncate max-w-xs">{v.agingAdvice}</span>
-                        )}
-                      </div>
+                      {grapesCatalog.length === 0 ? (
+                        <p className="text-xs text-neutral-400 font-sans italic py-1">
+                          Todavía no hay uvas cargadas en el catálogo oficial.
+                        </p>
+                      ) : (
+                        editBlend.map((row) => {
+                          const availableGrapes = grapesCatalog.filter(
+                            (g) =>
+                              g.id === row.grapeId ||
+                              !editBlend.some((b) => b.id !== row.id && b.grapeId === g.id)
+                          );
 
-                      {/* Desglose de Varietales */}
-                      {v.grapes && v.grapes.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {v.grapes.map((g) => (
-                            <span
-                              key={g.grapeId}
-                              className="inline-block text-[10px] font-mono bg-stone-900 border border-white/5 px-2 py-0.5 rounded text-neutral-300"
-                            >
-                              {getGrapeName(g.grapeId)} {g.percentage ? `(${g.percentage}%)` : ''}
-                            </span>
-                          ))}
-                        </div>
+                          return (
+                            <div key={row.id} className="flex items-center gap-2">
+                              <select
+                                value={row.grapeId}
+                                onChange={(e) => handleEditGrapeChange(row.id, Number(e.target.value))}
+                                className="h-9 flex-1 rounded-xl px-3 text-xs bg-zinc-900 text-zinc-100 border border-zinc-800"
+                              >
+                                {availableGrapes.map((g) => (
+                                  <option key={g.id} value={g.id} className="bg-[#121015]">
+                                    {g.name}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <div className="relative w-24">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  value={row.percentage}
+                                  onChange={(e) => handleEditPercentageChange(row.id, e.target.value)}
+                                  placeholder="%"
+                                  className="h-9 w-full rounded-xl pl-2 pr-6 text-xs font-mono bg-zinc-900 text-zinc-100 border border-zinc-800 text-right"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 font-mono">
+                                  %
+                                </span>
+                              </div>
+
+                              {editBlend.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEditGrape(row.id)}
+                                  className="text-neutral-500 hover:text-rose-400 p-1 cursor-pointer"
+                                  aria-label="Quitar uva de la cosecha editada"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
-                  </div>
 
-                  {/* Calificación */}
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/5 text-right">
-                    <div className="flex items-center gap-1 text-sm text-amber-200 font-mono">
-                      <Star className="w-4 h-4 fill-amber-300/30 text-amber-300" />
-                      <span className="font-semibold">
-                        {v.averageRating ? v.averageRating.toFixed(1) : '—'}
-                      </span>
+                    <div className="pt-2 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        disabled={isSavingEdit}
+                        className="px-3.5 py-2 rounded-xl border border-white/10 text-xs text-neutral-300 hover:text-white cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingEdit}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSavingEdit ? 'Guardando...' : 'Guardar cambios'}</span>
+                      </button>
                     </div>
-                    <span className="text-[11px] text-neutral-500 font-mono">
-                      {v.reviewCount ?? 0} {v.reviewCount === 1 ? 'reseña' : 'reseñas'}
-                    </span>
+                  </form>
+                ) : (
+                  <div
+                    key={v.id}
+                    className="p-4 rounded-2xl bg-[#121015] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/20 transition-colors"
+                  >
+                    <div className="flex items-start sm:items-center gap-4">
+                      {/* Miniatura de Cosecha */}
+                      {(v.imageId || v.imageUrl) && (
+                        <div className="w-14 h-20 rounded-xl overflow-hidden bg-stone-900 border border-white/10 shrink-0">
+                          <img
+                            src={imageUrl(v.imageId, 'bottle') ?? v.imageUrl!}
+                            alt={`Cosecha ${v.year ?? ''}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-serif text-2xl font-semibold text-neutral-100">
+                            {v.year ?? 'S/A'}
+                          </span>
+
+                          {/* Badge de Aprobación */}
+                          {v.approvalStatus === 'Approved' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Aprobada</span>
+                            </span>
+                          )}
+                          {v.approvalStatus === 'Pending' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-amber-950/40 text-amber-300 border border-amber-800/40">
+                              <Clock className="w-3 h-3" />
+                              <span>En Revisión</span>
+                            </span>
+                          )}
+                          {v.approvalStatus === 'Rejected' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-950/40 text-rose-300 border border-rose-800/40">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Rechazada</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Ficha Rápida: Graduación, Temperatura, Guarda */}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-400 font-sans">
+                          {v.alcoholContent && (
+                            <span>
+                              <strong className="text-neutral-200">{v.alcoholContent}%</strong> alc.
+                            </span>
+                          )}
+                          {v.servingTemperature && (
+                            <span>
+                              Servicio: <strong className="text-neutral-200">{v.servingTemperature} °C</strong>
+                            </span>
+                          )}
+                          {v.agingAdvice && (
+                            <span className="text-neutral-500 truncate max-w-xs">{v.agingAdvice}</span>
+                          )}
+                        </div>
+
+                        {/* Desglose de Varietales */}
+                        {v.grapes && v.grapes.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {v.grapes.map((g) => (
+                              <span
+                                key={g.grapeId}
+                                className="inline-block text-[10px] font-mono bg-stone-900 border border-white/5 px-2 py-0.5 rounded text-neutral-300"
+                              >
+                                {getGrapeName(g.grapeId)} {g.percentage ? `(${g.percentage}%)` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      {/* Botón Editar Cosecha */}
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditVintage(v)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Editar</span>
+                      </button>
+
+                      {/* Calificación */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/5 text-right">
+                        <div className="flex items-center gap-1 text-sm text-amber-200 font-mono">
+                          <Star className="w-4 h-4 fill-amber-300/30 text-amber-300" />
+                          <span className="font-semibold">
+                            {v.averageRating ? v.averageRating.toFixed(1) : '—'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-neutral-500 font-mono">
+                          {v.reviewCount ?? 0} {v.reviewCount === 1 ? 'reseña' : 'reseñas'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </div>
