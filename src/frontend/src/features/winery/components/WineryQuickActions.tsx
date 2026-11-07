@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus, Sparkles, Building2, ArrowUpRight } from 'lucide-react';
+import { Plus, Sparkles, ArrowUpRight } from 'lucide-react';
 
 export interface WineryQuickActionsProps {
   wineryId?: number;
@@ -8,7 +8,7 @@ export interface WineryQuickActionsProps {
 
 /**
  * WineryQuickActions Component
- * Grilla de accesos directos a las tareas operativas clave de la bodega.
+ * Grilla de 3 accesos directos a las tareas operativas clave de la bodega.
  */
 export default function WineryQuickActions({ wineryId, isApproved }: WineryQuickActionsProps) {
   const canViewPublicProfile = Boolean(isApproved && wineryId);
@@ -30,15 +30,6 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
       icon: Sparkles,
       badge: 'Comunidad',
       color: 'amber',
-      disabled: false,
-    },
-    {
-      title: 'Editar perfil de bodega',
-      description: 'Mantené al día la historia del viñedo, año de fundación, terruños y enlaces institucionales.',
-      to: '/bodega/perfil',
-      icon: Building2,
-      badge: 'Institucional',
-      color: 'stone',
       disabled: false,
     },
     {
@@ -65,7 +56,7 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {actions.map((act) => {
           const Icon = act.icon;
 
@@ -144,4 +135,3 @@ export default function WineryQuickActions({ wineryId, isApproved }: WineryQuick
     </div>
   );
 }
-

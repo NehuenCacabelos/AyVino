@@ -105,12 +105,13 @@ describe('WineryDashboardPage (/bodega/dashboard)', () => {
       </MemoryRouter>
     );
 
-  it('renderiza la cabecera del panel con nombre de bodega y saludo de usuario', async () => {
+  it('renderiza la cabecera del panel con nombre de bodega y saludo de usuario sin insignia oficial ni ver vidriera', async () => {
     renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Bodega El Terruño')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Oficial')).toBeInTheDocument();
+      expect(screen.queryByText('Bodega Oficial')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ver vidriera')).not.toBeInTheDocument();
       expect(screen.getByText(/Panel Oficial de Cava/i)).toBeInTheDocument();
       expect(screen.getByText('donpedro')).toBeInTheDocument();
     });
