@@ -283,6 +283,7 @@ export default function WineryWineDetailPage() {
           onClose={() => setIsEditModalOpen(false)}
           wine={wine}
           wineryId={winery.id}
+          wineryName={winery.name}
           locationId={winery.locationId}
           onWineUpdated={() => {
             void reload();

@@ -2,14 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { isAxiosError } from 'axios';
 import { X, Save, AlertCircle, Wine } from 'lucide-react';
 import { updateWine } from '../api/wineApi';
+import RegionPicker from './RegionPicker';
 import type { WineryCatalogWineDto } from '../types/catalog';
-import type { WineType, UpdateWineRequestDto } from '../types';
+import type { WineType, UpdateWineRequestDto, RegionPickerValue } from '../types';
 
 export interface WineEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   wine: WineryCatalogWineDto | null;
   wineryId: number;
+  wineryName?: string;
   locationId?: number | null;
   onWineUpdated: () => void;
 }
@@ -25,6 +27,7 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 interface WineEditFormProps {
   wine: WineryCatalogWineDto;
   wineryId: number;
+  wineryName?: string;
   locationId?: number | null;
   onClose: () => void;
   onWineUpdated: () => void;
@@ -33,15 +36,19 @@ interface WineEditFormProps {
 function WineEditForm({
   wine,
   wineryId,
+  wineryName,
   locationId,
   onClose,
   onWineUpdated,
 }: WineEditFormProps) {
+  const currentWineryName = wineryName ?? 'Mi Bodega Oficial';
   const [name, setName] = useState(wine.name);
   const [wineType, setWineType] = useState<WineType>(
     (wine.wineType as WineType) || 'Red'
   );
   const [description, setDescription] = useState(wine.description ?? '');
+  const [selectedRegion, setSelectedRegion] = useState<RegionPickerValue | null>(null);
+  const [currentLocationId, setCurrentLocationId] = useState<number | null>(locationId ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,7 +66,7 @@ function WineEditForm({
       name: name.trim(),
       wineType,
       wineryId,
-      locationId: locationId ?? null,
+      locationId: selectedRegion?.locationId ?? currentLocationId ?? null,
       description: description.trim() ? description.trim() : null,
     };
 
@@ -68,8 +75,16 @@ function WineEditForm({
       onWineUpdated();
       onClose();
     } catch (err: unknown) {
-      if (isAxiosError(err) && err.response?.data?.detail) {
-        setErrorMessage(err.response.data.detail as string);
+      if (isAxiosError<{ detail?: string; title?: string }>(err)) {
+        const status = err.response?.status;
+        const detail = err.response?.data?.detail ?? err.response?.data?.title;
+        if (status === 403) {
+          setErrorMessage(detail ?? 'No tenés permiso para editar esta etiqueta.');
+        } else if (status === 400) {
+          setErrorMessage(detail ?? 'Datos de etiqueta inválidos. Verificá los campos ingresados.');
+        } else {
+          setErrorMessage(detail ?? 'Ocurrió un error al actualizar la etiqueta.');
+        }
       } else if (err instanceof Error) {
         setErrorMessage(err.message);
       } else {
@@ -81,7 +96,7 @@ function WineEditForm({
   };
 
   return (
-    <div className="relative w-full max-w-lg rounded-2xl bg-[#141217] border border-white/10 p-6 shadow-2xl shadow-black/80 space-y-5 animate-in zoom-in-95">
+    <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-[#141217] border border-white/10 p-6 shadow-2xl shadow-black/80 space-y-5 animate-in zoom-in-95">
       {/* Cabecera del Modal */}
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <div className="flex items-center gap-2.5">
@@ -124,6 +139,23 @@ function WineEditForm({
 
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Bodega (Solo lectura) */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="edit-wine-winery"
+            className="text-xs font-mono uppercase tracking-wider text-neutral-400 block"
+          >
+            Bodega <span className="text-[10px] text-neutral-500 font-sans">(Solo lectura)</span>
+          </label>
+          <input
+            id="edit-wine-winery"
+            type="text"
+            disabled
+            value={currentWineryName}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a0a0c]/60 border border-white/5 text-xs text-neutral-400 cursor-not-allowed font-medium"
+          />
+        </div>
+
         {/* Nombre de la Etiqueta */}
         <div className="space-y-1.5">
           <label
@@ -162,6 +194,25 @@ function WineEditForm({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Ubicación / Terruño */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-mono uppercase tracking-wider text-neutral-300 block">
+            Ubicación / Terruño <span className="text-neutral-500">(Opcional)</span>
+          </label>
+          <div className="rounded-xl border border-white/10 p-3 bg-[#0a0a0c]">
+            <RegionPicker
+              value={selectedRegion}
+              onChange={(val) => {
+                setSelectedRegion(val);
+                if (val?.locationId) {
+                  setCurrentLocationId(val.locationId);
+                }
+              }}
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
 
         {/* Descripción */}
@@ -211,6 +262,7 @@ export default function WineEditModal({
   onClose,
   wine,
   wineryId,
+  wineryName,
   locationId,
   onWineUpdated,
 }: WineEditModalProps) {
@@ -227,6 +279,7 @@ export default function WineEditModal({
         key={`${wine.id}-${wine.name}`}
         wine={wine}
         wineryId={wineryId}
+        wineryName={wineryName}
         locationId={locationId}
         onClose={onClose}
         onWineUpdated={onWineUpdated}

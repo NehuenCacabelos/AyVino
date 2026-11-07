@@ -148,7 +148,6 @@ public class WineVintageService(
                     });
             }
         }
-
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
@@ -186,6 +185,21 @@ public class WineVintageService(
             }
         }
 
+        if (dto.Year.HasValue && dto.Year != vintage.Year)
+        {
+            var existingVintages = await vintageRepository.GetAllByWineIdAsync(wineId, ct);
+            if (existingVintages.Any(v => v.Id != vintageId && v.Year == dto.Year))
+            {
+                throw new ConflictException(
+                    $"Ya existe la cosecha {dto.Year} para esta etiqueta.",
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] = "WINE_VINTAGE_DUPLICATE",
+                        ["existingWineId"] = wineId,
+                        ["year"] = dto.Year.Value
+                    });
+            }
+        }
 
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
