@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Plus,
-  ExternalLink,
   Clock,
   AlertTriangle,
   ChevronLeft,
@@ -215,17 +214,6 @@ export default function WineryCatalogPage() {
 
         {/* Acciones principales del Encabezado */}
         <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-          {winery?.id && (
-            <Link
-              to={`/bodegas/${winery.id}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white border border-white/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-              title="Ver cómo lo ven los usuarios"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Ver cómo lo ven los usuarios</span>
-            </Link>
-          )}
-
           {!isWineryRejected && (
             <button
               type="button"
