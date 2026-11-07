@@ -60,6 +60,14 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             }
         };
 
+        if (exception is AppException appException && appException.Extensions.Count > 0)
+        {
+            foreach (var (key, value) in appException.Extensions)
+            {
+                problemDetails.Extensions[key] = value;
+            }
+        }
+
         httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
 

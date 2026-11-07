@@ -109,7 +109,12 @@ public class WineVintageService(
         if (wine is null)
             throw new NotFoundException($"Wine with ID {wineId} not found.");
 
-        if (wine.WineryId is int wineryId && !actor.IsAdmin)
+        ApprovalStatus approvalStatus;
+        if (actor.IsAdmin)
+        {
+            approvalStatus = ApprovalStatus.Approved;
+        }
+        else if (wine.WineryId is int wineryId)
         {
             var winery = await wineryRepository.GetByIdAsync(wineryId, ct)
                 ?? throw new ValidationException($"Winery with ID {wineryId} does not exist.");
@@ -119,13 +124,35 @@ public class WineVintageService(
 
             if (!WineryAccessRules.CanPublish(winery, actor))
                 throw new ForbiddenException("La bodega debe estar aprobada o pendiente para crear cosechas.");
+
+            approvalStatus = ApprovalStatus.Approved;
+        }
+        else
+        {
+            approvalStatus = ApprovalStatus.Pending;
         }
 
+        if (dto.Year.HasValue)
+        {
+            var existingVintages = await vintageRepository.GetAllByWineIdAsync(wineId, ct);
+            var duplicateVintage = existingVintages.FirstOrDefault(v => v.Year == dto.Year.Value);
+            if (duplicateVintage != null)
+            {
+                throw new ConflictException(
+                    $"Ya existe una cosecha para el año {dto.Year.Value} en este vino.",
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] = "WINE_VINTAGE_DUPLICATE",
+                        ["existingWineId"] = wineId,
+                        ["existingVintageId"] = duplicateVintage.Id
+                    });
+            }
+        }
 
         await ValidateGrapesAsync(dto.Grapes, ct);
         var grapes = ToWineGrapes(dto.Grapes);
 
-        var vintageEntity = dto.ToEntity(actor.UserId, wineId);
+        var vintageEntity = dto.ToEntity(actor.UserId, wineId, approvalStatus);
         var vintage = await vintageRepository.CreateAsync(vintageEntity, grapes, ct);
         return vintage.ToResponseDto(grapes);
     }
