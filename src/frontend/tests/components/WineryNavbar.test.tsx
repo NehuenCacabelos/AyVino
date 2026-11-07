@@ -17,7 +17,7 @@ vi.mock('@/features/auth', () => ({
   }),
 }));
 
-const mockWinery: WineryResponseDto = {
+let currentWinery: WineryResponseDto = {
   id: 42,
   name: 'Bodega El Terruño',
   description: 'Historia centenaria.',
@@ -32,7 +32,7 @@ const mockWinery: WineryResponseDto = {
 
 vi.mock('@/features/winery/context/WineryContext', () => ({
   useWinery: () => ({
-    winery: mockWinery,
+    winery: currentWinery,
     reload: vi.fn(),
     isLoading: false,
     error: null,
@@ -43,6 +43,10 @@ vi.mock('@/features/winery/context/WineryContext', () => ({
 describe('WineryNavbar Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentWinery = {
+      ...currentWinery,
+      status: 'Approved',
+    };
   });
 
   const renderComponent = (initialEntries = ['/bodega/dashboard']) =>
@@ -52,7 +56,7 @@ describe('WineryNavbar Component', () => {
       </MemoryRouter>
     );
 
-  it('renderiza la marca AyVino., enlaces institucionales y badge de bodega oficial', () => {
+  it('renderiza la marca AyVino. y los 4 enlaces institucionales, y NO muestra "Oficial" con estado Approved', () => {
     renderComponent();
 
     expect(screen.getByText('AyVino')).toBeInTheDocument();
@@ -73,10 +77,27 @@ describe('WineryNavbar Component', () => {
       '/bodega/perfil'
     );
 
-    expect(screen.getByText('Oficial')).toBeInTheDocument();
+    // En estado Approved, el badge de escritorio ya no debe mostrar "Oficial"
+    expect(screen.queryByText('Oficial')).not.toBeInTheDocument();
   });
 
-  it('abre el menú desplegable institucional al hacer clic en el logo de la bodega', async () => {
+  it('muestra el badge "En revisión" en desktop cuando la bodega está en estado Pending', () => {
+    currentWinery = { ...currentWinery, status: 'Pending' };
+    renderComponent();
+
+    expect(screen.getByText('En revisión')).toBeInTheDocument();
+    expect(screen.queryByText('Oficial')).not.toBeInTheDocument();
+  });
+
+  it('muestra el badge "Rechazada" en desktop cuando la bodega está en estado Rejected', () => {
+    currentWinery = { ...currentWinery, status: 'Rejected' };
+    renderComponent();
+
+    expect(screen.getByText('Rechazada')).toBeInTheDocument();
+    expect(screen.queryByText('Oficial')).not.toBeInTheDocument();
+  });
+
+  it('abre el menú desplegable institucional con exactamente 3 opciones y sin "Explorar como usuario"', async () => {
     renderComponent();
 
     const menuTrigger = screen.getByRole('button', { name: /abrir menú de bodega/i });
@@ -85,10 +106,9 @@ describe('WineryNavbar Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Bodega El Terruño')).toBeInTheDocument();
       expect(screen.getByText('alberto@bodegaelterruno.com')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Aprobada')).toBeInTheDocument();
     });
 
-    // Enlaces dentro del dropdown
+    // Enlaces permitidos dentro del dropdown
     expect(screen.getByRole('link', { name: /configuración de bodega/i })).toHaveAttribute(
       'href',
       '/bodega/configuracion'
@@ -97,10 +117,25 @@ describe('WineryNavbar Component', () => {
       'href',
       '/bodegas/42'
     );
-    expect(screen.getByRole('link', { name: /explorar como usuario/i })).toHaveAttribute(
-      'href',
-      '/dashboard'
-    );
+    expect(screen.getByRole('button', { name: /cerrar sesión/i })).toBeInTheDocument();
+
+    // Debe haberse eliminado "Explorar como usuario"
+    expect(screen.queryByText('Explorar como usuario')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /explorar como usuario/i })).not.toBeInTheDocument();
+  });
+
+  it('el menú móvil no contiene "Explorar catálogo" ni "Explorar como usuario"', async () => {
+    renderComponent();
+
+    const mobileToggle = screen.getByRole('button', { name: /abrir navegación móvil/i });
+    fireEvent.click(mobileToggle);
+
+    await waitFor(() => {
+      expect(screen.getByText('don_alberto · Winery')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Explorar catálogo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Explorar como usuario')).not.toBeInTheDocument();
   });
 
   it('ejecuta el cierre de sesión al hacer clic en Cerrar sesión', async () => {
@@ -114,17 +149,6 @@ describe('WineryNavbar Component', () => {
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('abre y cierra el menú móvil responsive', async () => {
-    renderComponent();
-
-    const mobileToggle = screen.getByRole('button', { name: /abrir navegación móvil/i });
-    fireEvent.click(mobileToggle);
-
-    await waitFor(() => {
-      expect(screen.getByText('don_alberto · Winery')).toBeInTheDocument();
     });
   });
 });

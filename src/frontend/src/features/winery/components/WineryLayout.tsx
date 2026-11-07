@@ -1,7 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import {
   Building2,
-  Compass,
   LogOut,
   Plus,
   Shield,
@@ -137,31 +136,15 @@ export default function WineryLayout() {
                     <LayoutDashboard className="h-4 w-4 text-neutral-400" />
                     <span>Panel Global</span>
                   </Link>
-                  <Link
-                    to="/dashboard"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <Compass className="h-4 w-4 text-neutral-400" />
-                    <span>Explorar como usuario</span>
-                  </Link>
                 </>
               ) : (
-                <>
-                  <Link
-                    to="/bodega/registro"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-sm"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Registrar mi bodega</span>
-                  </Link>
-                  <Link
-                    to="/dashboard"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 hover:text-white px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <Compass className="h-4 w-4 text-neutral-400" />
-                    <span>Ir al catálogo / Mi Cava</span>
-                  </Link>
-                </>
+                <Link
+                  to="/bodega/registro"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Registrar mi bodega</span>
+                </Link>
               )}
             </div>
           </div>
