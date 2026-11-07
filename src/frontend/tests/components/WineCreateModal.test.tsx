@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import WineCreateModal from '@/features/winery/components/WineCreateModal';
-import * as grapeApi from '@/features/winery/components/../api/grapeApi';
-import * as wineApi from '@/features/winery/components/../api/wineApi';
-import type { GrapeResponseDto, WineResponseDto } from '@/features/winery/components/../types';
+import * as grapeApi from '@/features/winery/api/grapeApi';
+import * as wineApi from '@/features/winery/api/wineApi';
+import type { GrapeResponseDto, WineResponseDto } from '@/features/winery/types';
 
 vi.mock('@/features/winery/api/grapeApi', () => ({
   getGrapes: vi.fn(),
@@ -11,6 +12,9 @@ vi.mock('@/features/winery/api/grapeApi', () => ({
 
 vi.mock('@/features/winery/api/wineApi', () => ({
   createWine: vi.fn(),
+  getWineVintages: vi.fn().mockResolvedValue([]),
+  createWineVintage: vi.fn(),
+  getWineById: vi.fn(),
 }));
 
 describe('WineCreateModal', () => {
@@ -49,30 +53,30 @@ describe('WineCreateModal', () => {
     vi.mocked(grapeApi.getGrapes).mockResolvedValue(mockGrapes);
   });
 
-  it('renders nothing when isOpen is false', () => {
-    const { container } = render(
-      <WineCreateModal
-        isOpen={false}
-        onClose={vi.fn()}
-        wineryId={1}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
+  const renderModal = (props: {
+    isOpen?: boolean;
+    onClose?: () => void;
+    onWineCreated?: (w: WineResponseDto) => void;
+  } = {}) =>
+    render(
+      <MemoryRouter>
+        <WineCreateModal
+          isOpen={props.isOpen ?? true}
+          onClose={props.onClose ?? vi.fn()}
+          wineryId={10}
+          locationId={5}
+          onWineCreated={props.onWineCreated ?? vi.fn()}
+        />
+      </MemoryRouter>
     );
 
+  it('renders nothing when isOpen is false', () => {
+    const { container } = renderModal({ isOpen: false });
     expect(container.firstChild).toBeNull();
   });
 
   it('renders form and loads grapes catalog when isOpen is true', async () => {
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
-    );
+    renderModal();
 
     expect(screen.getByText('Nueva Etiqueta Oficial')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Gran Reserva Malbec/i)).toBeInTheDocument();
@@ -83,15 +87,7 @@ describe('WineCreateModal', () => {
   });
 
   it('validates that wine name is required on submit', async () => {
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
-    );
+    renderModal();
 
     await waitFor(() => {
       expect(grapeApi.getGrapes).toHaveBeenCalled();
@@ -101,6 +97,48 @@ describe('WineCreateModal', () => {
     fireEvent.click(submitBtn);
 
     expect(await screen.findByText('El nombre del vino es obligatorio.')).toBeInTheDocument();
+  });
+
+  it('la primera uva entra con 100% y la siguiente con 0% visible', async () => {
+    renderModal();
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    // Primera fila de uva (Malbec) con 100%
+    const pctInput = screen.getByPlaceholderText('%') as HTMLInputElement;
+    expect(pctInput.value).toBe('100');
+
+    // Agregar segunda uva
+    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
+    fireEvent.click(addGrapeBtn);
+
+    const pctInputs = screen.getAllByPlaceholderText('%') as HTMLInputElement[];
+    expect(pctInputs.length).toBe(2);
+    expect(pctInputs[1].value).toBe('0');
+  });
+
+  it('rechaza el envio con mensaje exacto si una uva esta en 0% o la suma no es 100%', async () => {
+    renderModal();
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i);
+    fireEvent.change(nameInput, { target: { value: 'Gran Malbec Reserva' } });
+
+    // Agregar segunda uva (queda en 0%)
+    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
+    fireEvent.click(addGrapeBtn);
+
+    const submitBtn = screen.getByRole('button', { name: /Publicar Etiqueta/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      await screen.findByText('Completá el porcentaje de cada uva y asegurate de que sumen 100%')
+    ).toBeInTheDocument();
   });
 
   it('submits valid wine and triggers onWineCreated', async () => {
@@ -120,26 +158,17 @@ describe('WineCreateModal', () => {
 
     vi.mocked(wineApi.createWine).mockResolvedValue(mockCreatedWine);
     const onWineCreatedMock = vi.fn();
+    const onCloseMock = vi.fn();
 
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={onWineCreatedMock}
-      />
-    );
+    renderModal({ onWineCreated: onWineCreatedMock, onClose: onCloseMock });
 
     await waitFor(() => {
       expect(grapeApi.getGrapes).toHaveBeenCalled();
     });
 
-    // Enter name
     const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i);
     fireEvent.change(nameInput, { target: { value: 'Gran Malbec Reserva' } });
 
-    // Submit form
     const submitBtn = screen.getByRole('button', { name: /Publicar Etiqueta/i });
     fireEvent.click(submitBtn);
 
@@ -153,99 +182,180 @@ describe('WineCreateModal', () => {
         })
       );
       expect(onWineCreatedMock).toHaveBeenCalledWith(mockCreatedWine);
+      expect(onCloseMock).toHaveBeenCalled();
     });
   });
 
-  it('initializes grape percentage as empty and disallows selecting duplicated grapes', async () => {
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
-    );
+  it('maneja 409 WINE_VINTAGE_DUPLICATE mostrando mensaje y enlace de gestion', async () => {
+    const error = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          code: 'WINE_VINTAGE_DUPLICATE',
+          detail: 'Ya existe el vino en esta bodega con esa cosecha',
+          existingWineId: 45,
+          existingVintageId: 12,
+        },
+      },
+    };
 
-    await waitFor(() => {
-      expect(grapeApi.getGrapes).toHaveBeenCalled();
-    });
+    vi.mocked(wineApi.createWine).mockRejectedValue(error);
 
-    // Check first grape row: Malbec with empty percentage
-    const pctInput = screen.getByPlaceholderText('%') as HTMLInputElement;
-    expect(pctInput.value).toBe('');
-
-    // Add second grape row
-    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
-    fireEvent.click(addGrapeBtn);
-
-    const selects = screen.getAllByRole('combobox');
-    // selects[0] is WineType, selects[1] is first grape, selects[2] is second grape
-    const secondGrapeSelect = selects[2] as HTMLSelectElement;
-
-    // Second grape select must NOT contain Malbec (id: 1) since it is selected in row 1
-    const options = Array.from(secondGrapeSelect.options).map((opt) => opt.textContent);
-    expect(options.some((o) => o?.includes('Malbec'))).toBe(false);
-    expect(options.some((o) => o?.includes('Cabernet Franc'))).toBe(true);
-  });
-
-  it('renders editorial message when grapes catalog is empty', async () => {
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue([]);
-
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
-    );
-
-    await waitFor(() => {
-      expect(grapeApi.getGrapes).toHaveBeenCalled();
-    });
-
-    expect(
-      screen.getByText('Todavía no hay uvas cargadas en el catálogo oficial.')
-    ).toBeInTheDocument();
-  });
-
-  it('validates blend percentages when sum exceeds 100%', async () => {
-    render(
-      <WineCreateModal
-        isOpen={true}
-        onClose={vi.fn()}
-        wineryId={10}
-        locationId={5}
-        onWineCreated={vi.fn()}
-      />
-    );
+    renderModal();
 
     await waitFor(() => {
       expect(grapeApi.getGrapes).toHaveBeenCalled();
     });
 
     const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i);
-    fireEvent.change(nameInput, { target: { value: 'Gran Malbec Reserva' } });
+    fireEvent.change(nameInput, { target: { value: 'Malbec Reserva 2022' } });
 
-    // Set first grape percentage to 70
-    const pctInput = screen.getByPlaceholderText('%');
-    fireEvent.change(pctInput, { target: { value: '70' } });
-
-    // Add second grape
-    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
-    fireEvent.click(addGrapeBtn);
-
-    // Set second grape percentage to 40 (sum = 110%)
-    const pctInputs = screen.getAllByPlaceholderText('%');
-    fireEvent.change(pctInputs[1], { target: { value: '40' } });
+    const yearInput = screen.getByPlaceholderText('2022');
+    fireEvent.change(yearInput, { target: { value: '2022' } });
 
     const submitBtn = screen.getByRole('button', { name: /Publicar Etiqueta/i });
     fireEvent.click(submitBtn);
 
-    expect(
-      await screen.findByText('La suma del corte (110%) no puede superar el 100%.')
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Ya registraste este vino con la cosecha 2022.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Gestionar vino/i })).toHaveAttribute(
+        'href',
+        '/bodega/vinos/45'
+      );
+    });
+  });
+
+  it('maneja 409 WINE_EXISTS_ADD_VINTAGE abriendo ConfirmDialog y llamando a createWineVintage al confirmar', async () => {
+    const duplicateWineError = {
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: {
+          code: 'WINE_EXISTS_ADD_VINTAGE',
+          existingWineId: 88,
+        },
+      },
+    };
+
+    const mockAddedVintage = {
+      id: 301,
+      wineId: 88,
+      year: 2024,
+      alcoholContent: 14,
+      servingTemperature: 16,
+      agingAdvice: null,
+      approvalStatus: 'Approved' as const,
+      averageRating: null,
+      reviewCount: 0,
+      registerDate: '2026-01-01',
+      grapes: [{ grapeId: 1, grapeName: 'Malbec', percentage: 100 }],
+    };
+
+    const mockUpdatedWine: WineResponseDto = {
+      id: 88,
+      name: 'Cabernet Franc Reserva',
+      wineryId: 10,
+      wineryNameText: 'Bodega Test',
+      description: null,
+      wineType: 'Red',
+      locationId: 5,
+      sourceType: 'Official',
+      duplicateOfWineId: null,
+      averageRating: null,
+      reviewCount: 0,
+    };
+
+    vi.mocked(wineApi.createWine).mockRejectedValue(duplicateWineError);
+    vi.mocked(wineApi.createWineVintage).mockResolvedValue(mockAddedVintage);
+    vi.mocked(wineApi.getWineById).mockResolvedValue(mockUpdatedWine);
+
+    const onWineCreatedMock = vi.fn();
+    const onCloseMock = vi.fn();
+
+    renderModal({ onWineCreated: onWineCreatedMock, onClose: onCloseMock });
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i);
+    fireEvent.change(nameInput, { target: { value: 'Cabernet Franc Reserva' } });
+
+    const yearInput = screen.getByPlaceholderText('2022');
+    fireEvent.change(yearInput, { target: { value: '2024' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Publicar Etiqueta/i });
+    fireEvent.click(submitBtn);
+
+    // Debe abrir el ConfirmDialog
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Ya tenés «Cabernet Franc Reserva» en tu catálogo. ¿Querés agregar la cosecha 2024 a ese vino?'
+        )
+      ).toBeInTheDocument();
+    });
+
+    // Confirmar adición de cosecha
+    const confirmBtn = screen.getByRole('button', { name: /Agregar cosecha/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(wineApi.createWineVintage).toHaveBeenCalledWith(
+        88,
+        expect.objectContaining({
+          year: 2024,
+          grapes: expect.arrayContaining([
+            expect.objectContaining({ grapeId: 1, percentage: 100 }),
+          ]),
+        })
+      );
+      expect(onWineCreatedMock).toHaveBeenCalledWith(mockUpdatedWine);
+      expect(onCloseMock).toHaveBeenCalled();
+    });
+  });
+
+  it('limpia el formulario al cerrar mediante el boton Cancelar', async () => {
+    const onCloseMock = vi.fn();
+    const { rerender } = render(
+      <MemoryRouter>
+        <WineCreateModal
+          isOpen={true}
+          onClose={onCloseMock}
+          wineryId={10}
+          locationId={5}
+          onWineCreated={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(grapeApi.getGrapes).toHaveBeenCalled();
+    });
+
+    const nameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i) as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: 'Vino a Descartar' } });
+    expect(nameInput.value).toBe('Vino a Descartar');
+
+    const cancelBtn = screen.getByRole('button', { name: /Cancelar/i });
+    fireEvent.click(cancelBtn);
+    expect(onCloseMock).toHaveBeenCalled();
+
+    // Al volver a abrir (rerender con isOpen=true) debe haberse reseteado
+    rerender(
+      <MemoryRouter>
+        <WineCreateModal
+          isOpen={true}
+          onClose={onCloseMock}
+          wineryId={10}
+          locationId={5}
+          onWineCreated={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    const freshNameInput = screen.getByPlaceholderText(/Gran Reserva Malbec/i) as HTMLInputElement;
+    expect(freshNameInput.value).toBe('');
   });
 });

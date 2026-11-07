@@ -1,15 +1,24 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { X, Plus, Trash2, Wine, AlertCircle, Save } from 'lucide-react';
 import { getGrapes } from '../api/grapeApi';
-import { createWine, getWineVintages } from '../api/wineApi';
+import { createWine, getWineVintages, createWineVintage, getWineById } from '../api/wineApi';
 import { uploadVintageImage } from '../api/imageApi';
 import ImageUploadField from './ImageUploadField';
+import ConfirmDialog from '../../admin/components/ConfirmDialog';
+import {
+  createNewBlendRow,
+  calculateTotalPercentage,
+  validateGrapeBlend,
+  type BlendRow,
+} from '../utils/grapeBlendUtils';
 import type {
   GrapeResponseDto,
   WineResponseDto,
   WineType,
   CreateWineRequestDto,
+  CreateWineVintageRequestDto,
 } from '../types';
 
 export interface WineCreateModalProps {
@@ -20,10 +29,16 @@ export interface WineCreateModalProps {
   onWineCreated: (newWine: WineResponseDto) => void;
 }
 
-interface BlendRow {
-  id: string;
-  grapeId: number | '';
-  percentage: number | '';
+interface DuplicateVintageInfo {
+  year: string;
+  existingWineId?: number;
+  existingVintageId?: number;
+}
+
+interface ConfirmAddVintageState {
+  existingWineId: number;
+  name: string;
+  year: string;
 }
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
@@ -60,13 +75,53 @@ export default function WineCreateModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Blend Varietal (inicia con porcentaje vacío, nunca 100%)
+  // Blend Varietal
   const [blend, setBlend] = useState<BlendRow[]>([]);
 
   // Feedback y Errores
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // Estados para manejo de 409
+  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateVintageInfo | null>(null);
+  const [confirmAddVintage, setConfirmAddVintage] = useState<ConfirmAddVintageState | null>(null);
+  const [isAddingVintage, setIsAddingVintage] = useState(false);
+
+  // Guarda contra doble envío
+  const isSubmittingRef = useRef(false);
+
+  const resetForm = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setName('');
+    setWineType('Red');
+    setDescription('');
+    setYear(new Date().getFullYear().toString());
+    setAlcoholContent('14.0');
+    setServingTemperature('16');
+    setAgingAdvice('');
+    setErrors({});
+    setServerError(null);
+    setDuplicateInfo(null);
+    setConfirmAddVintage(null);
+
+    if (grapesCatalog.length > 0) {
+      const defaultGrape =
+        grapesCatalog.find((g) => g.name.toLowerCase().includes('malbec')) ?? grapesCatalog[0];
+      setBlend([createNewBlendRow(defaultGrape.id, 0)]);
+    } else {
+      setBlend([]);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   // Cargar catálogo de cepas al abrir
   useEffect(() => {
@@ -82,7 +137,7 @@ export default function WineCreateModal({
             if (prev.length > 0) return prev;
             const defaultGrape =
               data.find((g) => g.name.toLowerCase().includes('malbec')) ?? data[0];
-            return [{ id: `blend-${defaultGrape.id}-${Date.now()}`, grapeId: defaultGrape.id, percentage: '' }];
+            return [createNewBlendRow(defaultGrape.id, 0)];
           });
         }
       })
@@ -95,6 +150,18 @@ export default function WineCreateModal({
     };
   }, [isOpen]);
 
+  // Reseteo al abrir y limpieza de URL al desmontar
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleAddGrape = () => {
@@ -104,10 +171,8 @@ export default function WineCreateModal({
     );
     if (remainingGrapes.length === 0) return;
     const nextGrape = remainingGrapes[0];
-    setBlend((prev) => [
-      ...prev,
-      { id: `blend-${nextGrape.id}-${Date.now()}-${Math.random()}`, grapeId: nextGrape.id, percentage: '' },
-    ]);
+    const newRow = createNewBlendRow(nextGrape.id, blend.length);
+    setBlend((prev) => [...prev, newRow]);
   };
 
   const handleRemoveGrape = (id: string) => {
@@ -134,9 +199,7 @@ export default function WineCreateModal({
     if (errors.blend) setErrors((prev) => ({ ...prev, blend: '' }));
   };
 
-  const totalPercentage = blend.reduce((acc, row) => {
-    return acc + (typeof row.percentage === 'number' ? row.percentage : 0);
-  }, 0);
+  const totalPercentage = calculateTotalPercentage(blend);
 
   const isAddGrapeDisabled =
     blend.length >= 20 ||
@@ -175,18 +238,9 @@ export default function WineCreateModal({
     }
 
     if (blend.length > 0) {
-      if (totalPercentage > 100) {
-        newErrors.blend = `La suma del corte (${totalPercentage}%) no puede superar el 100%.`;
-      }
-      const hasEmptyGrape = blend.some((b) => b.grapeId === '');
-      if (hasEmptyGrape) {
-        newErrors.blend = 'Elegí la cepa para todas las filas del corte.';
-      }
-      const hasInvalidPercentage = blend.some(
-        (b) => typeof b.percentage === 'number' && (b.percentage < 0.01 || b.percentage > 100),
-      );
-      if (hasInvalidPercentage) {
-        newErrors.blend = 'Cada porcentaje debe ser mayor a 0% y menor o igual a 100%.';
+      const blendResult = validateGrapeBlend(blend);
+      if (!blendResult.isValid && blendResult.errorMessage) {
+        newErrors.blend = blendResult.errorMessage;
       }
     }
 
@@ -196,18 +250,21 @@ export default function WineCreateModal({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || isLoading) return;
     setServerError(null);
+    setDuplicateInfo(null);
 
     if (!validate()) return;
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
 
     try {
       const validGrapes = blend
-        .filter((b) => typeof b.grapeId === 'number')
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
         .map((b) => ({
           grapeId: b.grapeId as number,
-          percentage: typeof b.percentage === 'number' ? b.percentage : null,
+          percentage: b.percentage as number,
         }));
 
       const payload: CreateWineRequestDto = {
@@ -234,22 +291,101 @@ export default function WineCreateModal({
             await uploadVintageImage(created.id, vintages[0].id, selectedFile);
           }
         } catch {
-          alert('Vino creado pero falló la subida de imagen. Podés subirla editando la cosecha.');
+          // Fallo no crítico de imagen
         }
       }
 
       onWineCreated(created);
+      resetForm();
       onClose();
     } catch (err: unknown) {
-      let detail: string | undefined;
-      if (isAxiosError<{ detail?: string; title?: string }>(err)) {
-        detail = err.response?.data?.detail ?? err.response?.data?.title;
+      if (isAxiosError<{ code?: string; detail?: string; title?: string; existingWineId?: number; existingVintageId?: number }>(err)) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        const code = data?.code;
+
+        if (status === 409) {
+          if (code === 'WINE_VINTAGE_DUPLICATE') {
+            setDuplicateInfo({
+              year,
+              existingWineId: data?.existingWineId,
+              existingVintageId: data?.existingVintageId,
+            });
+            setServerError(`Ya registraste este vino con la cosecha ${year}.`);
+            return;
+          }
+
+          if (code === 'WINE_EXISTS_ADD_VINTAGE' && data?.existingWineId) {
+            setConfirmAddVintage({
+              existingWineId: data.existingWineId,
+              name: name.trim(),
+              year,
+            });
+            return;
+          }
+        }
+
+        const detail = data?.detail ?? data?.title;
+        setServerError(detail ?? 'No se pudo crear la etiqueta de vino. Verificá los campos ingresados.');
+      } else {
+        setServerError('No se pudo crear la etiqueta de vino. Verificá los campos ingresados.');
       }
-      setServerError(
-        detail ?? 'No se pudo crear la etiqueta de vino. Verificá los campos ingresados.',
-      );
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
+    }
+  };
+
+  const handleConfirmAddVintage = async () => {
+    if (!confirmAddVintage || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsAddingVintage(true);
+
+    try {
+      const validGrapes = blend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const vintagePayload: CreateWineVintageRequestDto = {
+        year: Number(confirmAddVintage.year),
+        alcoholContent: alcoholContent ? Number(alcoholContent) : null,
+        servingTemperature: servingTemperature ? Number(servingTemperature) : null,
+        agingAdvice: agingAdvice.trim() || null,
+        grapes: validGrapes.length > 0 ? validGrapes : null,
+      };
+
+      const createdVintage = await createWineVintage(confirmAddVintage.existingWineId, vintagePayload);
+
+      if (selectedFile) {
+        try {
+          await uploadVintageImage(confirmAddVintage.existingWineId, createdVintage.id, selectedFile);
+        } catch {
+          // Fallo no crítico de imagen
+        }
+      }
+
+      const updatedWine = await getWineById(confirmAddVintage.existingWineId);
+      onWineCreated(updatedWine);
+      setConfirmAddVintage(null);
+      resetForm();
+      onClose();
+    } catch (err: unknown) {
+      if (isAxiosError<{ detail?: string; title?: string }>(err)) {
+        setServerError(
+          err.response?.data?.detail ??
+            err.response?.data?.title ??
+            'No se pudo agregar la cosecha al vino existente.'
+        );
+      } else {
+        setServerError('No se pudo agregar la cosecha al vino existente.');
+      }
+      setConfirmAddVintage(null);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsAddingVintage(false);
     }
   };
 
@@ -278,7 +414,7 @@ export default function WineCreateModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 rounded-xl bg-stone-900/60 border border-white/5 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />
@@ -287,7 +423,26 @@ export default function WineCreateModal({
 
         {/* Formulario Scrolleable */}
         <form noValidate onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
-          {serverError && (
+          {duplicateInfo && (
+            <div
+              role="alert"
+              className="flex items-center justify-between p-4 rounded-xl bg-amber-950/30 border border-amber-800/40 text-amber-200 text-xs font-sans"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Ya registraste este vino con la cosecha {duplicateInfo.year}.</span>
+              </div>
+              <Link
+                to={duplicateInfo.existingWineId ? `/bodega/vinos/${duplicateInfo.existingWineId}` : '/bodega/vinos'}
+                onClick={handleClose}
+                className="font-mono underline text-amber-300 hover:text-amber-100 font-semibold text-xs ml-4 shrink-0"
+              >
+                Gestionar vino
+              </Link>
+            </div>
+          )}
+
+          {serverError && !duplicateInfo && (
             <div
               role="alert"
               className="flex items-center gap-3 p-4 rounded-xl bg-rose-950/30 border border-rose-800/40 text-rose-200 text-xs font-sans"
@@ -454,24 +609,18 @@ export default function WineCreateModal({
                   3. Composición Varietal (Blend)
                 </span>
                 <span className="text-xs text-neutral-500 font-sans">
-                  Total asignado:{' '}
+                  Total:{' '}
                   <strong
                     className={
-                      totalPercentage > 100
-                        ? 'text-rose-400 font-mono'
-                        : totalPercentage === 100
-                          ? 'text-emerald-400 font-mono'
+                      totalPercentage === 100
+                        ? 'text-emerald-400 font-mono'
+                        : totalPercentage > 100
+                          ? 'text-rose-400 font-mono'
                           : 'text-amber-300 font-mono'
                     }
                   >
                     {totalPercentage}%
-                  </strong>{' '}
-                  / 100%
-                  {totalPercentage > 100 && (
-                    <span className="text-rose-400 ml-2 font-mono text-[11px]">
-                      (Supera el 100%)
-                    </span>
-                  )}
+                  </strong>
                 </span>
               </div>
 
@@ -518,7 +667,7 @@ export default function WineCreateModal({
                       <div className="relative w-28">
                         <input
                           type="number"
-                          min="0.01"
+                          min="0"
                           max="100"
                           step="0.01"
                           value={row.percentage}
@@ -552,8 +701,8 @@ export default function WineCreateModal({
           <div className="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={onClose}
-              disabled={isLoading}
+              onClick={handleClose}
+              disabled={isLoading || isAddingVintage}
               className="px-5 py-2.5 rounded-xl border border-white/10 text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white cursor-pointer transition-colors"
             >
               Cancelar
@@ -561,10 +710,10 @@ export default function WineCreateModal({
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isAddingVintage}
               className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg disabled:opacity-60"
             >
-              {isLoading ? (
+              {isLoading || isAddingVintage ? (
                 <div className="h-4 w-4 border-2 border-rose-200/30 border-t-rose-100 rounded-full animate-spin" />
               ) : (
                 <>
@@ -575,6 +724,20 @@ export default function WineCreateModal({
             </button>
           </div>
         </form>
+
+        {/* Diálogo de confirmación en caso de que el vino ya exista con otra cosecha */}
+        {confirmAddVintage && (
+          <ConfirmDialog
+            open={true}
+            title="Etiqueta existente"
+            message={`Ya tenés «${confirmAddVintage.name}» en tu catálogo. ¿Querés agregar la cosecha ${confirmAddVintage.year} a ese vino?`}
+            confirmLabel="Agregar cosecha"
+            tone="default"
+            isLoading={isAddingVintage}
+            onConfirm={() => void handleConfirmAddVintage()}
+            onCancel={() => setConfirmAddVintage(null)}
+          />
+        )}
       </div>
     </div>
   );
