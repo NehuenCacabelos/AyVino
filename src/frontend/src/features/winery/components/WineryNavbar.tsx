@@ -6,7 +6,6 @@ import {
   LogOut,
   ExternalLink,
   Settings,
-  Compass,
   Building2,
   ShieldCheck,
   Clock,
@@ -110,15 +109,10 @@ export default function WineryNavbar() {
         {/* Lado Derecho: Menú de Bodega y Toggle Móvil */}
         <div className="flex items-center gap-3">
           
-          {/* Badge de Estado en Desktop */}
-          {winery && (
+          {/* Badge de Estado en Desktop (solo En revisión y Rechazada) */}
+          {winery && winery.status !== 'Approved' && (
             <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border">
-              {winery.status === 'Approved' ? (
-                <span className="flex items-center gap-1 text-emerald-400 border-emerald-900/40 bg-emerald-950/30">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Oficial
-                </span>
-              ) : winery.status === 'Rejected' ? (
+              {winery.status === 'Rejected' ? (
                 <span className="flex items-center gap-1 text-rose-400 border-rose-900/40 bg-rose-950/30">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Rechazada
@@ -202,15 +196,6 @@ export default function WineryNavbar() {
                       <ExternalLink className="w-3 h-3 text-zinc-500" />
                     </Link>
                   )}
-
-                  <Link
-                    to="/dashboard"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors font-medium"
-                  >
-                    <Compass className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>Explorar como usuario</span>
-                  </Link>
                 </div>
 
                 <div className="my-1.5 border-t border-white/5" />
@@ -306,15 +291,6 @@ export default function WineryNavbar() {
                 <ExternalLink className="w-3 h-3 text-neutral-500" />
               </Link>
             )}
-
-            <Link
-              to="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200"
-            >
-              <Compass className="w-3.5 h-3.5 text-neutral-500" />
-              <span>Explorar catálogo</span>
-            </Link>
           </nav>
 
           <div className="pt-2 border-t border-white/5">
