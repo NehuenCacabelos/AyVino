@@ -1,57 +1,40 @@
-import { Link } from 'react-router-dom';
-import { Wine, Plus, Star, ArrowRight } from 'lucide-react';
-import type { WineResponseDto } from '../types';
+import { Link, useNavigate } from 'react-router-dom';
+import { Wine, Plus, ArrowRight } from 'lucide-react';
+import type { WineryPublicCatalogWineDto } from '../types';
+import WineryPublicCatalogCard from './WineryPublicCatalogCard';
 
 export interface WineryRecentWinesProps {
-  wines: WineResponseDto[];
+  wines: WineryPublicCatalogWineDto[];
   isLoading: boolean;
-}
-
-function getWineTypeLabel(wineType?: string): string {
-  switch (wineType?.toLowerCase()) {
-    case 'red':
-      return 'Tinto';
-    case 'white':
-      return 'Blanco';
-    case 'rose':
-      return 'Rosado';
-    case 'sparkling':
-      return 'Espumoso';
-    case 'orange':
-      return 'Naranjo';
-    default:
-      return wineType || 'Vino';
-  }
-}
-
-function getWineTypeColor(wineType?: string): string {
-  switch (wineType?.toLowerCase()) {
-    case 'red':
-      return 'bg-rose-950/40 text-rose-300 border-rose-900/40';
-    case 'white':
-      return 'bg-amber-950/30 text-amber-200 border-amber-900/40';
-    case 'rose':
-      return 'bg-pink-950/30 text-pink-300 border-pink-900/40';
-    case 'sparkling':
-      return 'bg-yellow-950/30 text-yellow-200 border-yellow-900/40';
-    case 'orange':
-      return 'bg-orange-950/30 text-orange-300 border-orange-900/40';
-    default:
-      return 'bg-stone-900 text-neutral-300 border-white/10';
-  }
+  totalCount?: number;
+  onOpenCreateModal?: () => void;
 }
 
 /**
  * WineryRecentWines Component
- * Sección que resume las últimas etiquetas oficiales registradas por la bodega.
- * Incluye empty state integrado cuando aún no se han publicado vinos.
+ * Sección que resume las últimas etiquetas registradas por la bodega usando WineryPublicCatalogCard.
+ * Muestra hasta 8 etiquetas en una grilla responsive idéntica a la del catálogo público.
  */
-export default function WineryRecentWines({ wines, isLoading }: WineryRecentWinesProps) {
-  // Tomar hasta 4 vinos para el preview de inicio
-  const previewWines = wines.slice(0, 4);
+export default function WineryRecentWines({
+  wines,
+  isLoading,
+  totalCount,
+  onOpenCreateModal,
+}: WineryRecentWinesProps) {
+  const navigate = useNavigate();
+
+  // Asegurar que cada vino cumpla el contrato de WineryPublicCatalogWineDto (en caso de datos legacy)
+  const safeWines: WineryPublicCatalogWineDto[] = (wines || []).map((w) => ({
+    ...w,
+    vintages: Array.isArray(w.vintages) ? w.vintages : [],
+  }));
+
+  // Mostrar hasta 8 etiquetas (dos filas de cuatro)
+  const previewWines = safeWines.slice(0, 8);
+  const totalLabels = totalCount ?? safeWines.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-serif text-lg font-semibold text-neutral-100 tracking-tight">
@@ -61,23 +44,20 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
             Últimas botellas oficiales incorporadas al catálogo de AyVino.
           </p>
         </div>
-
-        <Link
-          to="/bodega/vinos"
-          className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 transition-colors font-medium"
-        >
-          <span>Ver todas ({wines.length})</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
+        /* Skeletons de Carga */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, idx) => (
             <div
-              key={i}
-              className="h-28 rounded-2xl bg-[#121015] border border-white/10 p-5 animate-pulse"
-            />
+              key={`skeleton-${idx}`}
+              className="h-80 rounded-2xl bg-[#121015] border border-white/5 animate-pulse flex flex-col p-4 space-y-4"
+            >
+              <div className="w-full h-44 bg-zinc-900/60 rounded-xl" />
+              <div className="h-5 w-3/4 bg-zinc-900 rounded" />
+              <div className="h-3 w-1/2 bg-zinc-900/50 rounded" />
+            </div>
           ))}
         </div>
       ) : previewWines.length === 0 ? (
@@ -98,72 +78,52 @@ export default function WineryRecentWines({ wines, isLoading }: WineryRecentWine
           </div>
 
           <div className="pt-2">
-            <Link
-              to="/bodega/vinos"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Cargar primera etiqueta</span>
-            </Link>
+            {onOpenCreateModal ? (
+              <button
+                type="button"
+                onClick={onOpenCreateModal}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Cargar primera etiqueta</span>
+              </button>
+            ) : (
+              <Link
+                to="/bodega/vinos"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Cargar primera etiqueta</span>
+              </Link>
+            )}
           </div>
         </div>
       ) : (
         /* Grilla de Vinos Recientes */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {previewWines.map((wine) => (
-            <div
-              key={wine.id}
-              className="rounded-2xl bg-[#121015] border border-white/10 p-5 flex flex-col justify-between hover:border-white/20 transition-colors shadow-lg group"
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {previewWines.map((wine) => (
+              <WineryPublicCatalogCard
+                key={wine.id}
+                wine={wine}
+                onSelectWine={() => navigate('/bodega/vinos')}
+                isPreview={true}
+              />
+            ))}
+          </div>
+
+          {/* "Ver todas (n)" debajo de la grilla, alineado a la derecha, solo si hay etiquetas */}
+          <div className="flex justify-end pt-2">
+            <Link
+              to="/bodega/vinos"
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200 transition-colors font-medium"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span
-                    className={`inline-block text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${getWineTypeColor(
-                      typeof wine.wineType === 'string' ? wine.wineType : 'Vino',
-                    )}`}
-                  >
-                    {getWineTypeLabel(typeof wine.wineType === 'string' ? wine.wineType : undefined)}
-                  </span>
-
-                  <div className="flex items-center gap-1 text-xs text-amber-200">
-                    <Star className="w-3.5 h-3.5 fill-amber-300/30 text-amber-300" />
-                    <span className="font-mono font-medium">
-                      {wine.averageRating ? wine.averageRating.toFixed(1) : '—'}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      ({wine.reviewCount})
-                    </span>
-                  </div>
-                </div>
-
-                <h3 className="font-serif text-lg font-semibold text-neutral-100 group-hover:text-rose-200 transition-colors truncate">
-                  {wine.name}
-                </h3>
-
-                {wine.description && (
-                  <p className="text-xs text-neutral-400 mt-1 line-clamp-2 font-sans leading-relaxed">
-                    {wine.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-mono text-neutral-500">
-                  {wine.sourceType === 'Official' ? 'Ficha Oficial' : 'Comunitaria'}
-                </span>
-
-                <Link
-                  to="/bodega/vinos"
-                  className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-white transition-colors"
-                >
-                  Gestionar →
-                </Link>
-              </div>
-            </div>
-          ))}
+              <span>Ver todas ({totalLabels})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
