@@ -1,5 +1,6 @@
 export * from './types';
 export * from './data/defaultVaultData';
+export * from './data/varietalsData';
 export { default as VaultHeader } from './components/VaultHeader';
 export { default as VaultVitals } from './components/VaultVitals';
 export { default as VaultTabs } from './components/VaultTabs';

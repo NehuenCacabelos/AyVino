@@ -11,6 +11,7 @@ import {
   TechnicalSheetModal,
   QuickAddBottleModal,
   initialTastingLog,
+  resolveWineTypeAndBottle,
   type CellarWine,
   type WineSortOption,
   type QuickAddBottlePayload,
@@ -291,17 +292,7 @@ export default function CavaPage() {
   };
 
   const handleAddBottle = async (payload: QuickAddBottlePayload) => {
-    let wineType = 'Red';
-    const v = payload.varietal.toLowerCase();
-    if (v.includes('blanco') || v.includes('chardonnay') || v.includes('torrontés')) {
-      wineType = 'White';
-    } else if (v.includes('rosado')) {
-      wineType = 'Rose';
-    } else if (v.includes('espumante') || v.includes('champagne')) {
-      wineType = 'Sparkling';
-    } else if (v.includes('naranjo')) {
-      wineType = 'Orange';
-    }
+    const { wineType } = resolveWineTypeAndBottle(payload.varietal);
 
     const response = await apiClient.post('/cellars/me/quick-add', {
       name: payload.name,

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Compass, AlertCircle, CheckCircle2, Star, ArrowLeft, Loader2 } from 'lucide-react';
+import { X, Plus, Compass, AlertCircle, CheckCircle2, Star, ArrowLeft, Loader2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiClient } from '../../../services/apiClient';
 import type { BottleKind } from '../../../types/wine';
 import type { QuickAddBottlePayload } from '../types';
+import { VARIETALS_CATALOG, resolveWineTypeAndBottle } from '../data/varietalsData';
 
 interface MatchedWineData {
   id: number;
@@ -38,11 +39,28 @@ export default function QuickAddBottleModal({
   const [location, setLocation] = useState('A1 · ESTANTE SUP.');
   const [units, setUnits] = useState<number>(1);
   const [bottleKind, setBottleKind] = useState<BottleKind>('red-burgundy');
+  const [showAllVarietals, setShowAllVarietals] = useState<boolean>(false);
 
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [matchedCandidate, setMatchedCandidate] = useState<MatchedWineData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const displayedVarietals = useMemo(() => {
+    if (showAllVarietals) return VARIETALS_CATALOG;
+    return VARIETALS_CATALOG.filter((item) => item.isPopular || item.value === varietal);
+  }, [showAllVarietals, varietal]);
+
+  const varietalGroups = useMemo(() => {
+    const order: Array<'Tintas' | 'Blancas' | 'Rosados' | 'Espumantes' | 'Especiales'> = [
+      'Tintas',
+      'Blancas',
+      'Rosados',
+      'Espumantes',
+      'Especiales',
+    ];
+    return order.filter((grp) => displayedVarietals.some((v) => v.group === grp));
+  }, [displayedVarietals]);
 
   if (!isOpen) {
     return null;
@@ -57,6 +75,7 @@ export default function QuickAddBottleModal({
     setLocation('A1 · ESTANTE SUP.');
     setUnits(1);
     setBottleKind('red-burgundy');
+    setShowAllVarietals(false);
     setMatchedCandidate(null);
     setErrorMessage(null);
     setIsChecking(false);
@@ -338,37 +357,64 @@ export default function QuickAddBottleModal({
             {/* Varietal y Añada */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label htmlFor="wine-varietal" className="font-mono text-xs text-neutral-300 uppercase tracking-wide block">
-                  Varietal Principal
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="wine-varietal" className="font-mono text-xs text-neutral-300 uppercase tracking-wide block">
+                    Varietal / Tipo *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllVarietals((prev) => !prev)}
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-[#fbbf24] hover:text-[#fde68a] hover:underline transition-colors"
+                  >
+                    {showAllVarietals ? (
+                      <>
+                        <ChevronUp className="w-3 h-3" />
+                        <span>Ver habituales</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3 h-3" />
+                        <span>Ver más (+35 cepas)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <select
                   id="wine-varietal"
                   value={varietal}
                   onChange={(e) => {
                     const val = e.target.value;
                     setVarietal(val);
-                    if (val.includes('Blanco') || val === 'Chardonnay') {
-                      setBottleKind('white');
-                    } else if (val === 'Torrontés') {
-                      setBottleKind('white-flute');
-                    } else if (val.includes('Espumante')) {
-                      setBottleKind('sparkling');
-                    } else {
-                      setBottleKind('red-burgundy');
-                    }
+                    const { bottleKind: resolvedBottle } = resolveWineTypeAndBottle(val);
+                    setBottleKind(resolvedBottle);
                   }}
                   className="w-full bg-[#0a0a0c] border border-neutral-800 rounded-lg px-3.5 py-2.5 text-sm text-neutral-100 focus:outline-none focus:border-[#722F37] transition-all"
                 >
-                  <option value="Malbec">Malbec</option>
-                  <option value="Cabernet Franc">Cabernet Franc</option>
-                  <option value="Cabernet Sauvignon">Cabernet Sauvignon</option>
-                  <option value="Blend de Tintas">Blend de Tintas</option>
-                  <option value="Pinot Noir">Pinot Noir</option>
-                  <option value="Chardonnay">Chardonnay</option>
-                  <option value="Torrontés">Torrontés</option>
-                  <option value="Rosado">Rosado</option>
-                  <option value="Espumante">Espumante</option>
+                  {varietalGroups.map((groupName) => (
+                    <optgroup key={groupName} label={groupName} className="bg-[#17161c] text-neutral-300 font-semibold">
+                      {displayedVarietals
+                        .filter((item) => item.group === groupName)
+                        .map((item) => (
+                          <option key={item.value} value={item.value} className="bg-[#0a0a0c] text-neutral-100 font-normal">
+                            {item.label}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
                 </select>
+                <div className="flex items-center justify-between pt-0.5">
+                  <span className="text-[10px] font-mono text-neutral-500">
+                    {showAllVarietals ? 'Catálogo completo (35+ variedades e INV)' : 'Varietales más frecuentes'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllVarietals((prev) => !prev)}
+                    className="text-[11px] font-mono text-[#fbbf24] hover:text-[#fde68a] hover:underline inline-flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{showAllVarietals ? 'Opciones frecuentes' : '+ Ver más opciones'}</span>
+                  </button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="wine-vintage" className="font-mono text-xs text-neutral-300 uppercase tracking-wide block">
