@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Wine } from 'lucide-react';
+import { Wine, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
 import {
