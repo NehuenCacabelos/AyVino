@@ -150,7 +150,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
     fireEvent.click(editBarBtn);
 
     // Ahora los campos son editables
-    expect(screen.getByDisplayValue('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Enzo Bianchi Gran Corte')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Vino ícono de corte mendocino.')).toBeInTheDocument();
     const saveBtn = screen.getByRole('button', { name: /Guardar edición/i });
     const cancelBtn = screen.getByRole('button', { name: /Cancelar/i });
@@ -173,7 +173,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
 
-    const nameInput = screen.getByDisplayValue('Enzo Bianchi Gran Corte');
+    const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte Modificado' } });
 
     const typeSelect = screen.getByLabelText(/Seleccionar tipo de vino/i);
@@ -262,7 +262,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
 
-    const nameInput = screen.getByDisplayValue('Enzo Bianchi Gran Corte');
+    const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte 2020' } });
 
     const saveBtn = screen.getByRole('button', { name: /Guardar edición/i });
@@ -319,7 +319,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
 
-    const nameInput = screen.getByDisplayValue('Enzo Bianchi Gran Corte');
+    const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Cambio sin guardar' } });
 
     const cancelBtn = screen.getByRole('button', { name: /Cancelar/i });
