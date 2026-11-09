@@ -4,13 +4,12 @@ import { apiWineToEditorial } from '../adapters/apiWineToEditorial';
 import { getWineById, getWineVintages } from '../../winery/api/wineApi';
 import { getWineryById } from '../../winery/api/wineryApi';
 import { getWinePairings } from '../../winery/api/wineryWinePairingsApi';
-import { getGrapes } from '../../winery/api/grapeApi';
+import { useWineCatalogs } from './useWineCatalogs';
 import { getWineReviews } from '../api/reviewsApi';
 import type {
   WineResponseDto,
   WineVintageResponseDto,
   WineryResponseDto,
-  GrapeResponseDto,
 } from '../../winery/types';
 import type { ReviewResponseDto } from '../types/review';
 
@@ -34,11 +33,12 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
 
   const isValidNumericId = !isNaN(numericId) && numericId > 0;
 
+  const { grapesCatalog } = useWineCatalogs({ enabled: isValidNumericId });
+
   const [wine, setWine] = useState<EditorialWine | null>(null);
   const [rawWine, setRawWine] = useState<WineResponseDto | null>(null);
   const [rawVintages, setRawVintages] = useState<WineVintageResponseDto[]>([]);
   const [rawWinery, setRawWinery] = useState<WineryResponseDto | null>(null);
-  const [grapesCatalog, setGrapesCatalog] = useState<GrapeResponseDto[]>([]);
   const [pairingsList, setPairingsList] = useState<{ id: number; name: string; category?: string }[]>([]);
   const [reviewsList, setReviewsList] = useState<ReviewResponseDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(isValidNumericId));
@@ -60,12 +60,11 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
       if (!isMounted.current) return;
       setRawWine(wineData);
 
-      // 2. Cargar en paralelo cosechas, bodega, maridajes, uvas y reseñas
-      const [vintagesRes, wineryRes, pairingsRes, grapesRes, reviewsRes] = await Promise.allSettled([
+      // 2. Cargar en paralelo cosechas, bodega, maridajes y reseñas
+      const [vintagesRes, wineryRes, pairingsRes, reviewsRes] = await Promise.allSettled([
         getWineVintages(numericId),
         wineData.wineryId ? getWineryById(wineData.wineryId) : Promise.resolve(null),
         getWinePairings(numericId),
-        getGrapes({ pageSize: 200 }),
         getWineReviews(numericId, 1, 100),
       ]);
 
@@ -74,12 +73,10 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
       const loadedVintages = vintagesRes.status === 'fulfilled' ? vintagesRes.value : [];
       const loadedWinery = wineryRes.status === 'fulfilled' ? wineryRes.value : null;
       const loadedPairings = pairingsRes.status === 'fulfilled' ? pairingsRes.value : [];
-      const loadedGrapes = grapesRes.status === 'fulfilled' ? grapesRes.value : [];
       const loadedReviews = reviewsRes.status === 'fulfilled' ? reviewsRes.value : [];
 
       setRawVintages(loadedVintages);
       setRawWinery(loadedWinery);
-      setGrapesCatalog(loadedGrapes);
       setPairingsList(loadedPairings);
       setReviewsList(loadedReviews);
 
@@ -88,7 +85,7 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
         loadedVintages,
         loadedWinery,
         loadedPairings,
-        loadedGrapes,
+        grapesCatalog,
         loadedReviews
       );
 
@@ -109,7 +106,23 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
         setIsLoading(false);
       }
     }
-  }, [numericId, isValidNumericId]);
+  }, [numericId, isValidNumericId, grapesCatalog]);
+
+  // Si el catálogo de uvas carga de forma asíncrona tras la respuesta del vino, re-adaptar
+  useEffect(() => {
+    if (rawWine) {
+      setWine(
+        apiWineToEditorial(
+          rawWine,
+          rawVintages,
+          rawWinery,
+          pairingsList,
+          grapesCatalog,
+          reviewsList
+        )
+      );
+    }
+  }, [rawWine, rawVintages, rawWinery, pairingsList, grapesCatalog, reviewsList]);
 
   const reloadReviews = useCallback(async () => {
     if (!isValidNumericId || !rawWine) return;
