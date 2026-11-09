@@ -84,6 +84,11 @@ src/frontend/src/
 │   ├── dashboard/             # Módulo del Dashboard / Mi Cava Personal
 │   │   ├── components/        # Componentes del dominio (QuickActions, Metrics, StockCarousel, UncorkDialog, etc.)
 │   │   └── index.ts           # Barrel export público del feature dashboard
+│   ├── cava/                  # Módulo de Mi Cava y Gestión de Bóveda Personal (/cava)
+│   │   ├── components/        # VaultHeader, VaultVitals, VaultTabs, VaultWineCard, TechnicalSheetModal, QuickAddBottleModal
+│   │   ├── data/              # defaultVaultData.ts, varietalsData.ts (catálogo ampliado de +35 cepas INV con toggle)
+│   │   ├── types/             # CellarWine, QuickAddBottlePayload, TastingLogEntry
+│   │   └── index.ts           # Barrel export público del feature cava
 │   └── wines/                 # Módulo de Vinos y Catálogo
 │       ├── components/        # Componentes de presentación (WineCard.tsx, WineBottleSilhouette.tsx, WineBottleMock.tsx, WineDetailModal.tsx)
 │       ├── data/              # Mock curado con assets reales vinculados (curatedWines.ts)
