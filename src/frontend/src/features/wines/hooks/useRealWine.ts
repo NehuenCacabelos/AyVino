@@ -19,6 +19,7 @@ export interface UseRealWineReturn {
   rawWine: WineResponseDto | null;
   rawVintages: WineVintageResponseDto[];
   rawWinery: WineryResponseDto | null;
+  reviewsList: ReviewResponseDto[];
   isLoading: boolean;
   error: string | null;
   isNotFound: boolean;
@@ -150,6 +151,7 @@ export function useRealWine(wineIdInput: string | number | undefined): UseRealWi
     rawWine,
     rawVintages,
     rawWinery,
+    reviewsList,
     isLoading,
     error,
     isNotFound,

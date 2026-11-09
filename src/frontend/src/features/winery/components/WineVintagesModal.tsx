@@ -393,11 +393,11 @@ export default function WineVintagesModal({
         }));
 
       const payload: UpdateWineVintageRequestDto = {
-        Year: Number(editYear),
-        AlcoholContent: editAlcohol ? Number(editAlcohol) : null,
-        ServingTemperature: editServingTemp ? Number(editServingTemp) : null,
-        AgingAdvice: editAgingAdvice.trim() || null,
-        Grapes: validGrapes.length > 0 ? validGrapes : null,
+        year: Number(editYear),
+        alcoholContent: editAlcohol ? Number(editAlcohol) : null,
+        servingTemperature: editServingTemp ? Number(editServingTemp) : null,
+        agingAdvice: editAgingAdvice.trim() || null,
+        grapes: validGrapes.length > 0 ? validGrapes : null,
       };
 
       await updateWineVintage(wine.id, editingVintageId, payload);

@@ -10,9 +10,11 @@ export default function WineryWineDetailPage() {
   const {
     wine,
     rawWine,
+    rawVintages,
     isLoading,
     isNotFound,
     error,
+    reload,
     reloadReviews,
   } = useRealWine(wineId);
 
@@ -85,6 +87,9 @@ export default function WineryWineDetailPage() {
       reviews={wine.reviews}
       ownerMode={true}
       isRealWine={true}
+      rawWine={rawWine}
+      rawVintages={rawVintages}
+      onReload={reload}
       onReviewPublished={reloadReviews}
     />
   );

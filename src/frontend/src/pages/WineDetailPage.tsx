@@ -11,9 +11,12 @@ export default function WineDetailPage() {
   // 1.1: Si el id es numérico, cargar vino real desde la API
   const {
     wine: realWine,
+    rawWine,
+    rawVintages,
     isLoading,
     isNotFound,
     error,
+    reload,
     reloadReviews,
   } = useRealWine(isNumeric ? id : undefined);
 
@@ -66,6 +69,9 @@ export default function WineDetailPage() {
         wine={realWine}
         reviews={realWine.reviews}
         isRealWine={true}
+        rawWine={rawWine}
+        rawVintages={rawVintages}
+        onReload={reload}
         onReviewPublished={reloadReviews}
       />
     );
