@@ -14,11 +14,12 @@ public class CellarItemServiceTests
     private readonly ICellarRepository _cellarRepository = Substitute.For<ICellarRepository>();
     private readonly ICellarItemRepository _itemRepository = Substitute.For<ICellarItemRepository>();
     private readonly IWineVintageRepository _wineVintageRepository = Substitute.For<IWineVintageRepository>();
+    private readonly IWineRepository _wineRepository = Substitute.For<IWineRepository>();
     private readonly CellarItemService _cellarItemService;
 
     public CellarItemServiceTests()
     {
-        _cellarItemService = new CellarItemService(_cellarRepository, _itemRepository, _wineVintageRepository);
+        _cellarItemService = new CellarItemService(_cellarRepository, _itemRepository, _wineVintageRepository, _wineRepository);
     }
 
     [Fact]
@@ -243,5 +244,148 @@ public class CellarItemServiceTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => _cellarItemService.GetPublicCellarItemsAsync("sommelier", page, size));
+    }
+
+    [Fact]
+    public async Task QuickAddAsync_NewCommunityWine_CreatesWineAndVintageAndAddsToCellar()
+    {
+        // Arrange
+        var cellar = new Cellar { Id = 10, UserId = 1, Name = "Mi Cava", CreatedAt = DateTime.UtcNow };
+        _cellarRepository.GetByIdAsync(10, 1, Arg.Any<CancellationToken>()).Returns(cellar);
+
+        var createdWine = new Wine { Id = 50, Name = "Vino Comunitario", WineType = AyVino.Api.Features.Wines.Enums.WineType.Red, SourceType = AyVino.Api.Features.Wines.Enums.SourceType.Community };
+        _wineRepository.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(createdWine);
+
+        var vintage = new WineVintage { Id = 100, WineId = 50, Year = 2021 };
+        _wineVintageRepository.GetAllByWineIdAsync(50, Arg.Any<CancellationToken>())
+            .Returns(new[] { vintage });
+
+        _itemRepository.GetAsync(10, 100, Arg.Any<CancellationToken>()).Returns((CellarItem?)null);
+
+        var row = new CellarItemListRow
+        {
+            WineVintageId = 100,
+            WineId = 50,
+            Name = "Vino Comunitario",
+            WineType = AyVino.Api.Features.Wines.Enums.WineType.Red,
+            WineryNameText = "Bodega Garage",
+            Year = 2021,
+            Quantity = 2,
+            Notes = "[A1] Botella guardada",
+            LastChangeAt = DateTime.UtcNow
+        };
+        _itemRepository.GetRowAsync(10, 100, Arg.Any<CancellationToken>()).Returns(row);
+
+        var request = new QuickAddCellarWineRequestDto(
+            Name: "Vino Comunitario",
+            WineryName: "Bodega Garage",
+            WineType: "Red",
+            Year: 2021,
+            Quantity: 2,
+            Location: "A1",
+            Notes: "Botella guardada");
+
+        // Act
+        var result = await _cellarItemService.QuickAddAsync(1, 10, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(100, result.WineVintageId);
+        Assert.Equal(50, result.WineId);
+        Assert.Equal(2, result.Quantity);
+        await _wineRepository.Received(1).CreateWithFirstVintageAsync(
+            Arg.Is<Wine>(w => w.SourceType == AyVino.Api.Features.Wines.Enums.SourceType.Community && w.WineryNameText == "Bodega Garage"),
+            Arg.Is<WineVintage>(v => v.Year == 2021),
+            Arg.Any<IEnumerable<WineGrape>>(),
+            Arg.Any<CancellationToken>());
+        await _itemRepository.Received(1).CreateAsync(
+            Arg.Is<CellarItem>(ci => ci.CellarId == 10 && ci.WineVintageId == 100 && ci.Quantity == 2),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task QuickAddAsync_MatchedExistingWine_ExistingVintage_IncrementsQuantity()
+    {
+        // Arrange
+        var cellar = new Cellar { Id = 10, UserId = 1, Name = "Mi Cava", CreatedAt = DateTime.UtcNow };
+        _cellarRepository.GetByIdAsync(10, 1, Arg.Any<CancellationToken>()).Returns(cellar);
+
+        var existingWine = new Wine { Id = 50, Name = "Catena Zapata", WineType = AyVino.Api.Features.Wines.Enums.WineType.Red, SourceType = AyVino.Api.Features.Wines.Enums.SourceType.Official };
+        _wineRepository.GetByIdAsync(50, Arg.Any<CancellationToken>()).Returns(existingWine);
+
+        var existingVintage = new WineVintage { Id = 100, WineId = 50, Year = 2020 };
+        _wineVintageRepository.GetAllByWineIdAsync(50, Arg.Any<CancellationToken>()).Returns(new[] { existingVintage });
+
+        var existingItem = new CellarItem { CellarId = 10, WineVintageId = 100, Quantity = 2, Notes = "Estante 1" };
+        _itemRepository.GetAsync(10, 100, Arg.Any<CancellationToken>()).Returns(existingItem);
+
+        var row = new CellarItemListRow
+        {
+            WineVintageId = 100,
+            WineId = 50,
+            Name = "Catena Zapata",
+            WineType = AyVino.Api.Features.Wines.Enums.WineType.Red,
+            WineryNameText = "Catena Zapata",
+            Year = 2020,
+            Quantity = 5,
+            LastChangeAt = DateTime.UtcNow
+        };
+        _itemRepository.GetRowAsync(10, 100, Arg.Any<CancellationToken>()).Returns(row);
+
+        var request = new QuickAddCellarWineRequestDto(
+            Name: "Catena Zapata",
+            WineryName: "Catena Zapata",
+            WineType: "Red",
+            Year: 2020,
+            Quantity: 3,
+            MatchedWineId: 50);
+
+        // Act
+        var result = await _cellarItemService.QuickAddAsync(1, 10, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Quantity);
+        await _itemRepository.Received(1).UpdateAsync(10, 100, 5, Arg.Any<DateOnly?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task QuickAddAsync_NoCellarExists_CreatesDefaultCellarFirst()
+    {
+        // Arrange
+        _cellarRepository.GetAllByUserAsync(1, 1, 1, Arg.Any<CancellationToken>())
+            .Returns(Enumerable.Empty<CellarSummaryRow>());
+        _cellarRepository.CreateAsync(1, "Mi Cava", Arg.Any<CancellationToken>())
+            .Returns(99);
+
+        var createdWine = new Wine { Id = 60, Name = "Malbec Joven", WineType = AyVino.Api.Features.Wines.Enums.WineType.Red, SourceType = AyVino.Api.Features.Wines.Enums.SourceType.Community };
+        _wineRepository.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+            .Returns(createdWine);
+
+        var vintage = new WineVintage { Id = 120, WineId = 60, Year = 2023 };
+        _wineVintageRepository.GetAllByWineIdAsync(60, Arg.Any<CancellationToken>()).Returns(new[] { vintage });
+        _itemRepository.GetAsync(99, 120, Arg.Any<CancellationToken>()).Returns((CellarItem?)null);
+
+        var row = new CellarItemListRow
+        {
+            WineVintageId = 120,
+            WineId = 60,
+            Name = "Malbec Joven",
+            WineType = AyVino.Api.Features.Wines.Enums.WineType.Red,
+            Quantity = 1,
+            LastChangeAt = DateTime.UtcNow
+        };
+        _itemRepository.GetRowAsync(99, 120, Arg.Any<CancellationToken>()).Returns(row);
+
+        var request = new QuickAddCellarWineRequestDto("Malbec Joven", "Bodega Nueva", "Red", 2023, 1);
+
+        // Act
+        var result = await _cellarItemService.QuickAddAsync(1, null, request);
+
+        // Assert
+        Assert.NotNull(result);
+        await _cellarRepository.Received(1).CreateAsync(1, "Mi Cava", Arg.Any<CancellationToken>());
+        await _itemRepository.Received(1).CreateAsync(Arg.Is<CellarItem>(ci => ci.CellarId == 99 && ci.WineVintageId == 120), Arg.Any<CancellationToken>());
     }
 }

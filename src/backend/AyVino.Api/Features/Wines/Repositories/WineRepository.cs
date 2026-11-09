@@ -270,6 +270,45 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
+    public async Task<Wine?> FindDuplicateCandidateAsync(string name, string winery, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(winery))
+            return null;
+
+        const string sql = """
+            SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
+                   w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            WHERE w.duplicate_of_wine_id IS NULL
+              AND (
+                  LOWER(TRIM(w.name)) = LOWER(TRIM(@Name))
+                  OR similarity(w.name, @Name) > 0.35
+              )
+              AND (
+                  LOWER(TRIM(COALESCE(w.winery_name_text, ''))) = LOWER(TRIM(@Winery))
+                  OR LOWER(TRIM(COALESCE(wy.name, ''))) = LOWER(TRIM(@Winery))
+                  OR similarity(COALESCE(w.winery_name_text, ''), @Winery) > 0.35
+                  OR similarity(COALESCE(wy.name, ''), @Winery) > 0.35
+              )
+            ORDER BY
+                (GREATEST(
+                    similarity(w.name, @Name),
+                    CASE WHEN LOWER(TRIM(w.name)) = LOWER(TRIM(@Name)) THEN 1.0 ELSE 0.0 END
+                ) +
+                GREATEST(
+                    similarity(COALESCE(w.winery_name_text, ''), @Winery),
+                    similarity(COALESCE(wy.name, ''), @Winery),
+                    CASE WHEN LOWER(TRIM(COALESCE(w.winery_name_text, ''))) = LOWER(TRIM(@Winery)) OR LOWER(TRIM(COALESCE(wy.name, ''))) = LOWER(TRIM(@Winery)) THEN 1.0 ELSE 0.0 END
+                )) DESC
+            LIMIT 1;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Wine>(
+            new CommandDefinition(sql, new { Name = name.Trim(), Winery = winery.Trim() }, cancellationToken: ct));
+    }
+
     // Umbral de similitud por trigramas: 0 a 1, cuanto más alto más estricto.
     // 0.25 tolera errores de tipeo normales (letras de más/de menos, mayúsculas) sin devolver basura.
     private const double SimilarityThreshold = 0.25;
@@ -278,6 +317,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default)
     {
+        var hasSearchTerm = !string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(winery);
+
         const string sql = """
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                 w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
@@ -293,6 +334,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 @IsAdmin = TRUE
                 OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
                 OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+                OR (@HasSearchTerm = TRUE AND w.source_type = 1 AND EXISTS (SELECT 1 FROM wine_vintages wv_comm WHERE wv_comm.wine_id = w.id))
             )
             AND (@Name IS NULL
                 OR w.name ILIKE @NamePattern
@@ -307,7 +349,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                     SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
                     AND (@IsAdmin = TRUE
                          OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
-                         OR wv.approval_status = 2)
+                         OR wv.approval_status = 2
+                         OR (@HasSearchTerm = TRUE AND w.source_type = 1))
                 ))
             ORDER BY
             GREATEST(
@@ -333,6 +376,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 Year = year,
                 CurrentUserId = currentUserId,
                 IsAdmin = isAdmin,
+                HasSearchTerm = hasSearchTerm,
                 Offset = (pageNumber - 1) * pageSize,
                 PageSize = pageSize
             }, cancellationToken: ct));

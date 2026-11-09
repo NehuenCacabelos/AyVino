@@ -34,6 +34,7 @@ export interface CellarWine {
   agingStatus: BottleAgingState;
   agingStatusLabel: string; // e.g. "En Guarda hasta 2028", "Ventana Óptima (2024–32)", "En Pleno Apogeo"
   isJewel: boolean;
+  sourceType?: 'Community' | 'Official' | string;
   bottle: BottleKind;
   imageUrl?: string;
   // Ficha técnica extendida
@@ -88,7 +89,7 @@ export interface QuickAddBottlePayload {
   vintage: number;
   units: number;
   location: string;
-  isJewel: boolean;
   bottle: BottleKind;
+  matchedWineId?: number | null;
 }
 

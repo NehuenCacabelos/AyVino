@@ -275,6 +275,9 @@ public class WineOptimizationTests
         public Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default) =>
             Task.FromResult(wineIds.Count());
 
+        public Task<Wine?> FindDuplicateCandidateAsync(string name, string winery, CancellationToken ct = default) =>
+            Task.FromResult<Wine?>(null);
+
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
 
         public Task<AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>

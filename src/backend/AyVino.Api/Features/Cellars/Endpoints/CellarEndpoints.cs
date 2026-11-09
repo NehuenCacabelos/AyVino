@@ -20,6 +20,12 @@ public static class CellarEndpoints
             Results.Ok(await service.GetAllByUserAsync(user.GetUserId(), pageNumber, pageSize, ct)))
             .WithName("GetMyCellars").WithSummary("Mis cavas (paginado) con cantidad de cosechas y botellas");
 
+        group.MapPost("/me/quick-add", async (QuickAddCellarWineRequestDto request, ClaimsPrincipal user, ICellarItemService itemService, CancellationToken ct) =>
+        {
+            var created = await itemService.QuickAddAsync(user.GetUserId(), null, request, ct);
+            return Results.Created($"/api/cellars/{created.WineId}/items/{created.WineVintageId}", created);
+        }).WithName("QuickAddWineToMyCellar").WithSummary("Agrega una botella a la cava personal creando o reutilizando etiqueta comunitaria.");
+
         group.MapGet("/{cellarId:int}", async (int cellarId, ClaimsPrincipal user, ICellarService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(user.GetUserId(), cellarId, ct)))
             .WithName("GetCellarById").WithSummary("Detalle de una cava propia");

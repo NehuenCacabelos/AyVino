@@ -156,6 +156,25 @@ Para salvaguardar la integridad de las experiencias y registros de los usuarios 
 
 ---
 
+## 9. Carga Rápida en Cava Personal y Detección de Duplicados
+
+Para enriquecer la cava personal de los coleccionistas y al mismo tiempo alimentar el archivo enológico colaborativo:
+
+1. **Detección Previa de Coincidencias (`GET /api/wines/check-duplicate`)**:
+   - Al completar el formulario de alta en Mi Cava, el sistema verifica por trigramas si ya existe una etiqueta con nombre y bodega similares (`pg_trgm`).
+   - Si detecta coincidencia, el usuario decide si asociar su botella a la etiqueta existente o forzar la creación de un nuevo vino comunitario independiente.
+2. **Ingreso Atómico a la Cava (`POST /api/cellars/me/quick-add`)**:
+   - Si se confirma una etiqueta existente (`MatchedWineId`): reutiliza la añada si ya existía o crea automáticamente la nueva cosecha en estado `Pending` si es un año nuevo.
+   - Si no se vincula (`MatchedWineId` nulo): da de alta el vino con `SourceType.Community` y su primera añada en estado `Pending`.
+   - Persiste en `cellar_items` de la cava del usuario (o incrementa el stock si la botella ya formaba parte de su inventario).
+3. **Visibilidad Restringida**:
+   - Inmediata y plena dentro de la cava del usuario.
+   - Oculta del catálogo general para no alterar la grilla de botellas oficiales.
+   - Visible en búsquedas textuales (`/api/wines/search`) con tag discreto `Comunidad`.
+   - Disponible en `/bodega/reclamar` para que la bodega oficial homónima la certifique.
+
+---
+
 ## 🔗 Referencias Relacionadas
 - [[Especificacion_Requerimientos]]: Requerimientos RF-1.1 al RF-1.6.
 - [[Catalogo_Endpoints_API]]: Endpoints `/api/wines` y `/api/grapes`.

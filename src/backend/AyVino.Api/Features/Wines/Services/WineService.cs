@@ -17,7 +17,8 @@ public class WineService(
     IWineRepository wineRepository,
     IWineryRepository wineryRepository,
     ILocationRepository locationRepository,
-    IGrapeRepository grapeRepository) : IWineService
+    IGrapeRepository grapeRepository,
+    IWineVintageRepository? wineVintageRepository = null) : IWineService
 {
     public async Task<WineResponseDto> GetByIdAsync(int id, Actor? actor = null, CancellationToken ct = default)
     {
@@ -226,6 +227,34 @@ public class WineService(
 
         var wines = await wineRepository.SearchAsync(name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
         return wines.Select(w => w.ToResponseDto());
+    }
+
+    public async Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(winery))
+        {
+            return new WineDuplicateCheckResponseDto(false, null, Array.Empty<int>());
+        }
+
+        var candidate = await wineRepository.FindDuplicateCandidateAsync(name.Trim(), winery.Trim(), ct);
+        if (candidate is null)
+        {
+            return new WineDuplicateCheckResponseDto(false, null, Array.Empty<int>());
+        }
+
+        var years = new List<int>();
+        if (wineVintageRepository is not null)
+        {
+            var vintages = await wineVintageRepository.GetAllByWineIdAsync(candidate.Id, ct);
+            years = vintages
+                .Where(v => v.Year.HasValue)
+                .Select(v => v.Year!.Value)
+                .Distinct()
+                .OrderByDescending(y => y)
+                .ToList();
+        }
+
+        return new WineDuplicateCheckResponseDto(true, candidate.ToResponseDto(), years);
     }
 
     public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default)

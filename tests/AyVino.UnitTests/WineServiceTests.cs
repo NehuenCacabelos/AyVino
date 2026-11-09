@@ -12,6 +12,7 @@ using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
 using AyVino.Api.Features.Wines.Services;
+using NSubstitute;
 
 namespace AyVino.UnitTests;
 
@@ -302,6 +303,53 @@ public class WineServiceTests
         Assert.Null(fakeWineRepo.ExistingWine);
     }
 
+    [Theory]
+    [InlineData("", "Catena")]
+    [InlineData("Malbec", "")]
+    [InlineData("   ", "   ")]
+    [InlineData(null, "Catena")]
+    public async Task CheckDuplicateAsync_EmptyInput_ReturnsHasMatchFalse(string? name, string? winery)
+    {
+        var service = new WineService(new FakeWineRepository(), new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+
+        var result = await service.CheckDuplicateAsync(name, winery);
+
+        Assert.False(result.HasMatch);
+        Assert.Null(result.MatchedWine);
+        Assert.Empty(result.ExistingYears);
+    }
+
+    [Fact]
+    public async Task CheckDuplicateAsync_CandidateFound_ReturnsMatchAndVintages()
+    {
+        var matched = new Wine
+        {
+            Id = 15,
+            Name = "DV Catena Malbec",
+            WineryNameText = "Catena Zapata",
+            WineType = WineType.Red,
+            SourceType = SourceType.Official
+        };
+        var fakeWineRepo = new FakeWineRepository { DuplicateCandidateResult = matched };
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.GetAllByWineIdAsync(15, Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                new WineVintage { Id = 1, WineId = 15, Year = 2019 },
+                new WineVintage { Id = 2, WineId = 15, Year = 2020 },
+                new WineVintage { Id = 3, WineId = 15, Year = 2020 }, // duplicate year check
+            });
+
+        var service = new WineService(fakeWineRepo, new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository(), vintageRepo);
+
+        var result = await service.CheckDuplicateAsync("DV Catena", "Catena");
+
+        Assert.True(result.HasMatch);
+        Assert.NotNull(result.MatchedWine);
+        Assert.Equal(15, result.MatchedWine.Id);
+        Assert.Equal(new[] { 2020, 2019 }, result.ExistingYears);
+    }
+
     [Fact]
     public async Task DeleteAsync_DuplicateWineWithoutHistory_SucceedsAndCallsDelete()
     {
@@ -378,6 +426,10 @@ public class WineServiceTests
 
         public Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default) =>
             Task.FromResult(wineIds.Count());
+
+        public Wine? DuplicateCandidateResult { get; set; }
+        public Task<Wine?> FindDuplicateCandidateAsync(string name, string winery, CancellationToken ct = default) =>
+            Task.FromResult(DuplicateCandidateResult);
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
 

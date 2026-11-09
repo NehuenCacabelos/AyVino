@@ -15,15 +15,22 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
       <div className="space-y-3">
         {/* Header badges: Shelf Location & Score */}
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[11px] text-[#fbbf24] tracking-wider uppercase truncate">
-            {wine.location}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-mono text-[11px] text-[#fbbf24] tracking-wider uppercase truncate">
+              {wine.location}
+            </span>
+            {wine.sourceType === 'Community' && (
+              <span className="bg-amber-950/40 text-amber-300 border border-amber-800/40 font-mono text-[9px] px-1.5 py-0.5 rounded uppercase shrink-0">
+                Comunidad
+              </span>
+            )}
+          </div>
           {wine.criticBadge ? (
-            <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)]">
+            <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)] shrink-0">
               {wine.criticBadge}
             </span>
           ) : (
-            <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-300 font-mono text-[11px]">
+            <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-300 font-mono text-[11px] shrink-0">
               {wine.rating} PTS
             </span>
           )}

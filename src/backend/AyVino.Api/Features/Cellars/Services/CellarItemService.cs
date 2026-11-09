@@ -1,7 +1,9 @@
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.DTOs;
+using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Wines.Enums;
+using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Cellars.Services;
@@ -9,10 +11,129 @@ namespace AyVino.Api.Features.Cellars.Services;
 public class CellarItemService(
     ICellarRepository cellarRepository,
     ICellarItemRepository itemRepository,
-    IWineVintageRepository wineVintageRepository) : ICellarItemService
+    IWineVintageRepository wineVintageRepository,
+    IWineRepository? wineRepository = null) : ICellarItemService
 {
     private const int MaxQuantity = 999;
     private const int MaxNotesLength = 500;
+
+    public async Task<CellarItemResponseDto> QuickAddAsync(int userId, int? cellarId, QuickAddCellarWineRequestDto request, CancellationToken ct = default)
+    {
+        if (wineRepository is null)
+            throw new InvalidOperationException("WineRepository is required for QuickAdd.");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new ValidationException("El nombre del vino es obligatorio.");
+        if (string.IsNullOrWhiteSpace(request.WineryName))
+            throw new ValidationException("El nombre de la bodega es obligatorio.");
+        if (request.Quantity is < 1 or > MaxQuantity)
+            throw new ValidationException($"La cantidad debe estar entre 1 y {MaxQuantity}.");
+        if (!Enum.TryParse<WineType>(request.WineType, ignoreCase: true, out var parsedWineType) || !Enum.IsDefined(parsedWineType))
+            throw new ValidationException($"Tipo de vino inválido: '{request.WineType}'.");
+
+        // 1. Resolver Cava
+        int resolvedCellarId;
+        if (cellarId.HasValue && cellarId.Value > 0)
+        {
+            await EnsureCellarOwnedAsync(userId, cellarId.Value, ct);
+            resolvedCellarId = cellarId.Value;
+        }
+        else
+        {
+            var cellars = await cellarRepository.GetAllByUserAsync(userId, 1, 1, ct);
+            var firstCellar = cellars.FirstOrDefault();
+            if (firstCellar is not null)
+            {
+                resolvedCellarId = firstCellar.Id;
+            }
+            else
+            {
+                resolvedCellarId = await cellarRepository.CreateAsync(userId, "Mi Cava", ct);
+            }
+        }
+
+        // 2. Resolver Etiqueta y Añada
+        int targetVintageId;
+
+        if (request.MatchedWineId.HasValue)
+        {
+            var existingWine = await wineRepository.GetByIdAsync(request.MatchedWineId.Value, ct)
+                ?? throw new NotFoundException($"Vino con ID {request.MatchedWineId.Value} no encontrado.");
+
+            var vintages = await wineVintageRepository.GetAllByWineIdAsync(existingWine.Id, ct);
+            var matchingVintage = vintages.FirstOrDefault(v => v.Year == request.Year);
+
+            if (matchingVintage is not null)
+            {
+                targetVintageId = matchingVintage.Id;
+            }
+            else
+            {
+                var newVintage = new WineVintage
+                {
+                    WineId = existingWine.Id,
+                    Year = request.Year,
+                    ApprovalStatus = ApprovalStatus.Pending,
+                    UploadedByUserId = userId,
+                    RegisterDate = DateTime.UtcNow
+                };
+                var createdVintage = await wineVintageRepository.CreateAsync(newVintage, Enumerable.Empty<WineGrape>(), ct);
+                targetVintageId = createdVintage.Id;
+            }
+        }
+        else
+        {
+            var wineEntity = new Wine
+            {
+                Name = request.Name.Trim(),
+                WineType = parsedWineType,
+                WineryNameText = request.WineryName.Trim(),
+                WineryId = null,
+                SourceType = SourceType.Community
+            };
+
+            var firstVintageEntity = new WineVintage
+            {
+                Year = request.Year,
+                ApprovalStatus = ApprovalStatus.Pending,
+                UploadedByUserId = userId,
+                RegisterDate = DateTime.UtcNow
+            };
+
+            var createdWine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, Enumerable.Empty<WineGrape>(), ct);
+            var vintages = await wineVintageRepository.GetAllByWineIdAsync(createdWine.Id, ct);
+            var createdVintage = vintages.FirstOrDefault()
+                ?? throw new InvalidOperationException("Failed to retrieve created wine vintage.");
+            targetVintageId = createdVintage.Id;
+        }
+
+        // 3. Formatear notas con ubicación si se especificó
+        var combinedNotes = FormatCombinedNotes(request.Location, request.Notes);
+
+        // 4. Guardar o actualizar en cellar_items
+        var existingItem = await itemRepository.GetAsync(resolvedCellarId, targetVintageId, ct);
+        if (existingItem is not null)
+        {
+            var newQuantity = Math.Min(MaxQuantity, existingItem.Quantity + request.Quantity);
+            var notesToKeep = !string.IsNullOrWhiteSpace(combinedNotes) ? combinedNotes : existingItem.Notes;
+            await itemRepository.UpdateAsync(resolvedCellarId, targetVintageId, newQuantity, existingItem.PurchaseDate, notesToKeep, ct);
+        }
+        else
+        {
+            var newItem = new CellarItem
+            {
+                CellarId = resolvedCellarId,
+                WineVintageId = targetVintageId,
+                Quantity = request.Quantity,
+                PurchaseDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Notes = combinedNotes,
+                CreatedAt = DateTime.UtcNow
+            };
+            await itemRepository.CreateAsync(newItem, ct);
+        }
+
+        return await GetRowOrThrowAsync(resolvedCellarId, targetVintageId, ct);
+    }
 
     public async Task<CellarItemResponseDto> AddAsync(int userId, int cellarId, AddCellarItemRequestDto request, CancellationToken ct = default)
     {
@@ -123,6 +244,23 @@ public class CellarItemService(
     {
         var trimmed = notes?.Trim();
         return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+    }
+
+    private static string? FormatCombinedNotes(string? location, string? notes)
+    {
+        var loc = location?.Trim();
+        var n = NormalizeNotes(notes);
+
+        if (!string.IsNullOrEmpty(loc) && !string.IsNullOrEmpty(n))
+        {
+            var combined = $"[{loc}] {n}";
+            return combined.Length > MaxNotesLength ? combined[..MaxNotesLength] : combined;
+        }
+        if (!string.IsNullOrEmpty(loc))
+        {
+            return $"[{loc}]";
+        }
+        return n;
     }
 
     private static void ValidatePaging(int pageNumber, int pageSize)

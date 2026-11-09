@@ -16,6 +16,12 @@ public static class CellarItemEndpoints
             return Results.Created($"/api/cellars/{cellarId}/items/{created.WineVintageId}", created);
         }).WithName("AddCellarItem").WithSummary("Agrega una cosecha a la cava (409 si ya está)");
 
+        group.MapPost("/quick-add", async (int cellarId, QuickAddCellarWineRequestDto request, ClaimsPrincipal user, ICellarItemService service, CancellationToken ct) =>
+        {
+            var created = await service.QuickAddAsync(user.GetUserId(), cellarId, request, ct);
+            return Results.Created($"/api/cellars/{cellarId}/items/{created.WineVintageId}", created);
+        }).WithName("QuickAddWineToCellar").WithSummary("Agrega una botella a una cava específica creando o reutilizando etiqueta comunitaria.");
+
         group.MapGet("/", async (int cellarId, ClaimsPrincipal user, ICellarItemService service, CancellationToken ct, string? wineType, int? year, int pageNumber = 1, int pageSize = 10) =>
             Results.Ok(await service.GetAllAsync(user.GetUserId(), cellarId, pageNumber, pageSize, wineType, year, ct)))
             .WithName("GetCellarItems").WithSummary("Contenido de la cava (paginado). Filtros opcionales: wineType, year");

@@ -66,6 +66,11 @@ public static class WineEndpoints
             .WithName("SearchWines")
             .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
 
+        group.MapGet("/check-duplicate", async (string? name, string? winery, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.CheckDuplicateAsync(name, winery, ct)))
+            .WithName("CheckWineDuplicate")
+            .WithSummary("Busca etiquetas existentes similares por nombre y bodega para evitar duplicados.");
+
         group.MapPost("/{targetId:int}/merge/{duplicateId:int}", async (int targetId, int duplicateId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
             Results.Ok(await service.MergeWinesAsync(targetId, duplicateId, user.GetActor(), ct)))
             .RequireAuthorization(AppPolicies.RequireAdmin)
