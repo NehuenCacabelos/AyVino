@@ -136,7 +136,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
     );
   };
 
-  it('muestra la barra flotante con el botón "Editar vino" y al activarlo habilita los campos editables', async () => {
+  it('muestra el botón "Editar vino" al final de la columna del formulario y al activarlo habilita los campos con Cancelar y Guardar edición', async () => {
     renderComponent();
 
     await waitFor(() => {
@@ -145,14 +145,23 @@ describe('Modo Editar Vino (Paso 2)', () => {
 
     const editBarBtn = screen.getByRole('button', { name: /Editar vino/i });
     expect(editBarBtn).toBeInTheDocument();
+    expect(editBarBtn.closest('aside')).toHaveAttribute('role', 'toolbar');
 
     fireEvent.click(editBarBtn);
 
     // Ahora los campos son editables
     expect(screen.getByDisplayValue('Enzo Bianchi Gran Corte')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Vino ícono de corte mendocino.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Guardar edición/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Cancelar/i })).toBeInTheDocument();
+    const saveBtn = screen.getByRole('button', { name: /Guardar edición/i });
+    const cancelBtn = screen.getByRole('button', { name: /Cancelar/i });
+    expect(saveBtn).toBeInTheDocument();
+    expect(cancelBtn).toBeInTheDocument();
+    expect(saveBtn.closest('aside')).toHaveAttribute('role', 'toolbar');
+
+    // Botones con texto sin "+" duplicado
+    expect(screen.getByRole('button', { name: 'Agregar uva' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agregar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Añada' })).toBeInTheDocument();
   });
 
   it('permite modificar nombre, tipo, descripción y recalcula el perfil sensorial en vivo', async () => {
@@ -168,6 +177,15 @@ describe('Modo Editar Vino (Paso 2)', () => {
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte Modificado' } });
 
     const typeSelect = screen.getByLabelText(/Seleccionar tipo de vino/i);
+    const options = screen.getAllByRole('option');
+    const optionLabels = options.map((o) => o.textContent);
+    expect(optionLabels).toContain('Tinto');
+    expect(optionLabels).toContain('Blanco');
+    expect(optionLabels).toContain('Rosado');
+    expect(optionLabels).toContain('Espumoso');
+    expect(optionLabels).toContain('Naranjo');
+    expect(optionLabels).not.toContain('Tinto Noble');
+
     fireEvent.change(typeSelect, { target: { value: 'Orange' } });
 
     // Perfil sensorial se recalcula en vivo con los atributos de White/Orange (Cuerpo 3.2, etc.)
@@ -188,7 +206,7 @@ describe('Modo Editar Vino (Paso 2)', () => {
       expect(screen.getAllByRole('option', { name: /Merlot/i }).length).toBeGreaterThan(0);
     });
 
-    const addGrapeBtn = screen.getByRole('button', { name: /\+ Agregar uva/i });
+    const addGrapeBtn = screen.getByRole('button', { name: /Agregar uva/i });
     fireEvent.click(addGrapeBtn);
 
     // Seleccionamos la cepa para la nueva fila (para que pase la validación de cepa vacía)
@@ -222,8 +240,8 @@ describe('Modo Editar Vino (Paso 2)', () => {
     fireEvent.click(removeBtn);
     expect(screen.queryByLabelText(/Quitar maridaje Chivito a las brasas/i)).not.toBeInTheDocument();
 
-    // Abrir panel "+ Agregar"
-    const addPairingBtn = screen.getByRole('button', { name: '+ Agregar' });
+    // Abrir panel "Agregar"
+    const addPairingBtn = screen.getByRole('button', { name: 'Agregar' });
     fireEvent.click(addPairingBtn);
 
     // Catálogo visible

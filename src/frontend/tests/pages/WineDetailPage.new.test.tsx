@@ -174,6 +174,22 @@ describe('Alta de Vino Nuevo en Plantilla (Paso 3)', () => {
     expect(yearInput).toBeInTheDocument();
     expect(yearInput).toHaveValue(null);
 
+    // Textos guía (placeholders) de aspectos técnicos en vino nuevo (no precargados)
+    const alcoholInput = screen.getByLabelText(/Graduación alcohólica/i);
+    expect(alcoholInput).toHaveValue('');
+    expect(alcoholInput).toHaveAttribute('placeholder', '14.5% Vol.');
+
+    const tempInput = screen.getByLabelText(/Temperatura de servicio/i);
+    expect(tempInput).toHaveValue('');
+    expect(tempInput).toHaveAttribute('placeholder', '16°C – 18°C');
+
+    const agingInput = screen.getByLabelText(/Consejo de guarda/i);
+    expect(agingInput).toHaveValue('');
+    expect(agingInput).toHaveAttribute('placeholder', '10 a 15 años.');
+
+    // Chip de añada en borrador sin año muestra 'Sin año'
+    expect(screen.getByRole('button', { name: 'Sin año' })).toBeInTheDocument();
+
     // Composición varietal vacía con texto guía
     expect(screen.getByText('Agregá la primera uva')).toBeInTheDocument();
 
@@ -235,7 +251,7 @@ describe('Alta de Vino Nuevo en Plantilla (Paso 3)', () => {
     });
 
     // 2. Agregar maridaje desde el catálogo
-    const addPairingBtn = screen.getByRole('button', { name: '+ Agregar' });
+    const addPairingBtn = screen.getByRole('button', { name: 'Agregar' });
     fireEvent.click(addPairingBtn);
 
     expect(await screen.findByText('Catálogo de Maridajes')).toBeInTheDocument();
@@ -258,11 +274,15 @@ describe('Alta de Vino Nuevo en Plantilla (Paso 3)', () => {
           name: 'Gran Enemigo Gualtallary',
           wineType: 'Red',
           wineryId: 10,
-          firstVintage: expect.objectContaining({
+          firstVintage: {
             year: 2021,
-          }),
+          },
         })
       );
+      const callArg = vi.mocked(wineApi.createWine).mock.calls[0][0];
+      expect(callArg.firstVintage).not.toHaveProperty('alcoholContent');
+      expect(callArg.firstVintage).not.toHaveProperty('servingTemperature');
+      expect(callArg.firstVintage).not.toHaveProperty('agingAdvice');
     });
 
     await waitFor(() => {

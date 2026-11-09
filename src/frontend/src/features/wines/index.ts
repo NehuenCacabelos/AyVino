@@ -21,7 +21,22 @@ export {
   type WineWineryInfo,
 } from './data/editorialWines';
 export { apiWineToEditorial, mapPairingCategoryToIcon } from './adapters/apiWineToEditorial';
+export {
+  REAL_WINE_TYPES,
+  REAL_WINE_TYPE_LABELS,
+  MOCK_WINE_TYPE_LABELS,
+  getRealWineTypeLabel,
+  getMockWineTypeLabel,
+  getWineTypeLabel,
+} from './utils/wineTypeUtils';
 export { useRealWine, type UseRealWineReturn } from './hooks/useRealWine';
+export {
+  useWineCatalogs,
+  fetchAllGrapes,
+  fetchAllPairings,
+  type UseWineCatalogsReturn,
+  type UseWineCatalogsOptions,
+} from './hooks/useWineCatalogs';
 export { getWineReviews, createReview } from './api/reviewsApi';
 export type { ReviewResponseDto, CreateReviewRequestDto } from './types/review';
 
