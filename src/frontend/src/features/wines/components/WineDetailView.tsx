@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Star,
   Wine,
@@ -30,7 +30,13 @@ import type { CellarWine } from '../../cava';
 import { imageUrl } from '../../../lib/image';
 import { createReview } from '../api/reviewsApi';
 import WineEditBar from './WineEditBar';
-import { updateWine, updateWineVintage, createWineVintage } from '../../winery/api/wineApi';
+import {
+  createWine,
+  updateWine,
+  updateWineVintage,
+  createWineVintage,
+  getWineVintages,
+} from '../../winery/api/wineApi';
 import { uploadVintageImage, deleteVintageImage } from '../../winery/api/imageApi';
 import {
   addWinePairing,
@@ -38,6 +44,7 @@ import {
   getPairingsCatalog,
 } from '../../winery/api/wineryWinePairingsApi';
 import { getGrapes } from '../../winery/api/grapeApi';
+import ConfirmDialog from '../../admin/components/ConfirmDialog';
 import {
   createNewBlendRow,
   calculateTotalPercentage,
@@ -54,6 +61,8 @@ import type {
   WineVintageResponseDto,
   GrapeResponseDto,
   WineryWinePairingDto,
+  CreateWineRequestDto,
+  CreateWineVintageRequestDto,
 } from '../../winery/types';
 
 interface ToastState {
@@ -292,12 +301,15 @@ export default function WineDetailView({
   onPublishNewWine,
 }: WineDetailViewProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const outletCtx = useOutletContext<AppOutletContext | null>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef<boolean>(false);
+  const isPublishedRef = useRef<boolean>(false);
 
   // Estados de vista
   const [selectedVintageYear, setSelectedVintageYear] = useState<number>(
-    () => wine.vintages[0]?.year ?? 2020
+    () => wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020)
   );
   const [toast, setToast] = useState<ToastState | null>(null);
   const [starFilter, setStarFilter] = useState<'all' | '5' | '4' | '3'>('all');
@@ -316,6 +328,17 @@ export default function WineDetailView({
   // ==========================================
   const [isEditing, setIsEditing] = useState<boolean>(isNewMode);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: boolean;
+    type?: boolean;
+    year?: boolean;
+  }>({});
+  const [confirmAddVintage, setConfirmAddVintage] = useState<{
+    existingWineId: number;
+    name: string;
+    year: number;
+  } | null>(null);
+  const [isAddingVintage, setIsAddingVintage] = useState<boolean>(false);
 
   // Campos del vino
   const [draftName, setDraftName] = useState<string>(wine.name);
@@ -335,7 +358,21 @@ export default function WineDetailView({
   const [grapesCatalog, setGrapesCatalog] = useState<GrapeResponseDto[]>([]);
 
   // Cosechas en borrador (indexadas por id o año)
-  const [vintageDrafts, setVintageDrafts] = useState<Record<string, EditableVintageDraft>>({});
+  const [vintageDrafts, setVintageDrafts] = useState<Record<string, EditableVintageDraft>>(() => {
+    const initial: Record<string, EditableVintageDraft> = {};
+    if (isNewMode) {
+      initial.new = {
+        id: 'draft-new',
+        isNew: true,
+        year: '' as unknown as number,
+        alcoholContent: '',
+        servingTemperature: '',
+        agingAdvice: '',
+        blend: [],
+      };
+    }
+    return initial;
+  });
 
   // Cargar catálogo de uvas al editar o en modo nuevo
   useEffect(() => {
@@ -387,13 +424,13 @@ export default function WineDetailView({
     });
 
     if (Object.keys(drafts).length === 0) {
-      const defaultYear = 2020;
-      drafts[String(defaultYear)] = {
+      const defaultYear = isNewMode ? ('' as unknown as number) : 2020;
+      drafts[String(defaultYear || 'new')] = {
         id: 'draft-0',
         isNew: true,
         year: defaultYear,
-        alcoholContent: '14.0% Vol.',
-        servingTemperature: '16°C – 18°C',
+        alcoholContent: isNewMode ? '' : '14.0% Vol.',
+        servingTemperature: isNewMode ? '' : '16°C – 18°C',
         agingAdvice: '',
         blend: [],
       };
@@ -426,13 +463,21 @@ export default function WineDetailView({
     return wine.vintages[0]?.year ?? selectedVintageYear;
   }, [wine.vintages, selectedVintageYear, vintageDrafts]);
 
-  // Cosecha activa seleccionada en borrador
-  const activeVintageDraftKey = String(effectiveSelectedYear);
+  // Clave del borrador activo
+  const activeVintageDraftKey = useMemo(() => {
+    if (vintageDrafts[String(effectiveSelectedYear)]) {
+      return String(effectiveSelectedYear);
+    }
+    const keys = Object.keys(vintageDrafts);
+    return keys.length > 0 ? keys[0] : 'new';
+  }, [vintageDrafts, effectiveSelectedYear]);
+
   const activeVintageDraft = vintageDrafts[activeVintageDraftKey] || {
-    id: `draft-${effectiveSelectedYear}`,
+    id: 'draft-new',
+    isNew: true,
     year: effectiveSelectedYear,
-    alcoholContent: '14.0% Vol.',
-    servingTemperature: '16°C – 18°C',
+    alcoholContent: isNewMode ? '' : '14.0% Vol.',
+    servingTemperature: isNewMode ? '' : '16°C – 18°C',
     agingAdvice: '',
     blend: [],
   };
@@ -441,19 +486,20 @@ export default function WineDetailView({
   const updateActiveVintageDraft = (patch: Partial<EditableVintageDraft>) => {
     setVintageDrafts((prev) => {
       const current = prev[activeVintageDraftKey] || {
-        id: `draft-${effectiveSelectedYear}`,
+        id: 'draft-new',
+        isNew: true,
         year: effectiveSelectedYear,
-        alcoholContent: '14.0% Vol.',
-        servingTemperature: '16°C – 18°C',
+        alcoholContent: isNewMode ? '' : '14.0% Vol.',
+        servingTemperature: isNewMode ? '' : '16°C – 18°C',
         agingAdvice: '',
         blend: [],
       };
       const updated = { ...current, ...patch };
       // Si cambia el año, reindexar la clave
-      if (patch.year && patch.year !== current.year) {
+      if (patch.year !== undefined && patch.year !== current.year) {
         const newDrafts = { ...prev };
         delete newDrafts[activeVintageDraftKey];
-        newDrafts[String(patch.year)] = updated;
+        newDrafts[String(patch.year || 'new')] = updated;
         setSelectedVintageYear(patch.year);
         return newDrafts;
       }
@@ -479,13 +525,25 @@ export default function WineDetailView({
 
   // Detección de cambios sin guardar
   const hasChanges = useMemo(() => {
-    if (!isEditing) return false;
+    if (isPublishedRef.current) return false;
+    if (!isEditing && !isNewMode) return false;
+    if (isNewMode) {
+      return Boolean(
+        draftName.trim() ||
+        draftType ||
+        draftDescription.trim() ||
+        activeVintageDraft.year ||
+        activeVintageDraft.blend.length > 0 ||
+        activeVintageDraft.imageFile ||
+        draftPairings.length > 0
+      );
+    }
     if (draftName !== wine.name) return true;
     if (draftType !== wine.type) return true;
     if (draftDescription !== wine.description) return true;
     if (draftPairings.length !== wine.pairings.length) return true;
-    return true; // En modo edición asumimos que puede haber cambios
-  }, [isEditing, draftName, draftType, draftDescription, draftPairings, wine]);
+    return true;
+  }, [isEditing, isNewMode, draftName, draftType, draftDescription, activeVintageDraft, draftPairings, wine]);
 
   // Manejo de Uvas en el Blend
   const handleAddGrape = () => {
@@ -750,6 +808,202 @@ export default function WineDetailView({
     }
   };
 
+  // ==========================================
+  // PUBLICAR ETIQUETA NUEVA (Paso 3)
+  // ==========================================
+  const handlePublish = async () => {
+    if (isSubmittingRef.current || isSaving) return;
+
+    // Validación de campos obligatorios
+    const missing: string[] = [];
+    if (!draftName.trim()) missing.push('Nombre del vino');
+    if (!draftType) missing.push('Tipo de vino');
+    const yearNum = parseYear(activeVintageDraft.year) ?? Number(activeVintageDraft.year);
+    if (!yearNum || isNaN(yearNum)) missing.push('Año de la primera cosecha');
+
+    if (missing.length > 0) {
+      setValidationErrors({
+        name: !draftName.trim(),
+        type: !draftType,
+        year: !yearNum || isNaN(yearNum),
+      });
+      showToast(`Completá los campos obligatorios: ${missing.join(', ')}.`);
+      return;
+    }
+
+    setValidationErrors({});
+
+    // Validar blend si tiene uvas cargadas
+    if (activeVintageDraft.blend.length > 0) {
+      if (!blendValidation.isValid) {
+        showToast(blendValidation.errorMessage || 'Verificá el porcentaje de las uvas.');
+        return;
+      }
+    }
+
+    isSubmittingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      const validGrapes = activeVintageDraft.blend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const alcoholNum = parseAlcohol(activeVintageDraft.alcoholContent);
+      const tempNum = parseServingTemperature(activeVintageDraft.servingTemperature);
+      const targetWineryId = rawWine?.wineryId ?? (wine.winery ? Number(wine.winery.id) : user?.id);
+
+      const payload: CreateWineRequestDto = {
+        name: draftName.trim(),
+        wineType: draftType,
+        wineryId: targetWineryId as number,
+        locationId: rawWine?.locationId ?? null,
+        description: draftDescription.trim() || null,
+        firstVintage: {
+          year: yearNum,
+          alcoholContent: alcoholNum,
+          servingTemperature: tempNum,
+          agingAdvice: activeVintageDraft.agingAdvice?.trim() || null,
+          grapes: validGrapes.length > 0 ? validGrapes : null,
+        },
+      };
+
+      const created = await createWine(payload);
+      isPublishedRef.current = true;
+
+      // 2. Si hay imagen seleccionada: uploadVintageImage
+      let imageFailed = false;
+      if (activeVintageDraft.imageFile) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          const firstV = vintages.find((v) => v.year === yearNum) ?? vintages[0];
+          if (firstV) {
+            await uploadVintageImage(created.id, firstV.id, activeVintageDraft.imageFile);
+          }
+        } catch {
+          imageFailed = true;
+        }
+      }
+
+      // 3. Si hay maridajes seleccionados: addWinePairing por cada uno
+      let pairingFailed = false;
+      for (const p of draftPairings) {
+        try {
+          await addWinePairing(created.id, p.id);
+        } catch {
+          pairingFailed = true;
+        }
+      }
+
+      // 4. Navegar a /bodega/vinos/{id}
+      if (imageFailed && pairingFailed) {
+        showToast('Se creó el vino, pero no se pudo subir la foto ni asociar maridajes.');
+      } else if (imageFailed) {
+        showToast('Se creó el vino, pero no se pudo subir la foto.');
+      } else if (pairingFailed) {
+        showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+      }
+
+      navigate(`/bodega/vinos/${created.id}`);
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: {
+          status?: number;
+          data?: { code?: string; detail?: string; existingWineId?: number };
+        };
+      };
+      const status = maybeAxios?.response?.status;
+      const data = maybeAxios?.response?.data;
+      const code = data?.code;
+
+      if (status === 409) {
+        if (code === 'WINE_VINTAGE_DUPLICATE') {
+          const existingId = data?.existingWineId;
+          showToast(
+            `Ya registraste este vino con la cosecha ${yearNum}.`,
+            existingId ? 'Ver etiqueta' : undefined,
+            existingId ? `/bodega/vinos/${existingId}` : undefined
+          );
+          return;
+        }
+
+        if (code === 'WINE_EXISTS_ADD_VINTAGE' && data?.existingWineId) {
+          setConfirmAddVintage({
+            existingWineId: data.existingWineId,
+            name: draftName.trim(),
+            year: yearNum,
+          });
+          return;
+        }
+      }
+
+      const msg = data?.detail || 'No se pudo crear la etiqueta de vino. Verificá los campos ingresados.';
+      showToast(msg);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmAddVintage = async () => {
+    if (!confirmAddVintage || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsAddingVintage(true);
+
+    try {
+      const validGrapes = activeVintageDraft.blend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const alcoholNum = parseAlcohol(activeVintageDraft.alcoholContent);
+      const tempNum = parseServingTemperature(activeVintageDraft.servingTemperature);
+
+      const vintagePayload: CreateWineVintageRequestDto = {
+        year: confirmAddVintage.year,
+        alcoholContent: alcoholNum,
+        servingTemperature: tempNum,
+        agingAdvice: activeVintageDraft.agingAdvice?.trim() || null,
+        grapes: validGrapes.length > 0 ? validGrapes : null,
+      };
+
+      const createdVintage = await createWineVintage(confirmAddVintage.existingWineId, vintagePayload);
+      isPublishedRef.current = true;
+
+      // Subir imagen si hay
+      if (activeVintageDraft.imageFile) {
+        try {
+          await uploadVintageImage(confirmAddVintage.existingWineId, createdVintage.id, activeVintageDraft.imageFile);
+        } catch {
+          // No crítico
+        }
+      }
+
+      // Asociar maridajes si hay
+      for (const p of draftPairings) {
+        try {
+          await addWinePairing(confirmAddVintage.existingWineId, p.id);
+        } catch {
+          // No crítico
+        }
+      }
+
+      setConfirmAddVintage(null);
+      navigate(`/bodega/vinos/${confirmAddVintage.existingWineId}`);
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: { detail?: string } } };
+      showToast(maybeAxios?.response?.data?.detail || 'No se pudo agregar la cosecha a la etiqueta existente.');
+    } finally {
+      isSubmittingRef.current = false;
+      setIsAddingVintage(false);
+    }
+  };
+
   const reviews = propReviews ?? (submittedReviews.length > 0 ? [...submittedReviews, ...wine.reviews] : wine.reviews);
   const REVIEWS_PER_PAGE = 3;
 
@@ -758,6 +1012,17 @@ export default function WineDetailView({
   // Perfil sensorial (en vivo con draftType en edición)
   const currentEffectiveType = isEditing ? draftType : wine.type;
   const sensoryAttributes: SensoryAttribute[] = useMemo(() => {
+    if (!currentEffectiveType) {
+      return [
+        { key: 'body', label: 'Cuerpo', value: 0 },
+        { key: 'tannins', label: 'Taninos', value: 0 },
+        { key: 'acidity', label: 'Acidez', value: 0 },
+        { key: 'fruit', label: 'Fruta', value: 0 },
+        { key: 'oak', label: 'Crianza', value: 0 },
+        { key: 'persistence', label: 'Persistencia', value: 0 },
+      ];
+    }
+
     const isWhite = currentEffectiveType === 'White' || currentEffectiveType === 'Orange';
     const isRose = currentEffectiveType === 'Rose';
 
@@ -1160,10 +1425,18 @@ export default function WineDetailView({
                 {isEditing ? (
                   <select
                     value={draftType}
-                    onChange={(e) => setDraftType(e.target.value as EditorialWine['type'])}
-                    className="bg-[#121015] border border-neutral-700 text-rose-300 text-xs font-mono uppercase tracking-widest px-2 py-1 rounded focus:border-rose-500 focus:outline-none cursor-pointer"
+                    onChange={(e) => {
+                      setDraftType(e.target.value as EditorialWine['type']);
+                      if (validationErrors.type) {
+                        setValidationErrors((prev) => ({ ...prev, type: false }));
+                      }
+                    }}
+                    className={`bg-[#121015] border ${
+                      validationErrors.type ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                    } text-rose-300 text-xs font-mono uppercase tracking-widest px-2 py-1 rounded focus:border-rose-500 focus:outline-none cursor-pointer`}
                     aria-label="Seleccionar tipo de vino"
                   >
+                    <option value="">Elegí un tipo</option>
                     <option value="Red">Tinto Noble</option>
                     <option value="White">Blanco & Mineral</option>
                     <option value="Rose">Rosado & Criolla</option>
@@ -1171,21 +1444,50 @@ export default function WineDetailView({
                     <option value="Orange">Naranjo</option>
                   </select>
                 ) : (
-                  <span>{getWineTypeLabel(wine.type)}</span>
+                  <span>{getWineTypeLabel(wine.type || 'Red')}</span>
                 )}
                 <span className="text-neutral-600" aria-hidden="true">·</span>
-                <span className="text-neutral-400 font-normal">
-                  Cosecha {isEditing ? activeVintageDraft.year : activeVintage.year}
-                </span>
+                {isEditing ? (
+                  <span className="text-neutral-400 font-normal flex items-center gap-1.5">
+                    <span>Cosecha</span>
+                    <input
+                      type="number"
+                      value={activeVintageDraft.year ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? ('' as unknown as number) : Number(e.target.value);
+                        updateActiveVintageDraft({ year: val });
+                        if (validationErrors.year) {
+                          setValidationErrors((prev) => ({ ...prev, year: false }));
+                        }
+                      }}
+                      placeholder="Ej.: 2020"
+                      className={`w-24 bg-[#121015] border ${
+                        validationErrors.year ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                      } text-neutral-200 text-xs font-mono px-2 py-0.5 rounded focus:border-rose-500 focus:outline-none placeholder:text-neutral-600`}
+                      aria-label="Año de cosecha"
+                    />
+                  </span>
+                ) : (
+                  <span className="text-neutral-400 font-normal">
+                    Cosecha {activeVintage.year}
+                  </span>
+                )}
               </div>
 
               {isEditing ? (
                 <input
                   type="text"
                   value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
+                  onChange={(e) => {
+                    setDraftName(e.target.value);
+                    if (validationErrors.name) {
+                      setValidationErrors((prev) => ({ ...prev, name: false }));
+                    }
+                  }}
                   placeholder="Ej.: Gran Reserva Malbec"
-                  className="w-full text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight bg-neutral-900/60 border border-neutral-700 rounded p-2 focus:border-rose-500 focus:outline-none placeholder:text-neutral-600"
+                  className={`w-full text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight bg-neutral-900/60 border ${
+                    validationErrors.name ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                  } rounded p-2 focus:border-rose-500 focus:outline-none placeholder:text-neutral-600`}
                   aria-label="Nombre del vino"
                 />
               ) : (
@@ -1301,6 +1603,11 @@ export default function WineDetailView({
                 /* Editor de Blend en Modo Edición */
                 <div className="space-y-3 bg-neutral-900/40 border border-neutral-800/80 p-4 rounded-lg">
                   <div className="space-y-2">
+                    {activeVintageDraft.blend.length === 0 && (
+                      <p className="text-xs text-neutral-500 font-mono py-1">
+                        Agregá la primera uva
+                      </p>
+                    )}
                     {activeVintageDraft.blend.map((row) => (
                       <div key={row.id} className="flex items-center gap-3">
                         <select
@@ -1884,8 +2191,8 @@ export default function WineDetailView({
           </div>
         </section>
 
-        {/* Barra de Acciones Flotante (Solo ownerMode o isNewMode) */}
-        {(ownerMode || isNewMode) && isRealWine && (
+        {/* Barra de Acciones Flotante (Solo ownerMode con vino real o isNewMode) */}
+        {((ownerMode && isRealWine) || isNewMode) && (
           <WineEditBar
             isEditing={isEditing}
             isSaving={isSaving}
@@ -1907,7 +2214,22 @@ export default function WineDetailView({
                   pairings: draftPairings,
                 });
               }
+              return handlePublish();
             }}
+          />
+        )}
+
+        {/* Diálogo de confirmación en caso de que el vino ya exista con otra cosecha */}
+        {confirmAddVintage && (
+          <ConfirmDialog
+            open={true}
+            title="Etiqueta existente"
+            message={`Ya tenés «${confirmAddVintage.name}» en tu catálogo. ¿Querés agregar la cosecha ${confirmAddVintage.year} a ese vino?`}
+            confirmLabel="Agregar cosecha"
+            tone="default"
+            isLoading={isAddingVintage}
+            onConfirm={() => void handleConfirmAddVintage()}
+            onCancel={() => setConfirmAddVintage(null)}
           />
         )}
 
