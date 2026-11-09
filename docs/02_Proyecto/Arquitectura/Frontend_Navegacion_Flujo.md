@@ -29,7 +29,7 @@ flowchart TD
         CommunityModal["CommunityModal (Próximamente Editorial)"]
 
         subgraph WineryPublic["Vistas Públicas de Bodega (WineryPublicLayout)"]
-            ForWineries["/para-bodegas -> ForWineriesPage.tsx (Propuesta de Valor)"]
+            ForWineries["/bodegas/registro -> ForWineriesPage.tsx (Propuesta de Valor)"]
             WineryPublicProfile["/bodegas/:id -> WineryPublicProfileLayout.tsx (Perfil Público Vidriera)"]
         end
     end
@@ -130,7 +130,7 @@ flowchart TD
 - **Acceso y Registro Sommelier (`LoginPage.tsx` / `RegisterPage.tsx`)**:
   - Formularios split-card con validaciones reactivas.
   - Redirección por rol en login: los usuarios con rol `Winery` ingresan directo a `/bodega/dashboard`.
-- **Portal de Bodegas (`ForWineriesPage.tsx` en `/para-bodegas`)**: Presentación editorial de ventajas competitivas (certificación técnica, reclamo de vinos, seguidores).
+- **Portal de Bodegas (`ForWineriesPage.tsx` en `/bodegas/registro`, redirección desde `/para-bodegas`)**: Presentación editorial de ventajas competitivas (certificación técnica, reclamo de vinos, seguidores).
 - **Registro de Bodega (`WineryRegisterPage.tsx` en `/bodega/registro`)**: Formulario split-card en 2 pasos con geolocalización interactiva vía `RegionPicker`.
 
 ### 2.2 Perfil Público Inmersivo de Bodega (`WineryPublicProfileLayout.tsx` en `/bodegas/:id`)
@@ -250,7 +250,8 @@ flowchart TD
 | Ruta | Componente | Layout | Acceso Permitido | Comportamiento si no cumple |
 | :--- | :--- | :--- | :--- | :--- |
 | `/` | `Landing.tsx` | `RootLayout` | Público | Redirige al dashboard según rol si ya está logueado |
-| `/para-bodegas` | `ForWineriesPage.tsx` | `WineryPublicLayout` | Público | N/A |
+| `/bodegas/registro` | `ForWineriesPage.tsx` | `WineryPublicLayout` | Público | N/A |
+| `/para-bodegas` | `Navigate (replace)` | N/A | Público | Redirige a `/bodegas/registro` |
 | `/bodega/registro` | `WineryRegisterPage.tsx` | `RootLayout` | Público | Si ya está autenticado, redirige a `/bodega/dashboard` |
 | `/bodegas/:id` | `WineryPublicProfileLayout.tsx` | Propio (`WineryPublicTopBar`) | Público (Auth opcional) | 404 amable si no está disponible |
 | `/bodegas/:id/catalogo` | `WineryPublicCatalogPage.tsx` | `WineryPublicProfileLayout` | Público (Auth opcional) | 404 amable si no está disponible |

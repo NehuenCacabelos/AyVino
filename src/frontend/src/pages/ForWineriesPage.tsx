@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 /**
- * ForWineriesPage Component (/para-bodegas)
+ * ForWineriesPage Component (/bodegas/registro)
  * Página pública institucional que presenta la propuesta de valor para productores
  * vitivinícolas argentinos con estética editorial de cava oscura (#0a0a0c / #0f0f11).
  */

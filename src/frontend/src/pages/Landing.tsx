@@ -288,63 +288,46 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 5.5 Franja Editorial para Bodegas y Productores */}
-      <section className="relative overflow-hidden bg-[#0d0d10] border-b border-neutral-800 py-16 sm:py-20">
+      {/* 5.5 Espacio Editorial para Bodegas y Productores */}
+      <section className="relative overflow-hidden bg-[#0c0c0e] border-b border-neutral-800/80 py-16 sm:py-20">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 opacity-[0.05] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px]"
+          className="pointer-events-none absolute inset-0 z-0 opacity-[0.04] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[#6e1a24]/15 blur-[100px]"
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-[500px] h-64 rounded-full bg-[#6e1a24]/10 blur-[90px]"
         />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-white/10 bg-[#141416]/90 p-8 sm:p-12 backdrop-blur-md grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-xl">
-            <div className="lg:col-span-8 space-y-4">
-              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-amber-200/70 font-semibold block">
-                Espacio Oficial para Bodegas
-              </span>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="rounded-2xl border border-white/5 bg-[#121115] px-6 py-10 sm:px-12 sm:py-12 text-center shadow-lg">
+            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-neutral-400 font-medium block">
+              Espacio para Bodegas y Productores
+            </span>
 
-              <h3 className="font-serif text-2xl sm:text-3xl md:text-4xl font-semibold text-neutral-100 leading-tight">
-                ¿Sos productor o dueño de una bodega argentina?
-              </h3>
+            <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-neutral-100 tracking-tight mt-3">
+              ¿Tenés una bodega o producís vinos en Argentina?
+            </h3>
 
-              <p className="text-neutral-400 text-sm sm:text-base leading-relaxed max-w-2xl font-sans">
-                Tomá el control de tus etiquetas: publicá tus cosechas oficiales con datos técnicos certificados,
-                reclamá las botellas que la comunidad ya está disfrutando y destacá tu terruño con un perfil público exclusivo.
-              </p>
+            <p className="text-neutral-400 text-xs sm:text-sm font-sans max-w-xl mx-auto leading-relaxed mt-3">
+              Certificá tus cosechas oficiales con datos enológicos precisos, reclamá las botellas que la comunidad ya disfruta y conectá directamente con sommeliers y aficionados.
+            </p>
 
-              {/* 3 puntos de valor rápidos */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs text-neutral-300 font-sans">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>Publicá tus vinos y blends</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>Reclamá etiquetas comunitarias</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>Perfil público y seguidores</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-4 flex flex-col gap-3 justify-center sm:flex-row lg:flex-col">
+            {/* Acciones centradas con separación vertical cuidada */}
+            <div className="mt-8 flex flex-col items-center justify-center gap-3.5">
               <Link
-                to="/para-bodegas"
-                className="w-full py-3.5 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#831823] text-zinc-100 border border-rose-800/40 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer text-center"
+                to="/bodegas/registro"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-7 py-3 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] shadow-md cursor-pointer"
               >
-                <span>Conocé el espacio para bodegas</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Registrar mi bodega</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+
               <Link
-                to="/bodega/registro"
-                className="w-full py-3 px-6 rounded-xl border border-white/10 hover:border-white/20 text-neutral-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors text-center cursor-pointer"
+                to="/login"
+                className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-white transition-colors cursor-pointer py-1"
               >
-                Registrar bodega directamente
+                ¿Ya tenés cuenta? Ingresar
               </Link>
             </div>
           </div>
@@ -383,7 +366,7 @@ export default function Landing() {
                 Comunidad
               </button>
               <Link
-                to="/para-bodegas"
+                to="/bodegas/registro"
                 className="hover:text-amber-200/90 transition-colors cursor-pointer"
               >
                 Para Bodegas

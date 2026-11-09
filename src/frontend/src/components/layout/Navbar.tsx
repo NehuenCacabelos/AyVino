@@ -209,7 +209,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    to="/para-bodegas"
+                    to="/bodegas/registro"
                     className="text-xs font-mono uppercase tracking-wider text-neutral-400 hover:text-amber-200/90 transition-colors px-2 py-1.5 cursor-pointer"
                   >
                     Para bodegas
@@ -361,7 +361,7 @@ export default function Navbar() {
             ) : (
               <>
                 <Link
-                  to="/para-bodegas"
+                  to="/bodegas/registro"
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center py-2 text-xs font-mono uppercase tracking-wider text-amber-200/90 hover:text-amber-100 transition-colors"
                 >
