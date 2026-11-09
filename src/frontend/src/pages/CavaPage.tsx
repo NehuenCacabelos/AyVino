@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Wine, CheckCircle2 } from 'lucide-react';
+import { Wine, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
 import {
@@ -399,7 +399,12 @@ export default function CavaPage() {
 
         {/* Grilla / Mosaico de Botellas */}
         <section className="space-y-4">
-          {displayedWines.length === 0 ? (
+          {isLoading ? (
+            <div className="p-16 text-center rounded-xl bg-[#121216] border border-neutral-800 space-y-3">
+              <Loader2 className="w-8 h-8 text-[#fbbf24] animate-spin mx-auto" />
+              <p className="font-mono text-xs text-neutral-400">Cargando inventario de la cava...</p>
+            </div>
+          ) : displayedWines.length === 0 ? (
             <div className="p-12 text-center rounded-xl bg-[#121216] border border-neutral-800 space-y-3">
               <Wine className="w-10 h-10 text-neutral-500 mx-auto" />
               <h3 className="font-serif text-xl text-neutral-200">No hay etiquetas registradas</h3>

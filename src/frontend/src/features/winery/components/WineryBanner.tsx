@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getBannerThemeByUsername } from '../../../constants/bannerThemes';
 import { cn } from '../../../lib/utils';
 import { imageUrl } from '../../../lib/image';
@@ -23,15 +23,11 @@ export default function WineryBanner({
   className,
   heightClassName = 'h-44 sm:h-52 md:h-60 lg:h-64',
 }: WineryBannerProps) {
-  const [imageError, setImageError] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   const effectiveBannerUrl = bannerImageId ? imageUrl(bannerImageId, 'banner') : bannerUrl;
-
-  useEffect(() => {
-    setImageError(false);
-  }, [effectiveBannerUrl]);
   const hasCustomBanner = Boolean(
-    effectiveBannerUrl && effectiveBannerUrl.trim().length > 0 && !imageError,
+    effectiveBannerUrl && effectiveBannerUrl.trim().length > 0 && failedUrl !== effectiveBannerUrl,
   );
   const bannerTheme = getBannerThemeByUsername(wineryName);
 
@@ -51,7 +47,7 @@ export default function WineryBanner({
           className="w-full h-full object-cover object-center"
           loading="eager"
           decoding="async"
-          onError={() => setImageError(true)}
+          onError={() => setFailedUrl(effectiveBannerUrl ?? null)}
         />
         {/* Overlay armónico: protege contraste y funde de forma gradual hacia el fondo inferior */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0e] via-black/25 to-black/10 pointer-events-none" />

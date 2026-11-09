@@ -428,28 +428,28 @@ export default function QuickAddBottleModal({
               <button
                 type="button"
                 onClick={handleResetAndClose}
-                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors"
                 disabled={isChecking || isSubmitting}
+                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isChecking || isSubmitting}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50"
               >
                 {isChecking ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Verificando...</span>
                   </>
                 ) : isSubmitting ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Guardando...</span>
                   </>
                 ) : (
-                  <span>Ingresar a la Cava</span>
+                  <span>Guardar en Bóveda</span>
                 )}
               </button>
             </div>

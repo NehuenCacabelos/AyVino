@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getWineryInitials } from '../utils/wineryUtils';
 import { cn } from '../../../lib/utils';
 import { imageUrl } from '../../../lib/image';
@@ -36,14 +36,10 @@ export default function WineryLogo({
   alt,
   objectFit = 'contain',
 }: WineryLogoProps) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const effectiveSrc = logoImageId ? imageUrl(logoImageId, 'logo') : src;
-
-  useEffect(() => {
-    setImageFailed(false);
-  }, [effectiveSrc]);
-  const hasValidLogo = Boolean(effectiveSrc && effectiveSrc.trim().length > 0 && !imageFailed);
+  const hasValidLogo = Boolean(effectiveSrc && effectiveSrc.trim().length > 0 && failedSrc !== effectiveSrc);
   const initials = getWineryInitials(name);
   const sizeClass = SIZE_CLASSES[size];
 
@@ -52,7 +48,7 @@ export default function WineryLogo({
       <img
         src={effectiveSrc!.trim()}
         alt={alt ?? `Logo oficial de ${name || 'la bodega'}`}
-        onError={() => setImageFailed(true)}
+        onError={() => setFailedSrc(effectiveSrc ?? null)}
         loading="lazy"
         decoding="async"
         className={cn(
