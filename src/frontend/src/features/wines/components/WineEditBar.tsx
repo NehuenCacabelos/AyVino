@@ -84,13 +84,13 @@ export default function WineEditBar({
         <aside
           role="toolbar"
           aria-label="Barra de publicación de etiqueta"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200"
+          className="pt-4 w-full animate-in fade-in duration-200"
         >
           <button
             type="button"
             onClick={() => void onPublish?.()}
             disabled={isSaving}
-            className="h-11 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center gap-2 border border-rose-500/30 hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full h-12 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-500/30 hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSaving ? (
               <>
@@ -117,12 +117,12 @@ export default function WineEditBar({
         <aside
           role="toolbar"
           aria-label="Barra de edición de vino"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200"
+          className="pt-4 w-full animate-in fade-in duration-200"
         >
           <button
             type="button"
             onClick={onStartEdit}
-            className="h-11 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center gap-2 border border-rose-500/30 hover:scale-[1.02]"
+            className="w-full h-12 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-500/30 hover:scale-[1.01]"
           >
             <Edit3 className="w-4 h-4 text-rose-200" />
             <span>Editar vino</span>
@@ -139,13 +139,13 @@ export default function WineEditBar({
       <aside
         role="toolbar"
         aria-label="Acciones de edición de vino"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200"
+        className="pt-4 w-full flex items-center gap-3 animate-in fade-in duration-200"
       >
         <button
           type="button"
           onClick={handleCancelClick}
           disabled={isSaving}
-          className="h-11 px-4 rounded-xl bg-neutral-900/90 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors flex items-center gap-2 disabled:opacity-50 shadow-xl"
+          className="w-1/3 sm:w-40 h-12 rounded-xl bg-neutral-900/90 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl"
         >
           <X className="w-4 h-4 text-neutral-400" />
           <span>Cancelar</span>
@@ -155,16 +155,16 @@ export default function WineEditBar({
           type="button"
           onClick={() => void onSaveEdit()}
           disabled={isSaving}
-          className="h-11 px-6 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center gap-2 border border-rose-500/30 hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex-1 h-12 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-500/30 hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-white" />
-              <span>Guardando edición...</span>
+              <span>Guardando cambios...</span>
             </>
           ) : (
             <>
-              <Check className="w-4 h-4 text-white" />
+              <Check className="w-4 h-4 text-emerald-400" />
               <span>Guardar edición</span>
             </>
           )}
