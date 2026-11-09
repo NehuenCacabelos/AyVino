@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
   Calendar,
@@ -17,7 +18,6 @@ import {
   WineryChecklistCard,
   WineryRecentWines,
   WineryLogo,
-  WineCreateModal,
   toPublicCatalogWines,
   type WineryPublicCatalogWineDto,
 } from '../features/winery';
@@ -32,10 +32,10 @@ import {
 export default function WineryDashboardPage() {
   const { user } = useAuth();
   const { winery } = useWinery();
-  const { catalog, isLoading: isCatalogLoading, reload: reloadCatalog } = useWineryCatalog();
+  const { catalog, isLoading: isCatalogLoading } = useWineryCatalog();
+  const navigate = useNavigate();
 
   const [asyncLocationName, setAsyncLocationName] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [publicData, setPublicData] = useState<{
     followersCount: number | null;
     averageRating: number | null;
@@ -62,10 +62,11 @@ export default function WineryDashboardPage() {
     : asyncLocationName;
 
   // Derivar etiquetas públicas a partir del catálogo del dueño usando el adaptador
+  const wines = catalog?.wines;
   const publicWines: WineryPublicCatalogWineDto[] = useMemo(() => {
-    if (!catalog?.wines) return [];
-    return toPublicCatalogWines(catalog.wines);
-  }, [catalog?.wines]);
+    if (!wines) return [];
+    return toPublicCatalogWines(wines);
+  }, [wines]);
 
   const winesCount = catalog?.totals.labels ?? publicWines.length;
 
@@ -138,13 +139,6 @@ export default function WineryDashboardPage() {
     };
   }, [fetchPublicData]);
 
-  // Al crear una nueva etiqueta exitosamente: cerrar modal y recargar catálogo y KPIs
-  const handleWineCreated = async () => {
-    setIsCreateModalOpen(false);
-    await reloadCatalog();
-    await fetchPublicData();
-  };
-
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
   const isRejected = winery?.status === 'Rejected';
@@ -216,11 +210,11 @@ export default function WineryDashboardPage() {
           </div>
         </div>
 
-        {/* Acciones de Cabecera: solo botón "+ Nueva etiqueta" que abre el modal in situ */}
+        {/* Acciones de Cabecera: botón "+ Nueva etiqueta" que navega a la plantilla */}
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => navigate('/bodega/vinos/nuevo')}
             className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
           >
             <Plus className="w-4 h-4" />
@@ -255,19 +249,8 @@ export default function WineryDashboardPage() {
         wines={publicWines}
         isLoading={isCatalogLoading}
         totalCount={winesCount}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        onOpenCreateModal={() => navigate('/bodega/vinos/nuevo')}
       />
-
-      {/* 6. Modal de Alta de Etiqueta Oficial */}
-      {winery?.id && (
-        <WineCreateModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          wineryId={winery.id}
-          locationId={winery.locationId}
-          onWineCreated={handleWineCreated}
-        />
-      )}
     </div>
   );
 }

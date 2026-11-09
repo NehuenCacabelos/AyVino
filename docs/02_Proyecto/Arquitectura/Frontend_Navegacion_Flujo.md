@@ -62,18 +62,19 @@ flowchart TD
         WineryProfile["/bodega/perfil -> WineryOverviewPage.tsx (Ficha con Banner)"]
         WineryConfig["/bodega/configuracion -> WineryConfigPage.tsx (Configuración Inmersiva)"]
         WineryWines["/bodega/vinos -> WineryCatalogPage.tsx"]
-        WineryWineDetail["/bodega/vinos/:wineId -> WineryWineDetailPage.tsx"]
+        WineryWineNew["/bodega/vinos/nuevo -> WineryNewWinePage.tsx (Alta en Plantilla Unificada)"]
+        WineryWineDetail["/bodega/vinos/:wineId -> WineryWineDetailPage.tsx (Ficha y Edición In-Place)"]
         WineryClaim["/bodega/reclamar -> WineryClaimPage.tsx"]
-        WineCreateModalComponent["WineCreateModal (Alta + Corte Varietal)"]
-        WineVintagesModalComponent["WineVintagesModal (Gestión de Cosechas)"]
 
         WineryLayoutComponent --> WineryDash
         WineryLayoutComponent --> WineryProfile
         WineryLayoutComponent --> WineryConfig
         WineryLayoutComponent --> WineryWines
         WineryLayoutComponent --> WineryClaim
-        WineryWines --> WineCreateModalComponent
-        WineryWines --> WineVintagesModalComponent
+        WineryWines --> WineryWineNew
+        WineryWines --> WineryWineDetail
+        WineryDash --> WineryWineNew
+        WineryDash --> WineryWineDetail
     end
 
     subgraph AdminArea["Panel de Administración (/admin/*)"]
@@ -182,16 +183,27 @@ flowchart TD
 - Tarjetas de vino con silueta estilizada o foto de la añada más reciente, uva principal y porcentaje, rango de años y badges de estado (`WineryCatalogCard`). Paginación cliente de 12 por página.
 - Soporte integral para bodegas en revisión (`Pending`): las añadas en revisión se visualizan como borradores privados.
 - Acceso directo a vista pública *"Ver cómo lo ven los usuarios"* hacia `/bodegas/:id`.
-- Modales técnicos:
-  - `WineCreateModal`: Alta de etiqueta oficial con añada inaugural y corte varietal.
-  - `WineVintagesModal`: Acceso rápido para incorporar nuevas añadas desde las tarjetas.
+- Navegación hacia alta de etiqueta:
+  - Botón *"+ Nueva etiqueta"* y estado vacío navegan a `/bodega/vinos/nuevo`.
+  - Redirección automática de parámetros transaccionales `?action=new` hacia `/bodega/vinos/nuevo`.
+  - Tarjetas y botón *"+ Agregar añada"* navegan directamente a la ficha del vino en `/bodega/vinos/:wineId`.
 
-### 2.8 Ficha Detallada de Vino (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)
-- Enlace *"Volver al catálogo"*, cabecera editorial con foto de botella, nombre, tipo, notas de cata y badge de origen (*"Oficial de tu bodega"* o *"Agregado por la comunidad"*).
-- Acciones de cabecera: *"Editar etiqueta"* (`WineEditModal`) y *"Agregar añada"* (`WineVintagesModal`).
-- Lista vertical de añadas (`WineryVintageCard`): foto, año, alcohol, temperatura de servicio, consejo de guarda, barra proporcional y chips del blend varietal de uvas, estado de moderación, reseñas y fecha de registro.
-- Maridajes recomendados (`WineryWinePairingsList`): consulta asíncrona de maridajes de solo lectura contra `GET /api/wines/{wineId}/pairings`.
-- Manejo amigable de error 404 para etiquetas inexistentes o ajenas con botón de regreso.
+### 2.8 Ficha Detallada de Vino y Edición In-Place (`WineryWineDetailPage.tsx` en `/bodega/vinos/:wineId`)
+- Envoltorio de ruta que renderiza `WineDetailView` con `ownerMode={true}` y datos reales de la API vía `useRealWine`.
+- Enlace *"Volver al catálogo"*, cabecera editorial con foto de botella, nombre, tipo, notas de cata y badge de origen.
+- Modo edición in-place mediante barra flotante (`WineEditBar`):
+  - Modificación directa de nombre, tipo de vino y descripción.
+  - Gestión de cosechas (`+ Añada`), edición de alcohol, temperatura, consejo de guarda y blend de uvas (`grapeBlendUtils`).
+  - Carga y reemplazo de foto de botella.
+  - Catálogo flotante de maridajes y recálculo reactivo del gráfico de radar sensorial.
+  - Detección de colisiones 409 (`WINE_VINTAGE_DUPLICATE`) y bloqueo de navegación con cambios sin guardar.
+- Formulario de reseñas conectado a `POST /api/reviews` para vinos reales.
+
+### 2.9 Alta de Nueva Etiqueta en Plantilla (`WineryNewWinePage.tsx` en `/bodega/vinos/nuevo`)
+- Plantilla editorial vacía en modo edición permanente (`isCreating={true}`).
+- Barra flotante con botón *"Publicar etiqueta"* y confirmador de salida ante cambios pendientes.
+- Secuencia de creación: `createWine` -> `uploadVintageImage` -> `addWinePairing` -> navegación a `/bodega/vinos/{id}`.
+- Manejo de conflictos 409: `WINE_VINTAGE_DUPLICATE` (toast con link directo) y `WINE_EXISTS_ADD_VINTAGE` (diálogo modal de confirmación).
 
 ### 2.9 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)
 - Detección automática de botellas cargadas por aficionados que coinciden con el nombre de la bodega.

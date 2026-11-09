@@ -89,7 +89,7 @@ export default function WineryRecentWines({
               </button>
             ) : (
               <Link
-                to="/bodega/vinos"
+                to="/bodega/vinos/nuevo"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
               >
                 <Plus className="w-4 h-4" />
@@ -106,7 +106,7 @@ export default function WineryRecentWines({
               <WineryPublicCatalogCard
                 key={wine.id}
                 wine={wine}
-                onSelectWine={() => navigate('/bodega/vinos')}
+                onSelectWine={() => navigate(`/bodega/vinos/${wine.id}`)}
                 isPreview={true}
               />
             ))}

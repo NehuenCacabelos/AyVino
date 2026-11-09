@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes, createMemoryRouter, RouterProvider } from 
 import WineryNewWinePage from '@/pages/WineryNewWinePage';
 import * as wineryModule from '@/features/winery';
 import * as wineApi from '@/features/winery/api/wineApi';
-import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as pairingsApi from '@/features/winery/api/wineryWinePairingsApi';
 import * as grapeApi from '@/features/winery/api/grapeApi';
 import * as imageApi from '@/features/winery/api/imageApi';
@@ -397,11 +396,11 @@ describe('Alta de Vino Nuevo en Plantilla (Paso 3)', () => {
   });
 
   it('previene doble envío mientras se procesa la publicación', async () => {
-    let resolveCreate: (value: any) => void;
-    const delayedPromise = new Promise((resolve) => {
+    let resolveCreate!: (value: wineApi.CreateWineResponseDto) => void;
+    const delayedPromise = new Promise<wineApi.CreateWineResponseDto>((resolve) => {
       resolveCreate = resolve;
     });
-    vi.mocked(wineApi.createWine).mockReturnValue(delayedPromise as any);
+    vi.mocked(wineApi.createWine).mockReturnValue(delayedPromise);
 
     renderComponent();
 

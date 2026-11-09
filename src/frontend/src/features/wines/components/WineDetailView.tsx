@@ -83,7 +83,7 @@ function calculateRating(reviews: WineReviewItem[]): string | null {
   return (sum / reviews.length).toFixed(1);
 }
 
-export function getWineTypeLabel(type: string): string {
+function getWineTypeLabel(type: string): string {
   switch (type) {
     case 'Red':
       return 'Tinto Noble';
@@ -305,7 +305,7 @@ export default function WineDetailView({
   const outletCtx = useOutletContext<AppOutletContext | null>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef<boolean>(false);
-  const isPublishedRef = useRef<boolean>(false);
+  const [isPublished, setIsPublished] = useState<boolean>(false);
 
   // Estados de vista
   const [selectedVintageYear, setSelectedVintageYear] = useState<number>(
@@ -525,7 +525,7 @@ export default function WineDetailView({
 
   // Detección de cambios sin guardar
   const hasChanges = useMemo(() => {
-    if (isPublishedRef.current) return false;
+    if (isPublished) return false;
     if (!isEditing && !isNewMode) return false;
     if (isNewMode) {
       return Boolean(
@@ -543,7 +543,7 @@ export default function WineDetailView({
     if (draftDescription !== wine.description) return true;
     if (draftPairings.length !== wine.pairings.length) return true;
     return true;
-  }, [isEditing, isNewMode, draftName, draftType, draftDescription, activeVintageDraft, draftPairings, wine]);
+  }, [isEditing, isNewMode, isPublished, draftName, draftType, draftDescription, activeVintageDraft, draftPairings, wine]);
 
   // Manejo de Uvas en el Blend
   const handleAddGrape = () => {
@@ -872,7 +872,7 @@ export default function WineDetailView({
       };
 
       const created = await createWine(payload);
-      isPublishedRef.current = true;
+      setIsPublished(true);
 
       // 2. Si hay imagen seleccionada: uploadVintageImage
       let imageFailed = false;
@@ -973,7 +973,7 @@ export default function WineDetailView({
       };
 
       const createdVintage = await createWineVintage(confirmAddVintage.existingWineId, vintagePayload);
-      isPublishedRef.current = true;
+      setIsPublished(true);
 
       // Subir imagen si hay
       if (activeVintageDraft.imageFile) {

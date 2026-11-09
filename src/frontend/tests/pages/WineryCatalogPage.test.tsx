@@ -9,16 +9,21 @@ import type {
   WineryCatalogResponseDto,
 } from '@/features/winery';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock('@/features/winery', async (importOriginal) => {
   const actual = await importOriginal<typeof wineryModule>();
   return {
     ...actual,
     useWinery: vi.fn(),
     useWineryCatalog: vi.fn(),
-    WineCreateModal: ({ isOpen }: { isOpen: boolean }) =>
-      isOpen ? <div data-testid="wine-create-modal">Modal Alta Etiqueta</div> : null,
-    WineVintagesModal: ({ isOpen }: { isOpen: boolean }) =>
-      isOpen ? <div data-testid="wine-vintages-modal">Modal Cosechas</div> : null,
   };
 });
 
@@ -215,7 +220,7 @@ describe('WineryCatalogPage', () => {
     expect(screen.getByText('No se encontraron etiquetas')).toBeInTheDocument();
   });
 
-  it('opens new wine creation modal on button click', () => {
+  it('navigates to /bodega/vinos/nuevo on button click', () => {
     render(
       <MemoryRouter>
         <WineryCatalogPage />
@@ -225,6 +230,16 @@ describe('WineryCatalogPage', () => {
     const newWineBtn = screen.getByRole('button', { name: /Nueva etiqueta/i });
     fireEvent.click(newWineBtn);
 
-    expect(screen.getByTestId('wine-create-modal')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/bodega/vinos/nuevo');
+  });
+
+  it('redirects to /bodega/vinos/nuevo when ?action=new is in the URL', () => {
+    render(
+      <MemoryRouter initialEntries={['/bodega/vinos?action=new']}>
+        <WineryCatalogPage />
+      </MemoryRouter>
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith('/bodega/vinos/nuevo', { replace: true });
   });
 });
