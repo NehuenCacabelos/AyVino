@@ -487,8 +487,8 @@ export default function DashboardPage() {
         <main className="relative z-20 mx-auto flex w-full max-w-7xl flex-col gap-12 sm:gap-16 px-4 sm:px-6 lg:px-8 pb-24 pt-24 sm:pt-32">
           {/* Sección de Catálogo Oficial por Bodegas */}
           <section id="catalogo" aria-labelledby="catalog-title" className="scroll-mt-28 flex flex-col gap-12 sm:gap-16">
-            {/* Contenedor superior con Ambient Glow en tono vino */}
-            <div className="relative flex flex-col items-center gap-6 text-center py-8 sm:py-12 px-4 rounded-3xl overflow-hidden bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(160,20,50,0.12),transparent)]">
+            {/* Contenedor superior de encabezado de catálogo */}
+            <div className="relative flex flex-col items-center gap-6 text-center py-8 sm:py-12 px-4 rounded-3xl overflow-hidden">
               <SectionHeading
                 id="catalog-title"
                 align="center"
