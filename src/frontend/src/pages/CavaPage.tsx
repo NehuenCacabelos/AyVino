@@ -270,7 +270,7 @@ export default function CavaPage() {
     );
 
     // 2. Persistir decremento en el backend si tenemos cellarId y ID numérico
-    const vintageId = Number(data.wine.id.replace('api-item-', ''));
+    const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
     if (!isNaN(vintageId) && vintageId > 0 && cellarId) {
       const current = wines.find((w) => w.id === data.wine.id);
       if (current) {
@@ -347,7 +347,7 @@ export default function CavaPage() {
       isJewel: isJewelScore,
       sourceType: item.wineryId ? 'Official' : 'Community',
       bottle: payload.bottle,
-      imageUrl: item.imageId ? imageUrl(item.imageId, 'bottle') : undefined,
+      imageUrl: item.imageId ? (imageUrl(item.imageId, 'bottle') ?? undefined) : undefined,
       altitude: '1.300 msnm',
       oakAging: 'Crianza en barricas seleccionadas',
       alcoholContent: '14.2% ABV',

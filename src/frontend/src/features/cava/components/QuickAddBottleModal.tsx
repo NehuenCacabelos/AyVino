@@ -136,6 +136,7 @@ export default function QuickAddBottleModal({
         vintage: Number(vintage) || 2021,
         location: location.trim(),
         units: Math.max(1, Number(units) || 1),
+        isJewel: false,
         bottle: bottleKind,
         matchedWineId,
       });

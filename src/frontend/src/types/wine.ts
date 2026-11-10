@@ -41,6 +41,79 @@ export interface WineApiDto {
   reviewCount: number;
 }
 
+export interface CatalogWineItemDto {
+  id: number;
+  wineryId: number | null;
+  wineryNameText: string | null;
+  wineryName: string | null;
+  name: string;
+  description: string | null;
+  wineType: WineTypeEnum | string;
+  locationId: number | null;
+  regionName: string | null;
+  varietal: string | null;
+  vintage: number | null;
+  imageId: string | null;
+  imageUrl: string | null;
+  sourceType: SourceTypeEnum | string;
+  duplicateOfWineId: number | null;
+  averageRating: number | null;
+  reviewCount: number;
+}
+
+/**
+ * Resuelve de forma determinista el tipo de vector de botella para el frontend,
+ * garantizando fallback robusto a 'red-cream' para cualquier valor nulo o no reconocido.
+ */
+export function resolveBottleKind(
+  wineType?: string | null,
+  varietal?: string | null,
+): BottleKind {
+  const t = (wineType || '').toLowerCase();
+  const v = (varietal || '').toLowerCase();
+
+  if (t === 'sparkling' || v.includes('espumante') || v.includes('champagne') || v.includes('brut')) {
+    return 'sparkling';
+  }
+
+  if (v.includes('torrontés') || v.includes('torrontes')) {
+    return 'white-flute';
+  }
+
+  if (t === 'white' || v.includes('blanco') || v.includes('chardonnay') || v.includes('sauvignon blanc')) {
+    return 'white';
+  }
+
+  if (t === 'rose' || v.includes('rosado') || v.includes('rose') || v.includes('rosé')) {
+    return 'red-burgundy';
+  }
+
+  if (v.includes('cabernet franc') || v.includes('pinot noir') || v.includes('gran reserva')) {
+    return 'red-burgundy';
+  }
+
+  if (v.includes('cabernet sauvignon') || v.includes('blend')) {
+    return 'red-black';
+  }
+
+  // Fallback determinista estándar tinto
+  return 'red-cream';
+}
+
+export function catalogWineToDashboardWine(item: CatalogWineItemDto): DashboardWine {
+  return {
+    id: String(item.id),
+    name: item.name,
+    winery: item.wineryName || item.wineryNameText || 'Bodega',
+    region: item.regionName || 'Mendoza, Argentina',
+    varietal: item.varietal || (item.wineType === 'White' ? 'Blancos' : 'Malbec'),
+    vintage: item.vintage || new Date().getFullYear(),
+    rating: item.averageRating != null ? Number(item.averageRating) : 0,
+    bottle: resolveBottleKind(item.wineType, item.varietal),
+    imageUrl: item.imageUrl || undefined,
+  };
+}
+
 export interface WineVintageApiDto {
   id: number;
   wineId: number;

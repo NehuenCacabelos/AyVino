@@ -229,6 +229,22 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
+    {
+        if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
+        if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
+
+        WineType? parsedType = null;
+        if (!string.IsNullOrWhiteSpace(wineType) && !string.Equals(wineType, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Enum.TryParse<WineType>(wineType, ignoreCase: true, out var parsed))
+                throw new ValidationException($"Invalid wine type: '{wineType}'.");
+            parsedType = parsed;
+        }
+
+        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
+    }
+
     public async Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(winery))

@@ -382,6 +382,187 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int pageNumber,
+        int pageSize,
+        int? currentUserId,
+        bool isAdmin,
+        CancellationToken ct = default)
+    {
+        var cleanSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        var cleanName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        var cleanWinery = string.IsNullOrWhiteSpace(winery) ? null : winery.Trim();
+        var hasSearchTerm = cleanSearch is not null || cleanName is not null || cleanWinery is not null;
+
+        const string sql = """
+            SELECT
+                w.id AS Id,
+                w.winery_id AS WineryId,
+                w.winery_name_text AS WineryNameText,
+                COALESCE(wy.name, w.winery_name_text) AS WineryName,
+                w.name AS Name,
+                w.description AS Description,
+                CASE w.wine_type
+                    WHEN 1 THEN 'Red'
+                    WHEN 2 THEN 'White'
+                    WHEN 3 THEN 'Rose'
+                    WHEN 4 THEN 'Sparkling'
+                    WHEN 5 THEN 'Orange'
+                    ELSE 'Red'
+                END AS WineType,
+                w.location_id AS LocationId,
+                COALESCE(c.name || ', ' || s.name, s.name, wy_c.name || ', ' || wy_s.name, wy_s.name, 'Mendoza, Argentina') AS RegionName,
+                COALESCE(main_grape.grape_name, CASE w.wine_type
+                    WHEN 1 THEN 'Tinto'
+                    WHEN 2 THEN 'Blanco'
+                    WHEN 3 THEN 'Rosado'
+                    WHEN 4 THEN 'Espumoso'
+                    WHEN 5 THEN 'Naranjo'
+                    ELSE 'Tinto'
+                END) AS Varietal,
+                latest_vintage.year AS Vintage,
+                latest_vintage.image_id AS ImageId,
+                CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=bottle' ELSE NULL END AS ImageUrl,
+                CASE w.source_type
+                    WHEN 1 THEN 'Community'
+                    WHEN 2 THEN 'Official'
+                    ELSE 'Community'
+                END AS SourceType,
+                w.duplicate_of_wine_id AS DuplicateOfWineId,
+                CASE
+                    WHEN w.review_count >= 5 THEN ROUND((w.rating_sum::numeric / w.review_count), 2)
+                    WHEN w.review_count > 0 THEN ROUND((w.rating_sum::numeric / w.review_count), 1)
+                    ELSE NULL
+                END AS AverageRating,
+                w.review_count AS ReviewCount
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN locations loc ON loc.id = w.location_id
+            LEFT JOIN cities c ON c.id = loc.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+            LEFT JOIN LATERAL (
+                SELECT wv.year, wv.image_id
+                FROM wine_vintages wv
+                WHERE wv.wine_id = w.id
+                  AND (@IsAdmin = TRUE
+                       OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                       OR wv.approval_status != 3)
+                ORDER BY
+                    CASE WHEN wv.approval_status = 2 THEN 1 ELSE 0 END DESC,
+                    wv.year DESC NULLS LAST,
+                    wv.id DESC
+                LIMIT 1
+            ) latest_vintage ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT g.name AS grape_name
+                FROM wine_grapes wg
+                INNER JOIN grapes g ON g.id = wg.grape_id
+                WHERE wg.wine_vintage_id = (
+                    SELECT wv2.id
+                    FROM wine_vintages wv2
+                    WHERE wv2.wine_id = w.id
+                      AND (@IsAdmin = TRUE
+                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
+                           OR wv2.approval_status != 3)
+                    ORDER BY
+                        CASE WHEN wv2.approval_status = 2 THEN 1 ELSE 0 END DESC,
+                        wv2.year DESC NULLS LAST,
+                        wv2.id DESC
+                    LIMIT 1
+                )
+                ORDER BY wg.percentage DESC NULLS LAST, g.name ASC
+                LIMIT 1
+            ) main_grape ON TRUE
+            WHERE (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR wy.status IS NULL
+                OR wy.status != 3
+              )
+              AND (
+                @IsAdmin = TRUE
+                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status != 3)
+                OR w.source_type = 1
+                OR w.winery_id IS NOT NULL
+              )
+            AND (@Search IS NULL
+                OR w.name ILIKE @SearchPattern
+                OR wy.name ILIKE @SearchPattern
+                OR w.winery_name_text ILIKE @SearchPattern
+                OR w.name % @Search
+                OR wy.name % @Search
+                OR w.winery_name_text % @Search)
+            AND (@Name IS NULL
+                OR w.name ILIKE @NamePattern
+                OR w.name % @Name)
+            AND (@Winery IS NULL
+                OR wy.name ILIKE @WineryPattern
+                OR w.winery_name_text ILIKE @WineryPattern
+                OR wy.name % @Winery
+                OR w.winery_name_text % @Winery)
+            AND (@WineType IS NULL OR w.wine_type = @WineType)
+            AND (@Year IS NULL OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
+                    AND (@IsAdmin = TRUE
+                         OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                         OR wv.approval_status = 2
+                         OR (@HasSearchTerm = TRUE AND w.source_type = 1))
+                ))
+            ORDER BY
+                CASE WHEN @HasSearchTerm = TRUE THEN
+                    GREATEST(
+                        CASE WHEN @Search IS NOT NULL THEN
+                            GREATEST(
+                                similarity(w.name, @Search),
+                                similarity(COALESCE(wy.name, w.winery_name_text, ''), @Search)
+                            )
+                        ELSE 0 END,
+                        CASE WHEN @Name IS NOT NULL THEN similarity(w.name, @Name) ELSE 0 END,
+                        CASE WHEN @Winery IS NOT NULL THEN
+                            GREATEST(
+                                similarity(COALESCE(wy.name, ''), @Winery),
+                                similarity(COALESCE(w.winery_name_text, ''), @Winery)
+                            )
+                        ELSE 0 END
+                    )
+                ELSE 0 END DESC,
+                w.review_count DESC,
+                w.rating_sum DESC,
+                w.name ASC,
+                w.id ASC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<CatalogWineItemDto>(
+            new CommandDefinition(sql, new
+            {
+                Search = cleanSearch,
+                SearchPattern = cleanSearch is null ? null : $"%{cleanSearch}%",
+                Name = cleanName,
+                NamePattern = cleanName is null ? null : $"%{cleanName}%",
+                Winery = cleanWinery,
+                WineryPattern = cleanWinery is null ? null : $"%{cleanWinery}%",
+                WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
+                Year = year,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin,
+                HasSearchTerm = hasSearchTerm,
+                Offset = (pageNumber - 1) * pageSize,
+                PageSize = pageSize
+            }, cancellationToken: ct));
+    }
+
     public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);

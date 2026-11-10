@@ -89,6 +89,7 @@ export interface QuickAddBottlePayload {
   vintage: number;
   units: number;
   location: string;
+  isJewel?: boolean;
   bottle: BottleKind;
   matchedWineId?: number | null;
 }

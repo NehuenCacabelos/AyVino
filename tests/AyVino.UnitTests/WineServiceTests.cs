@@ -365,6 +365,28 @@ public class WineServiceTests
         Assert.Null(fakeWineRepo.ExistingWine);
     }
 
+    [Fact]
+    public async Task SearchCatalogAsync_InvalidPageSize_ThrowsValidationException()
+    {
+        var service = new WineService(new FakeWineRepository(), new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+        await Assert.ThrowsAsync<ValidationException>(() => service.SearchCatalogAsync("Malbec", null, null, null, null, 1, 0));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_InvalidWineType_ThrowsValidationException()
+    {
+        var service = new WineService(new FakeWineRepository(), new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+        await Assert.ThrowsAsync<ValidationException>(() => service.SearchCatalogAsync("Malbec", null, null, null, "Inexistente", 1, 10));
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_ValidRequest_Succeeds()
+    {
+        var service = new WineService(new FakeWineRepository(), new FakeWineryRepository(), new FakeLocationRepository(), new FakeGrapeRepository());
+        var result = await service.SearchCatalogAsync("Catena", null, null, 2020, "Red", 1, 10);
+        Assert.NotNull(result);
+    }
+
     #region Fakes
 
     private sealed class FakeWineRepository : IWineRepository
@@ -432,6 +454,8 @@ public class WineServiceTests
             Task.FromResult(DuplicateCandidateResult);
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
+
+        public Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default) => Task.FromResult<IEnumerable<CatalogWineItemDto>>([]);
 
         public Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
             Task.FromResult(new MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));

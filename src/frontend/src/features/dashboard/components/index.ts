@@ -10,4 +10,6 @@ export { default as DashboardSection } from './DashboardSection';
 export { default as PromoBlocks } from './PromoBlocks';
 export { default as FilterChips } from './FilterChips';
 export { default as WineryBlock } from './WineryBlock';
+export { default as DashboardWineCard } from './DashboardWineCard';
+export { default as WineCardSkeleton } from './WineCardSkeleton';
 
