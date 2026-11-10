@@ -10,6 +10,7 @@ import {
   VaultLogbookModule,
   TechnicalSheetModal,
   QuickAddBottleModal,
+  initialVaultWines,
   initialTastingLog,
   resolveWineTypeAndBottle,
   type CellarWine,
@@ -35,8 +36,19 @@ import type { DashboardWine, UncorkSubmission } from '../types/wine';
 export default function CavaPage() {
   const { user } = useAuth();
 
-  // 1. Colección y Datos de Bóveda sincronizados con Backend .NET
-  const [wines, setWines] = useState<CellarWine[]>([]);
+  // 1. Colección y Datos de Bóveda (inicializa desde localStorage o colección curada, luego sincroniza con API)
+  const [wines, setWines] = useState<CellarWine[]>(() => {
+    const saved = localStorage.getItem('ayvino_vault_wines');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return initialVaultWines;
+      }
+    }
+    return initialVaultWines;
+  });
+
   const [cellarId, setCellarId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -61,6 +73,11 @@ export default function CavaPage() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Sincronización en LocalStorage
+  useEffect(() => {
+    localStorage.setItem('ayvino_vault_wines', JSON.stringify(wines));
+  }, [wines]);
 
   useEffect(() => {
     localStorage.setItem('ayvino_vault_logbook', JSON.stringify(tastingLog));
@@ -89,7 +106,7 @@ export default function CavaPage() {
               activeCellarId = createdRes.data.id;
             }
           } catch {
-            // Manejo silencioso si ya existe o hay carrera
+            // Manejo silencioso si ya existe o hay concurrencia
           }
         }
 
@@ -97,7 +114,7 @@ export default function CavaPage() {
           setCellarId(activeCellarId);
           const itemsResponse = await apiClient.get(`/cellars/${activeCellarId}/items`);
           const items = itemsResponse.data;
-          if (Array.isArray(items) && isMounted) {
+          if (Array.isArray(items) && items.length > 0 && isMounted) {
             const mapped: CellarWine[] = items.map((item, idx) => ({
               id: `api-item-${item.wineVintageId || idx}`,
               name: item.name || 'Etiqueta de Colección',
