@@ -1,0 +1,82 @@
+using System.Diagnostics;
+using AyVino.Api.Common.Exceptions;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Npgsql;
+
+namespace AyVino.Api.Common.Middleware;
+
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        var (statusCode, title, detail) = exception switch
+        {
+            AppException appEx => (
+                appEx.StatusCode,
+                GetTitleForStatusCode(appEx.StatusCode),
+                appEx.Message
+            ),
+            BadHttpRequestException badReq => (
+                badReq.StatusCode,
+                GetTitleForStatusCode(badReq.StatusCode),
+                "La solicitud es inválida o está mal formada."
+            ),
+            PostgresException pgEx when pgEx.SqlState == PostgresErrorCodes.ForeignKeyViolation => (
+                StatusCodes.Status409Conflict,
+                GetTitleForStatusCode(StatusCodes.Status409Conflict),
+                "No se puede eliminar el registro porque tiene otros datos asociados en el sistema."
+            ),
+            _ => (
+                StatusCodes.Status500InternalServerError,
+                "Error interno del servidor",
+                "Ha ocurrido un error inesperado al procesar la solicitud."
+            )
+        };
+
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(exception, "Excepción no controlada en {Path}: {Message}", httpContext.Request.Path, exception.Message);
+        }
+        else
+        {
+            logger.LogWarning("Excepción de dominio ({StatusCode}) en {Path}: {Message}", statusCode, httpContext.Request.Path, exception.Message);
+        }
+
+        var problemDetails = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail,
+            Instance = httpContext.Request.Path,
+            Extensions =
+            {
+                ["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier
+            }
+        };
+
+        httpContext.Response.StatusCode = statusCode;
+        await httpContext.Response.WriteAsJsonAsync(problemDetails, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
+
+        return true;
+    }
+
+    private static string GetTitleForStatusCode(int statusCode) => statusCode switch
+    {
+        StatusCodes.Status400BadRequest => "Error de validación",
+        StatusCodes.Status401Unauthorized => "No autorizado",
+        StatusCodes.Status403Forbidden => "Acceso prohibido",
+        StatusCodes.Status404NotFound => "Recurso no encontrado",
+        StatusCodes.Status409Conflict => "Conflicto de recursos",
+        StatusCodes.Status413PayloadTooLarge => "Carga demasiado grande",
+        StatusCodes.Status415UnsupportedMediaType => "Tipo de medio no soportado",
+        StatusCodes.Status422UnprocessableEntity => "Entidad no procesable",
+        StatusCodes.Status503ServiceUnavailable => "Servicio no disponible",
+        _ => "Error en la solicitud"
+    };
+}
