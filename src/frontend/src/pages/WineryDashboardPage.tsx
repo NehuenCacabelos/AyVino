@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
   Calendar,
-  ExternalLink,
   Plus,
-  ShieldCheck,
   Clock,
   AlertTriangle,
 } from 'lucide-react';
@@ -13,7 +11,6 @@ import { useAuth } from '../features/auth';
 import {
   useWinery,
   useWineryCatalog,
-  getWines,
   getWineryPublicProfile,
   getLocationById,
   WineryKpiRibbon,
@@ -21,23 +18,24 @@ import {
   WineryChecklistCard,
   WineryRecentWines,
   WineryLogo,
-  type WineResponseDto,
+  toPublicCatalogWines,
+  type WineryPublicCatalogWineDto,
 } from '../features/winery';
 
 /**
  * WineryDashboardPage Component (/bodega/dashboard)
  * Pantalla de inicio del panel oficial de bodega en AyVino.
  * Integra saludo editorial de bienvenida, cinta de 4 KPIs, accesos rápidos,
- * checklist interactivo de perfil institucional y resumen de etiquetas oficiales.
+ * checklist interactivo de perfil institucional, modal de nueva etiqueta
+ * y catálogo visual de etiquetas registradas a ancho completo.
  */
 export default function WineryDashboardPage() {
   const { user } = useAuth();
   const { winery } = useWinery();
   const { catalog, isLoading: isCatalogLoading } = useWineryCatalog();
+  const navigate = useNavigate();
 
   const [asyncLocationName, setAsyncLocationName] = useState<string | null>(null);
-  const [winesFallback, setWinesFallback] = useState<WineResponseDto[]>([]);
-  const [isLoadingWines, setIsLoadingWines] = useState<boolean>(false);
   const [publicData, setPublicData] = useState<{
     followersCount: number | null;
     averageRating: number | null;
@@ -63,24 +61,14 @@ export default function WineryDashboardPage() {
     ? `${winery.location.regionName}, ${winery.location.stateName}`
     : asyncLocationName;
 
-  // Derivar etiquetas a partir del contexto de catálogo (o fallback)
-  const wines: WineResponseDto[] = (catalog?.wines && catalog.wines.length > 0)
-    ? catalog.wines.map((w) => ({
-        id: w.id,
-        name: w.name,
-        wineryId: winery?.id ?? null,
-        wineryNameText: winery?.name ?? null,
-        wineType: w.wineType,
-        sourceType: w.sourceType,
-        description: w.description ?? null,
-        locationId: winery?.locationId ?? null,
-        duplicateOfWineId: null,
-        averageRating: w.averageRating ?? null,
-        reviewCount: w.reviewCount,
-      }))
-    : winesFallback;
+  // Derivar etiquetas públicas a partir del catálogo del dueño usando el adaptador
+  const wines = catalog?.wines;
+  const publicWines: WineryPublicCatalogWineDto[] = useMemo(() => {
+    if (!wines) return [];
+    return toPublicCatalogWines(wines);
+  }, [wines]);
 
-  const winesCount = catalog?.totals.labels ?? wines.length;
+  const winesCount = catalog?.totals.labels ?? publicWines.length;
 
   // Derivar métricas de añadas a partir de los totales del catálogo
   const vintagesStats = catalog?.totals
@@ -95,31 +83,9 @@ export default function WineryDashboardPage() {
         pending: 0,
       };
 
-  // 1. Carga de fallback para etiquetas si no están disponibles en el contexto
   const wineryId = winery?.id;
-  useEffect(() => {
-    if (catalog) return;
-    let isMounted = true;
-    if (!wineryId) return;
 
-    Promise.resolve().then(async () => {
-      setIsLoadingWines(true);
-      try {
-        const list = await getWines({ wineryId, pageSize: 100 });
-        if (isMounted) setWinesFallback(list);
-      } catch {
-        if (isMounted) setWinesFallback([]);
-      } finally {
-        if (isMounted) setIsLoadingWines(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [catalog, wineryId]);
-
-  // 2. Resolver Terruño Geográfico de respaldo si no viene embebido
+  // 1. Resolver Terruño Geográfico de respaldo si no viene embebido
   const locationId = winery?.locationId;
   const hasEmbeddedLocation = Boolean(winery?.location);
   useEffect(() => {
@@ -142,47 +108,36 @@ export default function WineryDashboardPage() {
     };
   }, [hasEmbeddedLocation, locationId]);
 
-  // 3. Consulta unificada al endpoint público (seguidores, valoración y totales)
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-
-    if (!wineryId) {
-      return;
+  // Función para recargar datos públicos (KPIs)
+  const fetchPublicData = useCallback(async (signal?: AbortSignal) => {
+    if (!wineryId) return;
+    setIsLoadingPublic(true);
+    try {
+      const profile = await getWineryPublicProfile(wineryId, signal);
+      setPublicData({
+        followersCount: profile.followersCount ?? 0,
+        averageRating: profile.averageRating ?? null,
+        totalReviews: profile.reviewCount ?? 0,
+      });
+    } catch {
+      setPublicData({
+        followersCount: null,
+        averageRating: null,
+        totalReviews: 0,
+      });
+    } finally {
+      setIsLoadingPublic(false);
     }
+  }, [wineryId]);
 
-    Promise.resolve().then(async () => {
-      if (!isMounted) return;
-      setIsLoadingPublic(true);
-
-      try {
-        const profile = await getWineryPublicProfile(wineryId, controller.signal);
-        if (!isMounted) return;
-        setPublicData({
-          followersCount: profile.followersCount ?? 0,
-          averageRating: profile.averageRating ?? null,
-          totalReviews: profile.reviewCount ?? 0,
-        });
-      } catch {
-        if (!isMounted) return;
-        // Un error en este dato no debe romper el resto de la pantalla
-        setPublicData({
-          followersCount: null,
-          averageRating: null,
-          totalReviews: 0,
-        });
-      } finally {
-        if (isMounted) {
-          setIsLoadingPublic(false);
-        }
-      }
-    });
-
+  // 2. Consulta unificada al endpoint público (seguidores, valoración y totales)
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchPublicData(controller.signal);
     return () => {
-      isMounted = false;
       controller.abort();
     };
-  }, [wineryId]);
+  }, [fetchPublicData]);
 
   const isApproved = winery?.status === 'Approved';
   const isPending = winery?.status === 'Pending';
@@ -218,13 +173,7 @@ export default function WineryDashboardPage() {
                   {winery?.name || 'Mi Bodega'}
                 </h1>
 
-                {/* Badge de Estado */}
-                {isApproved && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Bodega Oficial</span>
-                  </span>
-                )}
+                {/* Badge de Estado: solo "En Verificación" y "Observaciones Pendientes" */}
                 {isPending && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-amber-950/40 text-amber-300 border border-amber-800/40">
                     <Clock className="w-3.5 h-3.5" />
@@ -261,27 +210,16 @@ export default function WineryDashboardPage() {
           </div>
         </div>
 
-        {/* Acciones de Cabecera */}
+        {/* Acciones de Cabecera: botón "+ Nueva etiqueta" que navega a la plantilla */}
         <div className="flex items-center gap-3 shrink-0">
-          {isApproved && winery?.id && (
-            <Link
-              to={`/bodegas/${winery.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200 hover:text-white px-4 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Ver vidriera</span>
-            </Link>
-          )}
-
-          <Link
-            to="/bodega/vinos"
+          <button
+            type="button"
+            onClick={() => navigate('/bodega/vinos/nuevo')}
             className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
           >
             <Plus className="w-4 h-4" />
             <span>Nueva etiqueta</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -295,22 +233,24 @@ export default function WineryDashboardPage() {
         averageRating={publicData.averageRating}
         totalReviews={publicData.totalReviews}
         isWineryApproved={isApproved}
-        isLoading={isLoadingPublic || isCatalogLoading || isLoadingWines}
+        isLoading={isLoadingPublic || isCatalogLoading}
       />
 
-      {/* 3. Accesos Rápidos Operativos */}
+      {/* 3. Accesos Rápidos Operativos (3 columnas) */}
       <WineryQuickActions wineryId={winery?.id} isApproved={isApproved} />
 
-      {/* 4. Bloques Complementarios: Checklist de Perfil y Últimas Etiquetas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Checklist Institucional */}
-        {winery && (
-          <WineryChecklistCard winery={winery} winesCount={winesCount} />
-        )}
+      {/* 4. Checklist Institucional */}
+      {winery && (
+        <WineryChecklistCard winery={winery} winesCount={winesCount} />
+      )}
 
-        {/* Resumen de Últimos Vinos */}
-        <WineryRecentWines wines={wines} isLoading={isLoadingWines || isCatalogLoading} />
-      </div>
+      {/* 5. Etiquetas Registradas (ancho completo con cards de catálogo público) */}
+      <WineryRecentWines
+        wines={publicWines}
+        isLoading={isCatalogLoading}
+        totalCount={winesCount}
+        onOpenCreateModal={() => navigate('/bodega/vinos/nuevo')}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Data;
+using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Wines.DTOs;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
@@ -134,6 +135,64 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
+        if (wine.WineryId.HasValue)
+        {
+            var normalizedName = WineLabelNormalizer.Normalize(wine.Name);
+            var lockKey = WineLabelNormalizer.ComputeAdvisoryLockKey(wine.WineryId.Value, normalizedName, wine.WineType);
+
+            await connection.ExecuteAsync(
+                new CommandDefinition("SELECT pg_advisory_xact_lock(@LockKey);", new { LockKey = lockKey }, transaction: transaction, cancellationToken: ct));
+
+            const string findWinesSql = """
+                SELECT id, winery_id, winery_name_text, name, description, wine_type, location_id,
+                       source_type, duplicate_of_wine_id, rating_sum, review_count
+                FROM wines
+                WHERE winery_id = @WineryId
+                  AND wine_type = @WineType
+                  AND duplicate_of_wine_id IS NULL;
+                """;
+
+            var candidates = (await connection.QueryAsync<Wine>(
+                new CommandDefinition(findWinesSql, new { WineryId = wine.WineryId.Value, WineType = (int)wine.WineType }, transaction: transaction, cancellationToken: ct))).ToList();
+
+            var existingWine = candidates.FirstOrDefault(c => WineLabelNormalizer.Normalize(c.Name) == normalizedName);
+            if (existingWine != null)
+            {
+                const string findVintagesSql = """
+                    SELECT id, wine_id, year, approval_status
+                    FROM wine_vintages
+                    WHERE wine_id = @WineId;
+                    """;
+
+                var vintages = (await connection.QueryAsync<WineVintage>(
+                    new CommandDefinition(findVintagesSql, new { WineId = existingWine.Id }, transaction: transaction, cancellationToken: ct))).ToList();
+
+                var existingVintage = firstVintage.Year.HasValue
+                    ? vintages.FirstOrDefault(v => v.Year == firstVintage.Year)
+                    : null;
+
+                if (existingVintage != null)
+                {
+                    throw new ConflictException(
+                        $"Ya existe el vino '{existingWine.Name}' con la cosecha {firstVintage.Year} en esta bodega.",
+                        new Dictionary<string, object?>
+                        {
+                            ["code"] = "WINE_VINTAGE_DUPLICATE",
+                            ["existingWineId"] = existingWine.Id,
+                            ["existingVintageId"] = existingVintage.Id
+                        });
+                }
+
+                throw new ConflictException(
+                    $"Ya existe el vino '{existingWine.Name}' en esta bodega. Podés agregarle una nueva cosecha.",
+                    new Dictionary<string, object?>
+                    {
+                        ["code"] = "WINE_EXISTS_ADD_VINTAGE",
+                        ["existingWineId"] = existingWine.Id
+                    });
+            }
+        }
+
         var wineId = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertWineSql, new
             {
@@ -253,21 +312,49 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<int> ClaimWinesAsync(int wineryId, IEnumerable<int> wineIds, CancellationToken ct = default)
     {
-        const string sql = """
+        var wineIdsArray = wineIds as int[] ?? wineIds.ToArray();
+        if (wineIdsArray.Length == 0) return 0;
+
+        const string updateWinesSql = """
             UPDATE wines
             SET winery_id = @WineryId,
                 source_type = @SourceType
             WHERE id = ANY(@WineIds)
-              AND winery_id IS NULL;
+              AND winery_id IS NULL
+            RETURNING id;
             """;
+
+        const string updateVintagesSql = """
+            UPDATE wine_vintages
+            SET approval_status = @ApprovedStatus
+            WHERE wine_id = ANY(@ClaimedWineIds)
+              AND approval_status = @PendingStatus;
+            """;
+
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.ExecuteAsync(
-            new CommandDefinition(sql, new
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        var claimedWineIds = (await connection.QueryAsync<int>(
+            new CommandDefinition(updateWinesSql, new
             {
                 WineryId = wineryId,
                 SourceType = (int)SourceType.Official,
-                WineIds = wineIds.ToArray()
-            }, cancellationToken: ct));
+                WineIds = wineIdsArray
+            }, transaction: transaction, cancellationToken: ct))).ToList();
+
+        if (claimedWineIds.Count > 0)
+        {
+            await connection.ExecuteAsync(
+                new CommandDefinition(updateVintagesSql, new
+                {
+                    ClaimedWineIds = claimedWineIds.ToArray(),
+                    ApprovedStatus = (int)ApprovalStatus.Approved,
+                    PendingStatus = (int)ApprovalStatus.Pending
+                }, transaction: transaction, cancellationToken: ct));
+        }
+
+        await transaction.CommitAsync(ct);
+        return claimedWineIds.Count;
     }
 
     public async Task<Wine?> FindDuplicateCandidateAsync(string name, string winery, CancellationToken ct = default)

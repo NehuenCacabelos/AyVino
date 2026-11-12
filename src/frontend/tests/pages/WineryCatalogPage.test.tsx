@@ -9,16 +9,21 @@ import type {
   WineryCatalogResponseDto,
 } from '@/features/winery';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock('@/features/winery', async (importOriginal) => {
   const actual = await importOriginal<typeof wineryModule>();
   return {
     ...actual,
     useWinery: vi.fn(),
     useWineryCatalog: vi.fn(),
-    WineCreateModal: ({ isOpen }: { isOpen: boolean }) =>
-      isOpen ? <div data-testid="wine-create-modal">Modal Alta Etiqueta</div> : null,
-    WineVintagesModal: ({ isOpen }: { isOpen: boolean }) =>
-      isOpen ? <div data-testid="wine-vintages-modal">Modal Cosechas</div> : null,
   };
 });
 
@@ -192,15 +197,14 @@ describe('WineryCatalogPage', () => {
     expect(screen.getByText(/Tu bodega está en revisión/i)).toBeInTheDocument();
   });
 
-  it('renders link to public profile view for users', () => {
+  it('no muestra el boton redundante de ver como lo ven los usuarios', () => {
     render(
       <MemoryRouter>
         <WineryCatalogPage />
       </MemoryRouter>
     );
 
-    const publicLink = screen.getByRole('link', { name: /Ver cómo lo ven los usuarios/i });
-    expect(publicLink).toHaveAttribute('href', '/bodegas/10');
+    expect(screen.queryByRole('link', { name: /Ver cómo lo ven los usuarios/i })).not.toBeInTheDocument();
   });
 
   it('shows empty filter state when no wines match criteria', () => {
@@ -216,7 +220,7 @@ describe('WineryCatalogPage', () => {
     expect(screen.getByText('No se encontraron etiquetas')).toBeInTheDocument();
   });
 
-  it('opens new wine creation modal on button click', () => {
+  it('navigates to /bodega/vinos/nuevo on button click', () => {
     render(
       <MemoryRouter>
         <WineryCatalogPage />
@@ -226,6 +230,16 @@ describe('WineryCatalogPage', () => {
     const newWineBtn = screen.getByRole('button', { name: /Nueva etiqueta/i });
     fireEvent.click(newWineBtn);
 
-    expect(screen.getByTestId('wine-create-modal')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/bodega/vinos/nuevo');
+  });
+
+  it('redirects to /bodega/vinos/nuevo when ?action=new is in the URL', () => {
+    render(
+      <MemoryRouter initialEntries={['/bodega/vinos?action=new']}>
+        <WineryCatalogPage />
+      </MemoryRouter>
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith('/bodega/vinos/nuevo', { replace: true });
   });
 });

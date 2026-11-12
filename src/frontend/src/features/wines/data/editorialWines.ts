@@ -47,7 +47,7 @@ export interface EditorialWine {
   id: string;
   slug: string;
   name: string;
-  type: 'Red' | 'White' | 'Rose' | 'Sparkling';
+  type: 'Red' | 'White' | 'Rose' | 'Sparkling' | 'Orange';
   description: string;
   wineryNameText: string;
   winery: WineWineryInfo | null;

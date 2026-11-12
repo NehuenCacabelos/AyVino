@@ -123,16 +123,17 @@ export default function LoginPage() {
         <div className="p-8 md:p-10 flex flex-col justify-between h-full overflow-y-auto lg:overflow-hidden bg-[#141416]">
           
           {/* Header Superior: Volver a la izquierda, Logo a la derecha */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between relative z-20">
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 py-2 -ml-3 rounded-xl text-xs font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 active:scale-[0.98] transition-all cursor-pointer relative z-20"
+              aria-label="Volver al inicio"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-4 h-4" />
               <span>Volver</span>
             </Link>
 
-            <Link to="/" className="flex items-center gap-2.5 group">
+            <Link to="/" className="flex items-center gap-2.5 group relative z-20">
               <span className="font-serif text-xl font-bold tracking-tight text-white group-hover:text-rose-200 transition-colors">
                 AyVino
               </span>
@@ -143,7 +144,7 @@ export default function LoginPage() {
           </div>
 
           {/* Cuerpo Central: Formulario */}
-          <div className="flex-1 flex flex-col justify-center pt-0 pb-2 -mt-5">
+          <div className="flex-1 flex flex-col justify-center pt-2 pb-2">
             {/* Cabecera Editorial */}
             <div className="mb-6">
               <span className="text-xs uppercase tracking-[0.25em] text-amber-200/60 font-sans block mb-2">
@@ -259,25 +260,28 @@ export default function LoginPage() {
           </div>
 
           {/* Footer Inferior Fijo */}
-          <div className="text-center text-xs text-zinc-400 space-y-1.5">
+          <div className="text-center text-xs text-zinc-400 space-y-3 pt-3">
             <p>
               ¿Todavía no tenés tu perfil?{' '}
               <Link
                 to="/register"
-                className="text-zinc-200 hover:text-white font-medium underline transition-colors"
+                className="text-zinc-200 hover:text-white font-medium underline transition-colors cursor-pointer"
               >
                 Creá tu cuenta acá
               </Link>
             </p>
-            <p className="text-[11px] text-zinc-500">
-              ¿Sos productor vitivinícola?{' '}
-              <Link
-                to="/bodega/registro"
-                className="text-rose-300/80 hover:text-rose-200 underline transition-colors"
-              >
-                Registrá tu bodega acá
-              </Link>
-            </p>
+
+            <div className="pt-3 border-t border-white/5 flex items-center justify-center">
+              <p className="text-[11px] text-zinc-500 font-sans leading-normal">
+                Sos productor vitivinícola,{' '}
+                <Link
+                  to="/bodegas/registro"
+                  className="text-rose-300 hover:text-rose-200 font-medium hover:underline transition-colors cursor-pointer"
+                >
+                  registrá tu bodega
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
 

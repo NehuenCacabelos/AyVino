@@ -32,6 +32,7 @@ const WineryDashboardPage = lazy(() => import('../pages/WineryDashboardPage'));
 const WineryOverviewPage = lazy(() => import('../pages/WineryOverviewPage'));
 const WineryConfigPage = lazy(() => import('../pages/WineryConfigPage'));
 const WineryCatalogPage = lazy(() => import('../pages/WineryCatalogPage'));
+const WineryNewWinePage = lazy(() => import('../pages/WineryNewWinePage'));
 const WineryWineDetailPage = lazy(() => import('../pages/WineryWineDetailPage'));
 const WineryClaimPage = lazy(() => import('../pages/WineryClaimPage'));
 
@@ -167,14 +168,18 @@ export const router = createBrowserRouter([
         ),
         children: [
           {
-            path: '/para-bodegas',
+            path: '/bodegas/registro',
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <ForWineriesPage />
               </Suspense>
             ),
           },
-          ],
+          {
+            path: '/para-bodegas',
+            element: <Navigate to="/bodegas/registro" replace />,
+          },
+        ],
       },
 
       // Rutas protegidas bajo el Layout Compartido con Outlet y estado de stock unificado
@@ -332,6 +337,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <WineryCatalogPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos/nuevo',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <WineryNewWinePage />
               </Suspense>
             ),
           },

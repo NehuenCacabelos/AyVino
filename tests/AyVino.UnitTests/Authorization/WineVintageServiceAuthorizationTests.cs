@@ -642,6 +642,66 @@ public class WineVintageServiceAuthorizationTests
         await wineRepo.DidNotReceiveWithAnyArgs().GetVisibleByIdAsync(default, default, default, default);
     }
 
+    [Fact]
+    public async Task UpdateAsync_WineryOwner_OnClaimedWine_Succeeds()
+    {
+        // Vino originalmente subido por usuario comunitario (999) y luego reclamado por bodega (id 10, dueño userId 5)
+        var vintage = CreateVintage(id: 105, wineId: 2, uploadedByUserId: 999, status: ApprovalStatus.Approved);
+        var wine = CreateWine(id: 2, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5, status: WineryStatus.Approved);
+
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.GetByIdAsync(105, Arg.Any<CancellationToken>()).Returns(vintage);
+        vintageRepo.UpdateAsync(Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>()).Returns(true);
+        vintageRepo.GetGrapesByVintageIdAsync(105, Arg.Any<CancellationToken>()).Returns([]);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(2, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var service = new WineVintageService(vintageRepo, wineRepo, Substitute.For<IGrapeRepository>(), wineryRepo);
+        var actor = new Actor(5, AppRoles.Winery);
+
+        var result = await service.UpdateAsync(2, 105, new UpdateWineVintageRequestDto(Year: 2020, AlcoholContent: 13.5m), actor);
+
+        Assert.NotNull(result);
+        await vintageRepo.Received(1).UpdateAsync(Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DuplicateYear_ThrowsConflictException()
+    {
+        var vintage = CreateVintage(id: 101, wineId: 1, uploadedByUserId: 5, status: ApprovalStatus.Approved); // año actual 2020
+        var otherVintage = CreateVintage(id: 102, wineId: 1, uploadedByUserId: 5, status: ApprovalStatus.Approved); // año 2022
+        otherVintage = otherVintage with { Year = 2022 };
+
+        var wine = CreateWine(id: 1, wineryId: 10);
+        var winery = CreateWinery(id: 10, userId: 5, status: WineryStatus.Approved);
+
+        var vintageRepo = Substitute.For<IWineVintageRepository>();
+        vintageRepo.GetByIdAsync(101, Arg.Any<CancellationToken>()).Returns(vintage);
+        vintageRepo.GetAllByWineIdAsync(1, Arg.Any<CancellationToken>()).Returns([vintage, otherVintage]);
+
+        var wineRepo = Substitute.For<IWineRepository>();
+        wineRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(wine);
+
+        var wineryRepo = Substitute.For<IWineryRepository>();
+        wineryRepo.GetByIdAsync(10, Arg.Any<CancellationToken>()).Returns(winery);
+
+        var service = new WineVintageService(vintageRepo, wineRepo, Substitute.For<IGrapeRepository>(), wineryRepo);
+        var actor = new Actor(5, AppRoles.Winery);
+
+        // Intenta cambiar el año de 2020 a 2022 (que ya existe en id 102)
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            service.UpdateAsync(1, 101, new UpdateWineVintageRequestDto(Year: 2022), actor));
+
+        Assert.Contains("Ya existe la cosecha 2022", ex.Message);
+        Assert.NotNull(ex.Extensions);
+        Assert.Equal("WINE_VINTAGE_DUPLICATE", ex.Extensions["code"]);
+    }
+
     #endregion
 }
 

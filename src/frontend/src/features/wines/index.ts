@@ -6,6 +6,7 @@ export { default as WineCard } from './components/WineCard';
 export { default as WineDetailModal } from './components/WineDetailModal';
 export { default as WineBottleSilhouette } from './components/WineBottleSilhouette';
 export { default as WineBottleMock } from './components/WineBottleMock';
+export { default as WineDetailView } from './components/WineDetailView';
 export { mapApiWineToCuratedWine } from './utils/wineMapper';
 export { CURATED_WINES } from './data/curatedWines';
 export {
@@ -19,5 +20,25 @@ export {
   type WinePairingItem,
   type WineWineryInfo,
 } from './data/editorialWines';
+export { apiWineToEditorial, mapPairingCategoryToIcon } from './adapters/apiWineToEditorial';
+export {
+  REAL_WINE_TYPES,
+  REAL_WINE_TYPE_LABELS,
+  MOCK_WINE_TYPE_LABELS,
+  getRealWineTypeLabel,
+  getMockWineTypeLabel,
+  getWineTypeLabel,
+} from './utils/wineTypeUtils';
+export { useRealWine, type UseRealWineReturn } from './hooks/useRealWine';
+export {
+  useWineCatalogs,
+  fetchAllGrapes,
+  fetchAllPairings,
+  type UseWineCatalogsReturn,
+  type UseWineCatalogsOptions,
+} from './hooks/useWineCatalogs';
+export { getWineReviews, createReview } from './api/reviewsApi';
+export type { ReviewResponseDto, CreateReviewRequestDto } from './types/review';
+
 
 

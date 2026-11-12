@@ -3,6 +3,7 @@ using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.Repositories;
 using AyVino.Api.Features.Wineries.Enums;
+using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Wineries.Rules;
 using AyVino.Api.Features.Wines.DTOs;
@@ -43,7 +44,12 @@ public class WineService(
     {
         var wineType = await ValidateLabelAsync(dto.Name, dto.WineType, dto.WineryId, dto.LocationId, ct);
 
-        if (dto.WineryId.HasValue && !actor.IsAdmin)
+        ApprovalStatus approvalStatus;
+        if (actor.IsAdmin)
+        {
+            approvalStatus = ApprovalStatus.Approved;
+        }
+        else if (dto.WineryId.HasValue)
         {
             var winery = await wineryRepository.GetByIdAsync(dto.WineryId.Value, ct)
                 ?? throw new ValidationException($"Winery with ID {dto.WineryId} does not exist.");
@@ -53,15 +59,20 @@ public class WineService(
 
             if (!WineryAccessRules.CanPublish(winery, actor))
                 throw new ForbiddenException("La bodega debe estar aprobada o pendiente para publicar vinos oficiales.");
-        }
 
+            approvalStatus = ApprovalStatus.Approved;
+        }
+        else
+        {
+            approvalStatus = ApprovalStatus.Pending;
+        }
 
         await ValidateGrapesAsync(dto.FirstVintage.Grapes, ct);
         var grapes = ToWineGrapes(dto.FirstVintage.Grapes);
         var sourceType = dto.WineryId.HasValue ? SourceType.Official : SourceType.Community;
 
         var wineEntity = dto.ToEntity(wineType, sourceType);
-        var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId);
+        var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId, wineId: 0, approvalStatus: approvalStatus);
 
         var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
         return wine.ToResponseDto();

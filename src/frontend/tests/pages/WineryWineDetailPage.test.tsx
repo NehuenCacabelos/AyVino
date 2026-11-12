@@ -1,45 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import WineryWineDetailPage from '@/pages/WineryWineDetailPage';
 import * as wineryModule from '@/features/winery';
-import * as pairingsModule from '@/features/winery/api/wineryWinePairingsApi';
-import type {
-  UseMyWineryReturn,
-  WineryCatalogContextValue,
-  WineryCatalogResponseDto,
-} from '@/features/winery';
+import * as wineApi from '@/features/winery/api/wineApi';
+import * as wineryApi from '@/features/winery/api/wineryApi';
+import * as pairingsApi from '@/features/winery/api/wineryWinePairingsApi';
+import * as grapeApi from '@/features/winery/api/grapeApi';
+import * as reviewsApi from '@/features/wines/api/reviewsApi';
+import type { UseMyWineryReturn, WineResponseDto, WineVintageResponseDto, WineryResponseDto } from '@/features/winery';
+
+vi.mock('@/features/auth', () => ({
+  useAuth: () => ({
+    user: { id: 1, username: 'donpedro', role: 'Winery' },
+  }),
+}));
 
 vi.mock('@/features/winery', async (importOriginal) => {
   const actual = await importOriginal<typeof wineryModule>();
   return {
     ...actual,
     useWinery: vi.fn(),
-    useWineryCatalog: vi.fn(),
-    WineVintagesModal: ({ isOpen }: { isOpen: boolean }) =>
-      isOpen ? <div data-testid="wine-vintages-modal">Modal Cosechas</div> : null,
   };
 });
 
-vi.mock('@/features/winery/api/wineryWinePairingsApi', () => ({
-  getWinePairings: vi.fn(),
-}));
+vi.mock('@/features/winery/api/wineApi');
+vi.mock('@/features/winery/api/wineryApi');
+vi.mock('@/features/winery/api/wineryWinePairingsApi');
+vi.mock('@/features/winery/api/grapeApi');
+vi.mock('@/features/wines/api/reviewsApi');
 
-describe('WineryWineDetailPage', () => {
-  const mockWinery = {
+describe('WineryWineDetailPage (ownerMode)', () => {
+  const mockMyWinery: WineryResponseDto = {
     id: 10,
     name: 'Bodega Bianchi',
+    description: 'Tradición sanrafaelina.',
     locationId: 1,
-    status: 'Approved' as const,
-    registerDate: '2026-01-01',
-    description: null,
-    foundationYear: null,
-    website: null,
+    foundationYear: 1928,
+    website: 'https://bodegasbianchi.com.ar',
     userId: 1,
+    status: 'Approved',
+    registerDate: new Date('2020-01-01'),
+    location: {
+      stateName: 'Mendoza',
+      regionName: 'San Rafael',
+    },
   };
 
-  const mockUseWinery: UseMyWineryReturn = {
-    winery: mockWinery,
+  const mockUseWineryReturn: UseMyWineryReturn = {
+    winery: mockMyWinery,
     isLoading: false,
     error: null,
     isNotFound: false,
@@ -50,73 +59,55 @@ describe('WineryWineDetailPage', () => {
     updateLocalWinery: vi.fn(),
   };
 
-  const mockCatalog: WineryCatalogResponseDto = {
+  const mockOwnerWine: WineResponseDto = {
+    id: 101,
     wineryId: 10,
-    wineryStatus: 'Approved',
-    totals: {
-      labels: 1,
-      vintages: 2,
-      vintagesApproved: 2,
-      vintagesPending: 0,
-      vintagesRejected: 0,
-    },
-    hasMore: false,
-    wines: [
-      {
-        id: 101,
-        name: 'Enzo Bianchi Gran Corte',
-        description: 'Vino icónico de corte mendocino.',
-        wineType: 'Red',
-        sourceType: 'Official',
-        averageRating: 4.8,
-        reviewCount: 42,
-        vintages: [
-          {
-            id: 201,
-            year: 2020,
-            alcoholContent: 14.5,
-            servingTemperature: 16,
-            agingAdvice: 'Conservar en lugar oscuro hasta 2035.',
-            imageUrl: null,
-            approvalStatus: 'Approved',
-            averageRating: 4.8,
-            reviewCount: 30,
-            registerDate: '2026-01-10T10:00:00Z',
-            grapes: [
-              { grapeId: 1, grapeName: 'Malbec', percentage: 70 },
-              { grapeId: 2, grapeName: 'Cabernet Sauvignon', percentage: 30 },
-            ],
-          },
-          {
-            id: 202,
-            year: 2018,
-            alcoholContent: 14.2,
-            servingTemperature: 16,
-            agingAdvice: 'Listo para beber.',
-            imageUrl: null,
-            approvalStatus: 'Approved',
-            averageRating: 4.7,
-            reviewCount: 12,
-            registerDate: '2026-01-05T10:00:00Z',
-            grapes: [{ grapeId: 1, grapeName: 'Malbec', percentage: 100 }],
-          },
-        ],
-      },
-    ],
+    wineryNameText: 'Bodega Bianchi',
+    name: 'Enzo Bianchi Gran Corte',
+    description: 'Vino ícono de corte mendocino.',
+    wineType: 'Red',
+    locationId: 1,
+    sourceType: 'Official',
+    duplicateOfWineId: null,
+    averageRating: 4.8,
+    reviewCount: 42,
   };
 
-  const mockUseCatalog: WineryCatalogContextValue = {
-    catalog: mockCatalog,
-    isLoading: false,
-    error: null,
-    reload: vi.fn().mockResolvedValue(undefined),
-  };
+  const mockOwnerVintages: WineVintageResponseDto[] = [
+    {
+      id: 201,
+      wineId: 101,
+      year: 2020,
+      alcoholContent: 14.5,
+      servingTemperature: 16,
+      agingAdvice: 'Conservar en lugar oscuro hasta 2035.',
+      imageId: null,
+      approvalStatus: 'Approved',
+      uploadedByUserId: 1,
+      registerDate: new Date('2026-01-10T10:00:00Z'),
+      averageRating: 4.8,
+      reviewCount: 30,
+      grapes: [
+        { grapeId: 1, percentage: 70 },
+        { grapeId: 2, percentage: 30 },
+      ],
+    },
+  ];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(wineryModule.useWinery).mockReturnValue(mockUseWinery);
-    vi.mocked(wineryModule.useWineryCatalog).mockReturnValue(mockUseCatalog);
-    vi.mocked(pairingsModule.getWinePairings).mockResolvedValue([]);
+    vi.mocked(wineryModule.useWinery).mockReturnValue(mockUseWineryReturn);
+    vi.mocked(wineApi.getWineById).mockResolvedValue(mockOwnerWine);
+    vi.mocked(wineApi.getWineVintages).mockResolvedValue(mockOwnerVintages);
+    vi.mocked(wineryApi.getWineryById).mockResolvedValue(mockMyWinery);
+    vi.mocked(pairingsApi.getWinePairings).mockResolvedValue([
+      { id: 1, name: 'Chivito a las brasas', category: 'Meat' },
+    ]);
+    vi.mocked(grapeApi.getGrapes).mockResolvedValue([
+      { id: 1, name: 'Malbec', colorType: 'Red' },
+      { id: 2, name: 'Cabernet Sauvignon', colorType: 'Red' },
+    ]);
+    vi.mocked(reviewsApi.getWineReviews).mockResolvedValue([]);
   });
 
   const renderComponent = (wineId = '101') => {
@@ -130,77 +121,56 @@ describe('WineryWineDetailPage', () => {
     );
   };
 
-  it('renders wine detail header, type, origin badge, and vintages', async () => {
+  it('renderiza la plantilla en modo dueño con el botón "Guardar en cava" deshabilitado', async () => {
     renderComponent('101');
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Tinto')).toBeInTheDocument();
-    expect(screen.getByText('Oficial de tu bodega')).toBeInTheDocument();
-    expect(screen.getByText('Vino icónico de corte mendocino.')).toBeInTheDocument();
+    // Guardar en cava debe estar deshabilitado con título explicativo
+    const cellarBtn = screen.getByRole('button', { name: /Guardar en cava/i });
+    expect(cellarBtn).toBeDisabled();
+    expect(cellarBtn).toHaveAttribute(
+      'title',
+      'No podés guardar tus propios vinos en tu cava personal'
+    );
+    expect(cellarBtn).toHaveClass('cursor-not-allowed');
 
-    // Vintages rendered
-    expect(screen.getByText('Cosecha 2020')).toBeInTheDocument();
-    expect(screen.getByText('Cosecha 2018')).toBeInTheDocument();
-    expect(screen.getByText('14.5% vol')).toBeInTheDocument();
-    expect(screen.getByText('Conservar en lugar oscuro hasta 2035.')).toBeInTheDocument();
+    // La bodega dueña ve la valoración y datos reales
+    expect(screen.getAllByText('Bodega Bianchi').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('San Rafael, Mendoza')).toBeInTheDocument();
+    expect(screen.getByText('Chivito a las brasas')).toBeInTheDocument();
   });
 
-  it('renders friendly 404 when wine is not found', () => {
+  it('muestra acceso denegado si la etiqueta pertenece a otra bodega distinta a la del usuario', async () => {
+    const foreignWine: WineResponseDto = {
+      ...mockOwnerWine,
+      wineryId: 999, // Otra bodega
+    };
+    vi.mocked(wineApi.getWineById).mockResolvedValue(foreignWine);
+
+    renderComponent('101');
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Acceso denegado/i })).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/Esta etiqueta enológica pertenece a otra bodega/i)
+    ).toBeInTheDocument();
+  });
+
+  it('muestra 404 amable si la etiqueta no existe', async () => {
+    const error404 = {
+      response: { status: 404, data: { message: 'Not found' } },
+    };
+    vi.mocked(wineApi.getWineById).mockRejectedValue(error404);
+
     renderComponent('999');
 
-    expect(screen.getByRole('heading', { level: 2, name: /Etiqueta no encontrada/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Volver al catálogo/i })).toBeInTheDocument();
-  });
-
-  it('shows empty pairings state when no pairings are registered', async () => {
-    renderComponent('101');
-
     await waitFor(() => {
-      expect(screen.getByText('Todavía no tiene maridajes asociados')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Etiqueta no encontrada/i })).toBeInTheDocument();
     });
-  });
-
-  it('shows pairings when returned from API', async () => {
-    vi.mocked(pairingsModule.getWinePairings).mockResolvedValue([
-      { id: 1, name: 'Ojo de bife a la leña', category: 'Carnes rojas' },
-      { id: 2, name: 'Queso Parmesano estacionado', category: 'Quesos' },
-    ]);
-
-    renderComponent('101');
-
-    await waitFor(() => {
-      expect(screen.getByText('Ojo de bife a la leña')).toBeInTheDocument();
-      expect(screen.getByText('Carnes rojas')).toBeInTheDocument();
-      expect(screen.getByText('Queso Parmesano estacionado')).toBeInTheDocument();
-    });
-  });
-
-  it('opens vintages modal when clicking "Agregar añada"', async () => {
-    renderComponent('101');
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
-    });
-
-    const addVintageBtn = screen.getAllByRole('button', { name: /Agregar añada/i })[0];
-    fireEvent.click(addVintageBtn);
-
-    expect(screen.getByTestId('wine-vintages-modal')).toBeInTheDocument();
-  });
-
-  it('opens wine edit modal when clicking "Editar etiqueta"', async () => {
-    renderComponent('101');
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
-    });
-
-    const editBtn = screen.getByRole('button', { name: /Editar etiqueta/i });
-    fireEvent.click(editBtn);
-
-    expect(screen.getByRole('heading', { level: 2, name: 'Editar etiqueta' })).toBeInTheDocument();
   });
 });

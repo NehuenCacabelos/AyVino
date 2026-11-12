@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus,
-  ExternalLink,
   Clock,
   AlertTriangle,
   ChevronLeft,
@@ -12,8 +11,6 @@ import {
 import {
   useWinery,
   useWineryCatalog,
-  WineCreateModal,
-  WineVintagesModal,
   WineryCatalogRibbon,
   WineryCatalogToolbar,
   WineryCatalogCard,
@@ -21,8 +18,6 @@ import {
   filterAndSortCatalogWines,
   type CatalogSortOption,
   type WineryCatalogWineDto,
-  type WineResponseDto,
-  type WineType,
 } from '../features/winery';
 
 const PAGE_SIZE = 12;
@@ -30,7 +25,8 @@ const PAGE_SIZE = 12;
 export default function WineryCatalogPage() {
   const { winery } = useWinery();
   const { catalog, isLoading, error, reload } = useWineryCatalog();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Estados de Filtros y Orden
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,30 +40,14 @@ export default function WineryCatalogPage() {
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modales
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(
-    () => searchParams.get('action') === 'new' || searchParams.get('nuevo') === '1'
-  );
-  const [selectedWineForVintages, setSelectedWineForVintages] = useState<WineResponseDto | null>(
-    null
-  );
-
-  // Limpiar parámetros transaccionales (?action=new o ?nuevo=1) tras lectura inicial
+  // Redireccionar ?action=new o ?nuevo=1 hacia /bodega/vinos/nuevo
   const actionParam = searchParams.get('action');
   const nuevoParam = searchParams.get('nuevo');
   useEffect(() => {
     if (actionParam === 'new' || nuevoParam === '1') {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete('action');
-          next.delete('nuevo');
-          return next;
-        },
-        { replace: true }
-      );
+      navigate('/bodega/vinos/nuevo', { replace: true });
     }
-  }, [actionParam, nuevoParam, setSearchParams]);
+  }, [actionParam, nuevoParam, navigate]);
 
   // Extraer valores estables del catálogo para memoización
   const wines = catalog?.wines;
@@ -144,23 +124,8 @@ export default function WineryCatalogPage() {
     return filteredWines.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredWines, safeCurrentPage]);
 
-  // Convertir WineryCatalogWineDto a WineResponseDto para el modal de añadas
-  const handleOpenVintagesModal = (wine: WineryCatalogWineDto) => {
-    if (!winery) return;
-    const mappedWine: WineResponseDto = {
-      id: wine.id,
-      wineryId: winery.id,
-      wineryNameText: winery.name,
-      name: wine.name,
-      description: wine.description ?? null,
-      wineType: wine.wineType as WineType,
-      locationId: winery.locationId ?? null,
-      sourceType: wine.sourceType,
-      duplicateOfWineId: null,
-      averageRating: wine.averageRating ?? null,
-      reviewCount: wine.reviewCount,
-    };
-    setSelectedWineForVintages(mappedWine);
+  const handleAddVintage = (wine: WineryCatalogWineDto) => {
+    navigate(`/bodega/vinos/${wine.id}`);
   };
 
   const isWineryPending = catalog?.wineryStatus === 'Pending' || winery?.status === 'Pending';
@@ -215,21 +180,10 @@ export default function WineryCatalogPage() {
 
         {/* Acciones principales del Encabezado */}
         <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-          {winery?.id && (
-            <Link
-              to={`/bodegas/${winery.id}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white border border-white/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-              title="Ver cómo lo ven los usuarios"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Ver cómo lo ven los usuarios</span>
-            </Link>
-          )}
-
           {!isWineryRejected && (
             <button
               type="button"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => navigate('/bodega/vinos/nuevo')}
               className="inline-flex items-center gap-2 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-zinc-100 border border-rose-800/40 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-md"
             >
               <Plus className="w-4 h-4" />
@@ -320,7 +274,7 @@ export default function WineryCatalogPage() {
         <WineryCatalogEmptyState
           isFiltered={hasActiveFilters}
           onResetFilters={handleResetFilters}
-          onCreateWine={() => setIsCreateModalOpen(true)}
+          onCreateWine={() => navigate('/bodega/vinos/nuevo')}
           canCreateWine={!isWineryRejected}
         />
       ) : (
@@ -333,7 +287,7 @@ export default function WineryCatalogPage() {
                   wine={wine}
                   wineryStatus={catalog?.wineryStatus}
                   viewMode="grid"
-                  onAddVintage={handleOpenVintagesModal}
+                  onAddVintage={handleAddVintage}
                 />
               ))}
             </div>
@@ -345,7 +299,7 @@ export default function WineryCatalogPage() {
                   wine={wine}
                   wineryStatus={catalog?.wineryStatus}
                   viewMode="list"
-                  onAddVintage={handleOpenVintagesModal}
+                  onAddVintage={handleAddVintage}
                 />
               ))}
             </div>
@@ -382,29 +336,6 @@ export default function WineryCatalogPage() {
           )}
         </div>
       )}
-
-      {/* Modal de Creación de Etiqueta */}
-      {winery?.id && (
-        <WineCreateModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          wineryId={winery.id}
-          locationId={winery.locationId}
-          onWineCreated={() => {
-            void reload();
-          }}
-        />
-      )}
-
-      {/* Modal de Añadas de la Etiqueta */}
-      <WineVintagesModal
-        isOpen={Boolean(selectedWineForVintages)}
-        onClose={() => setSelectedWineForVintages(null)}
-        wine={selectedWineForVintages}
-        onVintageAdded={() => {
-          void reload();
-        }}
-      />
     </div>
   );
 }
