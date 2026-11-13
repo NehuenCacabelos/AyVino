@@ -1,5 +1,6 @@
 using System.Data;
 using AyVino.Api.Common.Data;
+using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wines;
 using Dapper;
@@ -203,5 +204,43 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.ExecuteScalarAsync<bool>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<WinerySuggestItemDto>> SuggestAsync(string searchKey, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                wy.id AS Id,
+                wy.name AS Name
+            FROM wineries wy
+            WHERE wy.status = 2
+              AND (
+                  wy.name_key LIKE @KeyPattern
+                  OR similarity(wy.name_key, @SearchKey) > @Threshold
+              )
+            ORDER BY
+                CASE
+                    WHEN wy.name_key = @SearchKey THEN 4
+                    WHEN wy.name_key LIKE @KeyPrefix THEN 3
+                    WHEN wy.name_key LIKE @KeyPattern THEN 2
+                    WHEN similarity(wy.name_key, @SearchKey) > @Threshold THEN 1
+                    ELSE 0
+                END DESC,
+                similarity(wy.name_key, @SearchKey) DESC,
+                wy.name ASC
+            LIMIT 5;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<WinerySuggestItemDto>(
+            new CommandDefinition(sql, new
+            {
+                SearchKey = searchKey,
+                KeyPrefix = $"{searchKey}%",
+                KeyPattern = $"%{searchKey}%",
+                Threshold = 0.3
+            }, cancellationToken: ct));
+
+        return rows.ToList();
     }
 }

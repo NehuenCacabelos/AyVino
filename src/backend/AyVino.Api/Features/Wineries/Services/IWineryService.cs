@@ -13,4 +13,5 @@ public interface IWineryService
     Task DeleteAsync(int id, CancellationToken ct = default);
     Task<WineryResponseDto> ChangeStatusAsync(int id, ChangeWineryStatusRequestDto dto, CancellationToken ct = default);
     Task<RegisterWineryResponseDto> RegisterWineryAsync(RegisterWineryRequestDto dto, CancellationToken ct = default);
+    Task<IReadOnlyList<WinerySuggestItemDto>> SuggestAsync(string? query, CancellationToken ct = default);
 }

@@ -32,6 +32,12 @@ public static class WineryEndpoints
             .WithName("GetMyWinery")
             .WithSummary("Gets the winery associated with the authenticated user.");
 
+        group.MapGet("/suggest", async (string? q, IWineryService service, CancellationToken ct) =>
+            Results.Ok(await service.SuggestAsync(q, ct)))
+            .AllowAnonymous()
+            .WithName("SuggestWineries")
+            .WithSummary("Sugiere hasta 5 bodegas registradas y aprobadas por coincidencia tolerante.");
+
         group.MapGet("/{id:int}", async (int id, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(id, user.GetActorOrNull(), ct)))
             .WithName("GetWineryById")
