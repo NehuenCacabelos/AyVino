@@ -11,6 +11,9 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
         SELECT ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
                w.name AS Name, w.wine_type AS WineType,
                w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
+               wy.name AS WineryName,
+               COALESCE(c.name || ', ' || s.name, s.name, wy_c.name || ', ' || wy_s.name, wy_s.name) AS RegionName,
+               main_grape.grape_name AS GrapeName,
                wv.year AS Year, wv.image_id AS ImageId,
                wv.rating_sum AS RatingSum, wv.review_count AS ReviewCount,
                ci.quantity AS Quantity, ci.purchase_date AS PurchaseDate, ci.notes AS Notes,
@@ -18,6 +21,21 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
         FROM cellar_items ci
         JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id
         JOIN wines w ON w.id = wv.wine_id
+        LEFT JOIN wineries wy ON wy.id = w.winery_id
+        LEFT JOIN locations loc ON loc.id = w.location_id
+        LEFT JOIN cities c ON c.id = loc.city_id
+        LEFT JOIN states s ON s.id = c.state_id
+        LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+        LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+        LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+        LEFT JOIN LATERAL (
+            SELECT g.name AS grape_name
+            FROM wine_grapes wg
+            INNER JOIN grapes g ON g.id = wg.grape_id
+            WHERE wg.wine_vintage_id = wv.id
+            ORDER BY wg.percentage DESC NULLS LAST, g.name ASC
+            LIMIT 1
+        ) main_grape ON TRUE
         """;
 
     public async Task<CellarItem?> GetAsync(int cellarId, int wineVintageId, CancellationToken ct = default)
@@ -72,6 +90,9 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
                    ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
                    w.name AS Name, w.wine_type AS WineType,
                    w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
+                   wy.name AS WineryName,
+                   COALESCE(loc_c.name || ', ' || s.name, s.name, wy_c.name || ', ' || wy_s.name, wy_s.name) AS RegionName,
+                   main_grape.grape_name AS GrapeName,
                    wv.year AS Year, wv.image_id AS ImageId,
                    wv.rating_sum AS RatingSum, wv.review_count AS ReviewCount,
                    ci.quantity AS Quantity, ci.purchase_date AS PurchaseDate, ci.notes AS Notes,
@@ -81,6 +102,21 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
             JOIN wines w ON w.id = wv.wine_id
             JOIN cellars c ON c.id = ci.cellar_id
             JOIN users u ON u.id = c.user_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN locations loc ON loc.id = w.location_id
+            LEFT JOIN cities loc_c ON loc_c.id = loc.city_id
+            LEFT JOIN states s ON s.id = loc_c.state_id
+            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+            LEFT JOIN LATERAL (
+                SELECT g.name AS grape_name
+                FROM wine_grapes wg
+                INNER JOIN grapes g ON g.id = wg.grape_id
+                WHERE wg.wine_vintage_id = wv.id
+                ORDER BY wg.percentage DESC NULLS LAST, g.name ASC
+                LIMIT 1
+            ) main_grape ON TRUE
             WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true
             ORDER BY ci.wine_vintage_id, ci.created_at DESC
             LIMIT @PageSize OFFSET @Offset;

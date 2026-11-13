@@ -14,4 +14,7 @@ public record CellarItemResponseDto(
     int Quantity,
     DateOnly? PurchaseDate,
     string? Notes,
-    DateTime LastChangeAt);
+    DateTime LastChangeAt,
+    string? WineryName = null,
+    string? RegionName = null,
+    string? GrapeName = null);

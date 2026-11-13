@@ -10,6 +10,9 @@ public record CellarItemListRow
     public WineType WineType { get; init; }
     public int? WineryId { get; init; }
     public string? WineryNameText { get; init; }
+    public string? WineryName { get; init; }
+    public string? RegionName { get; init; }
+    public string? GrapeName { get; init; }
     public int? Year { get; init; }
     public Guid? ImageId { get; init; }
     public int RatingSum { get; init; }

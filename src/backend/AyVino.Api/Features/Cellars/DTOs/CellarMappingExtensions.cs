@@ -19,13 +19,16 @@ public static class CellarMappingExtensions
         row.WineryNameText,
         row.Year,
         row.ImageId,
-        // Misma regla que Reviews/UserWines: el promedio recién se muestra desde 5 reseñas.
-        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : null,
+        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) :
+        row.ReviewCount > 0 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 1) : null,
         row.ReviewCount,
         row.Quantity,
         row.PurchaseDate,
         row.Notes,
-        row.LastChangeAt);
+        row.LastChangeAt,
+        row.WineryName,
+        row.RegionName,
+        row.GrapeName);
 
     public static IReadOnlyList<CellarItemResponseDto> ToResponseDtoList(this IEnumerable<CellarItemListRow> rows) =>
         rows.Select(r => r.ToResponseDto()).ToList();
