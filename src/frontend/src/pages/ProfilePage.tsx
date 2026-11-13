@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   Settings,
@@ -56,12 +56,21 @@ function ShowcaseWineBottle({ src, alt }: { src?: string | null; alt: string }) 
   );
 }
 
-type OwnerTab = 'cava' | 'historial' | 'deseados';
+type OwnerTab = 'cava' | 'historial' | 'favoritos';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  const rawTab = searchParams.get('tab');
+  const activeTab: OwnerTab =
+    rawTab === 'deseados' || rawTab === 'favoritos'
+      ? 'favoritos'
+      : rawTab === 'historial'
+      ? 'historial'
+      : 'cava';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +83,14 @@ export default function ProfilePage() {
   const [publicWinesLoading, setPublicWinesLoading] = useState(false);
 
   // Vista owner: pestañas & datos
-  const [activeTab, setActiveTab] = useState<OwnerTab>('cava');
   const [ownerCellarItems, setOwnerCellarItems] = useState<CellarItemDto[]>([]);
   const [ownerTriedWines, setOwnerTriedWines] = useState<UserWineListItemDto[]>([]);
   const [ownerFavWines, setOwnerFavWines] = useState<UserWineListItemDto[]>([]);
   const [ownerDataLoading, setOwnerDataLoading] = useState(false);
+
+  const handleSelectTab = (tab: OwnerTab) => {
+    setSearchParams({ tab }, { replace: true });
+  };
 
   const isOwner = Boolean(
     currentUser &&
@@ -194,16 +206,9 @@ export default function ProfilePage() {
         } else if (activeTab === 'historial') {
           const tried = await getMyUserWinesApi({ tried: true });
           if (isMounted) setOwnerTriedWines(tried);
-        } else if (activeTab === 'deseados') {
-          const [wanted, fav] = await Promise.all([
-            getMyUserWinesApi({ wanted: true }),
-            getMyUserWinesApi({ favorite: true }),
-          ]);
-          // Combinar sin duplicados
-          const combinedMap = new Map<number, UserWineListItemDto>();
-          wanted.forEach((w) => combinedMap.set(w.wineId, w));
-          fav.forEach((w) => combinedMap.set(w.wineId, w));
-          if (isMounted) setOwnerFavWines(Array.from(combinedMap.values()));
+        } else if (activeTab === 'favoritos') {
+          const fav = await getMyUserWinesApi({ favorite: true });
+          if (isMounted) setOwnerFavWines(fav);
         }
       } catch {
         // En caso de fallo de red, mantener estados previos
@@ -440,7 +445,7 @@ export default function ProfilePage() {
                   <div className="inline-flex p-1 bg-[#17151a] border border-white/10 rounded-md gap-1 overflow-x-auto max-w-full">
                     <button
                       type="button"
-                      onClick={() => setActiveTab('cava')}
+                      onClick={() => handleSelectTab('cava')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'cava'
@@ -467,7 +472,7 @@ export default function ProfilePage() {
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab('historial')}
+                      onClick={() => handleSelectTab('historial')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
                         activeTab === 'historial'
@@ -486,10 +491,10 @@ export default function ProfilePage() {
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab('deseados')}
+                      onClick={() => handleSelectTab('favoritos')}
                       className={cn(
                         'group px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-sans flex items-center gap-2 transition-all whitespace-nowrap',
-                        activeTab === 'deseados'
+                        activeTab === 'favoritos'
                           ? 'bg-[#6e1a24] text-white font-semibold shadow-sm'
                           : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 font-medium'
                       )}
@@ -497,10 +502,10 @@ export default function ProfilePage() {
                       <Bookmark
                         className={cn(
                           'w-4 h-4 shrink-0 transition-colors',
-                          activeTab === 'deseados' ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
+                          activeTab === 'favoritos' ? 'text-rose-200' : 'text-zinc-400 group-hover:text-zinc-200'
                         )}
                       />
-                      <span>Deseados & Favoritos</span>
+                      <span>Favoritos</span>
                     </button>
                   </div>
 
@@ -670,31 +675,45 @@ export default function ProfilePage() {
                           {ownerTriedWines.map((wine) => (
                             <div
                               key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-2 flex flex-col justify-between hover:border-rose-900/30 transition-all"
+                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
                             >
-                              <div>
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-xs font-mono font-medium uppercase tracking-wide text-zinc-300">
-                                    {wine.wineType}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded-sm text-xs font-mono bg-amber-950/60 text-amber-300 border border-amber-800/40">
-                                    Probado
-                                  </span>
+                              <div className="flex gap-3">
+                                <div className="w-14 h-24 bg-black/20 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
                                 </div>
-                                <h3 className="text-base font-bold text-white truncate font-sans">{wine.name}</h3>
-                                <p className="text-sm text-zinc-300 truncate font-sans">{wine.wineryNameText || 'Bodega'}</p>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-1 mb-1">
+                                    <span className="text-[10px] font-mono font-medium uppercase tracking-wide text-zinc-400">
+                                      {wine.wineType}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-950/60 text-amber-300 border border-amber-800/40">
+                                      Probado
+                                    </span>
+                                  </div>
+                                  <h3 className="text-sm font-bold text-white truncate font-sans" title={wine.name}>
+                                    {wine.name}
+                                  </h3>
+                                  <p className="text-xs text-zinc-300 truncate font-sans">
+                                    {wine.wineryName || wine.wineryNameText || 'Bodega'}
+                                  </p>
+                                  {wine.vintage ? (
+                                    <p className="text-xs font-mono text-zinc-400 mt-0.5">
+                                      Cosecha {wine.vintage}
+                                    </p>
+                                  ) : null}
+                                </div>
                               </div>
 
-                              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-300">
+                              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
                                 {wine.averageRating ? (
-                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-sm">
-                                    <Star className="w-3.5 h-3.5 fill-amber-400" />
+                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs">
+                                    <Star className="w-3 h-3 fill-amber-400" />
                                     <span>{wine.averageRating}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-zinc-400">Sin calificar</span>
+                                  <span className="text-[11px] text-zinc-500">Sin calificar</span>
                                 )}
-                                <span className="text-xs text-zinc-400">
+                                <span className="text-[11px] text-zinc-400">
                                   {new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}
                                 </span>
                               </div>
@@ -707,19 +726,19 @@ export default function ProfilePage() {
                     <div className="space-y-6">
                       <div>
                         <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white">
-                          Deseados y Favoritos
+                          Favoritos
                         </h2>
                         <p className="text-sm text-zinc-300 font-sans mt-0.5">
-                          Etiquetas que guardaste para probar o adquirir en el futuro.
+                          Etiquetas que guardaste en tu lista de favoritos.
                         </p>
                       </div>
 
                       {ownerFavWines.length === 0 ? (
                         <div className="border border-white/10 bg-[#17151a] rounded-md p-14 text-center space-y-3">
                           <Bookmark className="w-8 h-8 text-neutral-500 mx-auto" />
-                          <h3 className="font-serif text-lg font-medium text-white">Sin deseados o favoritos</h3>
+                          <h3 className="font-serif text-lg font-medium text-white">Sin favoritos registrados</h3>
                           <p className="text-sm text-zinc-300 font-sans max-w-sm mx-auto">
-                            No tienes vinos en tu lista de deseos o favoritos.
+                            Aún no guardaste vinos en tus favoritos.
                           </p>
                         </div>
                       ) : (
@@ -727,36 +746,48 @@ export default function ProfilePage() {
                           {ownerFavWines.map((wine) => (
                             <div
                               key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-2 flex flex-col justify-between hover:border-rose-900/30 transition-all"
+                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
                             >
-                              <div>
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-xs font-mono font-medium uppercase tracking-wide text-zinc-300">
-                                    {wine.wineType}
-                                  </span>
-                                  <div className="flex gap-1.5">
-                                    {wine.isFavorite && (
-                                      <span className="px-2 py-0.5 rounded-sm text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40">
-                                        Favorito
-                                      </span>
-                                    )}
-                                    {wine.isWanted && (
-                                      <span className="px-2 py-0.5 rounded-sm text-xs font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
-                                        Deseado
-                                      </span>
-                                    )}
-                                  </div>
+                              <div className="flex gap-3">
+                                <div className="w-14 h-24 bg-black/20 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
                                 </div>
-                                <h3 className="text-base font-bold text-white truncate font-sans">{wine.name}</h3>
-                                <p className="text-sm text-zinc-300 truncate font-sans">{wine.wineryNameText || 'Bodega'}</p>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-1 mb-1">
+                                    <span className="text-[10px] font-mono font-medium uppercase tracking-wide text-zinc-400">
+                                      {wine.wineType}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40">
+                                      Favorito
+                                    </span>
+                                  </div>
+                                  <h3 className="text-sm font-bold text-white truncate font-sans" title={wine.name}>
+                                    {wine.name}
+                                  </h3>
+                                  <p className="text-xs text-zinc-300 truncate font-sans">
+                                    {wine.wineryName || wine.wineryNameText || 'Bodega'}
+                                  </p>
+                                  {wine.vintage ? (
+                                    <p className="text-xs font-mono text-zinc-400 mt-0.5">
+                                      Cosecha {wine.vintage}
+                                    </p>
+                                  ) : null}
+                                </div>
                               </div>
 
-                              {wine.averageRating && (
-                                <div className="pt-2 border-t border-white/10 flex items-center gap-1 text-sm font-mono text-amber-400 font-bold">
-                                  <Star className="w-3.5 h-3.5 fill-amber-400" />
-                                  <span>{wine.averageRating} ({wine.reviewCount} reseñas)</span>
-                                </div>
-                              )}
+                              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
+                                {wine.averageRating ? (
+                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs">
+                                    <Star className="w-3 h-3 fill-amber-400" />
+                                    <span>{wine.averageRating}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-zinc-500">Sin calificar</span>
+                                )}
+                                <span className="text-[11px] text-zinc-400">
+                                  {new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>

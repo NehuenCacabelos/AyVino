@@ -377,7 +377,7 @@ describe('Bloque U5 - QuickAddBottleModal & Vino Comunitario', () => {
         resolvePost = resolve;
       });
 
-      vi.mocked(apiClient.post).mockImplementationOnce(() => pendingPromise as Promise<any>);
+      vi.mocked(apiClient.post).mockImplementationOnce(() => pendingPromise as Promise<{ data: unknown }>);
 
       render(
         <MemoryRouter>

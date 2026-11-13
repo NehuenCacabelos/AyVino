@@ -41,9 +41,11 @@ export default function WineryBlock({
   const logoSrc = logoImageId ? imageUrl(logoImageId, 'logo') : null;
   const showLogoImage = Boolean(logoSrc && !logoError);
 
-  const toggleFav = (wineName: string, wine: DashboardWine) => {
-    const nextState = !favorites[wineName];
-    setFavorites((prev) => ({ ...prev, [wineName]: nextState }));
+  const toggleFav = (wine: DashboardWine) => {
+    const wineKey = wine.id || wine.name;
+    const current = favorites[wineKey] !== undefined ? favorites[wineKey] : Boolean(wine.isFavorite);
+    const nextState = !current;
+    setFavorites((prev) => ({ ...prev, [wineKey]: nextState }));
     onToggleFavorite?.(wine, nextState);
   };
 
@@ -123,7 +125,8 @@ export default function WineryBlock({
       {/* Grilla de Vinos */}
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {wines.map((wine) => {
-          const isFav = !!favorites[wine.name];
+          const wineKey = wine.id || wine.name;
+          const isFav = favorites[wineKey] !== undefined ? favorites[wineKey] : Boolean(wine.isFavorite);
           const wineSlug = wine.id || normalizeWineSlug(wine.name);
 
           return (
@@ -135,11 +138,11 @@ export default function WineryBlock({
                 {/* Botón de Favorito Flotante Esmerilado */}
                 <button
                   type="button"
-                  aria-label={isFav ? `Quitar ${wine.name} de deseados` : `Añadir ${wine.name} a deseados`}
+                  aria-label={isFav ? `Quitar ${wine.name} de favoritos` : `Añadir ${wine.name} a favoritos`}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    toggleFav(wine.name, wine);
+                    toggleFav(wine);
                   }}
                   className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c1c22]/80 border border-white/[0.08] backdrop-blur-xl transition-all cursor-pointer ${
                     isFav

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import axios from 'axios';
 import { Wine, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import type { AppOutletContext } from '../components/layout/AppLayout';
@@ -260,56 +261,47 @@ export default function CavaPage() {
     setUncorkingWine(mapCellarWineToDashboardWine(w));
   };
 
-  const handleUncorkSaved = (data: UncorkSubmission) => {
-    // 1. Reducir stock de la botella
-    setWines((prev) =>
-      prev
-        .map((w) => {
-          if (w.name === data.wine.name || w.id === data.wine.id) {
-            return { ...w, units: Math.max(0, w.units - 1) };
-          }
-          return w;
-        })
-        .filter((w) => w.units > 0)
-    );
-
-    // 2. Persistir decremento en el backend si tenemos cellarId y ID numérico
+  const handleUncorkSaved = async (data: UncorkSubmission) => {
     const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
-    if (!isNaN(vintageId) && vintageId > 0 && cellarId) {
-      const current = wines.find((w) => w.id === data.wine.id);
-      if (current) {
-        const remaining = current.units - 1;
-        if (remaining <= 0) {
-          apiClient.delete(`/cellars/${cellarId}/items/${vintageId}`).catch(() => {});
-        } else {
-          apiClient.put(`/cellars/${cellarId}/items/${vintageId}`, {
-            quantity: remaining,
-            notes: current.location,
-          }).catch(() => {});
-        }
-      }
+    if (isNaN(vintageId) || vintageId <= 0 || !cellarId) {
+      showNotification('No se pudo identificar la botella para descorchar.');
+      return;
     }
 
-    // 3. Registrar en la bitácora de cata
-    const newEntry: TastingLogEntry = {
-      id: `log-${Date.now()}`,
-      wineName: `${data.wine.name} (${data.wine.vintage})`,
-      criticScore: `CATA PRIVADA ${data.rating * 20} PTS`,
-      uncorkDate: `DESCORCHADO EL ${new Date().toLocaleDateString('es-AR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).toUpperCase()}`,
-      notes:
-        data.tastingNotes ||
-        `Ocasión: ${data.occasion || 'Degustación personal'}. Calificado con ${data.rating} estrellas en cata confidencial.`,
-      sight: 'Gran concentración cromática con ribete de evolución noble',
-      agingRemaining: 'Consumido en ventana óptima de expresión',
-      ratingValue: data.rating,
-    };
+    try {
+      await apiClient.post(`/cellars/${cellarId}/items/${vintageId}/uncork`);
+      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
 
-    setTastingLog((prev) => [newEntry, ...prev]);
-    showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
+      // Sincronizar Cava desde backend y actualizar contador de la Navbar
+      await fetchBackendCellar();
+      refreshStock?.();
+
+      // Registrar en la bitácora de cata local
+      const newEntry: TastingLogEntry = {
+        id: `log-${Date.now()}`,
+        wineName: `${data.wine.name} (${data.wine.vintage})`,
+        criticScore: `CATA PRIVADA ${data.rating * 20} PTS`,
+        uncorkDate: `DESCORCHADO EL ${new Date().toLocaleDateString('es-AR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }).toUpperCase()}`,
+        notes:
+          data.tastingNotes ||
+          `Ocasión: ${data.occasion || 'Degustación personal'}. Calificado con ${data.rating} estrellas en cata confidencial.`,
+        sight: 'Gran concentración cromática con ribete de evolución noble',
+        agingRemaining: 'Consumido en ventana óptima de expresión',
+        ratingValue: data.rating,
+      };
+
+      setTastingLog((prev) => [newEntry, ...prev]);
+    } catch (err: unknown) {
+      let errorMsg = 'Error al descorchar la botella.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+      }
+      showNotification(errorMsg);
+    }
   };
 
   const handleAddBottle = async () => {

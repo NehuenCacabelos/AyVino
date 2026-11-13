@@ -30,6 +30,9 @@ export interface UserWineListItemDto {
   wineType: string;
   wineryId?: number | null;
   wineryNameText?: string | null;
+  wineryName?: string | null;
+  vintage?: number | null;
+  imageUrl?: string | null;
   averageRating?: number | null;
   reviewCount: number;
   isWanted: boolean;

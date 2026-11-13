@@ -4,6 +4,7 @@ import { Heart, Plus, Star } from 'lucide-react';
 import BottleVector from './BottleVector';
 import type { DashboardWine } from '../../../types/wine';
 import { normalizeWineSlug } from '../../wines';
+import { apiClient } from '../../../services/apiClient';
 
 export interface DashboardWineCardProps {
   wine: DashboardWine;
@@ -21,15 +22,32 @@ export default function DashboardWineCard({
   onAddToCellar,
   onToggleFavorite,
 }: DashboardWineCardProps) {
-  const [isFav, setIsFav] = useState(Boolean(wine.isFavorite));
+  const [overrideFav, setOverrideFav] = useState<boolean | null>(null);
+  const isFav = overrideFav !== null ? overrideFav : Boolean(wine.isFavorite);
   const wineSlug = wine.id || normalizeWineSlug(wine.name);
 
-  const handleToggleFav = (e: MouseEvent) => {
+  const handleToggleFav = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const nextState = !isFav;
-    setIsFav(nextState);
-    onToggleFavorite?.(wine, nextState);
+    setOverrideFav(nextState);
+
+    if (onToggleFavorite) {
+      onToggleFavorite(wine, nextState);
+    } else {
+      const wineId = Number(wine.id);
+      if (!isNaN(wineId) && wineId > 0) {
+        try {
+          if (nextState) {
+            await apiClient.put(`/wines/${wineId}/favorite`);
+          } else {
+            await apiClient.delete(`/wines/${wineId}/favorite`);
+          }
+        } catch {
+          setOverrideFav(isFav);
+        }
+      }
+    }
   };
 
   const handleAdd = (e: MouseEvent) => {
@@ -47,7 +65,7 @@ export default function DashboardWineCard({
         {/* Botón de Favorito Flotante Esmerilado */}
         <button
           type="button"
-          aria-label={isFav ? `Quitar ${wine.name} de deseados` : `Añadir ${wine.name} a deseados`}
+          aria-label={isFav ? `Quitar ${wine.name} de favoritos` : `Añadir ${wine.name} a favoritos`}
           onClick={handleToggleFav}
           className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c1c22]/80 border border-white/[0.08] backdrop-blur-xl transition-all cursor-pointer ${
             isFav

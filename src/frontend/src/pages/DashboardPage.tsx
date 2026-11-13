@@ -28,6 +28,7 @@ import {
   type UncorkSubmission,
 } from '../types/wine';
 import type { AppOutletContext } from '../components/layout/AppLayout';
+import { apiClient } from '../services/apiClient';
 
 interface WineryGroup {
   key: string;
@@ -78,6 +79,7 @@ export default function DashboardPage() {
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
+  const [favoriteWineIds, setFavoriteWineIds] = useState<Set<number>>(new Set());
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isAutoScrollingRef = useRef(false);
   const lastScrollYRef = useRef(0);
@@ -205,6 +207,26 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Carga inicial unificada de favoritos (una sola consulta de hasta 100 etiquetas)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadFavorites() {
+      try {
+        const res = await apiClient.get('/user-wines/me?favorite=true&pageSize=100');
+        if (isMounted && Array.isArray(res.data)) {
+          const ids = new Set<number>(res.data.map((item: { wineId: number }) => item.wineId));
+          setFavoriteWineIds(ids);
+        }
+      } catch {
+        // Silencioso si no está autenticado o error transitorio
+      }
+    }
+    void loadFavorites();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const showNotification = (msg: string) => {
     clearTimeout(notificationTimerRef.current);
     setNotification(msg);
@@ -213,9 +235,79 @@ export default function DashboardPage() {
     }, 3500);
   };
 
-  const handleUncorkSaved = (data: UncorkSubmission) => {
-    setStockCount((prev) => Math.max(0, prev - 1));
-    showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
+  const handleToggleFavorite = async (wine: DashboardWine, nextIsFav: boolean) => {
+    const wineId = Number(wine.id);
+    if (!wineId || isNaN(wineId)) return;
+
+    // Actualización optimista inmediata
+    setFavoriteWineIds((prev) => {
+      const next = new Set(prev);
+      if (nextIsFav) {
+        next.add(wineId);
+      } else {
+        next.delete(wineId);
+      }
+      return next;
+    });
+
+    try {
+      if (nextIsFav) {
+        await apiClient.put(`/wines/${wineId}/favorite`);
+      } else {
+        await apiClient.delete(`/wines/${wineId}/favorite`);
+      }
+    } catch {
+      // Revertir optimismo si falla
+      setFavoriteWineIds((prev) => {
+        const rollback = new Set(prev);
+        if (nextIsFav) {
+          rollback.delete(wineId);
+        } else {
+          rollback.add(wineId);
+        }
+        return rollback;
+      });
+      showNotification('No se pudo actualizar favoritos. Intentalo de nuevo.');
+    }
+  };
+
+  const handleUncorkSaved = async (data: UncorkSubmission) => {
+    try {
+      const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
+      if (!isNaN(vintageId) && vintageId > 0) {
+        await apiClient.post(`/cellars/me/items/${vintageId}/uncork`);
+      } else {
+        const cellarRes = await apiClient.get('/cellars/me');
+        const userCellars = cellarRes.data;
+        if (!Array.isArray(userCellars) || userCellars.length === 0) {
+          throw new Error('No tenés una cava creada.');
+        }
+        const activeCellarId = userCellars[0].id;
+        const itemsRes = await apiClient.get(`/cellars/${activeCellarId}/items`);
+        const matchingItem = Array.isArray(itemsRes.data)
+          ? itemsRes.data.find(
+              (it: { name?: string; wineId?: number; wineVintageId?: number }) =>
+                it.name === data.wine.name || it.wineId === Number(data.wine.id)
+            )
+          : null;
+        if (!matchingItem) {
+          throw new Error('No quedan botellas de esta cosecha en tu cava.');
+        }
+        await apiClient.post(`/cellars/${activeCellarId}/items/${matchingItem.wineVintageId}/uncork`);
+      }
+
+      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
+      refreshStock?.();
+      setStockCount((prev) => Math.max(0, prev - 1));
+    } catch (err: unknown) {
+      let errorMsg = 'Error al descorchar la botella.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      showNotification(errorMsg);
+    }
   };
 
   const handleAddToCellar = (wine: DashboardWine) => {
@@ -316,9 +408,12 @@ export default function DashboardPage() {
       name: data.name,
       region: data.region,
       initials: getWineryInitials(data.name),
-      wines: data.wines,
+      wines: data.wines.map((w) => ({
+        ...w,
+        isFavorite: favoriteWineIds.has(Number(w.id)),
+      })),
     }));
-  }, [filteredWines]);
+  }, [filteredWines, favoriteWineIds]);
 
   // Paginación de bodegas: máximo 4 bodegas visibles simultáneamente
   const WINERIES_PER_PAGE = 4;
@@ -556,11 +651,7 @@ export default function DashboardPage() {
                     total={group.wines.length}
                     wines={group.wines}
                     onAddToCellar={handleAddToCellar}
-                    onToggleFavorite={(wine, isFav) =>
-                      showNotification(
-                        `${wine.name} ${isFav ? 'añadido a tus Deseados' : 'removido de Deseados'}.`
-                      )
-                    }
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
 
