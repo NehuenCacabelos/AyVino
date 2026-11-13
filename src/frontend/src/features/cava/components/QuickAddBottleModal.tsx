@@ -22,16 +22,24 @@ interface QuickAddBottleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddBottle: (bottle: QuickAddBottlePayload) => Promise<void> | void;
+  initialName?: string;
 }
 
 export default function QuickAddBottleModal({
   isOpen,
   onClose,
   onAddBottle,
+  initialName,
 }: QuickAddBottleModalProps) {
   const navigate = useNavigate();
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName || '');
+  const [prevInitialName, setPrevInitialName] = useState(initialName);
+  if (isOpen && initialName !== prevInitialName) {
+    setPrevInitialName(initialName);
+    setName(initialName || '');
+  }
+
   const [winery, setWinery] = useState('');
   const [region, setRegion] = useState('Mendoza, Argentina');
   const [varietal, setVarietal] = useState('Malbec');

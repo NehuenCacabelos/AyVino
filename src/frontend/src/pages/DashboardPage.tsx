@@ -19,6 +19,9 @@ import {
   WineCardSkeleton,
 } from '../features/dashboard';
 import { searchCatalogWines } from '../features/dashboard/api/catalogApi';
+import QuickAddBottleModal from '../features/cava/components/QuickAddBottleModal';
+import { resolveWineTypeAndBottle } from '../features/cava/data/varietalsData';
+import apiClient from '../services/apiClient';
 import { useDebounce } from '../hooks/useDebounce';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import {
@@ -67,6 +70,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createInitialName, setCreateInitialName] = useState('');
+
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
@@ -87,7 +93,10 @@ export default function DashboardPage() {
 
     async function loadCatalog() {
       try {
-        const wineryParam = heroFilters.winery !== 'Todas' ? heroFilters.winery : undefined;
+        const wineryParam =
+          heroFilters.wineryId === undefined && heroFilters.winery !== 'Todas'
+            ? heroFilters.winery
+            : undefined;
         let wineTypeParam: string | undefined = undefined;
 
         if (heroFilters.varietal === 'Blancos' || activeFilter === 'Blancos') {
@@ -100,6 +109,9 @@ export default function DashboardPage() {
           {
             search: debouncedQuery || undefined,
             winery: wineryParam,
+            wineryId: heroFilters.wineryId,
+            grapeId: heroFilters.grapeId,
+            stateId: heroFilters.stateId,
             wineType: wineTypeParam,
             pageSize: 48,
           },
@@ -130,7 +142,16 @@ export default function DashboardPage() {
       isMounted = false;
       controller.abort();
     };
-  }, [debouncedQuery, heroFilters.winery, heroFilters.varietal, activeFilter, reloadKey]);
+  }, [
+    debouncedQuery,
+    heroFilters.wineryId,
+    heroFilters.winery,
+    heroFilters.grapeId,
+    heroFilters.stateId,
+    heroFilters.varietal,
+    activeFilter,
+    reloadKey,
+  ]);
 
   const handleRetry = useCallback(() => {
     setIsLoading(true);
@@ -200,44 +221,10 @@ export default function DashboardPage() {
     showNotification(`"${wine.name}" fue agregado con éxito a tu Cava.`);
   };
 
-  // Filtrado reactivo derivado en cliente para complementar filtros rápidos y chips
+  // Filtrado reactivo derivado en cliente exclusivamente para chips rápidos
   const filteredWines = useMemo(() => {
     return catalogWines.filter((wine) => {
-      // 1. Filtro de bodega del Hero
-      if (heroFilters.winery !== 'Todas') {
-        if (!wine.winery.toLowerCase().includes(heroFilters.winery.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // 2. Filtro de región del Hero
-      if (heroFilters.region !== 'Todas') {
-        if (!wine.region.toLowerCase().includes(heroFilters.region.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // 3. Filtro de varietal del Hero
-      if (heroFilters.varietal !== 'Todos') {
-        if (heroFilters.varietal === 'Blancos') {
-          const isWhite =
-            wine.varietal.toLowerCase().includes('blanco') ||
-            wine.varietal.toLowerCase().includes('chardonnay') ||
-            wine.varietal.toLowerCase().includes('torrontés') ||
-            wine.varietal.toLowerCase().includes('torrontes') ||
-            wine.bottle === 'white' ||
-            wine.bottle === 'white-flute';
-          if (!isWhite) return false;
-        } else if (heroFilters.varietal === 'Blends') {
-          if (!wine.varietal.toLowerCase().includes('blend')) return false;
-        } else {
-          if (!wine.varietal.toLowerCase().includes(heroFilters.varietal.toLowerCase())) {
-            return false;
-          }
-        }
-      }
-
-      // 4. Chips de filtros rápidos inferiores
+      // Chips de filtros rápidos inferiores (se conservan intactos)
       if (activeFilter !== 'Todos') {
         if (activeFilter === 'Blancos') {
           const isWhite =
@@ -277,7 +264,7 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [catalogWines, heroFilters, activeFilter]);
+  }, [catalogWines, activeFilter]);
 
   // Agrupamiento dinámico por bodega a partir de los datos reales de la base de datos
   const wineryGroups = useMemo<WineryGroup[]>(() => {
@@ -341,6 +328,9 @@ export default function DashboardPage() {
       varietal: 'Todos',
       region: 'Todas',
       winery: 'Todas',
+      grapeId: undefined,
+      stateId: undefined,
+      wineryId: undefined,
     });
     setWineryPage(1);
   };
@@ -406,6 +396,10 @@ export default function DashboardPage() {
                 setHeroFilters(filters);
                 setSearchQuery(filters.query);
                 setWineryPage(1);
+              }}
+              onCreateWine={(name) => {
+                setCreateInitialName(name);
+                setIsCreateModalOpen(true);
               }}
               onRegisterBottle={() =>
                 showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
@@ -613,6 +607,34 @@ export default function DashboardPage() {
         wine={uncorkingWine}
         onClose={() => setUncorkingWine(null)}
         onSave={handleUncorkSaved}
+      />
+
+      {/* Modal de Alta Rápida desde el Buscador */}
+      <QuickAddBottleModal
+        isOpen={isCreateModalOpen}
+        initialName={createInitialName}
+        onClose={() => setIsCreateModalOpen(false)}
+        onAddBottle={async (payload) => {
+          const { wineType } = resolveWineTypeAndBottle(payload.varietal);
+          let mainGrapeId: number | undefined = undefined;
+          if (wineType === 'Red') mainGrapeId = 1;
+          else if (wineType === 'White') mainGrapeId = 9;
+
+          await apiClient.post('/cellars/me/quick-add', {
+            name: payload.name,
+            wineryName: payload.winery,
+            wineType,
+            year: payload.vintage,
+            quantity: payload.units,
+            location: payload.location,
+            notes: payload.location,
+            matchedWineId: payload.matchedWineId ?? null,
+            mainGrapeId,
+          });
+
+          showNotification(`¡Etiqueta "${payload.name}" guardada con éxito!`);
+          setReloadKey((prev) => prev + 1);
+        }}
       />
     </div>
   );
