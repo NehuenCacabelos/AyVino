@@ -12,4 +12,6 @@ public interface ICellarItemRepository
     Task<bool> UpdateAsync(int cellarId, int wineVintageId, int quantity, DateOnly? purchaseDate, string? notes, CancellationToken ct = default);
     Task<bool> DeleteAsync(int cellarId, int wineVintageId, CancellationToken ct = default);
     Task<IReadOnlyList<int>> GetVintageIdsAsync(int cellarId, CancellationToken ct = default);
+    Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
+        Task.FromResult<CellarItemListRow?>(null);
 }

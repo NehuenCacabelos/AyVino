@@ -10,6 +10,9 @@ public record UserWineListRow
     public WineType WineType { get; init; }
     public int? WineryId { get; init; }
     public string? WineryNameText { get; init; }
+    public string? WineryName { get; init; }
+    public int? Vintage { get; init; }
+    public string? ImageUrl { get; init; }
     public int RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public bool IsWanted { get; init; }

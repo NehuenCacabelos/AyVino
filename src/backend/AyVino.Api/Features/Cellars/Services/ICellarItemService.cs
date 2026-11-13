@@ -11,4 +11,5 @@ public interface ICellarItemService
     Task<CellarItemResponseDto> GetAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default);
     Task<CellarItemResponseDto> UpdateAsync(int userId, int cellarId, int wineVintageId, UpdateCellarItemRequestDto request, CancellationToken ct = default);
     Task RemoveAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default);
+    Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default);
 }

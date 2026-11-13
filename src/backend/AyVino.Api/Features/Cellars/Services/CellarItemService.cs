@@ -248,6 +248,17 @@ public class CellarItemService(
             throw new NotFoundException($"La cosecha {wineVintageId} no está en la cava {cellarId}.");
     }
 
+    public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default)
+    {
+        await EnsureCellarOwnedAsync(userId, cellarId, ct);
+
+        var row = await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, ct);
+        if (row is null)
+            throw new ConflictException("No quedan botellas de esta cosecha en la cava o el ítem no existe.");
+
+        return row.ToResponseDto();
+    }
+
     // Si la cava no existe o es de otro usuario: 404, sin revelar cuál de los dos casos es.
     private async Task EnsureCellarOwnedAsync(int userId, int cellarId, CancellationToken ct)
     {

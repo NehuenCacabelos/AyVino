@@ -11,4 +11,7 @@ public record UserWineListItemDto(
     bool IsWanted,
     bool IsTried,
     bool IsFavorite,
-    DateTime LastChangeAt);
+    DateTime LastChangeAt,
+    string? WineryName = null,
+    int? Vintage = null,
+    string? ImageUrl = null);

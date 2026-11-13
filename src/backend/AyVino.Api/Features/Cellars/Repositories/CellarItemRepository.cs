@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Cellars.Models;
 using Dapper;
@@ -187,4 +188,85 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
             new CommandDefinition(sql, new { CellarId = cellarId }, cancellationToken: ct));
         return ids.ToList();
     }
+
+    public async Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        if (connection.State != ConnectionState.Open) await connection.OpenAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+
+        try
+        {
+            const string lockSql = """
+                SELECT ci.quantity AS Quantity, wv.wine_id AS WineId
+                FROM cellar_items ci
+                JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id
+                WHERE ci.cellar_id = @CellarId AND ci.wine_vintage_id = @WineVintageId
+                FOR UPDATE;
+                """;
+
+            var current = await connection.QuerySingleOrDefaultAsync<CellarItemLockRow>(
+                new CommandDefinition(lockSql, new { CellarId = cellarId, WineVintageId = wineVintageId }, transaction, cancellationToken: ct));
+
+            if (current is null || current.Quantity <= 0)
+            {
+                await transaction.RollbackAsync(ct);
+                return null;
+            }
+
+            var fetchRowSql = SelectRowSql + """
+
+                WHERE ci.cellar_id = @CellarId AND ci.wine_vintage_id = @WineVintageId;
+                """;
+            var existingRow = await connection.QuerySingleOrDefaultAsync<CellarItemListRow>(
+                new CommandDefinition(fetchRowSql, new { CellarId = cellarId, WineVintageId = wineVintageId }, transaction, cancellationToken: ct));
+
+            if (existingRow is null)
+            {
+                await transaction.RollbackAsync(ct);
+                return null;
+            }
+
+            int newQuantity = current.Quantity - 1;
+
+            if (newQuantity > 0)
+            {
+                const string updateSql = """
+                    UPDATE cellar_items
+                    SET quantity = @Quantity,
+                        updated_at = now() AT TIME ZONE 'utc'
+                    WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId;
+                    """;
+                await connection.ExecuteAsync(
+                    new CommandDefinition(updateSql, new { CellarId = cellarId, WineVintageId = wineVintageId, Quantity = newQuantity }, transaction, cancellationToken: ct));
+            }
+            else
+            {
+                const string deleteSql = "DELETE FROM cellar_items WHERE cellar_id = @CellarId AND wine_vintage_id = @WineVintageId;";
+                await connection.ExecuteAsync(
+                    new CommandDefinition(deleteSql, new { CellarId = cellarId, WineVintageId = wineVintageId }, transaction, cancellationToken: ct));
+            }
+
+            const string markTriedSql = """
+                INSERT INTO user_wines (user_id, wine_id, is_wanted, is_tried, is_favorite)
+                VALUES (@UserId, @WineId, FALSE, TRUE, FALSE)
+                ON CONFLICT (user_id, wine_id) DO UPDATE
+                SET is_tried = TRUE,
+                    updated_at = now() AT TIME ZONE 'utc';
+                """;
+            await connection.ExecuteAsync(
+                new CommandDefinition(markTriedSql, new { UserId = userId, WineId = current.WineId }, transaction, cancellationToken: ct));
+
+            await transaction.CommitAsync(ct);
+
+            return existingRow with { Quantity = newQuantity };
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    private sealed record CellarItemLockRow(int Quantity, int WineId);
 }

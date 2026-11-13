@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.DTOs;
 using AyVino.Api.Features.Cellars.Services;
 
@@ -25,6 +26,14 @@ public static class CellarEndpoints
             var created = await itemService.QuickAddAsync(user.GetUserId(), null, request, ct);
             return Results.Created($"/api/wines/{created.WineId}", created);
         }).WithName("QuickAddWineToMyCellar").WithSummary("Agrega una botella a la cava personal creando o reutilizando etiqueta comunitaria.");
+
+        group.MapPost("/me/items/{wineVintageId:int}/uncork", async (int wineVintageId, ClaimsPrincipal user, ICellarService cellarService, ICellarItemService itemService, CancellationToken ct) =>
+        {
+            var cellars = await cellarService.GetAllByUserAsync(user.GetUserId(), 1, 1, ct);
+            var firstCellar = cellars.FirstOrDefault() ?? throw new NotFoundException("El usuario no posee una cava creada.");
+            var item = await itemService.UncorkAsync(user.GetUserId(), firstCellar.Id, wineVintageId, ct);
+            return Results.Ok(item);
+        }).WithName("UncorkWineInMyCellar").WithSummary("Descorcha una botella de la cava por defecto del usuario");
 
         group.MapGet("/{cellarId:int}", async (int cellarId, ClaimsPrincipal user, ICellarService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(user.GetUserId(), cellarId, ct)))
