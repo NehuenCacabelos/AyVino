@@ -280,7 +280,7 @@ public class WineOptimizationTests
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
 
-        public Task<IEnumerable<AyVino.Api.Features.Wines.DTOs.CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default) => Task.FromResult<IEnumerable<AyVino.Api.Features.Wines.DTOs.CatalogWineItemDto>>([]);
+        public Task<IEnumerable<AyVino.Api.Features.Wines.DTOs.CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default) => Task.FromResult<IEnumerable<AyVino.Api.Features.Wines.DTOs.CatalogWineItemDto>>([]);
 
         public Task<AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
             Task.FromResult(new AyVino.Api.Features.Wines.DTOs.MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));

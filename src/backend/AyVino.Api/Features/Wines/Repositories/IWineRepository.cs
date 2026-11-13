@@ -38,6 +38,9 @@ public interface IWineRepository
         int pageSize,
         int? currentUserId,
         bool isAdmin,
+        int? grapeId = null,
+        int? stateId = null,
+        int? wineryId = null,
         CancellationToken ct = default);
 
     Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default);

@@ -240,7 +240,7 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
-    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
@@ -253,7 +253,7 @@ public class WineService(
             parsedType = parsed;
         }
 
-        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
+        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, grapeId, stateId, wineryId, ct);
     }
 
     public async Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default)

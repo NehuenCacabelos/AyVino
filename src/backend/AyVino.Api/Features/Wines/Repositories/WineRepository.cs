@@ -11,7 +11,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 {
     private const string SelectColumns = """
         id, winery_id, winery_name_text, name, description, wine_type, location_id,
-        source_type, duplicate_of_wine_id, rating_sum, review_count
+        source_type, duplicate_of_wine_id, rating_sum, review_count, name_key, winery_text_key
         """;
 
     public async Task<Wine?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -117,9 +117,10 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public async Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
     {
+        var (nameKey, wineryTextKey) = WineLabelNormalizer.ComputeWineKeys(wine.Name, wine.WineryNameText);
         const string insertWineSql = """
-            INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count)
-            VALUES (@WineryId, @WineryNameText, @Name, @Description, @WineType, @LocationId, @SourceType, 0, 0)
+            INSERT INTO wines (winery_id, winery_name_text, name, description, wine_type, location_id, source_type, rating_sum, review_count, name_key, winery_text_key)
+            VALUES (@WineryId, @WineryNameText, @Name, @Description, @WineType, @LocationId, @SourceType, 0, 0, @NameKey, @WineryTextKey)
             RETURNING id;
             """;
         const string insertVintageSql = """
@@ -202,7 +203,9 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 wine.Description,
                 WineType = (int)wine.WineType,
                 wine.LocationId,
-                SourceType = (int)wine.SourceType
+                SourceType = (int)wine.SourceType,
+                NameKey = nameKey,
+                WineryTextKey = wineryTextKey
             }, transaction: transaction, cancellationToken: ct));
 
         var vintageId = await connection.ExecuteScalarAsync<int>(
@@ -231,11 +234,12 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         }
 
         await transaction.CommitAsync(ct);
-        return wine with { Id = wineId };
+        return wine with { Id = wineId, NameKey = nameKey, WineryTextKey = wineryTextKey };
     }
 
     public async Task<bool> UpdateAsync(Wine wine, CancellationToken ct = default)
     {
+        var (nameKey, wineryTextKey) = WineLabelNormalizer.ComputeWineKeys(wine.Name, wine.WineryNameText);
         const string sql = """
             UPDATE wines
             SET winery_id = @WineryId,
@@ -244,7 +248,9 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 description = @Description,
                 wine_type = @WineType,
                 location_id = @LocationId,
-                source_type = @SourceType
+                source_type = @SourceType,
+                name_key = @NameKey,
+                winery_text_key = @WineryTextKey
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -258,7 +264,9 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 wine.Description,
                 WineType = (int)wine.WineType,
                 wine.LocationId,
-                SourceType = (int)wine.SourceType
+                SourceType = (int)wine.SourceType,
+                NameKey = nameKey,
+                WineryTextKey = wineryTextKey
             }, cancellationToken: ct));
         return rows > 0;
     }
@@ -469,6 +477,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
+    public const double SearchSimilarityThreshold = 0.3;
+
     public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
         string? search,
         string? name,
@@ -479,12 +489,25 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         int pageSize,
         int? currentUserId,
         bool isAdmin,
+        int? grapeId = null,
+        int? stateId = null,
+        int? wineryId = null,
         CancellationToken ct = default)
     {
-        var cleanSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        string? searchKey = null;
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            searchKey = WineLabelNormalizer.ToSearchKey(search);
+            if (searchKey.Length < 2)
+            {
+                return [];
+            }
+        }
+
         var cleanName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
         var cleanWinery = string.IsNullOrWhiteSpace(winery) ? null : winery.Trim();
-        var hasSearchTerm = cleanSearch is not null || cleanName is not null || cleanWinery is not null;
+        var hasOtherSearchTerms = cleanName is not null || cleanWinery is not null;
+        var hasSearchTerm = searchKey is not null || hasOtherSearchTerms;
 
         const string sql = """
             SELECT
@@ -526,7 +549,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                     WHEN w.review_count > 0 THEN ROUND((w.rating_sum::numeric / w.review_count), 1)
                     ELSE NULL
                 END AS AverageRating,
-                w.review_count AS ReviewCount
+                w.review_count AS ReviewCount,
+                wy.logo_image_id AS WineryLogoImageId
             FROM wines w
             LEFT JOIN wineries wy ON wy.id = w.winery_id
             LEFT JOIN locations loc ON loc.id = w.location_id
@@ -582,13 +606,13 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 OR w.source_type = 1
                 OR w.winery_id IS NOT NULL
               )
-            AND (@Search IS NULL
-                OR w.name ILIKE @SearchPattern
-                OR wy.name ILIKE @SearchPattern
-                OR w.winery_name_text ILIKE @SearchPattern
-                OR w.name % @Search
-                OR wy.name % @Search
-                OR w.winery_name_text % @Search)
+            AND (@SearchKey IS NULL OR (
+                w.name_key LIKE @SearchKeyPattern
+                OR wy.name_key LIKE @SearchKeyPattern
+                OR w.winery_text_key LIKE @SearchKeyPattern
+                OR similarity(w.name_key, @SearchKey) > @Threshold
+                OR similarity(COALESCE(wy.name_key, w.winery_text_key, ''), @SearchKey) > @Threshold
+            ))
             AND (@Name IS NULL
                 OR w.name ILIKE @NamePattern
                 OR w.name % @Name)
@@ -598,6 +622,17 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 OR wy.name % @Winery
                 OR w.winery_name_text % @Winery)
             AND (@WineType IS NULL OR w.wine_type = @WineType)
+            AND (@GrapeId IS NULL OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv_g
+                    JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
+                    WHERE wv_g.wine_id = w.id
+                      AND wg.grape_id = @GrapeId
+                      AND (@IsAdmin = TRUE
+                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv_g.uploaded_by_user_id = @CurrentUserId))
+                           OR wv_g.approval_status != 3)
+                ))
+            AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
+            AND (@WineryId IS NULL OR w.winery_id = @WineryId)
             AND (@Year IS NULL OR EXISTS (
                     SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
                     AND (@IsAdmin = TRUE
@@ -606,23 +641,38 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                          OR (@HasSearchTerm = TRUE AND w.source_type = 1))
                 ))
             ORDER BY
-                CASE WHEN @HasSearchTerm = TRUE THEN
-                    GREATEST(
-                        CASE WHEN @Search IS NOT NULL THEN
-                            GREATEST(
-                                similarity(w.name, @Search),
-                                similarity(COALESCE(wy.name, w.winery_name_text, ''), @Search)
-                            )
-                        ELSE 0 END,
-                        CASE WHEN @Name IS NOT NULL THEN similarity(w.name, @Name) ELSE 0 END,
-                        CASE WHEN @Winery IS NOT NULL THEN
-                            GREATEST(
-                                similarity(COALESCE(wy.name, ''), @Winery),
-                                similarity(COALESCE(w.winery_name_text, ''), @Winery)
-                            )
-                        ELSE 0 END
-                    )
+                CASE WHEN @SearchKey IS NOT NULL THEN
+                    CASE
+                        -- 1. Clave igual
+                        WHEN w.name_key = @SearchKey OR wy.name_key = @SearchKey OR w.winery_text_key = @SearchKey THEN 4
+                        -- 2. Empieza con la clave
+                        WHEN w.name_key LIKE @SearchKeyPrefix OR wy.name_key LIKE @SearchKeyPrefix OR w.winery_text_key LIKE @SearchKeyPrefix THEN 3
+                        -- 3. Contiene la clave
+                        WHEN w.name_key LIKE @SearchKeyPattern OR wy.name_key LIKE @SearchKeyPattern OR w.winery_text_key LIKE @SearchKeyPattern THEN 2
+                        -- 4. Mayor similitud
+                        WHEN similarity(w.name_key, @SearchKey) > @Threshold
+                             OR similarity(COALESCE(wy.name_key, w.winery_text_key, ''), @SearchKey) > @Threshold THEN 1
+                        ELSE 0
+                    END
                 ELSE 0 END DESC,
+                CASE WHEN @SearchKey IS NOT NULL THEN
+                    GREATEST(
+                        similarity(w.name_key, @SearchKey),
+                        similarity(COALESCE(wy.name_key, w.winery_text_key, ''), @SearchKey)
+                    )
+                ELSE
+                    CASE WHEN @HasOtherSearchTerms = TRUE THEN
+                        GREATEST(
+                            CASE WHEN @Name IS NOT NULL THEN similarity(w.name, @Name) ELSE 0 END,
+                            CASE WHEN @Winery IS NOT NULL THEN
+                                GREATEST(
+                                    similarity(COALESCE(wy.name, ''), @Winery),
+                                    similarity(COALESCE(w.winery_name_text, ''), @Winery)
+                                )
+                            ELSE 0 END
+                        )
+                    ELSE 0 END
+                END DESC,
                 w.review_count DESC,
                 w.rating_sum DESC,
                 w.name ASC,
@@ -634,17 +684,23 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         return await connection.QueryAsync<CatalogWineItemDto>(
             new CommandDefinition(sql, new
             {
-                Search = cleanSearch,
-                SearchPattern = cleanSearch is null ? null : $"%{cleanSearch}%",
+                SearchKey = searchKey,
+                SearchKeyPrefix = searchKey is null ? null : $"{searchKey}%",
+                SearchKeyPattern = searchKey is null ? null : $"%{searchKey}%",
+                Threshold = SearchSimilarityThreshold,
                 Name = cleanName,
                 NamePattern = cleanName is null ? null : $"%{cleanName}%",
                 Winery = cleanWinery,
                 WineryPattern = cleanWinery is null ? null : $"%{cleanWinery}%",
                 WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
                 Year = year,
+                GrapeId = grapeId,
+                StateId = stateId,
+                WineryId = wineryId,
                 CurrentUserId = currentUserId,
                 IsAdmin = isAdmin,
                 HasSearchTerm = hasSearchTerm,
+                HasOtherSearchTerms = hasOtherSearchTerms,
                 Offset = (pageNumber - 1) * pageSize,
                 PageSize = pageSize
             }, cancellationToken: ct));

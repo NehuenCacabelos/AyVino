@@ -455,7 +455,7 @@ public class WineServiceTests
 
         public Task<IEnumerable<Wine>> SearchAsync(string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, CancellationToken ct = default) => Task.FromResult<IEnumerable<Wine>>([]);
 
-        public Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, CancellationToken ct = default) => Task.FromResult<IEnumerable<CatalogWineItemDto>>([]);
+        public Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, WineType? wineType, int pageNumber, int pageSize, int? currentUserId, bool isAdmin, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default) => Task.FromResult<IEnumerable<CatalogWineItemDto>>([]);
 
         public Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default) =>
             Task.FromResult(new MergeWinesResultDto(targetId, duplicateId, 0, 0, 0, 0, 0));

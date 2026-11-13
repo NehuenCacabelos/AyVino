@@ -17,5 +17,6 @@ public record CatalogWineItemDto(
     string SourceType,
     int? DuplicateOfWineId,
     decimal? AverageRating,
-    int ReviewCount);
+    int ReviewCount,
+    Guid? WineryLogoImageId = null);
 
