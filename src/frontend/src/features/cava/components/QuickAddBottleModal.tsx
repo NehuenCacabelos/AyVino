@@ -10,11 +10,16 @@ import {
   ArrowLeft,
   Loader2,
   Sparkles,
+  Upload,
+  Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { apiClient } from '../../../services/apiClient';
 import type { BottleKind, DashboardWine } from '../../../types/wine';
 import type { QuickAddBottlePayload } from '../types';
-import { VARIETALS_CATALOG, resolveWineTypeAndBottle } from '../data/varietalsData';
+import type { GrapeResponseDto } from '../../winery/types';
+import { fetchGrapesCatalogOnce, sortGrapesForWineType } from '../api/grapesCatalogCache';
+import { resizeImageToMax } from '../utils/imageResize';
 
 interface MatchedWineData {
   id: number;
@@ -41,12 +46,35 @@ interface CatalogSearchItem {
   defaultVintageYear?: number | null;
 }
 
+interface WinerySuggestItem {
+  id: number;
+  name: string;
+}
+
+interface CellarItemQuickAddResponse {
+  wineVintageId: number;
+  wineId: number;
+  name: string;
+  wineType: string;
+  year?: number | null;
+  quantity: number;
+}
+
+const WINE_TYPES: Array<{ value: string; label: string; defaultBottle: BottleKind }> = [
+  { value: 'Red', label: 'Tinto', defaultBottle: 'red-burgundy' },
+  { value: 'White', label: 'Blanco', defaultBottle: 'white' },
+  { value: 'Rose', label: 'Rosado', defaultBottle: 'red-burgundy' },
+  { value: 'Sparkling', label: 'Espumoso', defaultBottle: 'sparkling' },
+  { value: 'Orange', label: 'Naranjo', defaultBottle: 'white' },
+];
+
 export interface QuickAddBottleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddBottle: (bottle: QuickAddBottlePayload) => Promise<void> | void;
+  onAddBottle?: (bottle: QuickAddBottlePayload) => Promise<void> | void;
   initialName?: string;
   initialWine?: DashboardWine | null;
+  showToast?: (message: string) => void;
 }
 
 export default function QuickAddBottleModal({
@@ -55,13 +83,16 @@ export default function QuickAddBottleModal({
   onAddBottle,
   initialName,
   initialWine,
+  showToast,
 }: QuickAddBottleModalProps) {
   const navigate = useNavigate();
 
   const [name, setName] = useState(initialWine?.name || initialName || '');
   const [winery, setWinery] = useState(initialWine?.winery || '');
   const [region, setRegion] = useState(initialWine?.region || 'Mendoza, Argentina');
-  const [varietal, setVarietal] = useState(initialWine?.varietal || 'Malbec');
+  const [selectedWineType, setSelectedWineType] = useState<string>('Red');
+  const [selectedGrapeId, setSelectedGrapeId] = useState<number | null>(1);
+  const [selectedGrapeName, setSelectedGrapeName] = useState<string>(initialWine?.varietal || 'Malbec');
   const [vintage, setVintage] = useState<number>(
     initialWine?.vintage ? Number(initialWine.vintage) || 2021 : new Date().getFullYear() - 3,
   );
@@ -82,7 +113,7 @@ export default function QuickAddBottleModal({
       setName(initialWine.name);
       setWinery(initialWine.winery || '');
       setRegion(initialWine.region || 'Mendoza, Argentina');
-      setVarietal(initialWine.varietal || 'Malbec');
+      setSelectedGrapeName(initialWine.varietal || '');
       setVintage(Number(initialWine.vintage) || new Date().getFullYear() - 3);
       setBottleKind(initialWine.bottle || 'red-burgundy');
       const parsedId = initialWine.id ? parseInt(initialWine.id, 10) : null;
@@ -98,34 +129,69 @@ export default function QuickAddBottleModal({
     setName(initialName || '');
   }
 
-  // Sugerencias de búsqueda en vivo (máximo 5)
+  // Sugerencias de búsqueda en vivo de etiquetas (máximo 5)
   const [suggestions, setSuggestions] = useState<CatalogSearchItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSugIndex, setActiveSugIndex] = useState(-1);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
 
+  // Sugerencias de bodegas en vivo (máximo 5)
+  const [winerySuggestions, setWinerySuggestions] = useState<WinerySuggestItem[]>([]);
+  const [showWinerySuggestions, setShowWinerySuggestions] = useState(false);
+  const [activeWinerySugIndex, setActiveWinerySugIndex] = useState(-1);
+  const [isSearchingWineries, setIsSearchingWineries] = useState(false);
+
+  // Catálogo de uvas maestro
+  const [grapesCatalog, setGrapesCatalog] = useState<GrapeResponseDto[]>([]);
+  const [showGrapeDropdown, setShowGrapeDropdown] = useState(false);
+  const [grapeSearchQuery, setGrapeSearchQuery] = useState('');
+  const [activeGrapeIndex, setActiveGrapeIndex] = useState(-1);
+
   // Añadas existentes de la etiqueta seleccionada
   const [existingYears, setExistingYears] = useState<number[]>([]);
   const [isLoadingYears, setIsLoadingYears] = useState(false);
 
+  // Imagen opcional
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [isResizingImage, setIsResizingImage] = useState(false);
+
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+
   const [matchedCandidate, setMatchedCandidate] = useState<MatchedWineData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const wineryContainerRef = useRef<HTMLDivElement>(null);
+  const grapeContainerRef = useRef<HTMLDivElement>(null);
 
-  const varietalGroups = useMemo(() => {
-    const order: Array<'Tintas' | 'Blancas' | 'Rosados' | 'Espumantes'> = [
-      'Tintas',
-      'Blancas',
-      'Rosados',
-      'Espumantes',
-    ];
-    return order.filter((grp) => VARIETALS_CATALOG.some((v) => v.group === grp));
-  }, []);
+  // Cargar catálogo de uvas exactamente una vez por sesión
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchGrapesCatalogOnce().then((list) => {
+      setGrapesCatalog(list);
+    });
+  }, [isOpen]);
 
-  // Carga reactiva de sugerencias con debounce de 250 ms y cancelación
+  // Lista de uvas ordenadas por color del tipo seleccionado
+  const sortedGrapes = useMemo(() => {
+    return sortGrapesForWineType(grapesCatalog, selectedWineType);
+  }, [grapesCatalog, selectedWineType]);
+
+  // Uvas filtradas según búsqueda
+  const filteredGrapes = useMemo(() => {
+    if (!grapeSearchQuery.trim()) return sortedGrapes;
+    const q = grapeSearchQuery.toLowerCase();
+    return sortedGrapes.filter((g) => g.name.toLowerCase().includes(q));
+  }, [sortedGrapes, grapeSearchQuery]);
+
+  // Obligatoriedad de uva principal
+  const isGrapeRequired = selectedWineType === 'Red' || selectedWineType === 'White';
+
+  // Carga reactiva de sugerencias de etiquetas (debounce 250 ms)
   useEffect(() => {
     if (isLocked || !isOpen || name.trim().length < 2) {
       return;
@@ -146,9 +212,7 @@ export default function QuickAddBottleModal({
           setShowSuggestions(list.length > 0);
           setActiveSugIndex(-1);
         })
-        .catch(() => {
-          // Ignorar cancelación o error transitorio
-        })
+        .catch(() => {})
         .finally(() => {
           setIsSearchingSuggestions(false);
         });
@@ -159,6 +223,39 @@ export default function QuickAddBottleModal({
       controller.abort();
     };
   }, [name, isLocked, isOpen]);
+
+  // Carga reactiva de sugerencias de bodegas registradas (debounce 250 ms)
+  useEffect(() => {
+    if (isLocked || !isOpen || winery.trim().length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(() => {
+      setIsSearchingWineries(true);
+      apiClient
+        .get<WinerySuggestItem[]>('/wineries/suggest', {
+          params: { q: winery.trim() },
+          signal: controller.signal,
+        })
+        .then((res) => {
+          const list = Array.isArray(res.data) ? res.data.slice(0, 5) : [];
+          setWinerySuggestions(list);
+          setShowWinerySuggestions(list.length > 0);
+          setActiveWinerySugIndex(-1);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsSearchingWineries(false);
+        });
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [winery, isLocked, isOpen]);
 
   // Carga de añadas existentes para el vino asociado
   useEffect(() => {
@@ -184,9 +281,7 @@ export default function QuickAddBottleModal({
           }
         }
       })
-      .catch(() => {
-        // Ignorar si falla o aborta
-      })
+      .catch(() => {})
       .finally(() => {
         setIsLoadingYears(false);
       });
@@ -204,7 +299,10 @@ export default function QuickAddBottleModal({
     setName('');
     setWinery('');
     setRegion('Mendoza, Argentina');
-    setVarietal('Malbec');
+    setSelectedWineType('Red');
+    setSelectedGrapeId(null);
+    setSelectedGrapeName('');
+    setGrapeSearchQuery('');
     setVintage(new Date().getFullYear() - 3);
     setLocation('A1 · ESTANTE SUP.');
     setUnits(1);
@@ -213,11 +311,18 @@ export default function QuickAddBottleModal({
     setIsLocked(false);
     setSuggestions([]);
     setShowSuggestions(false);
+    setWinerySuggestions([]);
+    setShowWinerySuggestions(false);
+    setShowGrapeDropdown(false);
     setExistingYears([]);
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    setImageBlob(null);
     setMatchedCandidate(null);
     setErrorMessage(null);
     setIsChecking(false);
     setIsSubmitting(false);
+    isSubmittingRef.current = false;
     onClose();
   };
 
@@ -225,14 +330,31 @@ export default function QuickAddBottleModal({
     setName(item.name);
     setWinery(item.wineryName || item.wineryNameText || '');
     setRegion(item.regionName || item.stateName || 'Mendoza, Argentina');
-    setVarietal(item.grapeName || item.wineType || 'Malbec');
-    const { bottleKind: resolvedBottle } = resolveWineTypeAndBottle(
-      item.grapeName || item.wineType || 'Malbec',
-    );
-    setBottleKind(resolvedBottle);
+
+    if (item.wineType) {
+      const match = WINE_TYPES.find(
+        (t) => t.value.toLowerCase() === item.wineType?.toLowerCase(),
+      );
+      if (match) {
+        setSelectedWineType(match.value);
+        setBottleKind(match.defaultBottle);
+      }
+    }
+
+    if (item.grapeName) {
+      setSelectedGrapeName(item.grapeName);
+      const matchedGrape = grapesCatalog.find(
+        (g) => g.name.toLowerCase() === item.grapeName?.toLowerCase(),
+      );
+      if (matchedGrape) {
+        setSelectedGrapeId(matchedGrape.id);
+      }
+    }
+
     if (item.defaultVintageYear) {
       setVintage(item.defaultVintageYear);
     }
+
     setMatchedWineId(item.id);
     setIsLocked(true);
     setSuggestions([]);
@@ -246,9 +368,79 @@ export default function QuickAddBottleModal({
     setName('');
     setWinery('');
     setRegion('Mendoza, Argentina');
-    setVarietal('Malbec');
+    setSelectedGrapeId(null);
+    setSelectedGrapeName('');
     setVintage(new Date().getFullYear() - 3);
     setBottleKind('red-burgundy');
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    setImageBlob(null);
+  };
+
+  const handleSelectWinery = (wineryItem: WinerySuggestItem) => {
+    setWinery(wineryItem.name);
+    setWinerySuggestions([]);
+    setShowWinerySuggestions(false);
+  };
+
+  const handleSelectGrape = (grape: GrapeResponseDto) => {
+    setSelectedGrapeId(grape.id);
+    setSelectedGrapeName(grape.name);
+    setGrapeSearchQuery('');
+    setShowGrapeDropdown(false);
+  };
+
+  const handleClearGrape = () => {
+    setSelectedGrapeId(null);
+    setSelectedGrapeName('');
+    setGrapeSearchQuery('');
+  };
+
+  const handleTypeChange = (newType: string) => {
+    setSelectedWineType(newType);
+    const typeMeta = WINE_TYPES.find((t) => t.value === newType);
+    if (typeMeta) {
+      setBottleKind(typeMeta.defaultBottle);
+    }
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Por favor seleccioná un archivo de imagen válido (JPEG, PNG o WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('La imagen no debe superar los 5 MB.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(objectUrl);
+
+    setIsResizingImage(true);
+    try {
+      const resized = await resizeImageToMax(file, 1200);
+      setImageBlob(resized);
+    } catch {
+      setImageBlob(file);
+    } finally {
+      setIsResizingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    setImageBlob(null);
   };
 
   const handleKeyDownName = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -268,6 +460,23 @@ export default function QuickAddBottleModal({
     }
   };
 
+  const handleKeyDownWinery = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showWinerySuggestions || winerySuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveWinerySugIndex((prev) => (prev < winerySuggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveWinerySugIndex((prev) => (prev > 0 ? prev - 1 : winerySuggestions.length - 1));
+    } else if (e.key === 'Enter' && activeWinerySugIndex >= 0) {
+      e.preventDefault();
+      handleSelectWinery(winerySuggestions[activeWinerySugIndex]);
+    } else if (e.key === 'Escape') {
+      setShowWinerySuggestions(false);
+    }
+  };
+
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -277,8 +486,18 @@ export default function QuickAddBottleModal({
       return;
     }
 
-    if (!name.trim() || !winery.trim()) {
-      setErrorMessage('Por favor completá el nombre del vino y de la bodega.');
+    if (!name.trim()) {
+      setErrorMessage('Por favor completá el nombre de la etiqueta.');
+      return;
+    }
+
+    if (!winery.trim()) {
+      setErrorMessage('Por favor indicá la bodega productora.');
+      return;
+    }
+
+    if (isGrapeRequired && !selectedGrapeId) {
+      setErrorMessage('La uva principal es obligatoria para vinos tintos y blancos.');
       return;
     }
 
@@ -324,28 +543,98 @@ export default function QuickAddBottleModal({
   };
 
   const executeSave = async (matchedWineIdToSave: number | null) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await onAddBottle({
+      const payload = {
         name: name.trim(),
-        winery: winery.trim(),
-        region: region.trim(),
-        varietal,
-        vintage: Number(vintage) || 2021,
+        wineryName: winery.trim(),
+        wineType: selectedWineType,
+        year: Number(vintage) || 2021,
+        quantity: Math.max(1, Number(units) || 1),
         location: location.trim(),
-        units: Math.max(1, Number(units) || 1),
-        isJewel: false,
-        bottle: bottleKind,
+        notes: location.trim(),
         matchedWineId: matchedWineIdToSave,
-      });
+        mainGrapeId: selectedGrapeId ?? null,
+      };
+
+      const res = await apiClient.post<CellarItemQuickAddResponse>(
+        '/cellars/me/quick-add',
+        payload,
+      );
+      const createdItem = res?.data;
+
+      // Subida de imagen opcional en segunda llamada
+      let imageUploadFailed = false;
+      const fileToUpload = imageBlob || imageFile;
+      if (fileToUpload && createdItem?.wineId && createdItem?.wineVintageId) {
+        try {
+          const formData = new FormData();
+          formData.append('file', fileToUpload, imageFile?.name || 'etiqueta.jpg');
+          await apiClient.put(
+            `/wines/${createdItem.wineId}/vintages/${createdItem.wineVintageId}/image`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } },
+          );
+        } catch {
+          imageUploadFailed = true;
+        }
+      }
+
+      // Notificar callback externo
+      if (onAddBottle) {
+        await onAddBottle({
+          name: name.trim(),
+          winery: winery.trim(),
+          region: region.trim(),
+          varietal: selectedGrapeName || 'Varietal',
+          vintage: Number(vintage) || 2021,
+          location: location.trim(),
+          units: Math.max(1, Number(units) || 1),
+          isJewel: false,
+          bottle: bottleKind,
+          matchedWineId: matchedWineIdToSave,
+          wineType: selectedWineType,
+          mainGrapeId: selectedGrapeId ?? null,
+          imageFile,
+        });
+      }
+
+      // Notificaciones / Toasts
+      if (imageUploadFailed) {
+        showToast?.(
+          'Tu vino quedó cargado en tu cava y será revisado por AyVino, pero la imagen no pudo subirse.',
+        );
+      } else if (!matchedWineIdToSave) {
+        showToast?.('Tu vino quedó cargado en tu cava y será revisado por AyVino.');
+      } else {
+        showToast?.(`"${name.trim()}" fue agregado con éxito a tu Cava.`);
+      }
 
       handleResetAndClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar la botella en la cava.';
-      setErrorMessage(msg);
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string; message?: string } }; message?: string };
+      if (axiosErr?.response?.status === 409) {
+        const detail =
+          axiosErr.response.data?.detail ||
+          axiosErr.response.data?.message ||
+          'Ya existe una etiqueta idéntica registrada en el catálogo.';
+        setErrorMessage(detail);
+        showToast?.(detail);
+      } else {
+        const msg =
+          axiosErr?.response?.data?.detail ||
+          axiosErr?.response?.data?.message ||
+          axiosErr?.message ||
+          'Error al guardar la botella en la cava.';
+        setErrorMessage(msg);
+        showToast?.(msg);
+      }
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -356,9 +645,9 @@ export default function QuickAddBottleModal({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="bg-[#121216] border border-neutral-800 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden">
+      <div className="bg-[#121216] border border-neutral-800 rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden">
         {/* Header */}
-        <div className="p-5 border-b border-neutral-800 flex items-center justify-between bg-[#0e0e11]">
+        <div className="p-5 border-b border-neutral-800 flex items-center justify-between bg-[#0e0e11] shrink-0">
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-[#fbbf24]" />
             <h3 className="font-serif text-xl text-neutral-100 font-semibold">
@@ -372,7 +661,7 @@ export default function QuickAddBottleModal({
           <button
             type="button"
             onClick={handleResetAndClose}
-            className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors"
+            className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
             aria-label="Cerrar modal"
           >
             <X className="w-5 h-5" />
@@ -381,7 +670,7 @@ export default function QuickAddBottleModal({
 
         {/* Catalog Shortcut Banner (Solo cuando no está bloqueado ni en verificación) */}
         {!matchedCandidate && !isLocked && (
-          <div className="bg-[#18181f] border-b border-neutral-800/80 px-5 py-3 flex items-center justify-between gap-3">
+          <div className="bg-[#18181f] border-b border-neutral-800/80 px-5 py-3 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2 text-xs text-neutral-300">
               <Compass className="w-4 h-4 text-[#fbbf24] shrink-0" />
               <span>¿Buscás una etiqueta curada con ficha técnica oficial?</span>
@@ -392,7 +681,7 @@ export default function QuickAddBottleModal({
                 handleResetAndClose();
                 navigate('/catalogo');
               }}
-              className="text-xs font-semibold text-[#fbbf24] hover:text-[#fde68a] hover:underline whitespace-nowrap transition-colors"
+              className="text-xs font-semibold text-[#fbbf24] hover:text-[#fde68a] hover:underline whitespace-nowrap transition-colors cursor-pointer"
             >
               Explorar en Catálogo &rarr;
             </button>
@@ -401,7 +690,7 @@ export default function QuickAddBottleModal({
 
         {/* Banner de Vino Seleccionado / Bloqueado */}
         {isLocked && !matchedCandidate && (
-          <div className="bg-amber-950/30 border-b border-amber-800/40 px-5 py-3 flex items-center justify-between gap-3">
+          <div className="bg-amber-950/30 border-b border-amber-800/40 px-5 py-3 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2 text-xs text-amber-200">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Etiqueta del catálogo institucional seleccionada. Datos base protegidos.</span>
@@ -418,7 +707,7 @@ export default function QuickAddBottleModal({
 
         {/* Alerta de Error */}
         {errorMessage && (
-          <div className="mx-5 mt-4 flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-200 text-xs">
+          <div className="mx-5 mt-4 flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-200 text-xs shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{errorMessage}</span>
           </div>
@@ -480,7 +769,7 @@ export default function QuickAddBottleModal({
               <button
                 type="button"
                 onClick={() => setMatchedCandidate(null)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-neutral-400 hover:text-white transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 disabled={isSubmitting}
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
@@ -492,7 +781,7 @@ export default function QuickAddBottleModal({
                   type="button"
                   onClick={() => executeSave(null)}
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   No, crear como nuevo vino
                 </button>
@@ -500,7 +789,7 @@ export default function QuickAddBottleModal({
                   type="button"
                   onClick={() => executeSave(matchedCandidate.id)}
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -606,33 +895,113 @@ export default function QuickAddBottleModal({
                       </span>
                     </li>
                   ))}
+
+                  {/* Opción de Crear Nuevo Vino si no coincide con ninguna sugerencia */}
+                  <li
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      setShowSuggestions(false);
+                      setSuggestions([]);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setShowSuggestions(false);
+                        setSuggestions([]);
+                      }
+                    }}
+                    className="p-3 bg-neutral-900/90 hover:bg-neutral-800 text-xs text-amber-300 font-semibold cursor-pointer flex items-center justify-between border-t border-neutral-700/60"
+                  >
+                    <span>¿No encontrás tu etiqueta? Creá «{name}» como vino nuevo</span>
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200">
+                      Continuar
+                    </span>
+                  </li>
                 </ul>
               )}
             </div>
 
-            {/* Bodega y Región */}
+            {/* Bodega (Sugerencias 250ms o Texto Libre) y Región */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="wine-winery"
-                  className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
-                >
-                  Bodega Productora *
-                </label>
+              <div ref={wineryContainerRef} className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="wine-winery"
+                    className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
+                  >
+                    Bodega Productora *
+                  </label>
+                  {isSearchingWineries && (
+                    <span className="text-[10px] font-mono text-neutral-400 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin text-[#fbbf24]" />
+                      <span>Buscando...</span>
+                    </span>
+                  )}
+                </div>
+
                 <input
                   id="wine-winery"
                   type="text"
                   required
                   disabled={isLocked}
                   value={winery}
-                  onChange={(e) => setWinery(e.target.value)}
-                  placeholder="Ej. Catena Zapata"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setWinery(val);
+                    if (val.trim().length < 2) {
+                      setWinerySuggestions([]);
+                      setShowWinerySuggestions(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!isLocked && winerySuggestions.length > 0) {
+                      setShowWinerySuggestions(true);
+                    }
+                  }}
+                  onKeyDown={handleKeyDownWinery}
+                  placeholder="Ej. Catena Zapata (o texto libre)"
+                  role="combobox"
+                  aria-expanded={showWinerySuggestions}
+                  aria-autocomplete="list"
+                  aria-controls="quickadd-winery-suggestions"
+                  aria-activedescendant={
+                    activeWinerySugIndex >= 0 ? `quickadd-winery-sug-${activeWinerySugIndex}` : undefined
+                  }
                   className={`w-full rounded-lg px-3.5 py-2.5 text-sm transition-all focus:outline-none ${
                     isLocked
                       ? 'bg-neutral-900/60 border border-neutral-800 text-neutral-400 cursor-not-allowed'
                       : 'bg-[#0a0a0c] border border-neutral-800 text-neutral-100 placeholder-neutral-600 focus:border-[#722F37]'
                   }`}
                 />
+
+                {/* Desplegable de Bodegas Registradas */}
+                {showWinerySuggestions && winerySuggestions.length > 0 && !isLocked && (
+                  <ul
+                    role="listbox"
+                    id="quickadd-winery-suggestions"
+                    aria-label="Sugerencias de bodegas registradas"
+                    className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-white/[0.12] bg-[#141417]/95 backdrop-blur-xl shadow-2xl overflow-hidden divide-y divide-white/[0.06]"
+                  >
+                    {winerySuggestions.map((sug, idx) => (
+                      <li
+                        key={sug.id}
+                        role="option"
+                        id={`quickadd-winery-sug-${idx}`}
+                        aria-selected={idx === activeWinerySugIndex}
+                        onClick={() => handleSelectWinery(sug)}
+                        onMouseEnter={() => setActiveWinerySugIndex(idx)}
+                        className={`p-2.5 cursor-pointer text-left transition-colors flex items-center justify-between text-xs ${
+                          idx === activeWinerySugIndex ? 'bg-white/[0.08] text-white' : 'text-neutral-200 hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        <span className="font-medium truncate">{sug.name}</span>
+                        <span className="text-[10px] font-mono text-neutral-400 bg-white/[0.06] px-1.5 py-0.5 rounded">
+                          Registrada
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -658,51 +1027,158 @@ export default function QuickAddBottleModal({
               </div>
             </div>
 
-            {/* Varietal y Añada */}
+            {/* Tipo de Vino y Uva Principal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Selector de Tipo (Tinto, Blanco, Rosado, Espumoso, Naranjo) */}
               <div className="space-y-1.5">
                 <label
-                  htmlFor="wine-varietal"
+                  htmlFor="wine-type"
                   className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
                 >
-                  Varietal / Tipo *
+                  Tipo *
                 </label>
                 <select
-                  id="wine-varietal"
+                  id="wine-type"
                   disabled={isLocked}
-                  value={varietal}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setVarietal(val);
-                    const { bottleKind: resolvedBottle } = resolveWineTypeAndBottle(val);
-                    setBottleKind(resolvedBottle);
-                  }}
+                  value={selectedWineType}
+                  onChange={(e) => handleTypeChange(e.target.value)}
                   className={`w-full rounded-lg px-3.5 py-2.5 text-sm transition-all focus:outline-none ${
                     isLocked
                       ? 'bg-neutral-900/60 border border-neutral-800 text-neutral-400 cursor-not-allowed'
                       : 'bg-[#0a0a0c] border border-neutral-800 text-neutral-100 focus:border-[#722F37]'
                   }`}
                 >
-                  {varietalGroups.map((groupName) => (
-                    <optgroup
-                      key={groupName}
-                      label={groupName}
-                      className="bg-[#17161c] text-neutral-300 font-semibold"
-                    >
-                      {VARIETALS_CATALOG.filter((item) => item.group === groupName).map((item) => (
-                        <option
-                          key={item.value}
-                          value={item.value}
-                          className="bg-[#0a0a0c] text-neutral-100 font-normal"
-                        >
-                          {item.label}
-                        </option>
-                      ))}
-                    </optgroup>
+                  {WINE_TYPES.map((t) => (
+                    <option key={t.value} value={t.value} className="bg-[#0a0a0c] text-neutral-100">
+                      {t.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
+              {/* Selector de Uva Principal con Buscador */}
+              <div ref={grapeContainerRef} className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="wine-main-grape"
+                    className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
+                  >
+                    Uva Principal {isGrapeRequired && '*'}
+                  </label>
+                  {selectedGrapeId && (
+                    <button
+                      type="button"
+                      onClick={handleClearGrape}
+                      className="text-[10px] font-mono text-neutral-400 hover:text-neutral-200 underline cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    id="wine-main-grape"
+                    type="text"
+                    disabled={isLocked}
+                    value={
+                      showGrapeDropdown
+                        ? grapeSearchQuery
+                        : selectedGrapeName || ''
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setGrapeSearchQuery(val);
+                      if (val.trim() === '') {
+                        setSelectedGrapeId(null);
+                        setSelectedGrapeName('');
+                      }
+                      setShowGrapeDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (!isLocked) setShowGrapeDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!showGrapeDropdown || filteredGrapes.length === 0) return;
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setActiveGrapeIndex((prev) =>
+                          prev < filteredGrapes.length - 1 ? prev + 1 : 0,
+                        );
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setActiveGrapeIndex((prev) =>
+                          prev > 0 ? prev - 1 : filteredGrapes.length - 1,
+                        );
+                      } else if (e.key === 'Enter' && activeGrapeIndex >= 0) {
+                        e.preventDefault();
+                        handleSelectGrape(filteredGrapes[activeGrapeIndex]);
+                      } else if (e.key === 'Escape') {
+                        setShowGrapeDropdown(false);
+                      }
+                    }}
+                    placeholder={
+                      isGrapeRequired
+                        ? 'Buscar uva (ej. Malbec)... *'
+                        : 'Buscar uva (opcional)...'
+                    }
+                    role="combobox"
+                    aria-expanded={showGrapeDropdown}
+                    aria-autocomplete="list"
+                    aria-controls="quickadd-grape-listbox"
+                    aria-activedescendant={
+                      activeGrapeIndex >= 0 ? `quickadd-grape-opt-${activeGrapeIndex}` : undefined
+                    }
+                    className={`w-full rounded-lg px-3.5 py-2.5 text-sm transition-all focus:outline-none pr-8 ${
+                      isLocked
+                        ? 'bg-neutral-900/60 border border-neutral-800 text-neutral-400 cursor-not-allowed'
+                        : 'bg-[#0a0a0c] border border-neutral-800 text-neutral-100 placeholder-neutral-600 focus:border-[#722F37]'
+                    }`}
+                  />
+                  <ChevronDown className="w-4 h-4 text-neutral-500 absolute right-2.5 top-3 pointer-events-none" />
+                </div>
+
+                {/* Dropdown de Uvas */}
+                {showGrapeDropdown && !isLocked && (
+                  <ul
+                    role="listbox"
+                    id="quickadd-grape-listbox"
+                    aria-label="Catálogo de uvas"
+                    className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-56 overflow-y-auto rounded-xl border border-white/[0.12] bg-[#141417]/95 backdrop-blur-xl shadow-2xl divide-y divide-white/[0.06]"
+                  >
+                    {filteredGrapes.length === 0 ? (
+                      <li className="p-3 text-xs text-neutral-400 text-center">
+                        No se encontraron uvas con ese nombre
+                      </li>
+                    ) : (
+                      filteredGrapes.map((grape, idx) => (
+                        <li
+                          key={grape.id}
+                          role="option"
+                          id={`quickadd-grape-opt-${idx}`}
+                          aria-selected={idx === activeGrapeIndex || selectedGrapeId === grape.id}
+                          onClick={() => handleSelectGrape(grape)}
+                          onMouseEnter={() => setActiveGrapeIndex(idx)}
+                          className={`p-2.5 cursor-pointer text-left transition-colors flex items-center justify-between text-xs ${
+                            idx === activeGrapeIndex || selectedGrapeId === grape.id
+                              ? 'bg-white/[0.08] text-white'
+                              : 'text-neutral-200 hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <span className="font-medium">{grape.name}</span>
+                          <span className="text-[10px] font-mono text-neutral-400 bg-white/[0.06] px-1.5 py-0.5 rounded capitalize">
+                            {grape.colorType}
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Añada y Cantidad */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label
@@ -747,26 +1223,7 @@ export default function QuickAddBottleModal({
                   />
                 )}
               </div>
-            </div>
 
-            {/* Ubicación de Estante y Cantidad */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="wine-location"
-                  className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
-                >
-                  Ubicación en Cava
-                </label>
-                <input
-                  id="wine-location"
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Ej. B2 · ESTANTE MEDIO"
-                  className="w-full bg-[#0a0a0c] border border-neutral-800 rounded-lg px-3.5 py-2.5 text-sm text-neutral-100 focus:outline-none focus:border-[#722F37] transition-all"
-                />
-              </div>
               <div className="space-y-1.5">
                 <label
                   htmlFor="wine-units"
@@ -786,20 +1243,96 @@ export default function QuickAddBottleModal({
               </div>
             </div>
 
+            {/* Ubicación de Estante */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="wine-location"
+                className="font-mono text-xs text-neutral-300 uppercase tracking-wide block"
+              >
+                Ubicación en Cava
+              </label>
+              <input
+                id="wine-location"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Ej. B2 · ESTANTE MEDIO"
+                className="w-full bg-[#0a0a0c] border border-neutral-800 rounded-lg px-3.5 py-2.5 text-sm text-neutral-100 focus:outline-none focus:border-[#722F37] transition-all"
+              />
+            </div>
+
+            {/* Imagen Opcional de la Etiqueta (Con vista previa y compresión a máx 1200px) */}
+            {!isLocked && (
+              <div className="space-y-1.5 pt-1">
+                <span className="font-mono text-xs text-neutral-300 uppercase tracking-wide block">
+                  Imagen de la Etiqueta (Opcional)
+                </span>
+
+                {imagePreviewUrl ? (
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-800 bg-[#16161a]">
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Vista previa de la etiqueta"
+                      className="w-14 h-14 object-cover rounded-lg border border-neutral-700 shrink-0"
+                    />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-xs font-semibold text-neutral-200 truncate">
+                        {imageFile?.name || 'etiqueta.jpg'}
+                      </span>
+                      <span className="text-[11px] font-mono text-neutral-400">
+                        {isResizingImage
+                          ? 'Optimizando imagen...'
+                          : `${Math.round((imageBlob?.size || imageFile?.size || 0) / 1024)} KB · Optimizada`}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors cursor-pointer"
+                      title="Eliminar imagen"
+                      aria-label="Eliminar imagen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="wine-image-file"
+                    className="flex flex-col items-center justify-center border border-dashed border-neutral-800 hover:border-neutral-700 bg-[#0e0e12]/60 hover:bg-[#141418] rounded-xl p-4 cursor-pointer transition-colors group"
+                  >
+                    <input
+                      id="wine-image-file"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center gap-2 text-neutral-400 group-hover:text-neutral-200 text-xs">
+                      <Upload className="w-4 h-4 text-[#fbbf24]" />
+                      <span>Subir foto de la etiqueta (JPEG, PNG o WebP)</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500 font-mono mt-1">
+                      Máx. 5 MB · Se redimensiona automáticamente a 1.200 px
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
+
             {/* Footer Submit */}
-            <div className="pt-4 border-t border-neutral-800 flex items-center justify-end gap-3">
+            <div className="pt-4 border-t border-neutral-800 flex items-center justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={handleResetAndClose}
                 disabled={isChecking || isSubmitting}
-                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isChecking || isSubmitting}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold border border-rose-500/30 shadow-[0_0_16px_rgba(114,47,55,0.4)] transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isChecking ? (
                   <>

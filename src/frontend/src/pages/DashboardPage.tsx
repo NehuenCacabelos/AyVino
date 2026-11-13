@@ -20,8 +20,6 @@ import {
 } from '../features/dashboard';
 import { searchCatalogWines } from '../features/dashboard/api/catalogApi';
 import QuickAddBottleModal from '../features/cava/components/QuickAddBottleModal';
-import { resolveWineTypeAndBottle } from '../features/cava/data/varietalsData';
-import apiClient from '../services/apiClient';
 import { useDebounce } from '../hooks/useDebounce';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import {
@@ -645,46 +643,19 @@ export default function DashboardPage() {
         isOpen={isCreateModalOpen}
         initialName={createInitialName}
         initialWine={activeCellarWine}
+        showToast={showNotification}
         onClose={() => {
           setIsCreateModalOpen(false);
           setActiveCellarWine(null);
           setCreateInitialName('');
         }}
         onAddBottle={async (payload) => {
-          const { wineType } = resolveWineTypeAndBottle(payload.varietal);
-          let mainGrapeId: number | undefined = undefined;
-          if (wineType === 'Red') mainGrapeId = 1;
-          else if (wineType === 'White') mainGrapeId = 9;
-
-          try {
-            await apiClient.post('/cellars/me/quick-add', {
-              name: payload.name,
-              wineryName: payload.winery,
-              wineType,
-              year: payload.vintage,
-              quantity: payload.units,
-              location: payload.location,
-              notes: payload.location,
-              matchedWineId: payload.matchedWineId ?? null,
-              mainGrapeId,
-            });
-
-            showNotification(`"${payload.name}" fue agregado con éxito a tu Cava.`);
-            if (refreshStock) {
-              await refreshStock();
-            } else {
-              setStockCount((prev) => prev + payload.units);
-            }
-            setReloadKey((prev) => prev + 1);
-          } catch (err: unknown) {
-            const errorMsg =
-              (err as { response?: { data?: { detail?: string; message?: string } } })?.response
-                ?.data?.detail ||
-              (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-              (err instanceof Error ? err.message : 'Error al guardar la botella en la cava.');
-            showNotification(errorMsg);
-            throw new Error(errorMsg, { cause: err });
+          if (refreshStock) {
+            await refreshStock();
+          } else {
+            setStockCount((prev) => prev + payload.units);
           }
+          setReloadKey((prev) => prev + 1);
         }}
       />
     </div>

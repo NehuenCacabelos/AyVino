@@ -92,5 +92,8 @@ export interface QuickAddBottlePayload {
   isJewel?: boolean;
   bottle: BottleKind;
   matchedWineId?: number | null;
+  wineType?: string;
+  mainGrapeId?: number | null;
+  imageFile?: File | null;
 }
 

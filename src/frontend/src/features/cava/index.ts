@@ -2,6 +2,8 @@ export * from './types';
 export * from './data/defaultVaultData';
 export * from './data/varietalsData';
 export * from './hooks/useMyCellarSummary';
+export * from './utils/imageResize';
+export * from './api/grapesCatalogCache';
 export { default as VaultHeader } from './components/VaultHeader';
 export { default as VaultVitals } from './components/VaultVitals';
 export { default as VaultTabs } from './components/VaultTabs';

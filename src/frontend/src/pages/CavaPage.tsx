@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Wine, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
+import type { AppOutletContext } from '../components/layout/AppLayout';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
 import {
   VaultHeader,
@@ -11,10 +13,8 @@ import {
   TechnicalSheetModal,
   QuickAddBottleModal,
   initialTastingLog,
-  resolveWineTypeAndBottle,
   type CellarWine,
   type WineSortOption,
-  type QuickAddBottlePayload,
   type TastingLogEntry,
 } from '../features/cava';
 import { apiClient } from '../services/apiClient';
@@ -34,6 +34,8 @@ import type { DashboardWine, UncorkSubmission } from '../types/wine';
  */
 export default function CavaPage() {
   const { user } = useAuth();
+  const outletContext = useOutletContext<AppOutletContext | null>();
+  const refreshStock = outletContext?.refreshStock;
 
   // 1. Colección y Datos de Bóveda: 100% datos reales desde la API backend
   const [wines, setWines] = useState<CellarWine[]>([]);
@@ -310,26 +312,11 @@ export default function CavaPage() {
     showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
   };
 
-  const handleAddBottle = async (payload: QuickAddBottlePayload) => {
-    const { wineType } = resolveWineTypeAndBottle(payload.varietal);
-    let mainGrapeId: number | undefined = undefined;
-    if (wineType === 'Red') mainGrapeId = 1;
-    else if (wineType === 'White') mainGrapeId = 9;
-
-    await apiClient.post('/cellars/me/quick-add', {
-      name: payload.name,
-      wineryName: payload.winery,
-      wineType,
-      year: payload.vintage,
-      quantity: payload.units,
-      location: payload.location,
-      notes: payload.location,
-      matchedWineId: payload.matchedWineId ?? null,
-      mainGrapeId,
-    });
-
-    showNotification(`"${payload.name}" fue agregado con éxito a tu Cava.`);
+  const handleAddBottle = async () => {
     await fetchBackendCellar();
+    if (refreshStock) {
+      await refreshStock();
+    }
   };
 
   // Nombre personalizado del sommelier/usuario
@@ -429,6 +416,7 @@ export default function CavaPage() {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onAddBottle={handleAddBottle}
+        showToast={showNotification}
       />
 
       <UncorkDialog
