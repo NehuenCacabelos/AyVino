@@ -280,3 +280,67 @@ Este documento consolida el avance, decisiones, problemas y verificaciones reali
 
 ## 6. Pendientes
 - Los 4 bloques (U1, U2, U3 y U4) se encuentran 100% finalizados, testeados y consolidados en la rama `fix/usuario-reparaciones`. Listo para revisión y entrega.
+
+
+---
+
+# USUARIO — BLOQUE U5: Alta de vino comunitario desde el modal de Cava
+**Rama**: `fix/usuario-alta-vino-comunitario` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **5.1 Backend: Sugerencia de Bodegas (`AyVino.Api`)**:
+  - `WinerySuggestItemDto`: DTO ligero `(int Id, string Name)`.
+  - `IWineryRepository` y `WineryRepository`: método `SuggestAsync` con filtro `status = 2`, búsqueda trigramática `similarity(name_key, @queryKey) > 0.3` y límite de 5 sugerencias.
+  - `IWineryService` y `WineryService`: validación para queries menores a 2 caracteres devolviendo array vacío.
+  - `WineryEndpoints`: endpoint público `GET /api/wineries/suggest?q={query}` con `.AllowAnonymous()`.
+- **5.2 Frontend: Utilidades y Caché de Catálogo**:
+  - `imageResize.ts`: función `resizeImageToMax(file, 1200)` para redimensionar en canvas antes de subir imagen (con fallback timer de 150ms para entornos de test).
+  - `grapesCatalogCache.ts`: obtención cached de cepas (`/api/grapes`) con persistencia en `sessionStorage` y función de ordenamiento contextual `sortGrapesForWineType`.
+- **5.3 Modal "Ingresar Lote" Mejorado (`QuickAddBottleModal.tsx`)**:
+  - Selector de Bodega con búsqueda y autocompletado contra `/api/wineries/suggest` o texto libre.
+  - Selector de Tipo de Vino (Tinto, Blanco, Rosado, Espumoso, Naranjo).
+  - Selector de Cepa Principal obligatorio para Tintos y Blancos con búsqueda de cepas; opcional para otros tipos.
+  - Subida de imagen opcional con previsualización, botón de eliminar y compresión a máx. 1200px.
+  - Flujo en dos pasos: alta rápida `POST /api/cellars/me/quick-add` y subida de imagen `PUT /api/wines/{wineId}/vintages/{vintageId}/image`.
+  - Alerta de error 409 Conflict en el modal sin cerrar ni perder datos.
+  - Prevención de doble submit mediante ref y botón deshabilitado.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/backend/AyVino.Api/Features/Wineries/DTOs/WinerySuggestItemDto.cs`
+  - `tests/AyVino.UnitTests/UsuarioBloqueU5Tests.cs`
+  - `src/frontend/src/features/cava/api/grapesCatalogCache.ts`
+  - `src/frontend/src/features/cava/utils/imageResize.ts`
+  - `src/frontend/tests/features/cava/QuickAddBottleModalBloqueU5.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U5.md`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Wineries/Repositories/IWineryRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Repositories/WineryRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Services/IWineryService.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Services/WineryService.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/WineryEndpoints.cs`
+  - `src/frontend/src/features/cava/components/QuickAddBottleModal.tsx`
+  - `src/frontend/src/features/cava/index.ts`
+  - `src/frontend/src/features/cava/types.ts`
+  - `src/frontend/src/pages/CavaPage.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+
+## 3. Decisiones técnicas
+- Cepa obligatoria en frontend para tintos y blancos asegurando consistencia en la base comunitaria.
+- Subida de imagen secundaria asincrónica: un fallo en la imagen no anula la creación de la botella en cava, sino que notifica al usuario con un toast de advertencia.
+- Búsqueda trigramática en PostgreSQL (`pg_trgm`) para tolerancia a faltas y coincidencias aproximadas en bodegas.
+
+## 4. Problemas encontrados
+- Soporte de imagen en Vitest/JSDOM resuelto mediante escape timeout de 150ms en `resizeImageToMax`.
+- Mock repository en tests unitarios resuelto con default interface implementation en `IWineryRepository`.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 749/749 pruebas superadas (7 nuevas pruebas unitarias).
+- `npm run build`: Compilación exitosa en 675 ms.
+- `npm test`: 281/281 pruebas superadas (58 suites pasando, 11 pruebas nuevas en Vitest).
+- `npm run lint`: 0 errores en código creado/modificado.
+
+## 6. Pendientes
+- Bloque U5 completado y verificado. Procediendo a Bloque U6 (Descorchar, favoritos e historial de catas).
