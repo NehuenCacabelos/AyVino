@@ -343,4 +343,85 @@ Este documento consolida el avance, decisiones, problemas y verificaciones reali
 - `npm run lint`: 0 errores en código creado/modificado.
 
 ## 6. Pendientes
-- Bloque U5 completado y verificado. Procediendo a Bloque U6 (Descorchar, favoritos e historial de catas).
+- Ninguno en este bloque. Completado y fusionado en `fix/usuario-reparaciones`.
+
+
+---
+
+# USUARIO — BLOQUE U6: Descorchar, favoritos e historial de catas
+**Rama**: `fix/usuario-perfil-marcas` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **6.1 Backend: Descorche Atómico (`AyVino.Api`)**:
+  - `ICellarItemRepository` y `CellarItemRepository`: método `UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct)`.
+  - Operación en transacción atómica con `SELECT ... FOR UPDATE`:
+    - Valida existencia y cantidad > 0 (retorna null / 409 si no hay unidades disponibles).
+    - Si cantidad > 1: decrementa en 1 y actualiza timestamp.
+    - Si cantidad == 1: elimina la fila en `cellar_items` cumpliendo la restricción de base de datos `CHECK (quantity >= 1)`.
+    - Upsert idempotente en `user_wines`: `INSERT ... ON CONFLICT (user_id, wine_id) DO UPDATE SET is_tried = TRUE, updated_at = now() AT TIME ZONE 'utc'`.
+    - Retorna `CellarItemListRow` con cantidad remanente (0 si se descorchó la última).
+  - `ICellarItemService` y `CellarItemService`: validación de titularidad de la cava vía `EnsureCellarOwnedAsync` (404 Not Found si es ajena) y lanzamiento de `ConflictException` (409) con mensaje explicativo si no hay stock.
+  - `CellarItemEndpoints` y `CellarEndpoints`: endpoints `POST /api/cellars/{cellarId}/items/{wineVintageId}/uncork` y `POST /api/cellars/me/items/{wineVintageId}/uncork`.
+- **6.2 Backend: Enriquecimiento de DTOs de `user-wines`**:
+  - `UserWineListItemDto`: sumó `string? WineryName = null`, `int? Vintage = null`, `string? ImageUrl = null`.
+  - `UserWineListRow` y `UserWineRepository`: `LEFT JOIN wineries wy` y subquery lateral para `latest_vintage`, proyectando bodega, última cosecha e imagen de botella.
+  - `UserWineMappingExtensions`: mapeo limpio hacia el DTO para consumo en vistas de perfil y catas.
+- **6.3 Frontend: Integración de Descorche en Cava y Dashboard**:
+  - `CavaPage.tsx`: invocación de `/api/cellars/{cellarId}/items/{vintageId}/uncork`, refresco del backend (`fetchBackendCellar`), actualización del stock global (`refreshStock`) y toast con el error exacto del backend ante 409 sin falso éxito.
+  - `DashboardPage.tsx`: atajo al descorche de bodega, actualización reactiva del contador de stock en navbar y manejo de excepciones.
+- **6.4 Frontend: Favoritos en Dashboard**:
+  - Carga única en `DashboardPage` con `GET /api/user-wines/me?favorite=true&pageSize=100` y almacenamiento en `Set<number>`.
+  - Actualización optimista inmediata en `DashboardWineCard` y `WineryBlock`.
+  - Persistencia con `PUT /api/wines/{wineId}/favorite` y `DELETE /api/wines/{wineId}/favorite`.
+  - Rollback reactivo ante error de red y notificación toast contextual sin mensajes falsos ("añadido a tus Deseados" erradicado).
+- **6.5 Frontend: Perfil de Usuario y Navegación**:
+  - `ProfilePage.tsx`: cálculo de `activeTab` como estado 100% derivado del query param `tab` (`cava` | `historial` | `favoritos`), mapeando retrocompatiblemente `?tab=deseados` a `'favoritos'`.
+  - Pestaña "Favoritos": consulta `GET /api/user-wines/me?favorite=true` y muestra tarjetas con foto de botella, bodega, añada y calificación.
+  - Pestaña "Historial de Catas": consulta `GET /api/user-wines/me?tried=true` con tarjetas identificadas con badge "Probado".
+  - `DashboardNavbar.tsx`: reemplazo de anclas `#historial` y `#deseados` por enlaces `<Link>` a `/perfil/{username}?tab=historial` y `?tab=favoritos` en menú desktop y drawer móvil.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU6Tests.cs`
+  - `src/frontend/tests/pages/ProfilePageBloqueU6.test.tsx`
+  - `src/frontend/tests/pages/DashboardAndCavaBloqueU6.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U6.md`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Cellars/Endpoints/CellarItemEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Endpoints/CellarEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Repositories/ICellarItemRepository.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Repositories/CellarItemRepository.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Services/ICellarItemService.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Services/CellarItemService.cs`
+  - `src/backend/AyVino.Api/Features/Users/DTOs/UserWineListItemDto.cs`
+  - `src/backend/AyVino.Api/Features/Users/Models/UserWineListRow.cs`
+  - `src/backend/AyVino.Api/Features/Users/Repositories/UserWineRepository.cs`
+  - `src/backend/AyVino.Api/Features/Users/UserWineMappingExtensions.cs`
+  - `src/frontend/src/features/dashboard/components/DashboardNavbar.tsx`
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx`
+  - `src/frontend/src/features/dashboard/components/WineryBlock.tsx`
+  - `src/frontend/src/features/users/types/index.ts`
+  - `src/frontend/src/pages/CavaPage.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+  - `src/frontend/src/pages/ProfilePage.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+
+## 3. Decisiones técnicas
+- Eliminación física de la fila en `cellar_items` cuando la cantidad llega a cero, respetando el check `quantity >= 1` de la base de datos PostgreSQL, retornando el DTO con `Quantity = 0`.
+- Cumplimiento estricto de las reglas frontend de Algoritmos y Programación III: `activeTab` como estado derivado puro de la URL sin sincronizaciones reactivas en `useEffect`, e inmutabilidad en sets y colecciones.
+- Optimismo transaccional con reversión automática en favoritos para máxima fluidez de usuario en el catálogo.
+
+## 4. Problemas encontrados
+- Restricción de base de datos `CHECK (quantity >= 1)` que rechazaba `UPDATE quantity = 0`: resuelto eliminando el registro y devolviendo el DTO con 0.
+- Conflicto de texto duplicado en pruebas de Vitest entre el botón de confirmación y el toast: resuelto focalizando la aserción en el role accesible `status`.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 754/754 pruebas superadas (5 nuevas pruebas en `UsuarioBloqueU6Tests`).
+- `npm run build`: Compilación exitosa en 659 ms.
+- `npm test`: 290/290 pruebas superadas (60 suites pasando, 9 pruebas nuevas en Vitest).
+- `npm run lint`: 0 errores en código creado/modificado.
+
+## 6. Conclusión y Cierre de Bloques de Usuario
+Con la finalización de los bloques U1 a U6, el circuito completo del usuario de AyVino (búsqueda tolerante, catálogo con filtros reales, fichas técnicas con añadas, notas de cata con rating y badges de comunidad, alta de vinos comunitarios con cepas y compresión de fotos, descorche atómico, favoritos y perfil con historial de catas) queda 100% implementado, probado y validado.
