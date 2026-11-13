@@ -2,6 +2,8 @@ using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.DTOs;
 using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
+using AyVino.Api.Features.Grapes.Enums;
+using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
@@ -12,7 +14,8 @@ public class CellarItemService(
     ICellarRepository cellarRepository,
     ICellarItemRepository itemRepository,
     IWineVintageRepository wineVintageRepository,
-    IWineRepository? wineRepository = null) : ICellarItemService
+    IWineRepository? wineRepository = null,
+    IGrapeRepository? grapeRepository = null) : ICellarItemService
 {
     private const int MaxQuantity = 999;
     private const int MaxNotesLength = 500;
@@ -83,6 +86,37 @@ public class CellarItemService(
         }
         else
         {
+            if (grapeRepository is null)
+                throw new InvalidOperationException("GrapeRepository is required for QuickAdd creating a new wine.");
+
+            List<WineGrape> grapes = [];
+
+            if (parsedWineType is WineType.Red or WineType.White)
+            {
+                if (!request.MainGrapeId.HasValue)
+                {
+                    throw new ValidationException("La uva principal es obligatoria para vinos tintos y blancos.");
+                }
+            }
+
+            if (request.MainGrapeId.HasValue)
+            {
+                var grape = await grapeRepository.GetByIdAsync(request.MainGrapeId.Value, ct)
+                    ?? throw new ValidationException($"La uva con ID {request.MainGrapeId.Value} no existe.");
+
+                if (parsedWineType == WineType.Red && grape.ColorType != ColorType.Red)
+                {
+                    throw new ValidationException("Los vinos tintos exigen una uva tinta.");
+                }
+
+                if (parsedWineType == WineType.Orange && grape.ColorType != ColorType.White && grape.ColorType != ColorType.Rose)
+                {
+                    throw new ValidationException("Los vinos naranjos solo aceptan uvas blancas o de piel rosada.");
+                }
+
+                grapes.Add(new WineGrape { GrapeId = grape.Id, Percentage = 100 });
+            }
+
             var wineEntity = new Wine
             {
                 Name = request.Name.Trim(),
@@ -100,7 +134,7 @@ public class CellarItemService(
                 RegisterDate = DateTime.UtcNow
             };
 
-            var createdWine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, Enumerable.Empty<WineGrape>(), ct);
+            var createdWine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
             var vintages = await wineVintageRepository.GetAllByWineIdAsync(createdWine.Id, ct);
             var createdVintage = vintages.FirstOrDefault()
                 ?? throw new InvalidOperationException("Failed to retrieve created wine vintage.");

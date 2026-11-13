@@ -13,5 +13,6 @@ public record QuickAddCellarWineRequestDto(
     [property: Range(1, 999, ErrorMessage = "La cantidad debe estar entre 1 y 999.")] int Quantity = 1,
     [property: StringLength(100, ErrorMessage = "La ubicación no puede superar los 100 caracteres.")] string? Location = null,
     [property: StringLength(500, ErrorMessage = "Las notas no pueden superar los 500 caracteres.")] string? Notes = null,
-    [property: Range(1, int.MaxValue, ErrorMessage = "El id de vino coincidente debe ser mayor a 0.")] int? MatchedWineId = null);
+    [property: Range(1, int.MaxValue, ErrorMessage = "El id de vino coincidente debe ser mayor a 0.")] int? MatchedWineId = null,
+    [property: Range(1, int.MaxValue, ErrorMessage = "El id de la uva debe ser mayor a 0.")] int? MainGrapeId = null);
 

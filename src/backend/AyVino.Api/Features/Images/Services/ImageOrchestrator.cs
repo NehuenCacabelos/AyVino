@@ -396,7 +396,7 @@ public class ImageOrchestrator(
         }
 
         var isUploader = vintage.UploadedByUserId == actor.UserId;
-        if (isUploader && vintage.ApprovalStatus == ApprovalStatus.Pending)
+        if (isUploader && (vintage.ApprovalStatus == ApprovalStatus.Pending || wine.SourceType == SourceType.Community || wine.WineryId == null))
         {
             return;
         }

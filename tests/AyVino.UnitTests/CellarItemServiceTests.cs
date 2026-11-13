@@ -3,6 +3,9 @@ using AyVino.Api.Features.Cellars.DTOs;
 using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Cellars.Services;
+using AyVino.Api.Features.Grapes.Enums;
+using AyVino.Api.Features.Grapes.Models;
+using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
 using NSubstitute;
@@ -15,11 +18,12 @@ public class CellarItemServiceTests
     private readonly ICellarItemRepository _itemRepository = Substitute.For<ICellarItemRepository>();
     private readonly IWineVintageRepository _wineVintageRepository = Substitute.For<IWineVintageRepository>();
     private readonly IWineRepository _wineRepository = Substitute.For<IWineRepository>();
+    private readonly IGrapeRepository _grapeRepository = Substitute.For<IGrapeRepository>();
     private readonly CellarItemService _cellarItemService;
 
     public CellarItemServiceTests()
     {
-        _cellarItemService = new CellarItemService(_cellarRepository, _itemRepository, _wineVintageRepository, _wineRepository);
+        _cellarItemService = new CellarItemService(_cellarRepository, _itemRepository, _wineVintageRepository, _wineRepository, _grapeRepository);
     }
 
     [Fact]
@@ -276,6 +280,7 @@ public class CellarItemServiceTests
             LastChangeAt = DateTime.UtcNow
         };
         _itemRepository.GetRowAsync(10, 100, Arg.Any<CancellationToken>()).Returns(row);
+        _grapeRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(new Grape { Id = 1, Name = "Malbec", ColorType = ColorType.Red });
 
         var request = new QuickAddCellarWineRequestDto(
             Name: "Vino Comunitario",
@@ -284,7 +289,8 @@ public class CellarItemServiceTests
             Year: 2021,
             Quantity: 2,
             Location: "A1",
-            Notes: "Botella guardada");
+            Notes: "Botella guardada",
+            MainGrapeId: 1);
 
         // Act
         var result = await _cellarItemService.QuickAddAsync(1, 10, request);
@@ -377,8 +383,9 @@ public class CellarItemServiceTests
             LastChangeAt = DateTime.UtcNow
         };
         _itemRepository.GetRowAsync(99, 120, Arg.Any<CancellationToken>()).Returns(row);
+        _grapeRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(new Grape { Id = 1, Name = "Malbec", ColorType = ColorType.Red });
 
-        var request = new QuickAddCellarWineRequestDto("Malbec Joven", "Bodega Nueva", "Red", 2023, 1);
+        var request = new QuickAddCellarWineRequestDto("Malbec Joven", "Bodega Nueva", "Red", 2023, 1, MainGrapeId: 1);
 
         // Act
         var result = await _cellarItemService.QuickAddAsync(1, null, request);
