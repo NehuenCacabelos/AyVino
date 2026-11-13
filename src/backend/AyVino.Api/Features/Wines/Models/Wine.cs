@@ -15,4 +15,6 @@ public record Wine
     public int? DuplicateOfWineId { get; init; }
     public int RatingSum { get; init; }
     public int ReviewCount { get; init; }
+    public string NameKey { get; init; } = string.Empty;
+    public string? WineryTextKey { get; init; }
 }

@@ -1,6 +1,7 @@
 using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Features.Wineries.Models;
+using AyVino.Api.Features.Wines;
 using Dapper;
 
 namespace AyVino.Api.Features.Wineries.Repositories;
@@ -11,6 +12,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
         w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
         w.user_id, w.status, w.register_date, w.latitude, w.longitude,
         w.logo_image_id AS LogoImageId, w.banner_image_id AS BannerImageId,
+        w.name_key AS NameKey,
         s.name AS StateName, c.name AS RegionName
         FROM wineries w
         LEFT JOIN locations l ON l.id = w.location_id
@@ -76,9 +78,10 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
     {
+        var nameKey = WineLabelNormalizer.ComputeWineryKey(winery.Name);
         const string sql = """
-            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_image_id, banner_image_id)
-            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoImageId, @BannerImageId)
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_image_id, banner_image_id, name_key)
+            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoImageId, @BannerImageId, @NameKey)
             RETURNING id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -97,14 +100,16 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.Latitude,
                 winery.Longitude,
                 winery.LogoImageId,
-                winery.BannerImageId
+                winery.BannerImageId,
+                NameKey = nameKey
             }, cancellationToken: ct));
 
-        return winery with { Id = id };
+        return winery with { Id = id, NameKey = nameKey };
     }
 
     public async Task<bool> UpdateAsync(Winery winery, CancellationToken ct = default)
     {
+        var nameKey = WineLabelNormalizer.ComputeWineryKey(winery.Name);
         const string sql = """
             UPDATE wineries
             SET name = @Name,
@@ -113,7 +118,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 foundation_year = @FoundationYear,
                 website = @Website,
                 latitude = @Latitude,
-                longitude = @Longitude
+                longitude = @Longitude,
+                name_key = @NameKey
             WHERE id = @Id;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -127,7 +133,8 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
                 winery.FoundationYear,
                 winery.Website,
                 winery.Latitude,
-                winery.Longitude
+                winery.Longitude,
+                NameKey = nameKey
             }, cancellationToken: ct));
         return rowsAffected > 0;
     }
