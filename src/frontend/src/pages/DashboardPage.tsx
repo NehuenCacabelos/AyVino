@@ -60,7 +60,7 @@ function getWineryInitials(name: string): string {
  * - Grilla unificada de cards con skeletons tenues durante la carga y Empty State editorial.
  */
 export default function DashboardPage() {
-  const { stockCount, setStockCount } = useOutletContext<AppOutletContext>();
+  const { stockCount, setStockCount, refreshStock } = useOutletContext<AppOutletContext>();
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [heroFilters, setHeroFilters] = useState<HeroFilterState>({
@@ -75,6 +75,7 @@ export default function DashboardPage() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createInitialName, setCreateInitialName] = useState('');
+  const [activeCellarWine, setActiveCellarWine] = useState<DashboardWine | null>(null);
 
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
@@ -220,8 +221,9 @@ export default function DashboardPage() {
   };
 
   const handleAddToCellar = (wine: DashboardWine) => {
-    setStockCount((prev) => prev + 1);
-    showNotification(`"${wine.name}" fue agregado con éxito a tu Cava.`);
+    setActiveCellarWine(wine);
+    setCreateInitialName(wine.name);
+    setIsCreateModalOpen(true);
   };
 
   // Filtrado reactivo derivado en cliente exclusivamente para chips rápidos
@@ -638,31 +640,51 @@ export default function DashboardPage() {
         onSave={handleUncorkSaved}
       />
 
-      {/* Modal de Alta Rápida desde el Buscador */}
+      {/* Modal de Alta Rápida e Ingreso a Cava */}
       <QuickAddBottleModal
         isOpen={isCreateModalOpen}
         initialName={createInitialName}
-        onClose={() => setIsCreateModalOpen(false)}
+        initialWine={activeCellarWine}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setActiveCellarWine(null);
+          setCreateInitialName('');
+        }}
         onAddBottle={async (payload) => {
           const { wineType } = resolveWineTypeAndBottle(payload.varietal);
           let mainGrapeId: number | undefined = undefined;
           if (wineType === 'Red') mainGrapeId = 1;
           else if (wineType === 'White') mainGrapeId = 9;
 
-          await apiClient.post('/cellars/me/quick-add', {
-            name: payload.name,
-            wineryName: payload.winery,
-            wineType,
-            year: payload.vintage,
-            quantity: payload.units,
-            location: payload.location,
-            notes: payload.location,
-            matchedWineId: payload.matchedWineId ?? null,
-            mainGrapeId,
-          });
+          try {
+            await apiClient.post('/cellars/me/quick-add', {
+              name: payload.name,
+              wineryName: payload.winery,
+              wineType,
+              year: payload.vintage,
+              quantity: payload.units,
+              location: payload.location,
+              notes: payload.location,
+              matchedWineId: payload.matchedWineId ?? null,
+              mainGrapeId,
+            });
 
-          showNotification(`¡Etiqueta "${payload.name}" guardada con éxito!`);
-          setReloadKey((prev) => prev + 1);
+            showNotification(`"${payload.name}" fue agregado con éxito a tu Cava.`);
+            if (refreshStock) {
+              await refreshStock();
+            } else {
+              setStockCount((prev) => prev + payload.units);
+            }
+            setReloadKey((prev) => prev + 1);
+          } catch (err: unknown) {
+            const errorMsg =
+              (err as { response?: { data?: { detail?: string; message?: string } } })?.response
+                ?.data?.detail ||
+              (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+              (err instanceof Error ? err.message : 'Error al guardar la botella en la cava.');
+            showNotification(errorMsg);
+            throw new Error(errorMsg, { cause: err });
+          }
         }}
       />
     </div>

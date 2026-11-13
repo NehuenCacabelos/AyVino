@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Wine, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
@@ -10,7 +10,6 @@ import {
   VaultLogbookModule,
   TechnicalSheetModal,
   QuickAddBottleModal,
-  initialVaultWines,
   initialTastingLog,
   resolveWineTypeAndBottle,
   type CellarWine,
@@ -29,26 +28,15 @@ import type { DashboardWine, UncorkSubmission } from '../types/wine';
  *
  * Adaptada a la cava personal:
  * - Identidad limpia sin píldoras redundantes y métricas esenciales (Total, Varietal, Añada más antigua).
- * - Sección "Tus botellas" con listado integral y ordenamiento ágil por cosecha.
+ * - Sección "Tus botellas" conectada en exclusiva a la API real de AyVino (sin maquetas de muestra).
  * - Módulos complementarios: Sommelier Inteligente, Telemetría Térmica/UV y Bitácora de Catas.
  * - Modales interactivos: Ficha Técnica Enológica, Ingreso Rápido de Botella y Registro de Descorche.
  */
 export default function CavaPage() {
   const { user } = useAuth();
 
-  // 1. Colección y Datos de Bóveda (inicializa desde localStorage o colección curada, luego sincroniza con API)
-  const [wines, setWines] = useState<CellarWine[]>(() => {
-    const saved = localStorage.getItem('ayvino_vault_wines');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return initialVaultWines;
-      }
-    }
-    return initialVaultWines;
-  });
-
+  // 1. Colección y Datos de Bóveda: 100% datos reales desde la API backend
+  const [wines, setWines] = useState<CellarWine[]>([]);
   const [cellarId, setCellarId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -74,11 +62,6 @@ export default function CavaPage() {
 
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Sincronización en LocalStorage
-  useEffect(() => {
-    localStorage.setItem('ayvino_vault_wines', JSON.stringify(wines));
-  }, [wines]);
-
   useEffect(() => {
     localStorage.setItem('ayvino_vault_logbook', JSON.stringify(tastingLog));
   }, [tastingLog]);
@@ -90,67 +73,86 @@ export default function CavaPage() {
   }, []);
 
   // Carga desde backend .NET de la cava del usuario
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const fetchBackendCellar = useCallback(() => {
+    setIsLoading(true);
+    setReloadTrigger((prev) => prev + 1);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-    async function fetchBackendCellar() {
+
+    async function loadCellarData() {
       try {
         const response = await apiClient.get('/cellars/me');
-        const cellars = response.data;
-        let activeCellarId: number | null = null;
-        if (Array.isArray(cellars) && cellars.length > 0 && cellars[0].id) {
-          activeCellarId = cellars[0].id;
-        } else {
-          try {
-            const createdRes = await apiClient.post('/cellars', { name: 'Mi Cava' });
-            if (createdRes.data?.id) {
-              activeCellarId = createdRes.data.id;
-            }
-          } catch {
-            // Manejo silencioso si ya existe o hay concurrencia
+      const cellars = response.data;
+      let activeCellarId: number | null = null;
+      if (Array.isArray(cellars) && cellars.length > 0 && cellars[0].id) {
+        activeCellarId = cellars[0].id;
+      } else {
+        try {
+          const createdRes = await apiClient.post('/cellars', { name: 'Mi Cava' });
+          if (createdRes.data?.id) {
+            activeCellarId = createdRes.data.id;
           }
+        } catch {
+          // Manejo silencioso si ya existe o hay concurrencia
         }
+      }
 
-        if (activeCellarId && isMounted) {
-          setCellarId(activeCellarId);
-          const itemsResponse = await apiClient.get(`/cellars/${activeCellarId}/items`);
-          const items = itemsResponse.data;
-          if (Array.isArray(items) && items.length > 0 && isMounted) {
-            const mapped: CellarWine[] = items.map((item, idx) => ({
+      if (activeCellarId) {
+        setCellarId(activeCellarId);
+        const itemsResponse = await apiClient.get(`/cellars/${activeCellarId}/items`);
+        const items = itemsResponse.data;
+        if (Array.isArray(items)) {
+          const mapped: CellarWine[] = items.map((item, idx) => {
+            const score100 = item.averageRating
+              ? Math.round(Number(item.averageRating) * 20)
+              : undefined;
+            return {
               id: `api-item-${item.wineVintageId || idx}`,
-              name: item.name || 'Etiqueta de Colección',
-              winery: item.wineryNameText || 'Bodega Argentina',
-              region: 'Mendoza, Argentina',
-              varietal: item.wineType || 'Malbec',
-              vintage: item.year || 2020,
-              rating: item.averageRating ? Math.round(Number(item.averageRating) * 20) : 92,
-              criticBadge: item.averageRating ? `AY ${Math.round(Number(item.averageRating) * 20)}` : undefined,
+              name: item.name || '—',
+              winery: item.wineryName || item.wineryNameText || '—',
+              region: item.regionName || '—',
+              varietal: item.grapeName || item.wineType || '—',
+              vintage: item.year || 0,
+              rating: score100 || 0,
+              criticBadge: score100 ? `AY ${score100}` : undefined,
               units: item.quantity || 1,
-              location: item.notes || `ESTANTE #${idx + 1}`,
+              location: item.notes || '—',
               temperatureConst: '15°C CONSTANTE',
               agingStatus: item.year && item.year <= 2019 ? 'optimal' : 'aging',
-              agingStatusLabel: item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
+              agingStatusLabel:
+                item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
               isJewel: (item.averageRating && Number(item.averageRating) >= 4.5) || false,
               sourceType: item.wineryId ? 'Official' : 'Community',
               bottle: item.wineType === 'White' ? 'white' : 'red-burgundy',
               imageUrl: (item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl) || undefined,
-            }));
-            setWines(mapped);
-          }
+            };
+          });
+          setWines(mapped);
+        } else {
+          setWines([]);
         }
-      } catch {
-        // Fallback silencioso en caso de desconexión
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      } else {
+        setWines([]);
+      }
+    } catch {
+      setWines([]);
+    } finally {
+      if (isMounted) {
+        setIsLoading(false);
       }
     }
+  }
 
-    fetchBackendCellar();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  void loadCellarData();
+
+  return () => {
+    isMounted = false;
+  };
+}, [reloadTrigger]);
 
   const showNotification = (msg: string) => {
     clearTimeout(notificationTimerRef.current);
@@ -310,8 +312,11 @@ export default function CavaPage() {
 
   const handleAddBottle = async (payload: QuickAddBottlePayload) => {
     const { wineType } = resolveWineTypeAndBottle(payload.varietal);
+    let mainGrapeId: number | undefined = undefined;
+    if (wineType === 'Red') mainGrapeId = 1;
+    else if (wineType === 'White') mainGrapeId = 9;
 
-    const response = await apiClient.post('/cellars/me/quick-add', {
+    await apiClient.post('/cellars/me/quick-add', {
       name: payload.name,
       wineryName: payload.winery,
       wineType,
@@ -320,54 +325,11 @@ export default function CavaPage() {
       location: payload.location,
       notes: payload.location,
       matchedWineId: payload.matchedWineId ?? null,
+      mainGrapeId,
     });
 
-    const item = response.data;
-    const vintageId = item.wineVintageId;
-    const idKey = `api-item-${vintageId}`;
-
-    const score = item.averageRating ? Math.round(Number(item.averageRating) * 20) : 92;
-    const isJewelScore = (item.averageRating && Number(item.averageRating) >= 4.5) || false;
-
-    const newWine: CellarWine = {
-      id: idKey,
-      name: item.name || payload.name,
-      winery: item.wineryNameText || payload.winery,
-      region: payload.region || 'Mendoza, Argentina',
-      varietal: payload.varietal,
-      vintage: item.year || payload.vintage,
-      rating: score,
-      criticBadge: item.averageRating ? `AY ${score}` : undefined,
-      units: item.quantity || payload.units,
-      location: payload.location || 'A1 · ESTANTE SUP.',
-      temperatureConst: '15°C CONSTANTE',
-      terroirNote: `${payload.varietal} · Cosecha ${item.year || payload.vintage} · ${item.wineryNameText || payload.winery}`,
-      agingStatus: item.year && item.year <= 2019 ? 'optimal' : 'aging',
-      agingStatusLabel: item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
-      isJewel: isJewelScore,
-      sourceType: item.wineryId ? 'Official' : 'Community',
-      bottle: payload.bottle,
-      imageUrl: item.imageId ? (imageUrl(item.imageId, 'bottle') ?? undefined) : undefined,
-      altitude: '1.300 msnm',
-      oakAging: 'Crianza en barricas seleccionadas',
-      alcoholContent: '14.2% ABV',
-      tastingNotes: {
-        sight: 'Límpido, denso y brillante con matices vivos.',
-        nose: 'Aromas francos de tipicidad varietal y notas tostadas.',
-        mouth: 'Equilibrio sedoso, taninos maduros y gran persistencia.',
-        pairing: 'Carnes asadas, pastas rellenas o quesos de maduración media.',
-      },
-    };
-
-    setWines((prev) => {
-      const existingIdx = prev.findIndex((w) => w.id === idKey);
-      if (existingIdx >= 0) {
-        return prev.map((w, idx) => (idx === existingIdx ? { ...w, units: item.quantity || (w.units + payload.units) } : w));
-      }
-      return [newWine, ...prev];
-    });
-
-    showNotification(`¡Etiqueta ${newWine.name} guardada exitosamente en la cava!`);
+    showNotification(`"${payload.name}" fue agregado con éxito a tu Cava.`);
+    await fetchBackendCellar();
   };
 
   // Nombre personalizado del sommelier/usuario
@@ -424,16 +386,16 @@ export default function CavaPage() {
           ) : displayedWines.length === 0 ? (
             <div className="p-12 text-center rounded-xl bg-[#121216] border border-neutral-800 space-y-3">
               <Wine className="w-10 h-10 text-neutral-500 mx-auto" />
-              <h3 className="font-serif text-xl text-neutral-200">No hay etiquetas registradas</h3>
+              <h3 className="font-serif text-xl text-neutral-200">Tu cava está vacía</h3>
               <p className="text-xs text-neutral-400 max-w-md mx-auto">
                 Agregá tus botellas personales para guardarlas bajo registro de estiba y consultarlas cuando quieras descorchar.
               </p>
               <button
                 type="button"
                 onClick={() => setIsQuickAddOpen(true)}
-                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#722F37] text-white text-xs font-semibold"
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#722F37] hover:bg-[#5C1D24] text-white text-xs font-semibold cursor-pointer transition-colors"
               >
-                Ingresar Botella
+                Ingresar primera botella
               </button>
             </div>
           ) : (

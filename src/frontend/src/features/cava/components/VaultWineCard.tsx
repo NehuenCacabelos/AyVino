@@ -17,7 +17,7 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-mono text-[11px] text-[#fbbf24] tracking-wider uppercase truncate">
-              {wine.location}
+              {wine.location || '—'}
             </span>
             {wine.sourceType === 'Community' && (
               <span className="bg-amber-950/40 text-amber-300 border border-amber-800/40 font-mono text-[9px] px-1.5 py-0.5 rounded uppercase shrink-0">
@@ -29,9 +29,13 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)] shrink-0">
               {wine.criticBadge}
             </span>
-          ) : (
+          ) : wine.rating && wine.rating > 0 ? (
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-300 font-mono text-[11px] shrink-0">
               {wine.rating} PTS
+            </span>
+          ) : (
+            <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-400 font-mono text-[11px] shrink-0">
+              —
             </span>
           )}
         </div>
@@ -69,13 +73,14 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
         {/* Metadata & Title */}
         <div className="pt-1 space-y-1.5">
           <span className="font-mono text-[11px] text-[#ffb2b8] block tracking-wide uppercase">
-            {wine.region}
+            {wine.region || '—'}
           </span>
           <h3 className="font-serif text-lg sm:text-xl text-neutral-100 font-medium leading-snug line-clamp-2 group-hover:text-[#fde68a] transition-colors">
             {wine.name}
           </h3>
           <p className="text-xs text-neutral-400 font-sans line-clamp-2 leading-relaxed">
-            {wine.terroirNote || `${wine.varietal} · Cosecha ${wine.vintage} · ${wine.winery}`}
+            {wine.terroirNote ||
+              `${wine.varietal || '—'} · Cosecha ${wine.vintage || '—'} · ${wine.winery || '—'}`}
           </p>
         </div>
 

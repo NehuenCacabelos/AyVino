@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { DashboardNavbar } from '../../features/dashboard';
+import { useMyCellarSummary } from '../../features/cava';
 
 export interface AppOutletContext {
   stockCount: number;
   setStockCount: React.Dispatch<React.SetStateAction<number>>;
+  refreshStock?: () => Promise<void>;
 }
 
 /**
@@ -12,11 +14,26 @@ export interface AppOutletContext {
  * Layout compartido para la zona privada/autenticada de AyVino:
  * - Persiste DashboardNavbar y el footer compartido en el DOM, evitando desmontajes
  *   y pérdidas de estado visual al transicionar entre /dashboard, /cava, /maridaje y /catalogo.
- * - Aplica Lifting State Up para el inventario de botellas (stockCount), transmitiéndolo
- *   hacia las rutas hijas mediante el contexto de Outlet (useOutletContext).
+ * - Sincroniza el inventario de botellas (stockCount) con la API real mediante useMyCellarSummary,
+ *   transmitiéndolo hacia las rutas hijas mediante el contexto de Outlet (useOutletContext).
  */
 export default function AppLayout() {
-  const [stockCount, setStockCount] = useState(24);
+  const { totalBottles, refresh } = useMyCellarSummary();
+  const [overrideStock, setOverrideStock] = useState<number | null>(null);
+
+  const stockCount = overrideStock ?? totalBottles;
+
+  const handleRefresh = async () => {
+    setOverrideStock(null);
+    await refresh();
+  };
+
+  const setStockCount: React.Dispatch<React.SetStateAction<number>> = (action) => {
+    setOverrideStock((prev) => {
+      const current = prev ?? totalBottles;
+      return typeof action === 'function' ? action(current) : action;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#0d0d0f] text-neutral-200 font-sans selection:bg-[#722F37] selection:text-white flex flex-col justify-between">
@@ -25,7 +42,15 @@ export default function AppLayout() {
 
       {/* Contenedor dinámico de rutas hijas con inyección de contexto */}
       <div className="flex-1 flex flex-col">
-        <Outlet context={{ stockCount, setStockCount } satisfies AppOutletContext} />
+        <Outlet
+          context={
+            {
+              stockCount,
+              setStockCount,
+              refreshStock: handleRefresh,
+            } satisfies AppOutletContext
+          }
+        />
       </div>
 
       {/* Footer Editorial Persistente */}
