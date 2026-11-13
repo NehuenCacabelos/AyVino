@@ -32,6 +32,9 @@ import {
 import type { AppOutletContext } from '../components/layout/AppLayout';
 
 interface WineryGroup {
+  key: string;
+  wineryId?: number;
+  logoImageId?: string;
   name: string;
   region: string;
   initials: string;
@@ -268,27 +271,51 @@ export default function DashboardPage() {
 
   // Agrupamiento dinámico por bodega a partir de los datos reales de la base de datos
   const wineryGroups = useMemo<WineryGroup[]>(() => {
-    const map = new Map<string, { region: string; wines: DashboardWine[] }>();
+    const map = new Map<
+      string,
+      {
+        key: string;
+        wineryId?: number;
+        logoImageId?: string;
+        name: string;
+        region: string;
+        wines: DashboardWine[];
+      }
+    >();
 
     filteredWines.forEach((wine) => {
       const wineryName = wine.winery?.trim() || 'Bodega Colección';
       const region = wine.region?.trim() || 'Mendoza, Argentina';
+      const groupKey =
+        wine.wineryId != null
+          ? `winery-id-${wine.wineryId}`
+          : `winery-text-${wineryName.toLowerCase()}`;
 
-      const existing = map.get(wineryName);
+      const existing = map.get(groupKey);
       if (existing) {
         existing.wines.push(wine);
+        if (!existing.logoImageId && wine.wineryLogoImageId) {
+          existing.logoImageId = wine.wineryLogoImageId;
+        }
       } else {
-        map.set(wineryName, {
+        map.set(groupKey, {
+          key: groupKey,
+          wineryId: wine.wineryId,
+          logoImageId: wine.wineryLogoImageId,
+          name: wineryName,
           region,
           wines: [wine],
         });
       }
     });
 
-    return Array.from(map.entries()).map(([name, data]) => ({
-      name,
+    return Array.from(map.values()).map((data) => ({
+      key: data.key,
+      wineryId: data.wineryId,
+      logoImageId: data.logoImageId,
+      name: data.name,
       region: data.region,
-      initials: getWineryInitials(name),
+      initials: getWineryInitials(data.name),
       wines: data.wines,
     }));
   }, [filteredWines]);
@@ -520,7 +547,9 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-14">
                 {paginatedWineryGroups.map((group) => (
                   <WineryBlock
-                    key={group.name}
+                    key={group.key}
+                    wineryId={group.wineryId}
+                    logoImageId={group.logoImageId}
                     name={group.name}
                     region={group.region}
                     initials={group.initials}
