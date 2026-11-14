@@ -545,8 +545,8 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 END AS SourceType,
                 w.duplicate_of_wine_id AS DuplicateOfWineId,
                 CASE
-                    WHEN w.review_count >= 5 THEN ROUND((w.rating_sum::numeric / w.review_count), 2)
-                    WHEN w.review_count > 0 THEN ROUND((w.rating_sum::numeric / w.review_count), 1)
+                    WHEN w.review_count >= 5 THEN ROUND((w.rating_sum / w.review_count), 1)
+                    WHEN w.review_count > 0 THEN ROUND((w.rating_sum / w.review_count), 1)
                     ELSE NULL
                 END AS AverageRating,
                 w.review_count AS ReviewCount,

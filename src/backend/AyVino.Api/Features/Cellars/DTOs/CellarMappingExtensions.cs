@@ -19,8 +19,8 @@ public static class CellarMappingExtensions
         row.WineryNameText,
         row.Year,
         row.ImageId,
-        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) :
-        row.ReviewCount > 0 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 1) : null,
+        row.ReviewCount >= 5 ? Math.Round(row.RatingSum / row.ReviewCount, 1) :
+        row.ReviewCount > 0 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : null,
         row.ReviewCount,
         row.Quantity,
         row.PurchaseDate,
@@ -42,7 +42,7 @@ public static class CellarMappingExtensions
         row.WineryNameText,
         row.Year,
         row.ImageId,
-        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : null,
+        row.ReviewCount >= 5 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : null,
         row.ReviewCount);
 
     public static IReadOnlyList<PublicCellarItemResponseDto> ToPublicResponseDtoList(this IEnumerable<CellarItemListRow> rows) =>

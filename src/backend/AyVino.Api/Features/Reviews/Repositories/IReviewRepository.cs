@@ -15,7 +15,7 @@ public interface IReviewRepository
         int? wineId = null,
         int? wineVintageId = null,
         int? userId = null,
-        int? rating = null,
+        decimal? rating = null,
         CancellationToken ct = default);
     Task<bool> ExistsForUserAndVintageAsync(int userId, int wineVintageId, CancellationToken ct = default);
     Task<int> CreateAsync(Review review, CancellationToken ct = default);

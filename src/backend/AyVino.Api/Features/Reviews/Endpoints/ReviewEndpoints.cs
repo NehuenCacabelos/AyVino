@@ -19,7 +19,7 @@ public static class ReviewEndpoints
             int? wineId = null,
             int? wineVintageId = null,
             int? userId = null,
-            int? rating = null) =>
+            decimal? rating = null) =>
         {
             var reviews = await service.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
             return Results.Ok(reviews);

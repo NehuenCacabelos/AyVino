@@ -149,7 +149,7 @@ public class UsuarioBloqueU11Tests
 
         Assert.Equal("El rating debe estar entre 1 y 5.", ex.Message);
         await _cellarRepository.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<decimal?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class UsuarioBloqueU11Tests
 
         Assert.Equal("El comentario no puede superar los 1000 caracteres.", ex.Message);
         await _cellarRepository.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
-        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<decimal?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class UsuarioBloqueU11Tests
         _cellarRepository.GetByIdAsync(cellarId, userId, Arg.Any<CancellationToken>())
             .Returns(new Cellar { Id = cellarId, UserId = userId, Name = "Mi Cava" });
 
-        _itemRepository.UncorkAsync(userId, cellarId, vintageId, 5, "Buena cata", Arg.Any<CancellationToken>())
+        _itemRepository.UncorkAsync(userId, cellarId, vintageId, 5m, "Buena cata", Arg.Any<CancellationToken>())
             .Returns((CellarItemListRow?)null);
 
         // Act & Assert
@@ -209,7 +209,7 @@ public class UsuarioBloqueU11Tests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.UncorkAsync(userId, foreignCellarId, vintageId, request));
 
-        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await _itemRepository.DidNotReceive().UncorkAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<decimal?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

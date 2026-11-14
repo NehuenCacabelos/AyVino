@@ -15,7 +15,7 @@ public record CellarItemListRow
     public string? GrapeName { get; init; }
     public int? Year { get; init; }
     public Guid? ImageId { get; init; }
-    public int RatingSum { get; init; }
+    public decimal RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public int Quantity { get; init; }
     public DateOnly? PurchaseDate { get; init; }

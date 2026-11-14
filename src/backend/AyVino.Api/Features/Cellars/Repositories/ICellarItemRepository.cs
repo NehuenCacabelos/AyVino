@@ -15,6 +15,6 @@ public interface ICellarItemRepository
     Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
         UncorkAsync(userId, cellarId, wineVintageId, null, null, ct);
 
-    Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, int? rating, string? comment, CancellationToken ct = default) =>
+    Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, decimal? rating, string? comment, CancellationToken ct = default) =>
         Task.FromResult<CellarItemListRow?>(null);
 }

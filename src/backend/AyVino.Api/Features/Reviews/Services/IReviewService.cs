@@ -17,6 +17,6 @@ public interface IReviewService
         int? wineId = null,
         int? wineVintageId = null,
         int? userId = null,
-        int? rating = null,
+        decimal? rating = null,
         CancellationToken ct = default);
 }

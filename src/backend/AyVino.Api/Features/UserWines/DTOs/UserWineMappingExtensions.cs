@@ -14,7 +14,7 @@ public static class UserWineMappingExtensions
         row.WineryId,
         row.WineryNameText,
         // Misma regla que WineResponseDto: el promedio recién se muestra desde 5 reseñas.
-        row.ReviewCount >= 5 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 2) : (row.ReviewCount > 0 ? Math.Round((decimal)row.RatingSum / row.ReviewCount, 1) : null),
+        row.ReviewCount >= 5 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : (row.ReviewCount > 0 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : null),
         row.ReviewCount,
         row.IsWanted,
         row.IsTried,

@@ -13,7 +13,7 @@ public record Wine
     public int? LocationId { get; init; }
     public SourceType SourceType { get; init; }
     public int? DuplicateOfWineId { get; init; }
-    public int RatingSum { get; init; }
+    public decimal RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public string NameKey { get; init; } = string.Empty;
     public string? WineryTextKey { get; init; }

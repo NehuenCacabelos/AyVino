@@ -93,7 +93,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         int? wineId = null,
         int? wineVintageId = null,
         int? userId = null,
-        int? rating = null,
+        decimal? rating = null,
         CancellationToken ct = default)
     {
         var conditions = new List<string>();

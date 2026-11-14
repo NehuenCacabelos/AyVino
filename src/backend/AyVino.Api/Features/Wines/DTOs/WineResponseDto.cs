@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Wines.DTOs;
 
 public record WineResponseDto(
@@ -10,5 +13,5 @@ public record WineResponseDto(
     int? LocationId,
     string SourceType,
     int? DuplicateOfWineId,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount);

@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Reviews.DTOs;
 
 public record ReviewResponseDto(
@@ -6,7 +9,7 @@ public record ReviewResponseDto(
     string UserName,
     int WineVintageId,
     int? VintageYear,
-    int Rating,
+    [property: JsonConverter(typeof(DecimalOnePlaceJsonConverter))] decimal Rating,
     string? Comment,
     DateTime CreatedAt,
     DateTime? UpdatedAt);

@@ -192,7 +192,7 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
     public Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
         UncorkAsync(userId, cellarId, wineVintageId, null, null, ct);
 
-    public async Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, int? rating, string? comment, CancellationToken ct = default)
+    public async Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, decimal? rating, string? comment, CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         if (connection.State != ConnectionState.Open) await connection.OpenAsync(ct);

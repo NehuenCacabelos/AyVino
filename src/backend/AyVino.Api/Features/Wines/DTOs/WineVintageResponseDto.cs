@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Wines.DTOs;
 
 public record WineGrapeResponseDto(int GrapeId, decimal? Percentage);
@@ -13,6 +16,6 @@ public record WineVintageResponseDto(
     string ApprovalStatus,
     int UploadedByUserId,
     DateTime RegisterDate,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount,
     IEnumerable<WineGrapeResponseDto> Grapes);

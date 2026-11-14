@@ -73,7 +73,7 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
                         AgingAdvice: v.AgingAdvice,
                         ImageId: v.ImageId,
                         ApprovalStatus: v.ApprovalStatus.ToString(),
-                        AverageRating: v.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round((decimal)v.RatingSum / v.ReviewCount, 2) : null,
+                        AverageRating: v.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round(v.RatingSum / v.ReviewCount, 1) : null,
                         ReviewCount: v.ReviewCount,
                         RegisterDate: v.RegisterDate,
                         Grapes: grapesByVintage.TryGetValue(v.Id, out var grapesList) ? grapesList : Array.Empty<WineryCatalogGrapeDto>()))
@@ -85,7 +85,7 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             Description: w.Description,
             WineType: w.WineType.ToString(),
             SourceType: w.SourceType.ToString(),
-            AverageRating: w.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round((decimal)w.RatingSum / w.ReviewCount, 2) : null,
+            AverageRating: w.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round(w.RatingSum / w.ReviewCount, 1) : null,
             ReviewCount: w.ReviewCount,
             Vintages: vintagesByWine.TryGetValue(w.Id, out var vintagesList) ? vintagesList : Array.Empty<WineryCatalogVintageDto>()))
             .ToList();
@@ -115,7 +115,7 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
 
         var ratingsAndTotals = await repository.GetPublicRatingsAndTotalsAsync(wineryId, isPreview, ct);
         decimal? averageRating = ratingsAndTotals.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage
-            ? Math.Round((decimal)ratingsAndTotals.RatingSum / ratingsAndTotals.ReviewCount, 2)
+            ? Math.Round(ratingsAndTotals.RatingSum / ratingsAndTotals.ReviewCount, 1)
             : null;
 
         var totalsDto = new WineryPublicTotalsDto(ratingsAndTotals.Labels, ratingsAndTotals.Vintages);
@@ -225,7 +225,7 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
                         AgingAdvice: v.AgingAdvice,
                         ImageId: v.ImageId,
                         ApprovalStatus: v.ApprovalStatus.ToString(),
-                        AverageRating: v.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round((decimal)v.RatingSum / v.ReviewCount, 2) : null,
+                        AverageRating: v.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round(v.RatingSum / v.ReviewCount, 1) : null,
                         ReviewCount: v.ReviewCount,
                         Grapes: grapesByVintage.TryGetValue(v.Id, out var gList) ? gList : Array.Empty<WineryPublicCatalogGrapeDto>()))
                     .ToList());
@@ -236,7 +236,7 @@ public class WineryCatalogService(IWineryCatalogRepository repository) : IWinery
             Description: w.Description,
             WineType: w.WineType.ToString(),
             SourceType: w.SourceType.ToString(),
-            AverageRating: w.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round((decimal)w.RatingSum / w.ReviewCount, 2) : null,
+            AverageRating: w.ReviewCount >= WineryCatalogConstants.MinReviewsForAverage ? Math.Round(w.RatingSum / w.ReviewCount, 1) : null,
             ReviewCount: w.ReviewCount,
             Vintages: vintagesByWine.TryGetValue(w.Id, out var vList) ? vList : Array.Empty<WineryPublicCatalogVintageDto>()))
             .ToList();

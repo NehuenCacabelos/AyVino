@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Wines.DTOs;
 
 public record CatalogWineItemDto(
@@ -16,7 +19,7 @@ public record CatalogWineItemDto(
     string? ImageUrl,
     string SourceType,
     int? DuplicateOfWineId,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount,
     Guid? WineryLogoImageId = null);
 

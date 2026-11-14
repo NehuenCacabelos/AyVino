@@ -4,6 +4,7 @@ using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Grapes.Enums;
 using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Reviews.Validation;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
@@ -253,8 +254,8 @@ public class CellarItemService(
 
     public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, UncorkCellarItemRequestDto? request, CancellationToken ct = default)
     {
-        if (request?.Rating.HasValue == true && (request.Rating.Value is < 1 or > 5))
-            throw new ValidationException("El rating debe estar entre 1 y 5.");
+        if (request?.Rating.HasValue == true)
+            RatingValidator.Validate(request.Rating.Value);
 
         if (request?.Comment?.Length > 1000)
             throw new ValidationException("El comentario no puede superar los 1000 caracteres.");
