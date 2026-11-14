@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Wine, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../features/auth';
 import type { AppOutletContext } from '../components/layout/AppLayout';
-import { DashboardNavbar, UncorkDialog } from '../features/dashboard';
+import { UncorkDialog } from '../features/dashboard';
 import {
   VaultHeader,
   VaultVitals,
@@ -364,9 +364,6 @@ export default function CavaPage() {
         </aside>
       )}
 
-      {/* 1. Navbar Superior Persistente */}
-      <DashboardNavbar stockCount={vitals.totalBottles} />
-
       {/* 2. Contenido Principal de Cava Privada */}
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 sm:gap-10 px-4 sm:px-6 lg:px-8 pb-24 pt-24 sm:pt-28 relative z-10">
         {/* Encabezado Editorial de Bóveda */}
@@ -446,24 +443,6 @@ export default function CavaPage() {
         onClose={() => setUncorkingWine(null)}
         onSave={handleUncorkSaved}
       />
-
-      {/* 4. Footer Editorial */}
-      <footer className="border-t border-neutral-900 bg-[#08080a] relative z-10 transition-colors">
-        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-8 text-xs text-neutral-500">
-          <div className="flex items-center gap-2">
-            <span className="font-serif text-lg font-bold tracking-tight text-neutral-100">
-              AyVino<span className="text-[#ffb2b8]">.</span>
-            </span>
-            <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-widest pl-2 border-l border-neutral-800">
-              Alta Cava &amp; Archivo Enológico
-            </span>
-          </div>
-
-          <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-neutral-500 text-center sm:text-right">
-            Beber con moderación · Prohibida su venta a menores de 18 años
-          </span>
-        </div>
-      </footer>
     </div>
   );
 }
