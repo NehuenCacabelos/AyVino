@@ -55,12 +55,23 @@ public static class ReviewEndpoints
           .WithName("DeleteReview")
           .WithSummary("Borra una reseña propia (usuario) o modera cualquier reseña (administrador).");
 
-        app.MapGroup("/api/wine-vintages/{vintageId:int}/reviews")
-           .WithTags("Reviews")
-           .MapGet("/", async (int vintageId, int pageNumber, int pageSize, IReviewService service, CancellationToken ct) =>
+        var vintageGroup = app.MapGroup("/api/wine-vintages/{vintageId:int}/reviews")
+           .WithTags("Reviews");
+
+        vintageGroup.MapGet("/", async (int vintageId, int pageNumber, int pageSize, IReviewService service, CancellationToken ct) =>
                 Results.Ok(await service.GetAllByVintageAsync(vintageId, pageNumber, pageSize, ct)))
            .WithName("GetReviewsByVintage")
            .WithSummary("Lista paginada de reseñas de una cosecha puntual.");
+
+        vintageGroup.MapGet("/me", async (int vintageId, ClaimsPrincipal user, IReviewService service, CancellationToken ct) =>
+        {
+            var userId = user.GetUserId();
+            var review = await service.GetByVintageAndUserAsync(vintageId, userId, ct);
+            return review is not null ? Results.Ok(review) : Results.NotFound();
+        })
+        .RequireAuthorization()
+        .WithName("GetMyReviewByVintage")
+        .WithSummary("Obtiene la reseña del usuario autenticado para una cosecha puntual (404 si no tiene).");
 
         app.MapGroup("/api/wines/{wineId:int}/reviews")
            .WithTags("Reviews")

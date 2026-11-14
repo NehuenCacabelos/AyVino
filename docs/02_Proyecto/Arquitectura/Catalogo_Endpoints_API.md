@@ -332,18 +332,19 @@ Gestión de reseñas comunitarias y valoraciones (1 a 5 estrellas) por cosecha y
 | `PUT` | `/api/reviews/{id}` | Autenticado (Solo autor) | Actualiza el puntaje o comentario de una reseña propia. | `UpdateReviewRequestDto` | `200 OK` (`ReviewResponseDto`) |
 | `DELETE`| `/api/reviews/{id}` | Autenticado (Solo autor) | Elimina una reseña propia y recalcula agregaciones. | - | `204 NoContent` |
 | `GET` | `/api/wine-vintages/{vintageId}/reviews` | Público | Lista paginada de reseñas de una cosecha específica. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
+| `GET` | `/api/wine-vintages/{vintageId}/reviews/me` | Autenticado | Obtiene la reseña del usuario autenticado para una cosecha puntual (404 si aún no la calificó). | - | `200 OK` (`ReviewResponseDto`) |
 | `GET` | `/api/wines/{wineId}/reviews` | Público | Feed agregado y paginado de reseñas de una etiqueta (todas sus cosechas). | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
 
 ---
 
-## 10.1 Catas Privadas y Bitácora (`/api/users/me/tastings`)
+## 10.1 Descorches y Bitácora (`/api/users/me/uncorks`)
 
-Bitácora personal y confidencial de catas del usuario aficionado. Soporta múltiples registros de cata por vino/añada (con fecha, notas privadas y calificación de 1,0 a 5,0 con precisión decimal). Cada registro de cata actualiza la calificación de la reseña pública del usuario de forma desacoplada (las notas privadas nunca se exponen al público).
+Bitácora personal y cronológica de eventos de descorche del usuario. Cada descorche (desde la cava o directo) registra fecha y cava opcional. Si se envía `rating` (1,0 a 5,0 con un decimal), se crea o actualiza en la misma transacción la reseña del usuario para esa cosecha. Si se provee `comment`, actualiza el comentario de la reseña; si se omite, se conserva el comentario previo.
 
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/users/me/tastings` | Autenticado | Registra una nueva cata privada para una cosecha de vino (desde ficha técnica con `cellarId: null` o desde cava). | `CreateTastingRequestDto` | `201 Created` (`TastingResponseDto`) |
-| `GET` | `/api/users/me/tastings` | Autenticado | Obtiene la bitácora cronológica paginada de catas del usuario actual, con filtro opcional por cosecha. | Query params: `wineVintageId?`, `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<TastingListItemDto>`) |
+| `POST` | `/api/users/me/uncorks` | Autenticado | Registra un nuevo evento de descorche para una cosecha (sin cava). | `CreateUncorkRequestDto` | `201 Created` (`UncorkResponseDto`) |
+| `GET` | `/api/users/me/uncorks` | Autenticado | Obtiene la bitácora cronológica paginada de descorches del usuario actual (con calificación y comentario actual de la reseña vía LEFT JOIN), con filtro opcional por cosecha. | Query params: `wineVintageId?`, `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UncorkListItemDto>`) |
 
 ---
 

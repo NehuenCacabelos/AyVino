@@ -9,6 +9,7 @@ public interface IReviewService
     Task<ReviewResponseDto> UpdateAsync(int id, UpdateReviewRequestDto request, int userId, CancellationToken ct = default);
     Task DeleteAsync(int id, Actor actor, CancellationToken ct = default);
     Task DeleteAsync(int id, int userId, CancellationToken ct = default);
+    Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default);
     Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<IEnumerable<ReviewResponseDto>> GetAllByWineAsync(int wineId, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(

@@ -44,13 +44,17 @@ Cada clase está decorada con el atributo `[Migration(version)]` donde la versi�
 | `20261005002` | `EnablePgTrgm.cs` | Extensión PostgreSQL | Habilita `pg_trgm` y crea índices trigram (GIN/GiST) para búsqueda difusa en vinos y bodegas. |
 | `20261005003` | `CreateCellarsTables.cs` | `cellars`, `cellar_items` | Cavas personales del usuario (`cellars`) y botellas/cosechas almacenadas en cada cava (`cellar_items`). |
 | `20261114001` | `M20261114001_AlterReviewRatingsAndRatingSumsToNumeric.cs` | `reviews`, `wines`, `wine_vintages` | Soporte de puntuación decimal: `reviews.rating` migra de `smallint` a `numeric(2,1)` con CHECK 1.0 a 5.0; `rating_sum` en `wines` y `wine_vintages` migra a `numeric(12,1)`. |
-| `20261114002` | `M20261114002_CreateTastingsTable.cs` | `tastings` | Tabla `tastings` para la bitácora privada de catas de vinos/cosechas (`id`, `user_id`, `wine_vintage_id`, `cellar_id`, `rating numeric(2,1)`, `comment`, `tasted_at`, `created_at`). |
+| `20261114002` | `M20261114002_CreateTastingsTable.cs` | `tastings` | Creación inicial de tabla de catas (reemplazada posteriormente por migración 003). |
+| `20261114003` | `M20261114003_RenameTastingsToUncorks.cs` | `uncorks` | Renombra `tastings` a `uncorks`, elimina columnas `rating` y `comment`, renombra `tasted_at` a `uncorked_at` y el índice asociado. La tabla registra eventos de descorche (`id`, `user_id`, `wine_vintage_id`, `cellar_id`, `uncorked_at`, `created_at`). |
 
 ---
 
-### Regla de Negocio: Catas Privadas vs. Reseñas Públicas
-1. **Catas (`tastings`)**: Bitácora privada del usuario. Cada descorche o acción de "Registrar mi cata" crea una cata con su fecha, puntaje y notas personales. El comentario de la cata vive únicamente en `tastings` y **nunca** se copia a la reseña pública.
-2. **Reseña pública (`reviews`)**: Una única reseña por cosecha por usuario (`uq_reviews_user_wine_vintage`). Cuando el usuario registra una cata con puntaje, se crea la reseña pública con ese puntaje (sin comentario) o, si ya existía, se actualiza **solo** su calificación conservando el comentario público previamente redactado.
+### Regla de Negocio: Reseña Única y Eventos de Descorche (U14)
+1. **Reseña única (`reviews`)**: Hay una **única** forma de calificar y comentar: la reseña (una por usuario y cosecha, calificación 1,0 a 5,0 con paso 0,1).
+2. **Eventos de descorche (`uncorks`)**: Cada descorche (desde la cava o directamente desde el perfil) registra un evento cronológico con su fecha y cava opcional.
+   - Si se informa `rating`: en la misma transacción se crea o actualiza la reseña del usuario para esa cosecha. Si se adjunta un `comment` no nulo, reemplaza el comentario de la reseña; si se omite o es nulo, se conserva el existente. El comentario exige puntaje.
+   - Sin `rating`: se registra el descorche, se descuenta el stock (si vino de cava) y se marca el vino como probado en `user_wines`, sin alterar la reseña.
+   - Las consultas de bitácora (`GET /api/users/me/uncorks`) obtienen el puntaje y comentario vigentes mediante `LEFT JOIN reviews`.
 
 ---
 

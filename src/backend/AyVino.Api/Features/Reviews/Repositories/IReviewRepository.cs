@@ -7,6 +7,7 @@ public interface IReviewRepository
 {
     Task<Review?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<ReviewResponseDto?> GetResponseByIdAsync(int id, CancellationToken ct = default);
+    Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default);
     Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<IEnumerable<ReviewResponseDto>> GetAllByWineAsync(int wineId, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<IEnumerable<AdminReviewListItemDto>> GetPagedForAdminAsync(

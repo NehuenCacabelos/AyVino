@@ -13,4 +13,7 @@ public record AdminReviewListItemDto(
     int WineVintageId,
     int WineId,
     string WineName,
-    int? Year);
+    int? Year)
+{
+    public AdminReviewListItemDto() : this(0, 0m, null, default, null, null, 0, 0, string.Empty, null) { }
+}

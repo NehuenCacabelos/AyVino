@@ -260,28 +260,27 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
             await connection.ExecuteAsync(
                 new CommandDefinition(markTriedSql, new { UserId = userId, WineId = current.WineId }, transaction, cancellationToken: ct));
 
-            // Cada descorche crea una cata privada en tastings (el comentario es privado y no va a la reseña pública)
-            const string insertTastingSql = """
-                INSERT INTO tastings (user_id, wine_vintage_id, cellar_id, rating, comment, tasted_at, created_at)
-                VALUES (@UserId, @WineVintageId, @CellarId, @Rating, @Comment, now() AT TIME ZONE 'utc', now() AT TIME ZONE 'utc');
+            // Cada descorche crea un evento en uncorks
+            const string insertUncorkSql = """
+                INSERT INTO uncorks (user_id, wine_vintage_id, cellar_id, uncorked_at, created_at)
+                VALUES (@UserId, @WineVintageId, @CellarId, now() AT TIME ZONE 'utc', now() AT TIME ZONE 'utc');
                 """;
             await connection.ExecuteAsync(
-                new CommandDefinition(insertTastingSql, new
+                new CommandDefinition(insertUncorkSql, new
                 {
                     UserId = userId,
                     WineVintageId = wineVintageId,
-                    CellarId = cellarId,
-                    Rating = rating,
-                    Comment = comment
+                    CellarId = cellarId
                 }, transaction, cancellationToken: ct));
 
             if (rating.HasValue)
             {
                 const string upsertReviewSql = """
                     INSERT INTO reviews (user_id, wine_vintage_id, rating, comment, created_at)
-                    VALUES (@UserId, @WineVintageId, @Rating, NULL, now() AT TIME ZONE 'utc')
+                    VALUES (@UserId, @WineVintageId, @Rating, @Comment, now() AT TIME ZONE 'utc')
                     ON CONFLICT (user_id, wine_vintage_id) DO UPDATE
                     SET rating = EXCLUDED.rating,
+                        comment = COALESCE(EXCLUDED.comment, reviews.comment),
                         updated_at = now() AT TIME ZONE 'utc';
                     """;
                 await connection.ExecuteAsync(
@@ -289,7 +288,8 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
                     {
                         UserId = userId,
                         WineVintageId = wineVintageId,
-                        Rating = rating.Value
+                        Rating = rating.Value,
+                        Comment = comment
                     }, transaction, cancellationToken: ct));
 
                 const string updateVintageRatingSql = """

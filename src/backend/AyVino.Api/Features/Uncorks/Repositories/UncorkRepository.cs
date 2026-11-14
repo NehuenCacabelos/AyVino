@@ -2,12 +2,12 @@ using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.Models;
-using AyVino.Api.Features.Tastings.DTOs;
+using AyVino.Api.Features.Uncorks.DTOs;
 using Dapper;
 
-namespace AyVino.Api.Features.Tastings.Repositories;
+namespace AyVino.Api.Features.Uncorks.Repositories;
 
-public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastingRepository
+public class UncorkRepository(IDbConnectionFactory connectionFactory) : IUncorkRepository
 {
     private const string SelectCellarItemRowSql = """
         SELECT ci.wine_vintage_id AS WineVintageId, wv.wine_id AS WineId,
@@ -40,29 +40,30 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
         ) main_grape ON TRUE
         """;
 
-    public async Task<TastingResponseDto?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<UncorkResponseDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT t.id AS Id,
-                   t.user_id AS UserId,
+            SELECT u.id AS Id,
+                   u.user_id AS UserId,
                    wv.wine_id AS WineId,
-                   t.wine_vintage_id AS WineVintageId,
-                   t.cellar_id AS CellarId,
-                   t.rating AS Rating,
-                   t.comment AS Comment,
-                   t.tasted_at AS TastedAt,
-                   t.created_at AS CreatedAt
-            FROM tastings t
-            JOIN wine_vintages wv ON wv.id = t.wine_vintage_id
-            WHERE t.id = @Id;
+                   u.wine_vintage_id AS WineVintageId,
+                   u.cellar_id AS CellarId,
+                   r.rating AS Rating,
+                   r.comment AS Comment,
+                   u.uncorked_at AS UncorkedAt,
+                   u.created_at AS CreatedAt
+            FROM uncorks u
+            JOIN wine_vintages wv ON wv.id = u.wine_vintage_id
+            LEFT JOIN reviews r ON r.wine_vintage_id = u.wine_vintage_id AND r.user_id = u.user_id
+            WHERE u.id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QuerySingleOrDefaultAsync<TastingResponseDto>(
+        return await connection.QuerySingleOrDefaultAsync<UncorkResponseDto>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<TastingListItemDto>> GetPagedByUserIdAsync(
+    public async Task<IEnumerable<UncorkListItemDto>> GetPagedByUserIdAsync(
         int userId,
         int pageNumber,
         int pageSize,
@@ -72,30 +73,31 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
         var offset = (pageNumber - 1) * pageSize;
         const string sql = """
             SELECT
-                t.id AS Id,
+                u.id AS Id,
                 v.wine_id AS WineId,
-                t.wine_vintage_id AS WineVintageId,
+                u.wine_vintage_id AS WineVintageId,
                 w.name AS WineName,
                 COALESCE(wy.name, w.winery_name_text) AS WineryName,
                 v.year AS Year,
                 v.image_id AS ImageId,
-                t.rating AS Rating,
-                t.comment AS Comment,
-                t.tasted_at AS TastedAt,
-                c.name AS CellarName
-            FROM tastings t
-            JOIN wine_vintages v ON t.wine_vintage_id = v.id
+                c.name AS CellarName,
+                u.uncorked_at AS UncorkedAt,
+                r.rating AS Rating,
+                r.comment AS Comment
+            FROM uncorks u
+            JOIN wine_vintages v ON u.wine_vintage_id = v.id
             JOIN wines w ON v.wine_id = w.id
             LEFT JOIN wineries wy ON w.winery_id = wy.id
-            LEFT JOIN cellars c ON t.cellar_id = c.id
-            WHERE t.user_id = @UserId
-              AND (@WineVintageId IS NULL OR t.wine_vintage_id = @WineVintageId)
-            ORDER BY t.tasted_at DESC, t.id DESC
+            LEFT JOIN cellars c ON u.cellar_id = c.id
+            LEFT JOIN reviews r ON r.wine_vintage_id = u.wine_vintage_id AND r.user_id = u.user_id
+            WHERE u.user_id = @UserId
+              AND (@WineVintageId IS NULL OR u.wine_vintage_id = @WineVintageId)
+            ORDER BY u.uncorked_at DESC, u.id DESC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<TastingListItemDto>(
+        return await connection.QueryAsync<UncorkListItemDto>(
             new CommandDefinition(sql, new
             {
                 UserId = userId,
@@ -105,13 +107,13 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
             }, cancellationToken: ct));
     }
 
-    public async Task<TastingExecutionResult> RecordTastingInTransactionAsync(
+    public async Task<UncorkExecutionResult> RecordUncorkInTransactionAsync(
         int userId,
         int wineVintageId,
         int? cellarId,
         decimal? rating,
         string? comment,
-        DateTime tastedAt,
+        DateTime uncorkedAt,
         CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -179,22 +181,20 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
                 }
             }
 
-            // 3. Insertar cata en tastings (el comentario es PRIVADO, vive solo aquí)
-            const string insertTastingSql = """
-                INSERT INTO tastings (user_id, wine_vintage_id, cellar_id, rating, comment, tasted_at, created_at)
-                VALUES (@UserId, @WineVintageId, @CellarId, @Rating, @Comment, @TastedAt, now() AT TIME ZONE 'utc')
+            // 3. Insertar evento en uncorks
+            const string insertUncorkSql = """
+                INSERT INTO uncorks (user_id, wine_vintage_id, cellar_id, uncorked_at, created_at)
+                VALUES (@UserId, @WineVintageId, @CellarId, @UncorkedAt, now() AT TIME ZONE 'utc')
                 RETURNING id, created_at;
                 """;
 
-            var (tastingId, createdAt) = await connection.QuerySingleAsync<(int Id, DateTime CreatedAt)>(
-                new CommandDefinition(insertTastingSql, new
+            var (uncorkId, createdAt) = await connection.QuerySingleAsync<(int Id, DateTime CreatedAt)>(
+                new CommandDefinition(insertUncorkSql, new
                 {
                     UserId = userId,
                     WineVintageId = wineVintageId,
                     CellarId = cellarId,
-                    Rating = rating,
-                    Comment = comment,
-                    TastedAt = tastedAt
+                    UncorkedAt = uncorkedAt
                 }, transaction, cancellationToken: ct));
 
             // 4. Marcar vino como probado (user_wines)
@@ -208,14 +208,15 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
             await connection.ExecuteAsync(
                 new CommandDefinition(markTriedSql, new { UserId = userId, WineId = wineId.Value }, transaction, cancellationToken: ct));
 
-            // 5. Si la cata trae puntaje: upsert de la reseña pública (actualiza SOLO rating y conserva comentario)
+            // 5. Si trae puntaje: crear o actualizar la reseña única del usuario para esa cosecha
             if (rating.HasValue)
             {
                 const string upsertReviewSql = """
                     INSERT INTO reviews (user_id, wine_vintage_id, rating, comment, created_at)
-                    VALUES (@UserId, @WineVintageId, @Rating, NULL, now() AT TIME ZONE 'utc')
+                    VALUES (@UserId, @WineVintageId, @Rating, @Comment, now() AT TIME ZONE 'utc')
                     ON CONFLICT (user_id, wine_vintage_id) DO UPDATE
                     SET rating = EXCLUDED.rating,
+                        comment = COALESCE(EXCLUDED.comment, reviews.comment),
                         updated_at = now() AT TIME ZONE 'utc';
                     """;
                 await connection.ExecuteAsync(
@@ -223,7 +224,8 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
                     {
                         UserId = userId,
                         WineVintageId = wineVintageId,
-                        Rating = rating.Value
+                        Rating = rating.Value,
+                        Comment = comment
                     }, transaction, cancellationToken: ct));
 
                 const string updateVintageRatingSql = """
@@ -245,20 +247,29 @@ public class TastingRepository(IDbConnectionFactory connectionFactory) : ITastin
                     new CommandDefinition(updateWineRatingSql, new { WineId = wineId.Value }, transaction, cancellationToken: ct));
             }
 
+            // 6. Obtener la reseña actual del usuario para esta cosecha (para el DTO resultante)
+            const string selectCurrentReviewSql = """
+                SELECT rating AS Rating, comment AS Comment
+                FROM reviews
+                WHERE user_id = @UserId AND wine_vintage_id = @WineVintageId;
+                """;
+            var currentReview = await connection.QuerySingleOrDefaultAsync<(decimal? Rating, string? Comment)?>(
+                new CommandDefinition(selectCurrentReviewSql, new { UserId = userId, WineVintageId = wineVintageId }, transaction, cancellationToken: ct));
+
             await transaction.CommitAsync(ct);
 
-            var tastingResponse = new TastingResponseDto(
-                tastingId,
+            var uncorkResponse = new UncorkResponseDto(
+                uncorkId,
                 userId,
                 wineId.Value,
                 wineVintageId,
                 cellarId,
-                rating,
-                comment,
-                tastedAt,
+                currentReview?.Rating ?? rating,
+                currentReview?.Comment ?? comment,
+                uncorkedAt,
                 createdAt);
 
-            return new TastingExecutionResult(tastingResponse, updatedCellarItem);
+            return new UncorkExecutionResult(uncorkResponse, updatedCellarItem);
         }
         catch
         {

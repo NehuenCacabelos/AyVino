@@ -95,6 +95,14 @@ public class ReviewService(
         return await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
     }
 
+    public async Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default)
+    {
+        if (wineVintageId <= 0)
+            throw new ValidationException("El ID de la cosecha debe ser mayor a 0.");
+
+        return await reviewRepository.GetByVintageAndUserAsync(wineVintageId, userId, ct);
+    }
+
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
         ValidatePagination(pageNumber, pageSize);

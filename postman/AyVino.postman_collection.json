@@ -3406,7 +3406,7 @@
                     }
                   ]
                 },
-                "description": "Rese├▒as de la cosecha"
+                "description": "Reseñas de la cosecha"
               },
               "response": [],
               "event": [
@@ -3415,6 +3415,45 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Review by Vintage",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/1/reviews/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "1",
+                    "reviews",
+                    "me"
+                  ]
+                },
+                "description": "Obtiene la reseña del propio usuario autenticado para una cosecha puntual (404 si aún no tiene reseña)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5359,10 +5398,10 @@
           ]
         },
         {
-          "name": "Tastings",
+          "name": "Uncorks",
           "item": [
             {
-              "name": "Create Tasting (Direct)",
+              "name": "Create Uncork (Without Cellar)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -5379,10 +5418,10 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"wineVintageId\": 1,\n  \"cellarId\": null,\n  \"rating\": 4.5,\n  \"comment\": \"Gran bouquet frutal y persistencia.\",\n  \"tastedAt\": \"2026-11-14T12:00:00Z\"\n}"
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"rating\": 4.5,\n  \"comment\": \"Gran bouquet frutal y persistencia.\",\n  \"uncorkedAt\": \"2026-11-14T12:00:00Z\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/me/tastings",
+                  "raw": "{{baseUrl}}/api/users/me/uncorks",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -5390,11 +5429,11 @@
                     "api",
                     "users",
                     "me",
-                    "tastings"
+                    "uncorks"
                   ],
                   "query": []
                 },
-                "description": "Registra una cata privada de una cosecha para el usuario autenticado."
+                "description": "Registra un evento de descorche para el usuario autenticado (actualizando o creando su reseña si se incluye calificación)."
               },
               "response": [],
               "event": [
@@ -5413,7 +5452,7 @@
               ]
             },
             {
-              "name": "Get My Tastings",
+              "name": "Get My Uncorks",
               "request": {
                 "method": "GET",
                 "header": [
@@ -5424,7 +5463,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/me/tastings?pageNumber=1&pageSize=10",
+                  "raw": "{{baseUrl}}/api/users/me/uncorks?pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -5432,7 +5471,7 @@
                     "api",
                     "users",
                     "me",
-                    "tastings"
+                    "uncorks"
                   ],
                   "query": [
                     {
@@ -5445,7 +5484,7 @@
                     }
                   ]
                 },
-                "description": "Obtiene la bitacora paginada de catas privadas del usuario autenticado."
+                "description": "Obtiene la bitácora paginada de eventos de descorche del usuario autenticado con su reseña vigente."
               },
               "response": [],
               "event": [
@@ -5463,7 +5502,7 @@
               ]
             },
             {
-              "name": "Get My Tastings Filtered by Vintage",
+              "name": "Get My Uncorks Filtered by Vintage",
               "request": {
                 "method": "GET",
                 "header": [
@@ -5474,7 +5513,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/users/me/tastings?wineVintageId={{vintageId}}&pageNumber=1&pageSize=10",
+                  "raw": "{{baseUrl}}/api/users/me/uncorks?wineVintageId={{vintageId}}&pageNumber=1&pageSize=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -5482,7 +5521,7 @@
                     "api",
                     "users",
                     "me",
-                    "tastings"
+                    "uncorks"
                   ],
                   "query": [
                     {
@@ -5499,7 +5538,7 @@
                     }
                   ]
                 },
-                "description": "Filtra las catas privadas del usuario por cosecha especifica."
+                "description": "Filtra los eventos de descorche del usuario por cosecha específica."
               },
               "response": [],
               "event": [

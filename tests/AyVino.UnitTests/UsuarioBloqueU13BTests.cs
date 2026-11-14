@@ -4,9 +4,9 @@ using AyVino.Api.Features.Cellars.DTOs;
 using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Cellars.Services;
-using AyVino.Api.Features.Tastings.DTOs;
-using AyVino.Api.Features.Tastings.Repositories;
-using AyVino.Api.Features.Tastings.Services;
+using AyVino.Api.Features.Uncorks.DTOs;
+using AyVino.Api.Features.Uncorks.Repositories;
+using AyVino.Api.Features.Uncorks.Services;
 using AyVino.Api.Features.Users.DTOs;
 using AyVino.Api.Features.Users.Models;
 using AyVino.Api.Features.Wines.Enums;
@@ -19,31 +19,31 @@ namespace AyVino.UnitTests;
 public class UsuarioBloqueU13BTests
 {
     // ==========================================
-    // 1. Validaciones del servicio de catas (TastingService)
+    // 1. Validaciones del servicio de descorches (UncorkService)
     // ==========================================
     [Fact]
-    public async Task TastingService_CommentWithoutRating_ThrowsValidationException()
+    public async Task UncorkService_CommentWithoutRating_ThrowsValidationException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             service.RecordAsync(1, 10, null, rating: null, comment: "Excelente vino", null));
 
         Assert.Equal("El comentario requiere una calificación.", ex.Message);
-        await tastingRepo.DidNotReceive().RecordTastingInTransactionAsync(
+        await uncorkRepo.DidNotReceive().RecordUncorkInTransactionAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<decimal?>(), Arg.Any<string?>(), Arg.Any<DateTime>());
     }
 
     [Fact]
-    public async Task TastingService_InvalidRating_ThrowsValidationException()
+    public async Task UncorkService_InvalidRating_ThrowsValidationException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         // Rating > 5.0
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
@@ -59,42 +59,42 @@ public class UsuarioBloqueU13BTests
     }
 
     [Fact]
-    public async Task TastingService_FutureTastedAt_ThrowsValidationException()
+    public async Task UncorkService_FutureUncorkedAt_ThrowsValidationException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         var future = DateTime.UtcNow.AddMinutes(10);
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             service.RecordAsync(1, 10, null, rating: 4.0m, comment: null, future));
 
-        Assert.Equal("La fecha de la cata no puede ser futura.", ex.Message);
+        Assert.Equal("La fecha de descorche no puede ser futura.", ex.Message);
     }
 
     [Fact]
-    public async Task TastingService_TooAncientTastedAt_ThrowsValidationException()
+    public async Task UncorkService_TooAncientUncorkedAt_ThrowsValidationException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         var ancient = new DateTime(1899, 12, 31, 23, 59, 59, DateTimeKind.Utc);
         var ex = await Assert.ThrowsAsync<ValidationException>(() =>
             service.RecordAsync(1, 10, null, rating: 4.0m, comment: null, ancient));
 
-        Assert.Equal("La fecha de la cata no puede ser anterior a 1900.", ex.Message);
+        Assert.Equal("La fecha de descorche no puede ser anterior a 1900.", ex.Message);
     }
 
     [Fact]
-    public async Task TastingService_NonExistentVintage_ThrowsNotFoundException()
+    public async Task UncorkService_NonExistentVintage_ThrowsNotFoundException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         vintageRepo.ExistsByIdAsync(999).Returns(false);
 
@@ -103,12 +103,12 @@ public class UsuarioBloqueU13BTests
     }
 
     [Fact]
-    public async Task TastingService_ForeignCellar_ThrowsNotFoundException()
+    public async Task UncorkService_ForeignCellar_ThrowsNotFoundException()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         vintageRepo.ExistsByIdAsync(10).Returns(true);
         cellarRepo.GetByIdAsync(50, 1).Returns((Cellar?)null);
@@ -118,66 +118,66 @@ public class UsuarioBloqueU13BTests
     }
 
     // ==========================================
-    // 2. Registro de cata con y sin cava
+    // 2. Registro de descorche con y sin cava
     // ==========================================
     [Fact]
-    public async Task TastingService_RecordWithCellar_CallsRepoAndReturnsResult()
+    public async Task UncorkService_RecordWithCellar_CallsRepoAndReturnsResult()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         vintageRepo.ExistsByIdAsync(10).Returns(true);
         cellarRepo.GetByIdAsync(5, 1).Returns(new Cellar { Id = 5, UserId = 1, Name = "Mi Cava" });
 
-        var expectedTasting = new TastingResponseDto(1, 1, 100, 10, 5, 4.3m, "Excelente", DateTime.UtcNow, DateTime.UtcNow);
+        var expectedUncork = new UncorkResponseDto(1, 1, 100, 10, 5, 4.3m, "Excelente", DateTime.UtcNow, DateTime.UtcNow);
         var expectedCellarItem = new CellarItemListRow { WineVintageId = 10, Quantity = 2 };
-        tastingRepo.RecordTastingInTransactionAsync(1, 10, 5, 4.3m, "Excelente", Arg.Any<DateTime>())
-            .Returns(new TastingExecutionResult(expectedTasting, expectedCellarItem));
+        uncorkRepo.RecordUncorkInTransactionAsync(1, 10, 5, 4.3m, "Excelente", Arg.Any<DateTime>())
+            .Returns(new UncorkExecutionResult(expectedUncork, expectedCellarItem));
 
         var result = await service.RecordAsync(1, 10, 5, 4.3m, "Excelente", null);
 
         Assert.NotNull(result);
-        Assert.Equal(1, result.Tasting.Id);
-        Assert.Equal(4.3m, result.Tasting.Rating);
-        Assert.Equal("Excelente", result.Tasting.Comment);
+        Assert.Equal(1, result.Uncork.Id);
+        Assert.Equal(4.3m, result.Uncork.Rating);
+        Assert.Equal("Excelente", result.Uncork.Comment);
         Assert.NotNull(result.UpdatedCellarItem);
         Assert.Equal(2, result.UpdatedCellarItem.Quantity);
     }
 
     [Fact]
-    public async Task TastingService_RecordWithoutCellar_CallsRepoWithNullCellarId()
+    public async Task UncorkService_RecordWithoutCellar_CallsRepoWithNullCellarId()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         vintageRepo.ExistsByIdAsync(10).Returns(true);
 
-        var expectedTasting = new TastingResponseDto(2, 1, 100, 10, null, 3.8m, null, DateTime.UtcNow, DateTime.UtcNow);
-        tastingRepo.RecordTastingInTransactionAsync(1, 10, null, 3.8m, null, Arg.Any<DateTime>())
-            .Returns(new TastingExecutionResult(expectedTasting, null));
+        var expectedUncork = new UncorkResponseDto(2, 1, 100, 10, null, 3.8m, null, DateTime.UtcNow, DateTime.UtcNow);
+        uncorkRepo.RecordUncorkInTransactionAsync(1, 10, null, 3.8m, null, Arg.Any<DateTime>())
+            .Returns(new UncorkExecutionResult(expectedUncork, null));
 
         var result = await service.RecordAsync(1, 10, null, 3.8m, null, null);
 
         Assert.NotNull(result);
         Assert.Null(result.UpdatedCellarItem);
-        Assert.Equal(3.8m, result.Tasting.Rating);
+        Assert.Equal(3.8m, result.Uncork.Rating);
         await cellarRepo.DidNotReceive().GetByIdAsync(Arg.Any<int>(), Arg.Any<int>());
     }
 
     // ==========================================
-    // 3. Paginación y lectura de catas (GetPagedByUserIdAsync)
+    // 3. Paginación y lectura de descorches (GetPagedByUserIdAsync)
     // ==========================================
     [Fact]
-    public async Task TastingService_GetPagedByUserIdAsync_ValidatesPagination()
+    public async Task UncorkService_GetPagedByUserIdAsync_ValidatesPagination()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             service.GetPagedByUserIdAsync(1, 0, 10));
@@ -187,18 +187,18 @@ public class UsuarioBloqueU13BTests
     }
 
     [Fact]
-    public async Task TastingService_GetPagedByUserIdAsync_ReturnsUserTastings()
+    public async Task UncorkService_GetPagedByUserIdAsync_ReturnsUserUncorks()
     {
-        var tastingRepo = Substitute.For<ITastingRepository>();
+        var uncorkRepo = Substitute.For<IUncorkRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
         var cellarRepo = Substitute.For<ICellarRepository>();
-        var service = new TastingService(tastingRepo, vintageRepo, cellarRepo);
+        var service = new UncorkService(uncorkRepo, vintageRepo, cellarRepo);
 
-        var list = new List<TastingListItemDto>
+        var list = new List<UncorkListItemDto>
         {
-            new(1, 100, 10, "Malbec Gran Reserva", "Zuccardi", 2020, null, 4.5m, "Muy buen cuerpo", DateTime.UtcNow, "Cava Principal")
+            new(1, 100, 10, "Malbec Gran Reserva", "Zuccardi", 2020, null, "Cava Principal", DateTime.UtcNow, 4.5m, "Muy buen cuerpo")
         };
-        tastingRepo.GetPagedByUserIdAsync(1, 1, 10, 10).Returns(list);
+        uncorkRepo.GetPagedByUserIdAsync(1, 1, 10, 10).Returns(list);
 
         var result = await service.GetPagedByUserIdAsync(1, 1, 10, 10);
 
@@ -213,14 +213,14 @@ public class UsuarioBloqueU13BTests
     // 4. Integración con CellarItemService.UncorkAsync
     // ==========================================
     [Fact]
-    public async Task CellarItemService_UncorkAsync_DelegatesToTastingService()
+    public async Task CellarItemService_UncorkAsync_DelegatesToUncorkService()
     {
         var cellarRepo = Substitute.For<ICellarRepository>();
         var itemRepo = Substitute.For<ICellarItemRepository>();
         var vintageRepo = Substitute.For<IWineVintageRepository>();
-        var tastingService = Substitute.For<ITastingService>();
+        var uncorkService = Substitute.For<IUncorkService>();
 
-        var service = new CellarItemService(cellarRepo, itemRepo, vintageRepo, tastingService: tastingService);
+        var service = new CellarItemService(cellarRepo, itemRepo, vintageRepo, uncorkService: uncorkService);
 
         var updatedCellarRow = new CellarItemListRow
         {
@@ -231,21 +231,21 @@ public class UsuarioBloqueU13BTests
             Quantity = 1,
             LastChangeAt = DateTime.UtcNow
         };
-        var tastingDto = new TastingResponseDto(1, 1, 100, 10, 5, 4.3m, "Nota privada", DateTime.UtcNow, DateTime.UtcNow);
+        var uncorkDto = new UncorkResponseDto(1, 1, 100, 10, 5, 4.3m, "Nota de cata", DateTime.UtcNow, DateTime.UtcNow);
 
-        tastingService.RecordAsync(1, 10, 5, 4.3m, "Nota privada", null, Arg.Any<CancellationToken>())
-            .Returns(new TastingExecutionResult(tastingDto, updatedCellarRow));
+        uncorkService.RecordAsync(1, 10, 5, 4.3m, "Nota de cata", null, Arg.Any<CancellationToken>())
+            .Returns(new UncorkExecutionResult(uncorkDto, updatedCellarRow));
 
-        var request = new UncorkCellarItemRequestDto(Rating: 4.3m, Comment: "Nota privada");
+        var request = new UncorkCellarItemRequestDto(Rating: 4.3m, Comment: "Nota de cata");
         var result = await service.UncorkAsync(1, 5, 10, request);
 
         Assert.NotNull(result);
         Assert.Equal(1, result.Quantity);
-        await tastingService.Received(1).RecordAsync(1, 10, 5, 4.3m, "Nota privada", null, Arg.Any<CancellationToken>());
+        await uncorkService.Received(1).RecordAsync(1, 10, 5, 4.3m, "Nota de cata", null, Arg.Any<CancellationToken>());
     }
 
     // ==========================================
-    // 5. Promedio de calificaciones del usuario (B.4)
+    // 5. Promedio de calificaciones del usuario
     // ==========================================
     [Fact]
     public void UserResponseDto_IncludesAverageRating()
