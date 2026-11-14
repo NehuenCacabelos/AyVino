@@ -24,7 +24,12 @@ public class CatalogService(
         return filters;
     }
 
-    public async Task<SearchSuggestionsResponseDto> GetSuggestionsAsync(string? q, CancellationToken ct = default)
+    public async Task<SearchSuggestionsResponseDto> GetSuggestionsAsync(
+        string? q,
+        int? grapeId = null,
+        int? stateId = null,
+        int? wineryId = null,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(q))
         {
@@ -37,18 +42,62 @@ public class CatalogService(
             return new SearchSuggestionsResponseDto([], [], [], []);
         }
 
-        var winesTask = catalogRepository.GetWineSuggestionsAsync(searchKey, ct);
-        var wineriesTask = catalogRepository.GetWinerySuggestionsAsync(searchKey, ct);
-        var filtersTask = GetFiltersAsync(ct);
+        var hasWineFilters = grapeId.HasValue || stateId.HasValue || wineryId.HasValue;
+        var winesTask = hasWineFilters
+            ? catalogRepository.GetWineSuggestionsAsync(searchKey, grapeId, stateId, wineryId, ct)
+            : catalogRepository.GetWineSuggestionsAsync(searchKey, ct);
 
-        await Task.WhenAll(winesTask, wineriesTask, filtersTask);
+        Task<IReadOnlyList<WinerySuggestionDto>> wineriesTask;
+        if (wineryId.HasValue)
+        {
+            wineriesTask = Task.FromResult<IReadOnlyList<WinerySuggestionDto>>([]);
+        }
+        else if (grapeId.HasValue || stateId.HasValue)
+        {
+            wineriesTask = catalogRepository.GetWinerySuggestionsAsync(searchKey, grapeId, stateId, ct);
+        }
+        else
+        {
+            wineriesTask = catalogRepository.GetWinerySuggestionsAsync(searchKey, ct);
+        }
+
+        Task<IReadOnlyList<CatalogFilterItemDto>> grapesCandidateTask;
+        if (grapeId.HasValue)
+        {
+            grapesCandidateTask = Task.FromResult<IReadOnlyList<CatalogFilterItemDto>>([]);
+        }
+        else if (wineryId.HasValue || stateId.HasValue)
+        {
+            grapesCandidateTask = catalogRepository.GetAvailableGrapesAsync(wineryId, stateId, ct);
+        }
+        else
+        {
+            grapesCandidateTask = GetFiltersAsync(ct).ContinueWith(t => (IReadOnlyList<CatalogFilterItemDto>)t.Result.Grapes, ct);
+        }
+
+        Task<IReadOnlyList<CatalogFilterItemDto>> regionsCandidateTask;
+        if (stateId.HasValue)
+        {
+            regionsCandidateTask = Task.FromResult<IReadOnlyList<CatalogFilterItemDto>>([]);
+        }
+        else if (wineryId.HasValue || grapeId.HasValue)
+        {
+            regionsCandidateTask = catalogRepository.GetAvailableProvincesAsync(wineryId, grapeId, ct);
+        }
+        else
+        {
+            regionsCandidateTask = GetFiltersAsync(ct).ContinueWith(t => (IReadOnlyList<CatalogFilterItemDto>)t.Result.Provinces, ct);
+        }
+
+        await Task.WhenAll(winesTask, wineriesTask, grapesCandidateTask, regionsCandidateTask);
 
         var wines = await winesTask;
         var wineries = await wineriesTask;
-        var filters = await filtersTask;
+        var availableGrapes = await grapesCandidateTask;
+        var availableRegions = await regionsCandidateTask;
 
-        var matchedGrapes = FilterAndRankInMemory(filters.Grapes, searchKey);
-        var matchedRegions = FilterAndRankInMemory(filters.Provinces, searchKey);
+        var matchedGrapes = grapeId.HasValue ? [] : FilterAndRankInMemory(availableGrapes, searchKey);
+        var matchedRegions = stateId.HasValue ? [] : FilterAndRankInMemory(availableRegions, searchKey);
 
         return new SearchSuggestionsResponseDto(wines, wineries, matchedGrapes, matchedRegions);
     }

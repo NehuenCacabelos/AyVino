@@ -92,7 +92,15 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
         return new CatalogFiltersResponseDto(grapes, provinces, wineries);
     }
 
-    public async Task<IReadOnlyList<WineSuggestionDto>> GetWineSuggestionsAsync(string searchKey, CancellationToken ct = default)
+    public Task<IReadOnlyList<WineSuggestionDto>> GetWineSuggestionsAsync(string searchKey, CancellationToken ct = default)
+        => GetWineSuggestionsAsync(searchKey, null, null, null, ct);
+
+    public async Task<IReadOnlyList<WineSuggestionDto>> GetWineSuggestionsAsync(
+        string searchKey,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        CancellationToken ct = default)
     {
         const string sql = """
             SELECT
@@ -103,6 +111,12 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
                 latest_vintage.image_id AS ImageId
             FROM wines w
             LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN locations loc ON loc.id = w.location_id
+            LEFT JOIN cities c ON c.id = loc.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
             LEFT JOIN LATERAL (
                 SELECT wv.year, wv.image_id
                 FROM wine_vintages wv
@@ -121,6 +135,13 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
                   OR w.source_type = 1
                   OR w.winery_id IS NOT NULL
               )
+              AND (@WineryId IS NULL OR w.winery_id = @WineryId)
+              AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
+              AND (@GrapeId IS NULL OR EXISTS (
+                  SELECT 1 FROM wine_vintages wv_g
+                  JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
+                  WHERE wv_g.wine_id = w.id AND wg.grape_id = @GrapeId AND wv_g.approval_status != 3
+              ))
               AND (
                   w.name_key LIKE @KeyPattern
                   OR wy.name_key LIKE @KeyPattern
@@ -154,13 +175,23 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
                 SearchKey = searchKey,
                 KeyPrefix = $"{searchKey}%",
                 KeyPattern = $"%{searchKey}%",
-                Threshold = SimilarityThreshold
+                Threshold = SimilarityThreshold,
+                WineryId = wineryId,
+                GrapeId = grapeId,
+                StateId = stateId
             }, cancellationToken: ct));
 
         return rows.ToList();
     }
 
-    public async Task<IReadOnlyList<WinerySuggestionDto>> GetWinerySuggestionsAsync(string searchKey, CancellationToken ct = default)
+    public Task<IReadOnlyList<WinerySuggestionDto>> GetWinerySuggestionsAsync(string searchKey, CancellationToken ct = default)
+        => GetWinerySuggestionsAsync(searchKey, null, null, ct);
+
+    public async Task<IReadOnlyList<WinerySuggestionDto>> GetWinerySuggestionsAsync(
+        string searchKey,
+        int? grapeId,
+        int? stateId,
+        CancellationToken ct = default)
     {
         const string sql = """
             SELECT
@@ -175,12 +206,21 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
             WHERE wy.status = 2
               AND EXISTS (
                   SELECT 1 FROM wines w
+                  LEFT JOIN locations loc ON loc.id = w.location_id
+                  LEFT JOIN cities wc ON wc.id = loc.city_id
+                  LEFT JOIN states ws ON ws.id = wc.state_id
                   WHERE w.winery_id = wy.id
                     AND w.duplicate_of_wine_id IS NULL
                     AND (
                         EXISTS (SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.approval_status != 3)
                         OR w.source_type = 1
                     )
+                    AND (@GrapeId IS NULL OR EXISTS (
+                        SELECT 1 FROM wine_vintages wv_g
+                        JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
+                        WHERE wv_g.wine_id = w.id AND wg.grape_id = @GrapeId AND wv_g.approval_status != 3
+                    ))
+                    AND (@StateId IS NULL OR COALESCE(ws.id, s.id) = @StateId)
               )
               AND (
                   wy.name_key LIKE @KeyPattern
@@ -206,7 +246,91 @@ public class CatalogRepository(IDbConnectionFactory connectionFactory) : ICatalo
                 SearchKey = searchKey,
                 KeyPrefix = $"{searchKey}%",
                 KeyPattern = $"%{searchKey}%",
-                Threshold = SimilarityThreshold
+                Threshold = SimilarityThreshold,
+                GrapeId = grapeId,
+                StateId = stateId
+            }, cancellationToken: ct));
+
+        return rows.ToList();
+    }
+
+    public async Task<IReadOnlyList<CatalogFilterItemDto>> GetAvailableGrapesAsync(
+        int? wineryId = null,
+        int? stateId = null,
+        CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT DISTINCT g.id AS Id, g.name AS Name, 1 AS WineCount
+            FROM grapes g
+            JOIN wine_grapes wg ON wg.grape_id = g.id
+            JOIN wine_vintages wv ON wv.id = wg.wine_vintage_id AND wv.approval_status != 3
+            JOIN wines w ON w.id = wv.wine_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN locations loc ON loc.id = w.location_id
+            LEFT JOIN cities c ON c.id = loc.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+            WHERE w.duplicate_of_wine_id IS NULL
+              AND (wy.status IS NULL OR wy.status != 3)
+              AND (@WineryId IS NULL OR w.winery_id = @WineryId)
+              AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
+            ORDER BY g.name ASC;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<CatalogFilterItemDto>(
+            new CommandDefinition(sql, new
+            {
+                WineryId = wineryId,
+                StateId = stateId
+            }, cancellationToken: ct));
+
+        return rows.ToList();
+    }
+
+    public async Task<IReadOnlyList<CatalogFilterItemDto>> GetAvailableProvincesAsync(
+        int? wineryId = null,
+        int? grapeId = null,
+        CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT DISTINCT
+                COALESCE(s.id, wy_s.id) AS Id,
+                COALESCE(s.name, wy_s.name) AS Name,
+                1 AS WineCount
+            FROM wines w
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN locations loc ON loc.id = w.location_id
+            LEFT JOIN cities c ON c.id = loc.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+            WHERE w.duplicate_of_wine_id IS NULL
+              AND (wy.status IS NULL OR wy.status != 3)
+              AND (
+                  EXISTS (SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.approval_status != 3)
+                  OR w.source_type = 1
+                  OR w.winery_id IS NOT NULL
+              )
+              AND COALESCE(s.id, wy_s.id) IS NOT NULL
+              AND (@WineryId IS NULL OR w.winery_id = @WineryId)
+              AND (@GrapeId IS NULL OR EXISTS (
+                  SELECT 1 FROM wine_vintages wv_g
+                  JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
+                  WHERE wv_g.wine_id = w.id AND wg.grape_id = @GrapeId AND wv_g.approval_status != 3
+              ))
+            ORDER BY Name ASC;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<CatalogFilterItemDto>(
+            new CommandDefinition(sql, new
+            {
+                WineryId = wineryId,
+                GrapeId = grapeId
             }, cancellationToken: ct));
 
         return rows.ToList();

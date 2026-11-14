@@ -97,13 +97,20 @@ export async function getCatalogFilters(forceRefresh = false): Promise<CatalogFi
   return response.data;
 }
 
+export interface SearchSuggestionsFilters {
+  grapeId?: number;
+  stateId?: number;
+  wineryId?: number;
+}
+
 /**
  * Obtiene sugerencias agrupadas (vinos, bodegas, uvas, regiones) para el buscador.
- * Cancela con AbortSignal y retorna listas vacías si la consulta tiene menos de 2 caracteres.
+ * Soporta filtros activos de cepa, provincia y bodega, cancela con AbortSignal y retorna listas vacías si la consulta tiene menos de 2 caracteres.
  */
 export async function getSearchSuggestions(
   q: string,
-  signal?: AbortSignal,
+  filtersOrSignal?: SearchSuggestionsFilters | AbortSignal,
+  optionalSignal?: AbortSignal,
 ): Promise<SearchSuggestionsResponse> {
   const query = q.trim();
   if (query.length < 2) {
@@ -115,8 +122,20 @@ export async function getSearchSuggestions(
     };
   }
 
+  const filters = filtersOrSignal && !(filtersOrSignal instanceof AbortSignal)
+    ? filtersOrSignal
+    : undefined;
+  const signal = filtersOrSignal instanceof AbortSignal
+    ? filtersOrSignal
+    : optionalSignal;
+
   const response = await apiClient.get<SearchSuggestionsResponse>('/search/suggestions', {
-    params: { q: query },
+    params: {
+      q: query,
+      grapeId: filters?.grapeId,
+      stateId: filters?.stateId,
+      wineryId: filters?.wineryId,
+    },
     signal,
   });
   return response.data;

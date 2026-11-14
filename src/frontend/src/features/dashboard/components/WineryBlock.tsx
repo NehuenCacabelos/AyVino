@@ -113,13 +113,15 @@ export default function WineryBlock({
           </div>
         )}
 
-        <Link
-          to="/dashboard#catalogo"
-          className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
-        >
-          <span>Ver catálogo completo ({total})</span>
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
-        </Link>
+        {wineryId ? (
+          <Link
+            to={`/bodegas/${wineryId}/catalogo`}
+            className="group/link inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-neutral-100 transition-colors"
+          >
+            <span>Ver catálogo completo ({total})</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" aria-hidden="true" />
+          </Link>
+        ) : null}
       </header>
 
       {/* Grilla de Vinos */}

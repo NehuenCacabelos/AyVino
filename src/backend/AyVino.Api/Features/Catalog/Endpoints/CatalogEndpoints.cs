@@ -18,8 +18,14 @@ public static class CatalogEndpoints
         var searchGroup = app.MapGroup("/api/search")
             .WithTags("Search");
 
-        searchGroup.MapGet("/suggestions", async (string? q, ICatalogService service, CancellationToken ct) =>
-            Results.Ok(await service.GetSuggestionsAsync(q, ct)))
+        searchGroup.MapGet("/suggestions", async (
+            string? q,
+            int? grapeId,
+            int? stateId,
+            int? wineryId,
+            ICatalogService service,
+            CancellationToken ct) =>
+            Results.Ok(await service.GetSuggestionsAsync(q, grapeId, stateId, wineryId, ct)))
             .AllowAnonymous()
             .WithName("GetSearchSuggestions")
             .WithSummary("Devuelve sugerencias agrupadas de vinos, bodegas, uvas y regiones.");

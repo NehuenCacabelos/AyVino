@@ -164,7 +164,7 @@ export default function QuickActions({
     };
   }, []);
 
-  // Debounce de 250ms y AbortSignal para sugerencias
+  // Debounce de 250ms y AbortSignal para sugerencias (envía filtros activos)
   useEffect(() => {
     const trimmed = searchQuery.trim();
 
@@ -183,7 +183,18 @@ export default function QuickActions({
       abortControllerRef.current = controller;
 
       try {
-        const res = await getSearchSuggestions(trimmed, controller.signal);
+        const hasFilters = Boolean(selectedGrapeId || selectedStateId || selectedWineryId);
+        const res = hasFilters
+          ? await getSearchSuggestions(
+              trimmed,
+              {
+                grapeId: selectedGrapeId,
+                stateId: selectedStateId,
+                wineryId: selectedWineryId,
+              },
+              controller.signal,
+            )
+          : await getSearchSuggestions(trimmed, controller.signal);
         setSuggestions(res);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') {
@@ -199,7 +210,7 @@ export default function QuickActions({
     return () => {
       clearTimeout(timer);
     };
-  }, [searchQuery]);
+  }, [searchQuery, selectedGrapeId, selectedStateId, selectedWineryId]);
 
   // Lista plana de sugerencias para navegación por teclado
   const flatSuggestions = useMemo<FlatSuggestion[]>(() => {
