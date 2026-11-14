@@ -521,3 +521,61 @@ Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyV
 
 ## 5. Pendientes
 - Ninguno en este bloque. Procediendo con el Bloque U9.
+
+
+---
+
+# USUARIO — BLOQUE U9: Catálogo público de bodega con las cards del dashboard
+**Rama**: `fix/usuario-catalogo-bodega` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **9.1 Cards del Dashboard en Catálogo Público**:
+  - Reemplazo de `WineryPublicCatalogCard` por `DashboardWineCard` en `WineryPublicCatalogPage.tsx`.
+  - Clic en la card redirige a `/vinos/{id}` numérico.
+  - Implementación del adaptador `adaptWineryPublicCatalogWineToDashboardWine` (`publicCatalogAdapter.ts`) que resuelve id numérico, bodega, uva/varietal, imagen con `imageUrl(imageId, 'bottle')`, añada y puntaje sin inventar datos.
+  - Extracción y reutilización del hook `useQuickAddToCellar` en `features/dashboard/hooks/` y `features/cava/hooks/` para abrir `QuickAddBottleModal` en modo vino existente con las añadas disponibles.
+  - Reutilización del hook `useFavorites` con carga inicial en una sola consulta (`/user-wines/me?favorite=true&pageSize=100`), actualización optimista y rollback automático.
+  - Soporte de `hideQuickActions` en `DashboardWineCard` para ocultar las acciones de Cava y Favoritos ante visitantes sin sesión (`!isAuthenticated`), con redirección a `/login`.
+- **9.2 Eliminación del Modal Inutilizado**:
+  - Eliminación completa de `WineryPublicWineDetailModal.tsx` y su exportación en `features/winery/components/index.ts`.
+  - Remoción de `selectedWine`, `handleSelectWine` y `adaptCatalogWineToDetail` en `WineryPublicCatalogPage.tsx`.
+  - Preservación de `WineryPublicCatalogCard.tsx` intacto para el dashboard del dueño en modo vista previa.
+- **9.3 Tests (vitest)**:
+  - Suite unitaria para el adaptador `adaptWineryPublicCatalogWineToDashboardWine` (campos completos, campos faltantes, fallbacks).
+  - Suite de integración `WineryPublicCatalogPageBloqueU9.test.tsx` (enlace a `/vinos/{id}`, modal de cava precargado, favoritos con persistencia y vuelta atrás, y ocultamiento en visitantes anónimos).
+  - Actualización de `WineryPublicProfile.test.tsx` para validar el enlace de las tarjetas del dashboard sin modal provisorio.
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx`
+  - `src/frontend/src/features/dashboard/index.ts`
+  - `src/frontend/src/features/winery/components/index.ts`
+  - `src/frontend/src/features/winery/index.ts`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+  - `src/frontend/src/pages/WineryPublicCatalogPage.tsx`
+  - `src/frontend/tests/pages/WineryPublicProfile.test.tsx`
+- **Creados**:
+  - `src/frontend/src/features/cava/hooks/useQuickAddToCellar.ts`
+  - `src/frontend/src/features/dashboard/hooks/index.ts`
+  - `src/frontend/src/features/dashboard/hooks/useFavorites.ts`
+  - `src/frontend/src/features/dashboard/hooks/useQuickAddToCellar.ts`
+  - `src/frontend/src/features/winery/utils/publicCatalogAdapter.ts`
+  - `src/frontend/tests/features/winery/publicCatalogAdapter.test.ts`
+  - `src/frontend/tests/pages/WineryPublicCatalogPageBloqueU9.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U9.md`
+- **Eliminados**:
+  - `src/frontend/src/features/winery/components/WineryPublicWineDetailModal.tsx`
+
+## 3. Decisiones técnicas
+- Derivación pura del estado de favoritos en `DashboardWineCard` cuando está controlado por el padre (`onToggleFavorite`), asegurando sincronización reactiva inmediata sin violar reglas de estado derivado en `useState`.
+- Reutilización de hooks desacoplados entre `DashboardPage` y `WineryPublicCatalogPage` sin duplicación de código.
+
+## 4. Resultado de verificaciones
+- `dotnet build` & `dotnet test`: 763/763 superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 792ms.
+- `npm test`: 63 archivos / 304 tests superados (0 fallas).
+- `npm run lint`: 0 errores o advertencias en código modificado/creado (7 problemas preexistentes documentados).
+
+## 5. Pendientes
+- Proceder con el Bloque U10 (`fix/usuario-ficha-vino`).
