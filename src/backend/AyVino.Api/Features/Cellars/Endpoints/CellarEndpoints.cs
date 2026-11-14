@@ -27,11 +27,11 @@ public static class CellarEndpoints
             return Results.Created($"/api/wines/{created.WineId}", created);
         }).WithName("QuickAddWineToMyCellar").WithSummary("Agrega una botella a la cava personal creando o reutilizando etiqueta comunitaria.");
 
-        group.MapPost("/me/items/{wineVintageId:int}/uncork", async (int wineVintageId, ClaimsPrincipal user, ICellarService cellarService, ICellarItemService itemService, CancellationToken ct) =>
+        group.MapPost("/me/items/{wineVintageId:int}/uncork", async (int wineVintageId, UncorkCellarItemRequestDto? request, ClaimsPrincipal user, ICellarService cellarService, ICellarItemService itemService, CancellationToken ct) =>
         {
             var cellars = await cellarService.GetAllByUserAsync(user.GetUserId(), 1, 1, ct);
             var firstCellar = cellars.FirstOrDefault() ?? throw new NotFoundException("El usuario no posee una cava creada.");
-            var item = await itemService.UncorkAsync(user.GetUserId(), firstCellar.Id, wineVintageId, ct);
+            var item = await itemService.UncorkAsync(user.GetUserId(), firstCellar.Id, wineVintageId, request, ct);
             return Results.Ok(item);
         }).WithName("UncorkWineInMyCellar").WithSummary("Descorcha una botella de la cava por defecto del usuario");
 

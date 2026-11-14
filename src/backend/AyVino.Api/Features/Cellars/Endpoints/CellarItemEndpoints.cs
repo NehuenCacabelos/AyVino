@@ -40,9 +40,9 @@ public static class CellarItemEndpoints
             return Results.NoContent();
         }).WithName("RemoveCellarItem").WithSummary("Saca la cosecha de la cava");
 
-        group.MapPost("/{wineVintageId:int}/uncork", async (int cellarId, int wineVintageId, ClaimsPrincipal user, ICellarItemService service, CancellationToken ct) =>
+        group.MapPost("/{wineVintageId:int}/uncork", async (int cellarId, int wineVintageId, UncorkCellarItemRequestDto? request, ClaimsPrincipal user, ICellarItemService service, CancellationToken ct) =>
         {
-            var item = await service.UncorkAsync(user.GetUserId(), cellarId, wineVintageId, ct);
+            var item = await service.UncorkAsync(user.GetUserId(), cellarId, wineVintageId, request, ct);
             return Results.Ok(item);
         }).WithName("UncorkCellarItem").WithSummary("Descorcha una botella de la cava: descuenta una unidad y marca el vino como probado para el usuario");
 

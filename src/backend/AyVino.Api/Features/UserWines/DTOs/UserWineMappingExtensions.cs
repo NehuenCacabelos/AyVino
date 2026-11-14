@@ -22,7 +22,9 @@ public static class UserWineMappingExtensions
         row.LastChangeAt,
         row.WineryName ?? row.WineryNameText,
         row.Vintage,
-        row.ImageUrl);
+        row.ImageUrl,
+        row.UserRating,
+        row.UserComment);
 
     public static IReadOnlyList<UserWineListItemDto> ToListItemDtoList(this IEnumerable<UserWineListRow> rows) =>
         rows.Select(r => r.ToListItemDto()).ToList();

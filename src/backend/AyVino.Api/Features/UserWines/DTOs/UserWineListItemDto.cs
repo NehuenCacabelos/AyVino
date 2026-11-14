@@ -14,4 +14,6 @@ public record UserWineListItemDto(
     DateTime LastChangeAt,
     string? WineryName = null,
     int? Vintage = null,
-    string? ImageUrl = null);
+    string? ImageUrl = null,
+    int? UserRating = null,
+    string? UserComment = null);

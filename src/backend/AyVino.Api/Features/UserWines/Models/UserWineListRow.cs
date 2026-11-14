@@ -19,4 +19,6 @@ public record UserWineListRow
     public bool IsTried { get; init; }
     public bool IsFavorite { get; init; }
     public DateTime LastChangeAt { get; init; }
+    public int? UserRating { get; init; }
+    public string? UserComment { get; init; }
 }

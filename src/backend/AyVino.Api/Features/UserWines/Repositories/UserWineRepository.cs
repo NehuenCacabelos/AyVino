@@ -29,7 +29,9 @@ public class UserWineRepository(IDbConnectionFactory connectionFactory) : IUserW
                    CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=bottle' ELSE NULL END AS ImageUrl,
                    w.rating_sum AS RatingSum, w.review_count AS ReviewCount,
                    uw.is_wanted AS IsWanted, uw.is_tried AS IsTried, uw.is_favorite AS IsFavorite,
-                   COALESCE(uw.updated_at, uw.created_at) AS LastChangeAt
+                   COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) AS LastChangeAt,
+                   CAST(user_review.rating AS INT) AS UserRating,
+                   user_review.comment AS UserComment
             FROM user_wines uw
             JOIN wines w ON w.id = uw.wine_id
             LEFT JOIN wineries wy ON wy.id = w.winery_id
@@ -44,11 +46,19 @@ public class UserWineRepository(IDbConnectionFactory connectionFactory) : IUserW
                     wv.id DESC
                 LIMIT 1
             ) latest_vintage ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT r.rating, r.comment, r.created_at AS review_created_at
+                FROM reviews r
+                JOIN wine_vintages wv ON wv.id = r.wine_vintage_id
+                WHERE wv.wine_id = w.id AND r.user_id = @UserId
+                ORDER BY r.created_at DESC
+                LIMIT 1
+            ) user_review ON TRUE
             WHERE uw.user_id = @UserId
               AND (@Wanted IS NULL OR uw.is_wanted = @Wanted)
               AND (@Tried IS NULL OR uw.is_tried = @Tried)
               AND (@Favorite IS NULL OR uw.is_favorite = @Favorite)
-            ORDER BY COALESCE(uw.updated_at, uw.created_at) DESC, uw.wine_id
+            ORDER BY COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) DESC, uw.wine_id
             OFFSET @Offset LIMIT @PageSize;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);

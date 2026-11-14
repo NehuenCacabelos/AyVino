@@ -248,11 +248,22 @@ public class CellarItemService(
             throw new NotFoundException($"La cosecha {wineVintageId} no está en la cava {cellarId}.");
     }
 
-    public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default)
+    public Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
+        UncorkAsync(userId, cellarId, wineVintageId, null, ct);
+
+    public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, UncorkCellarItemRequestDto? request, CancellationToken ct = default)
     {
+        if (request?.Rating.HasValue == true && (request.Rating.Value is < 1 or > 5))
+            throw new ValidationException("El rating debe estar entre 1 y 5.");
+
+        if (request?.Comment?.Length > 1000)
+            throw new ValidationException("El comentario no puede superar los 1000 caracteres.");
+
         await EnsureCellarOwnedAsync(userId, cellarId, ct);
 
-        var row = await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, ct);
+        var row = (request?.Rating.HasValue == true || !string.IsNullOrWhiteSpace(request?.Comment))
+            ? await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, request?.Rating, request?.Comment, ct)
+            : await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, ct);
         if (row is null)
             throw new ConflictException("No quedan botellas de esta cosecha en la cava o el ítem no existe.");
 

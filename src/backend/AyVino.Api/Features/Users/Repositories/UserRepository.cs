@@ -64,7 +64,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                        SELECT COUNT(DISTINCT ci.wine_vintage_id)
                        FROM cellars c
                        JOIN cellar_items ci ON ci.cellar_id = c.id
-                       WHERE c.user_id = u.id
+                       WHERE c.user_id = u.id AND ci.quantity > 0
                    ), 0)::int AS CellarWinesCount,
                    COALESCE((
                        SELECT COUNT(*)

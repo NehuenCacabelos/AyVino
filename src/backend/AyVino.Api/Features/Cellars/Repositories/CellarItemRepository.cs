@@ -189,7 +189,10 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
         return ids.ToList();
     }
 
-    public async Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default)
+    public Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
+        UncorkAsync(userId, cellarId, wineVintageId, null, null, ct);
+
+    public async Task<CellarItemListRow?> UncorkAsync(int userId, int cellarId, int wineVintageId, int? rating, string? comment, CancellationToken ct = default)
     {
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         if (connection.State != ConnectionState.Open) await connection.OpenAsync(ct);
@@ -256,6 +259,45 @@ public class CellarItemRepository(IDbConnectionFactory connectionFactory) : ICel
                 """;
             await connection.ExecuteAsync(
                 new CommandDefinition(markTriedSql, new { UserId = userId, WineId = current.WineId }, transaction, cancellationToken: ct));
+
+            if (rating.HasValue)
+            {
+                const string upsertReviewSql = """
+                    INSERT INTO reviews (user_id, wine_vintage_id, rating, comment, created_at)
+                    VALUES (@UserId, @WineVintageId, @Rating, @Comment, now() AT TIME ZONE 'utc')
+                    ON CONFLICT (user_id, wine_vintage_id) DO UPDATE
+                    SET rating = EXCLUDED.rating,
+                        comment = EXCLUDED.comment,
+                        updated_at = now() AT TIME ZONE 'utc';
+                    """;
+                await connection.ExecuteAsync(
+                    new CommandDefinition(upsertReviewSql, new
+                    {
+                        UserId = userId,
+                        WineVintageId = wineVintageId,
+                        Rating = rating.Value,
+                        Comment = comment
+                    }, transaction, cancellationToken: ct));
+
+                const string updateVintageRatingSql = """
+                    UPDATE wine_vintages
+                    SET rating_sum = COALESCE((SELECT SUM(rating) FROM reviews WHERE wine_vintage_id = @WineVintageId), 0),
+                        review_count = (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @WineVintageId)
+                    WHERE id = @WineVintageId
+                    RETURNING wine_id;
+                    """;
+                var wineId = await connection.ExecuteScalarAsync<int>(
+                    new CommandDefinition(updateVintageRatingSql, new { WineVintageId = wineVintageId }, transaction, cancellationToken: ct));
+
+                const string updateWineRatingSql = """
+                    UPDATE wines
+                    SET rating_sum = COALESCE((SELECT SUM(rating_sum) FROM wine_vintages WHERE wine_id = @WineId), 0),
+                        review_count = COALESCE((SELECT SUM(review_count) FROM wine_vintages WHERE wine_id = @WineId), 0)
+                    WHERE id = @WineId;
+                    """;
+                await connection.ExecuteAsync(
+                    new CommandDefinition(updateWineRatingSql, new { WineId = wineId }, transaction, cancellationToken: ct));
+            }
 
             await transaction.CommitAsync(ct);
 
