@@ -17,6 +17,8 @@ import {
   WineryBlock,
   UncorkDialog,
   WineCardSkeleton,
+  useQuickAddToCellar,
+  useFavorites,
 } from '../features/dashboard';
 import { searchCatalogWines } from '../features/dashboard/api/catalogApi';
 import QuickAddBottleModal from '../features/cava/components/QuickAddBottleModal';
@@ -72,17 +74,38 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createInitialName, setCreateInitialName] = useState('');
-  const [activeCellarWine, setActiveCellarWine] = useState<DashboardWine | null>(null);
-
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
   const [uncorkingWine, setUncorkingWine] = useState<DashboardWine | null>(null);
-  const [favoriteWineIds, setFavoriteWineIds] = useState<Set<number>>(new Set());
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isAutoScrollingRef = useRef(false);
   const lastScrollYRef = useRef(0);
+
+  const showNotification = useCallback((msg: string) => {
+    clearTimeout(notificationTimerRef.current);
+    setNotification(msg);
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+  }, []);
+
+  // Hook compartido para ingreso rápido a la cava
+  const {
+    isModalOpen: isCreateModalOpen,
+    activeWine: activeCellarWine,
+    initialName: createInitialName,
+    openQuickAdd: handleAddToCellar,
+    openQuickAddNew: handleCreateWine,
+    closeQuickAdd: handleCloseQuickAdd,
+  } = useQuickAddToCellar();
+
+  // Hook compartido para favoritos (batch inicial optimizado + actualización optimista)
+  const {
+    favoriteWineIds,
+    toggleFavorite: handleToggleFavorite,
+  } = useFavorites({
+    onError: showNotification,
+  });
 
   // Debounce de 350ms del término de búsqueda efectivo
   const effectiveQuery = searchQuery.trim() || heroFilters.query.trim();
@@ -207,69 +230,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Carga inicial unificada de favoritos (una sola consulta de hasta 100 etiquetas)
-  useEffect(() => {
-    let isMounted = true;
-    async function loadFavorites() {
-      try {
-        const res = await apiClient.get('/user-wines/me?favorite=true&pageSize=100');
-        if (isMounted && Array.isArray(res.data)) {
-          const ids = new Set<number>(res.data.map((item: { wineId: number }) => item.wineId));
-          setFavoriteWineIds(ids);
-        }
-      } catch {
-        // Silencioso si no está autenticado o error transitorio
-      }
-    }
-    void loadFavorites();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
-  const showNotification = (msg: string) => {
-    clearTimeout(notificationTimerRef.current);
-    setNotification(msg);
-    notificationTimerRef.current = setTimeout(() => {
-      setNotification(null);
-    }, 3500);
-  };
-
-  const handleToggleFavorite = async (wine: DashboardWine, nextIsFav: boolean) => {
-    const wineId = Number(wine.id);
-    if (!wineId || isNaN(wineId)) return;
-
-    // Actualización optimista inmediata
-    setFavoriteWineIds((prev) => {
-      const next = new Set(prev);
-      if (nextIsFav) {
-        next.add(wineId);
-      } else {
-        next.delete(wineId);
-      }
-      return next;
-    });
-
-    try {
-      if (nextIsFav) {
-        await apiClient.put(`/wines/${wineId}/favorite`);
-      } else {
-        await apiClient.delete(`/wines/${wineId}/favorite`);
-      }
-    } catch {
-      // Revertir optimismo si falla
-      setFavoriteWineIds((prev) => {
-        const rollback = new Set(prev);
-        if (nextIsFav) {
-          rollback.delete(wineId);
-        } else {
-          rollback.add(wineId);
-        }
-        return rollback;
-      });
-      showNotification('No se pudo actualizar favoritos. Intentalo de nuevo.');
-    }
-  };
 
   const handleUncorkSaved = async (data: UncorkSubmission) => {
     try {
@@ -310,11 +271,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddToCellar = (wine: DashboardWine) => {
-    setActiveCellarWine(wine);
-    setCreateInitialName(wine.name);
-    setIsCreateModalOpen(true);
-  };
 
   // Filtrado reactivo derivado en cliente exclusivamente para chips rápidos
   const filteredWines = useMemo(() => {
@@ -519,10 +475,7 @@ export default function DashboardPage() {
                 setSearchQuery(filters.query);
                 setWineryPage(1);
               }}
-              onCreateWine={(name) => {
-                setCreateInitialName(name);
-                setIsCreateModalOpen(true);
-              }}
+              onCreateWine={handleCreateWine}
               onRegisterBottle={() =>
                 showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
               }
@@ -735,11 +688,7 @@ export default function DashboardPage() {
         initialName={createInitialName}
         initialWine={activeCellarWine}
         showToast={showNotification}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setActiveCellarWine(null);
-          setCreateInitialName('');
-        }}
+        onClose={handleCloseQuickAdd}
         onAddBottle={async (payload) => {
           if (refreshStock) {
             await refreshStock();
