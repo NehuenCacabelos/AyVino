@@ -13,6 +13,7 @@ public class CloudinaryImageStorage : IImageStorage
     public const string VariantLogo = "logo";
     public const string VariantBanner = "banner";
     public const string VariantBottle = "bottle";
+    public const int BottleBackgroundTolerance = 10;
 
     public static readonly HashSet<string> AllowedVariants = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -102,6 +103,9 @@ public class CloudinaryImageStorage : IImageStorage
         }
 
         var normalizedVariant = variant?.Trim().ToLowerInvariant();
+        var tolerance = _options.BottleBackgroundTolerance > 0
+            ? _options.BottleBackgroundTolerance
+            : BottleBackgroundTolerance;
 
         Transformation transformation = normalizedVariant switch
         {
@@ -130,6 +134,8 @@ public class CloudinaryImageStorage : IImageStorage
                 .Quality("auto"),
 
             VariantBottle => new Transformation()
+                .Effect($"make_transparent:{tolerance}")
+                .Chain()
                 .Width(600)
                 .Height(1200)
                 .Crop("pad")
