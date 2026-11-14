@@ -28,6 +28,9 @@ import type { EditorialWine, WineReviewItem, WineVintageDetail } from '../data/e
 import { useAuth } from '../../auth';
 import type { AppOutletContext } from '../../../components/layout/AppLayout';
 import type { CellarWine } from '../../cava';
+import QuickAddBottleModal from '../../cava/components/QuickAddBottleModal';
+import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
+import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
 import { imageUrl } from '../../../lib/image';
 import { createReview } from '../api/reviewsApi';
 import WineEditBar from './WineEditBar';
@@ -298,6 +301,17 @@ export default function WineDetailView({
   const [starFilter, setStarFilter] = useState<'all' | '5' | '4' | '3'>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
+
+  // Hook para alta rápida en cava (vino real)
+  const {
+    isModalOpen: isCellarModalOpen,
+    activeWine: cellarActiveWine,
+    initialName: cellarInitialName,
+    openQuickAdd,
+    closeQuickAdd,
+  } = useQuickAddToCellar();
+
+  const wineryId = wine.winery?.wineryId ?? wine.wineryId;
 
   // Formulario de nueva reseña
   const [newReviewRating, setNewReviewRating] = useState<number>(4.5);
@@ -1065,6 +1079,25 @@ export default function WineDetailView({
   const handleSaveToCellar = () => {
     if (ownerMode || isNewMode) return;
 
+    if (isRealWine) {
+      const activeGrape = activeVintage?.grapes?.[0]?.variety || (wine.type === 'White' ? 'Blancos' : 'Malbec');
+      const selectedYear = activeVintage?.year || selectedVintageYear || new Date().getFullYear();
+      const cellarWinePayload: DashboardWine = {
+        id: wine.id,
+        wineryId,
+        name: wine.name,
+        winery: wine.winery?.name || wine.wineryNameText,
+        region: wine.winery?.region || 'Mendoza, Argentina',
+        varietal: activeGrape,
+        vintage: selectedYear,
+        rating: averageRating ? parseFloat(averageRating) : 0,
+        bottle: resolveBottleKind(wine.type, activeGrape),
+        imageUrl: (activeVintage?.imageId ? imageUrl(activeVintage.imageId, 'bottle') : activeVintage?.imageUrl) || undefined,
+      };
+      openQuickAdd(cellarWinePayload);
+      return;
+    }
+
     if (outletCtx?.setStockCount) {
       outletCtx.setStockCount((prev) => prev + 1);
     }
@@ -1338,7 +1371,21 @@ export default function WineDetailView({
             </div>
 
             {/* Bloque Espacioso de Bodega & Terruño */}
-            <div className="rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4">
+            <div
+              {...(wineryId
+                ? {
+                    onClick: (e: React.MouseEvent) => {
+                      if ((e.target as HTMLElement).closest('a')) return;
+                      navigate(`/bodegas/${wineryId}`);
+                    },
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4 cursor-pointer hover:border-neutral-700/80 transition-colors',
+                  }
+                : {
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4',
+                  })}
+            >
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 block font-medium">
                 Bodega Elaboradora
               </span>
@@ -1347,8 +1394,20 @@ export default function WineDetailView({
                 <div className="space-y-3">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight hover:text-amber-200 transition-colors cursor-pointer flex items-center justify-between group/winery">
-                      <span>{wine.winery.name}</span>
-                      <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                      {wineryId ? (
+                        <Link
+                          to={`/bodegas/${wineryId}`}
+                          className="hover:underline flex items-center justify-between w-full"
+                        >
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </Link>
+                      ) : (
+                        <>
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </>
+                      )}
                     </h3>
                     <p className="text-xs text-neutral-400 flex items-center gap-1.5 font-sans mt-1">
                       <MapPin className="w-3.5 h-3.5 text-rose-300" />
@@ -1500,7 +1559,14 @@ export default function WineDetailView({
               )}
 
               <p className="text-sm text-neutral-400 font-sans">
-                Elaborado por <span className="text-neutral-200 font-medium">{wine.winery?.name || wine.wineryNameText}</span>
+                Elaborado por {wineryId ? (
+                  <Link
+                    to={`/bodegas/${wineryId}`}
+                    className="text-neutral-200 font-medium hover:underline cursor-pointer"
+                  >
+                    {wine.winery?.name || wine.wineryNameText}
+                  </Link>
+                ) : <span className="text-neutral-200 font-medium">{wine.winery?.name || wine.wineryNameText}</span>}
               </p>
             </header>
 
@@ -2256,6 +2322,29 @@ export default function WineDetailView({
             isLoading={isAddingVintage}
             onConfirm={() => void handleConfirmAddVintage()}
             onCancel={() => setConfirmAddVintage(null)}
+          />
+        )}
+
+        {/* Modal de Cava para Vino Real */}
+        {isRealWine && (
+          <QuickAddBottleModal
+            isOpen={isCellarModalOpen}
+            initialName={cellarInitialName}
+            initialWine={cellarActiveWine}
+            showToast={(msg) => showToast(msg)}
+            onClose={closeQuickAdd}
+            onAddBottle={async (payload) => {
+              if (outletCtx?.refreshStock) {
+                await outletCtx.refreshStock();
+              } else if (outletCtx?.setStockCount) {
+                outletCtx.setStockCount((prev) => prev + payload.units);
+              }
+              showToast(
+                `¡"${payload.name} (${payload.vintage})" guardado en tu Cava!`,
+                'Ver en mi Cava',
+                '/cava'
+              );
+            }}
           />
         )}
 

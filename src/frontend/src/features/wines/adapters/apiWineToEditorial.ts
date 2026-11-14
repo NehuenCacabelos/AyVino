@@ -61,6 +61,8 @@ export function apiWineToEditorial(
   }
 
   // Mapeo de Bodega
+  const resolvedWineryId = winery?.id ?? (wine.wineryId ?? undefined);
+
   let wineryInfo: WineWineryInfo | null = null;
   if (winery) {
     let regionStr = 'Mendoza, Argentina';
@@ -73,6 +75,15 @@ export function apiWineToEditorial(
       foundedYear: winery.foundationYear ?? 1900,
       websiteUrl: winery.website ?? undefined,
       region: regionStr,
+      wineryId: winery.id,
+    };
+  } else if (resolvedWineryId) {
+    wineryInfo = {
+      id: String(resolvedWineryId),
+      name: wine.wineryNameText || 'Bodega Elaboradora',
+      foundedYear: 1900,
+      region: 'Mendoza, Argentina',
+      wineryId: resolvedWineryId,
     };
   }
 
@@ -185,6 +196,7 @@ export function apiWineToEditorial(
         : 'Etiqueta enológica noble de elaboración artesanal y perfil de terroir auténtico.',
     wineryNameText: effectiveWineryName,
     winery: wineryInfo,
+    wineryId: resolvedWineryId,
     pairings: mappedPairings,
     vintages: mappedVintages,
     reviews: mappedReviews,
