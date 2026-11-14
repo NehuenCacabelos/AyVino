@@ -12,5 +12,8 @@ public record UserResponseDto(
     bool IsActive,
     Guid? AvatarImageId,
     string? Bio,
-    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null
-);
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null)
+{
+    public UserResponseDto() : this(default, string.Empty, string.Empty, string.Empty, default, default, null, null, null) { }
+}
+

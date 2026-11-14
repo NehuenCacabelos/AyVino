@@ -61,7 +61,6 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                    u.avatar_image_id AS AvatarImageId,
                    u.bio AS Bio,
                    u.register_date AS RegisterDate,
-                   (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.user_id = u.id) AS AverageRating,
                    COALESCE((
                        SELECT COUNT(DISTINCT ci.wine_vintage_id)
                        FROM cellars c
@@ -84,7 +83,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                            FROM winery_follows wf
                            WHERE wf.follower_id = u.id
                        ), 0)
-                   )::int AS FollowingCount
+                   )::int AS FollowingCount,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.user_id = u.id) AS AverageRating
             FROM users u
             WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true;
             """;

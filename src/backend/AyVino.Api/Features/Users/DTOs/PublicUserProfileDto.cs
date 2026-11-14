@@ -12,5 +12,8 @@ public record PublicUserProfileDto(
     int CellarWinesCount,
     int FollowersCount,
     int FollowingCount,
-    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null
-);
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null)
+{
+    public PublicUserProfileDto() : this(default, string.Empty, null, null, default, default, default, default, null) { }
+}
+

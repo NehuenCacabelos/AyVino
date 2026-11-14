@@ -306,6 +306,38 @@ public class UsuarioBloqueU14ATests
         Assert.Equal(4.3m, users[0].AverageRating);
     }
 
+    [Fact]
+    public void Dapper_Materialize_PublicUserProfileDto_Succeeds()
+    {
+        using var table = new DataTable();
+        table.Columns.Add("id", typeof(int));
+        table.Columns.Add("username", typeof(string));
+        table.Columns.Add("avatar_image_id", typeof(Guid));
+        table.Columns.Add("bio", typeof(string));
+        table.Columns.Add("register_date", typeof(DateTime));
+        table.Columns.Add("cellar_wines_count", typeof(int));
+        table.Columns.Add("followers_count", typeof(int));
+        table.Columns.Add("following_count", typeof(int));
+        table.Columns.Add("average_rating", typeof(decimal));
+
+        var avatarId = Guid.NewGuid();
+        table.Rows.Add(1, "usuario", avatarId, "Sommelier aficionado", DateTime.UtcNow, 5, 12, 8, 4.6m);
+
+        using var reader = table.CreateDataReader();
+        var items = reader.Parse<PublicUserProfileDto>().ToList();
+
+        Assert.Single(items);
+        var item = items[0];
+        Assert.Equal(1, item.Id);
+        Assert.Equal("usuario", item.Username);
+        Assert.Equal(avatarId, item.AvatarImageId);
+        Assert.Equal("Sommelier aficionado", item.Bio);
+        Assert.Equal(5, item.CellarWinesCount);
+        Assert.Equal(12, item.FollowersCount);
+        Assert.Equal(8, item.FollowingCount);
+        Assert.Equal(4.6m, item.AverageRating);
+    }
+
     // =========================================================================
     // A.6 Tests funcionales de UncorkService (xUnit)
     // =========================================================================
