@@ -28,6 +28,18 @@ import type { AppOutletContext } from '../../../components/layout/AppLayout';
 import type { CellarWine } from '../../cava';
 import QuickAddBottleModal from '../../cava/components/QuickAddBottleModal';
 import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
+import { useVintageSensory } from '../hooks/useVintageSensory';
+import {
+  buildSensoryAttributes,
+  getTypeSensoryFallback,
+  type SensoryAttribute,
+} from '../utils/sensoryUtils';
+import {
+  previewSensory,
+  updateVintageSensory,
+  type SensoryAxisKey,
+  type VintageSensoryDto,
+} from '../api/sensoryApi';
 import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
 import { imageUrl } from '../../../lib/image';
 import WineBottleSilhouette from './WineBottleSilhouette';
@@ -74,12 +86,6 @@ interface ToastState {
   message: string;
   actionLabel?: string;
   actionTo?: string;
-}
-
-interface SensoryAttribute {
-  key: string;
-  label: string;
-  value: number; // 1.0 a 5.0
 }
 
 function calculateRating(reviews: WineReviewItem[]): string | null {
@@ -240,6 +246,8 @@ export interface EditableVintageDraft {
   imageFile?: File | null;
   imageRemoved?: boolean;
   previewUrl?: string | null;
+  sensory?: Partial<Record<SensoryAxisKey, number | null>>;
+  sensoryModified?: boolean;
 }
 
 export interface WineDetailViewProps {
@@ -698,6 +706,24 @@ export default function WineDetailView({
             if (draft.imageFile) {
               await uploadVintageImage(numericWineId, createdV.id, draft.imageFile);
             }
+
+            // Perfil sensorial manual si hay valores
+            if (draft.sensory && Object.values(draft.sensory).some((v) => v != null)) {
+              try {
+                await updateVintageSensory(numericWineId, createdV.id, {
+                  body: draft.sensory.body ?? null,
+                  tannins: draft.sensory.tannins ?? null,
+                  acidity: draft.sensory.acidity ?? null,
+                  fruit: draft.sensory.fruit ?? null,
+                  oak: draft.sensory.oak ?? null,
+                  persistence: draft.sensory.persistence ?? null,
+                });
+                savedSteps.push('perfil sensorial');
+              } catch (err: unknown) {
+                failedSteps.push('perfil sensorial');
+                throw err;
+              }
+            }
           } catch (err: unknown) {
             failedSteps.push(`cosecha ${yearNum}`);
             const maybeAxios = err as {
@@ -731,6 +757,24 @@ export default function WineDetailView({
                 await uploadVintageImage(numericWineId, targetVintageId, draft.imageFile);
               } else if (draft.imageRemoved) {
                 await deleteVintageImage(numericWineId, targetVintageId);
+              }
+
+              // Perfil sensorial si cambió
+              if (draft.sensoryModified) {
+                try {
+                  await updateVintageSensory(numericWineId, targetVintageId, {
+                    body: draft.sensory?.body ?? null,
+                    tannins: draft.sensory?.tannins ?? null,
+                    acidity: draft.sensory?.acidity ?? null,
+                    fruit: draft.sensory?.fruit ?? null,
+                    oak: draft.sensory?.oak ?? null,
+                    persistence: draft.sensory?.persistence ?? null,
+                  });
+                  savedSteps.push('perfil sensorial');
+                } catch (err: unknown) {
+                  failedSteps.push('perfil sensorial');
+                  throw err;
+                }
               }
             } catch (err: unknown) {
               failedSteps.push(`cosecha ${yearNum}`);
@@ -882,13 +926,43 @@ export default function WineDetailView({
         }
       }
 
-      // 4. Navegar a /bodega/vinos/{id}
-      if (imageFailed && pairingFailed) {
-        showToast('Se creó el vino, pero no se pudo subir la foto ni asociar maridajes.');
-      } else if (imageFailed) {
-        showToast('Se creó el vino, pero no se pudo subir la foto.');
-      } else if (pairingFailed) {
-        showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+      // 4. Perfil sensorial manual si hay algún valor
+      let sensoryFailed = false;
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          const firstV = vintages.find((v) => v.year === yearNum) ?? vintages[0];
+          if (firstV) {
+            await updateVintageSensory(created.id, firstV.id, {
+              body: activeVintageDraft.sensory.body ?? null,
+              tannins: activeVintageDraft.sensory.tannins ?? null,
+              acidity: activeVintageDraft.sensory.acidity ?? null,
+              fruit: activeVintageDraft.sensory.fruit ?? null,
+              oak: activeVintageDraft.sensory.oak ?? null,
+              persistence: activeVintageDraft.sensory.persistence ?? null,
+            });
+          }
+        } catch {
+          sensoryFailed = true;
+        }
+      }
+
+      // 5. Navegar a /bodega/vinos/{id}
+      const failures: string[] = [];
+      if (imageFailed) failures.push('subir la foto');
+      if (pairingFailed) failures.push('asociar maridajes');
+      if (sensoryFailed) failures.push('guardar el perfil sensorial');
+
+      if (failures.length > 0) {
+        if (failures.length === 1 && sensoryFailed) {
+          showToast('Se creó el vino, pero no se pudo guardar el perfil sensorial.');
+        } else if (failures.length === 1 && imageFailed) {
+          showToast('Se creó el vino, pero no se pudo subir la foto.');
+        } else if (failures.length === 1 && pairingFailed) {
+          showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+        } else {
+          showToast(`Se creó el vino, pero no se pudo ${failures.join(' ni ')}.`);
+        }
       }
 
       navigate(`/bodega/vinos/${created.id}`);
@@ -977,6 +1051,22 @@ export default function WineDetailView({
         }
       }
 
+      // Perfil sensorial manual si hay algún valor
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          await updateVintageSensory(confirmAddVintage.existingWineId, createdVintage.id, {
+            body: activeVintageDraft.sensory.body ?? null,
+            tannins: activeVintageDraft.sensory.tannins ?? null,
+            acidity: activeVintageDraft.sensory.acidity ?? null,
+            fruit: activeVintageDraft.sensory.fruit ?? null,
+            oak: activeVintageDraft.sensory.oak ?? null,
+            persistence: activeVintageDraft.sensory.persistence ?? null,
+          });
+        } catch {
+          showToast('Se agregó la cosecha, pero no se pudo guardar el perfil sensorial.');
+        }
+      }
+
       setConfirmAddVintage(null);
       navigate(`/bodega/vinos/${confirmAddVintage.existingWineId}`);
     } catch (err: unknown) {
@@ -993,54 +1083,96 @@ export default function WineDetailView({
 
   const averageRating = useMemo(() => calculateRating(reviews), [reviews]);
 
-  // Perfil sensorial (en vivo con draftType en edición)
+  // Carga de perfil sensorial en vino real
+  const numericWineId = isRealWine && !isNaN(Number(wine.id)) ? Number(wine.id) : undefined;
+  const numericVintageId = isRealWine && !isNaN(Number(activeVintage.id)) ? Number(activeVintage.id) : undefined;
+  const { sensory: serverSensory } = useVintageSensory(numericWineId, numericVintageId);
+
+  // Previsualización de perfil sensorial en vivo calculada desde las uvas del borrador
+  const [previewSensoryData, setPreviewSensoryData] = useState<VintageSensoryDto | null>(null);
+
+  const activeBlendGrapes = useMemo(() => {
+    if (!isEditing && !isNewMode) return [];
+    return activeVintageDraft.blend
+      .filter((b) => typeof b.grapeId === 'number' && b.grapeId > 0)
+      .map((b) => ({
+        grapeId: Number(b.grapeId),
+        percentage: typeof b.percentage === 'number' ? b.percentage : null,
+      }));
+  }, [isEditing, isNewMode, activeVintageDraft.blend]);
+
+  useEffect(() => {
+    if (!isEditing && !isNewMode) return;
+    if (activeBlendGrapes.length === 0) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      previewSensory(activeBlendGrapes, controller.signal)
+        .then((data) => {
+          setPreviewSensoryData(data);
+        })
+        .catch((err: unknown) => {
+          if ((err as { name?: string })?.name === 'CanceledError' || (err as { name?: string })?.name === 'AbortError') {
+            return;
+          }
+          setPreviewSensoryData(null);
+        });
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isEditing, isNewMode, activeBlendGrapes]);
+
+  const effectivePreviewSensory =
+    (isEditing || isNewMode) && activeBlendGrapes.length > 0 ? previewSensoryData : null;
+
+  const handleSensoryChange = (key: SensoryAxisKey, val: number) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    updateActiveVintageDraft({
+      sensory: {
+        ...currentSensory,
+        [key]: val,
+      },
+      sensoryModified: true,
+    });
+  };
+
+  const handleSensoryReset = (key: SensoryAxisKey) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    const nextSensory = { ...currentSensory };
+    delete nextSensory[key];
+    updateActiveVintageDraft({
+      sensory: nextSensory,
+      sensoryModified: true,
+    });
+  };
+
+  // Perfil sensorial (en vivo con draftType en edición y con prioridad efectiva)
   const currentEffectiveType = isEditing ? draftType : wine.type;
   const sensoryAttributes: SensoryAttribute[] = useMemo(() => {
-    if (!currentEffectiveType) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 0 },
-        { key: 'tannins', label: 'Taninos', value: 0 },
-        { key: 'acidity', label: 'Acidez', value: 0 },
-        { key: 'fruit', label: 'Fruta', value: 0 },
-        { key: 'oak', label: 'Crianza', value: 0 },
-        { key: 'persistence', label: 'Persistencia', value: 0 },
-      ];
+    if (isRealWine || isEditing || isNewMode) {
+      return buildSensoryAttributes({
+        type: currentEffectiveType,
+        server: serverSensory,
+        manual: activeVintageDraft.sensory,
+        preview: effectivePreviewSensory,
+        isEditingOrNew: isEditing || isNewMode,
+      });
     }
 
-    const isWhite = currentEffectiveType === 'White' || currentEffectiveType === 'Orange';
-    const isRose = currentEffectiveType === 'Rose';
-
-    if (isWhite) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 3.2 },
-        { key: 'tannins', label: 'Taninos', value: 1.2 },
-        { key: 'acidity', label: 'Acidez', value: 4.8 },
-        { key: 'fruit', label: 'Fruta', value: 4.6 },
-        { key: 'oak', label: 'Crianza', value: 3.5 },
-        { key: 'persistence', label: 'Persistencia', value: 4.4 },
-      ];
-    }
-
-    if (isRose) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 2.8 },
-        { key: 'tannins', label: 'Taninos', value: 2.0 },
-        { key: 'acidity', label: 'Acidez', value: 4.6 },
-        { key: 'fruit', label: 'Fruta', value: 4.7 },
-        { key: 'oak', label: 'Crianza', value: 1.8 },
-        { key: 'persistence', label: 'Persistencia', value: 3.9 },
-      ];
-    }
-
-    return [
-      { key: 'body', label: 'Cuerpo', value: 4.7 },
-      { key: 'tannins', label: 'Taninos', value: 4.8 },
-      { key: 'acidity', label: 'Acidez', value: 4.3 },
-      { key: 'fruit', label: 'Fruta', value: 4.4 },
-      { key: 'oak', label: 'Crianza', value: 4.1 },
-      { key: 'persistence', label: 'Persistencia', value: 4.9 },
-    ];
-  }, [currentEffectiveType]);
+    return getTypeSensoryFallback(wine.type);
+  }, [
+    isRealWine,
+    isEditing,
+    isNewMode,
+    currentEffectiveType,
+    serverSensory,
+    activeVintageDraft.sensory,
+    effectivePreviewSensory,
+    wine.type,
+  ]);
 
   const filteredReviews = useMemo(() => {
     if (starFilter === 'all') return reviews;
@@ -2297,22 +2429,83 @@ export default function WineDetailView({
 
               {/* Desglose de Atributos */}
               <div className="space-y-2.5 pt-2 border-t border-neutral-800/80">
-                {sensoryAttributes.map((attr) => (
-                  <div key={attr.key} className="flex items-center justify-between text-xs font-mono text-neutral-300">
-                    <span>{attr.label}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
-                          style={{ width: `${(attr.value / 5) * 100}%` }}
+                {sensoryAttributes.map((attr) => {
+                  const isEditingMode = isEditing || isNewMode;
+                  if (!isEditingMode) {
+                    return (
+                      <div key={attr.key} className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <span>{attr.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const hasManual = activeVintageDraft.sensory?.[attr.key as SensoryAxisKey] != null;
+                  const showCalculated =
+                    (attr.key === 'body' || attr.key === 'tannins' || attr.key === 'acidity') &&
+                    attr.calculatedValue != null;
+
+                  return (
+                    <div key={attr.key} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <div className="flex items-center gap-2">
+                          <span>{attr.label}</span>
+                          {hasManual && (
+                            <button
+                              type="button"
+                              onClick={() => handleSensoryReset(attr.key as SensoryAxisKey)}
+                              className="text-[10px] text-neutral-400 hover:text-rose-400 underline cursor-pointer"
+                            >
+                              Restablecer
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-0.5">
+                        <input
+                          type="range"
+                          min="1.0"
+                          max="5.0"
+                          step="0.1"
+                          value={attr.value || 1.0}
+                          onChange={(e) =>
+                            handleSensoryChange(attr.key as SensoryAxisKey, parseFloat(e.target.value))
+                          }
+                          aria-label={`Ajustar ${attr.label}`}
+                          className="w-full h-1 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
                         />
                       </div>
-                      <span className="text-neutral-200 font-semibold w-7 text-right">
-                        {attr.value.toFixed(1)}
-                      </span>
+
+                      {showCalculated && (
+                        <span className="text-[10px] text-neutral-400 font-mono block">
+                          Calculado desde las uvas: {attr.calculatedValue!.toFixed(1).replace('.', ',')}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Dictamen Enológico al pie del gráfico */}
