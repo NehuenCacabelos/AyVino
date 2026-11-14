@@ -26,7 +26,7 @@ public class UserWineRepository(IDbConnectionFactory connectionFactory) : IUserW
                    w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
                    COALESCE(wy.name, w.winery_name_text) AS WineryName,
                    latest_vintage.year AS Vintage,
-                   CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=bottle' ELSE NULL END AS ImageUrl,
+                   CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=card' ELSE NULL END AS ImageUrl,
                    w.rating_sum AS RatingSum, w.review_count AS ReviewCount,
                    uw.is_wanted AS IsWanted, uw.is_tried AS IsTried, uw.is_favorite AS IsFavorite,
                    COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) AS LastChangeAt,

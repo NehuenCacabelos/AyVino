@@ -537,7 +537,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 END) AS Varietal,
                 latest_vintage.year AS Vintage,
                 latest_vintage.image_id AS ImageId,
-                CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=bottle' ELSE NULL END AS ImageUrl,
+                CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=card' ELSE NULL END AS ImageUrl,
                 CASE w.source_type
                     WHEN 1 THEN 'Community'
                     WHEN 2 THEN 'Official'

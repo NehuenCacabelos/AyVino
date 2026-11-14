@@ -14,6 +14,9 @@ public static class ImageEndpoints
         "avatar",
         "logo",
         "banner",
+        "card",
+        "detail",
+        "thumb",
         "bottle"
     };
 
@@ -42,11 +45,9 @@ public static class ImageEndpoints
         if (!string.IsNullOrWhiteSpace(variant))
         {
             var trimmed = variant.Trim();
-            if (!AllowedVariants.Contains(trimmed))
-            {
-                throw new ValidationException($"Variante '{variant}' no válida. Valores permitidos: avatar, logo, banner, bottle.");
-            }
-            cleanVariant = trimmed.ToLowerInvariant();
+            cleanVariant = AllowedVariants.Contains(trimmed)
+                ? trimmed.ToLowerInvariant()
+                : "card";
         }
 
         var image = await imageRepository.GetByIdAsync(id, ct);
@@ -56,6 +57,11 @@ public static class ImageEndpoints
         }
 
         var deliveryUrl = imageStorage.BuildDeliveryUrl(image.ExternalId, cleanVariant);
+        if (string.IsNullOrWhiteSpace(deliveryUrl))
+        {
+            throw new NotFoundException($"No se pudo resolver la URL de entrega para la imagen '{id}'.");
+        }
+
         httpContext.Response.Headers.CacheControl = "public, max-age=604800";
         return Results.Redirect(deliveryUrl, permanent: false);
     }

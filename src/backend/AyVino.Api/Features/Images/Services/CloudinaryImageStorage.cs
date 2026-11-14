@@ -12,15 +12,45 @@ public class CloudinaryImageStorage : IImageStorage
     public const string VariantAvatar = "avatar";
     public const string VariantLogo = "logo";
     public const string VariantBanner = "banner";
-    public const string VariantBottle = "bottle";
-    public const int BottleBackgroundTolerance = 10;
+    public const string VariantCard = "card";
+    public const string VariantDetail = "detail";
+    public const string VariantThumb = "thumb";
+
+    /// <summary>
+    /// Transformación para tarjetas de vinos (catálogo, dashboard, cava):
+    /// - e_trim:10 -> Recorta márgenes vacíos uniformes del borde de la foto original (tolerancia 10).
+    /// - c_fit,w_680,h_880 -> Ajusta proporcionalmente la botella al área interior útil sin recortar píxeles.
+    /// - c_pad,w_800,h_1000,b_white -> Genera un lienzo fijo de proporción 4:5 centrado con fondo blanco uniforme (#ffffff).
+    /// - f_auto,q_auto -> Auto-formato (webp/avif) y compresión inteligente en CDN.
+    /// </summary>
+    public const string TransformCard = "e_trim:10/c_fit,w_680,h_880/c_pad,w_800,h_1000,b_white/f_auto,q_auto";
+
+    /// <summary>
+    /// Transformación para vista de detalle de vinos (ficha técnica y fotos principales):
+    /// - e_trim:10 -> Recorta márgenes vacíos uniformes del borde de la foto original (tolerancia 10).
+    /// - c_fit,w_1020,h_1320 -> Escala la botella en alta resolución para llenar el cuadro escénico.
+    /// - c_pad,w_1200,h_1500,b_white -> Genera un lienzo fijo de proporción 4:5 centrado con fondo blanco uniforme (#ffffff).
+    /// - f_auto,q_auto -> Auto-formato (webp/avif) y compresión inteligente en CDN.
+    /// </summary>
+    public const string TransformDetail = "e_trim:10/c_fit,w_1020,h_1320/c_pad,w_1200,h_1500,b_white/f_auto,q_auto";
+
+    /// <summary>
+    /// Transformación para miniaturas de vinos (buscador, historial de perfil, bitácora y listas chicas):
+    /// - e_trim:10 -> Recorta márgenes vacíos uniformes del borde de la foto original (tolerancia 10).
+    /// - c_fit,w_136,h_176 -> Ajusta la botella proporcionalmente a la miniatura compacta.
+    /// - c_pad,w_160,h_200,b_white -> Genera un lienzo fijo de proporción 4:5 centrado con fondo blanco uniforme (#ffffff).
+    /// - f_auto,q_auto -> Auto-formato (webp/avif) y compresión inteligente en CDN.
+    /// </summary>
+    public const string TransformThumb = "e_trim:10/c_fit,w_136,h_176/c_pad,w_160,h_200,b_white/f_auto,q_auto";
 
     public static readonly HashSet<string> AllowedVariants = new(StringComparer.OrdinalIgnoreCase)
     {
         VariantAvatar,
         VariantLogo,
         VariantBanner,
-        VariantBottle
+        VariantCard,
+        VariantDetail,
+        VariantThumb
     };
 
     private readonly ICloudinaryClient _cloudinaryClient;
@@ -94,18 +124,10 @@ public class CloudinaryImageStorage : IImageStorage
     {
         if (string.IsNullOrWhiteSpace(externalId))
         {
-            throw new ArgumentException("El identificador de la imagen no puede estar vacío.", nameof(externalId));
-        }
-
-        if (!string.IsNullOrWhiteSpace(variant) && !AllowedVariants.Contains(variant.Trim()))
-        {
-            throw new ValidationException($"Variante de imagen '{variant}' desconocida.");
+            return string.Empty;
         }
 
         var normalizedVariant = variant?.Trim().ToLowerInvariant();
-        var tolerance = _options.BottleBackgroundTolerance > 0
-            ? _options.BottleBackgroundTolerance
-            : BottleBackgroundTolerance;
 
         Transformation transformation = normalizedVariant switch
         {
@@ -133,19 +155,12 @@ public class CloudinaryImageStorage : IImageStorage
                 .FetchFormat("auto")
                 .Quality("auto"),
 
-            VariantBottle => new Transformation()
-                .Effect($"make_transparent:{tolerance}")
-                .Chain()
-                .Width(600)
-                .Height(1200)
-                .Crop("pad")
-                .Background("transparent")
-                .FetchFormat("auto")
-                .Quality("auto"),
+            VariantDetail => new Transformation().RawTransformation(TransformDetail),
+            VariantThumb => new Transformation().RawTransformation(TransformThumb),
+            VariantCard => new Transformation().RawTransformation(TransformCard),
 
-            _ => new Transformation()
-                .FetchFormat("auto")
-                .Quality("auto")
+            // Variante desconocida, ausente o legacy cae en card
+            _ => new Transformation().RawTransformation(TransformCard)
         };
 
         return _cloudinaryClient.BuildUrl(externalId, transformation);
