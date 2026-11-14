@@ -7,7 +7,6 @@ import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as pairingsApi from '@/features/winery/api/wineryWinePairingsApi';
 import * as grapeApi from '@/features/winery/api/grapeApi';
 import * as reviewsApi from '@/features/wines/api/reviewsApi';
-import * as tastingsApi from '@/features/wines/api/tastingsApi';
 import type { WineResponseDto, WineVintageResponseDto, WineryResponseDto } from '@/features/winery/types';
 
 vi.mock('@/features/auth', () => ({
@@ -21,7 +20,6 @@ vi.mock('@/features/winery/api/wineryApi');
 vi.mock('@/features/winery/api/wineryWinePairingsApi');
 vi.mock('@/features/winery/api/grapeApi');
 vi.mock('@/features/wines/api/reviewsApi');
-vi.mock('@/features/wines/api/tastingsApi');
 
 describe('WineDetailPage Integration', () => {
   const mockRealWine: WineResponseDto = {
@@ -112,15 +110,17 @@ describe('WineDetailPage Integration', () => {
       createdAt: '2025-03-01T10:00:00Z',
       updatedAt: null,
     });
-    vi.mocked(tastingsApi.createTasting).mockResolvedValue({
-      id: 50,
+    vi.mocked(reviewsApi.getMyVintageReview).mockResolvedValue(null);
+    vi.mocked(reviewsApi.updateReview).mockResolvedValue({
+      id: 100,
       userId: 10,
+      username: 'Mariano Sommelier',
       wineVintageId: 201,
-      cellarId: null,
-      rating: 4.3,
-      comment: 'Gran textura en boca.',
-      tastedAt: '2025-03-01T10:00:00Z',
+      vintageYear: 2020,
+      rating: 4.5,
+      comment: 'Muy buena concentración.',
       createdAt: '2025-03-01T10:00:00Z',
+      updatedAt: '2025-03-01T10:00:00Z',
     });
   });
 
@@ -163,6 +163,18 @@ describe('WineDetailPage Integration', () => {
   });
 
   it('publicación de reseña en vino real: envía rating decimal sin redondear a entero', async () => {
+    vi.mocked(reviewsApi.createReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.2,
+      comment: 'Notas de vainilla y pimientos dulces.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
     render(
       <MemoryRouter initialEntries={['/vinos/101']}>
         <Routes>
@@ -186,7 +198,7 @@ describe('WineDetailPage Integration', () => {
     const slider = screen.getByLabelText(/Seleccionar puntuación decimal/i);
     fireEvent.change(slider, { target: { value: '4.2' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña Pública/i });
+    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -198,10 +210,33 @@ describe('WineDetailPage Integration', () => {
     });
 
     // Verifica que se haya mostrado toast de éxito en formato es-AR
-    expect(await screen.findByText(/¡Tu reseña \(4,2 ★\) fue publicada con éxito!/i)).toBeInTheDocument();
+    expect(await screen.findByText(/¡Tu reseña \(4,2 ★\) fue guardada!/i)).toBeInTheDocument();
   });
 
-  it('registro de cata privada en vino real: llama a createTasting con decimal sin redondear', async () => {
+  it('edición de reseña existente en vino real: formulario precargado y llama a updateReview', async () => {
+    vi.mocked(reviewsApi.getMyVintageReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.3,
+      comment: 'Excelente acidez con pastas rellenas.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    vi.mocked(reviewsApi.updateReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.5,
+      comment: 'Actualizado: aún mejor en boca.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
     render(
       <MemoryRouter initialEntries={['/vinos/101']}>
         <Routes>
@@ -214,36 +249,36 @@ describe('WineDetailPage Integration', () => {
       expect(screen.getByText('Rutini Cabernet Malbec 2020')).toBeInTheDocument();
     });
 
-    // Abrir formulario desde "+ Registrar mi cata"
-    const openTastingBtn = screen.getByRole('button', { name: /\+ Registrar mi cata/i });
-    fireEvent.click(openTastingBtn);
+    // El botón debe decir "Editar reseña" o "Editar mi reseña"
+    const editBtn = await screen.findByRole('button', { name: /Editar reseña/i });
+    fireEvent.click(editBtn);
 
-    const textarea = screen.getByPlaceholderText(/Aromas percibidos, maridaje elegido/i);
-    fireEvent.change(textarea, { target: { value: 'Excelente acidez con pastas rellenas.' } });
+    const textarea = screen.getByPlaceholderText(/Describí aromas primarios/i);
+    expect(textarea).toHaveValue('Excelente acidez con pastas rellenas.');
 
-    // Cambiamos slider a 4.3
+    fireEvent.change(textarea, { target: { value: 'Actualizado: aún mejor en boca.' } });
+
     const slider = screen.getByLabelText(/Seleccionar puntuación decimal/i);
-    fireEvent.change(slider, { target: { value: '4.3' } });
+    fireEvent.change(slider, { target: { value: '4.5' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Guardar en mi bitácora/i });
+    const submitBtn = screen.getByRole('button', { name: /Guardar cambios/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(tastingsApi.createTasting).toHaveBeenCalledWith(
+      expect(reviewsApi.updateReview).toHaveBeenCalledWith(
+        501,
         expect.objectContaining({
-          wineVintageId: 201,
-          cellarId: null,
-          rating: 4.3,
-          comment: 'Excelente acidez con pastas rellenas.',
+          rating: 4.5,
+          comment: 'Actualizado: aún mejor en boca.',
         })
       );
     });
 
     // Verifica aviso de éxito en formato es-AR
-    expect(await screen.findByText(/¡Tu cata \(4,3 ★\) fue guardada en tu bitácora!/i)).toBeInTheDocument();
+    expect(await screen.findByText(/¡Tu reseña \(4,5 ★\) fue guardada!/i)).toBeInTheDocument();
   });
 
-  it('error en reseña o cata muestra el mensaje devuelto por el backend sin romper estado', async () => {
+  it('error en reseña muestra el mensaje devuelto por el backend sin romper estado', async () => {
     vi.mocked(reviewsApi.createReview).mockRejectedValueOnce({
       response: { data: { detail: 'Ya registraste una reseña para esta cosecha.' } },
     });
@@ -266,7 +301,7 @@ describe('WineDetailPage Integration', () => {
     const textarea = await screen.findByPlaceholderText(/Describí aromas primarios/i);
     fireEvent.change(textarea, { target: { value: 'Comentario duplicado.' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña Pública/i });
+    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña/i });
     fireEvent.click(submitBtn);
 
     expect(await screen.findByText(/Ya registraste una reseña para esta cosecha/i)).toBeInTheDocument();

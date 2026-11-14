@@ -194,6 +194,8 @@ export interface DashboardWine {
   isFavorite?: boolean;
   imageUrl?: string;
   imageId?: string | null;
+  wineId?: number;
+  wineVintageId?: number;
 }
 
 /**

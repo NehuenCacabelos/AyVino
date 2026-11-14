@@ -190,14 +190,15 @@ describe('Bloque U13D - Pantalla /cava', () => {
       bottle: 'red-bordeaux',
     };
 
-    it('VaultWineCard muestra MI CATA 4,3 ★ para vinos puntuados y Sin calificar para no puntuados', () => {
+    it('VaultWineCard muestra TU RESEÑA 4,3 ★ para vinos puntuados y — para no puntuados', () => {
       const { rerender } = render(
         <MemoryRouter>
           <VaultWineCard wine={ratedWine} onOpenDetails={vi.fn()} onUncork={vi.fn()} />
         </MemoryRouter>
       );
 
-      expect(screen.getByText('MI CATA 4,3 ★')).toBeInTheDocument();
+      expect(screen.getByText(/TU RESEÑA/i)).toBeInTheDocument();
+      expect(screen.getByText(/4,3/i)).toBeInTheDocument();
       expect(screen.queryByText(/PTS/i)).toBeNull();
 
       rerender(
@@ -212,7 +213,7 @@ describe('Bloque U13D - Pantalla /cava', () => {
   });
 
   describe('D.4 Bitácora de catas desde API con paginación', () => {
-    it('carga las catas desde /users/me/tastings y permite cargar más páginas', async () => {
+    it('carga las catas desde /users/me/uncorks y permite cargar más páginas', async () => {
       mockClient.get.mockImplementation((url: string, config?: { params?: { pageNumber?: number; pageSize?: number } }) => {
         if (url === '/cellars/me') {
           return Promise.resolve({ data: [{ id: 1, name: 'Cava Principal' }] });
@@ -220,20 +221,21 @@ describe('Bloque U13D - Pantalla /cava', () => {
         if (url === '/cellars/1/items') {
           return Promise.resolve({ data: [] });
         }
-        if (url === '/users/me/tastings') {
+        if (url === '/users/me/uncorks') {
           const page = config?.params?.pageNumber || 1;
           if (page === 1) {
-            // Retorna 10 catas para habilitar el botón "Cargar más"
+            // Retorna 10 descorches para habilitar el botón "Cargar más"
             return Promise.resolve({
               data: Array.from({ length: 10 }, (_, i) => ({
                 id: i + 1,
                 wineId: 100 + i,
+                wineVintageId: 200 + i,
                 wineName: `Vino Cata ${i + 1}`,
-                vintageYear: 2020,
+                year: 2020,
                 wineryName: 'Bodega Test',
                 rating: 4.5,
                 comment: `Nota de cata número ${i + 1}`,
-                tastedAt: '2026-11-14T12:00:00Z',
+                uncorkedAt: '2026-11-14T12:00:00Z',
               })),
             });
           }
@@ -243,12 +245,13 @@ describe('Bloque U13D - Pantalla /cava', () => {
                 {
                   id: 11,
                   wineId: 111,
+                  wineVintageId: 211,
                   wineName: 'Vino Página Dos',
-                  vintageYear: 2019,
+                  year: 2019,
                   wineryName: 'Bodega Dos',
                   rating: 5.0,
                   comment: 'Nota de la segunda página.',
-                  tastedAt: '2026-11-13T12:00:00Z',
+                  uncorkedAt: '2026-11-13T12:00:00Z',
                 },
               ],
             });
@@ -267,7 +270,7 @@ describe('Bloque U13D - Pantalla /cava', () => {
 
       // Debe consultar página 1
       await waitFor(() => {
-        expect(mockClient.get).toHaveBeenCalledWith('/users/me/tastings', expect.objectContaining({
+        expect(mockClient.get).toHaveBeenCalledWith('/users/me/uncorks', expect.objectContaining({
           params: expect.objectContaining({ pageNumber: 1, pageSize: 10 }),
         }));
       });
@@ -285,7 +288,7 @@ describe('Bloque U13D - Pantalla /cava', () => {
       fireEvent.click(loadMoreBtn);
 
       await waitFor(() => {
-        expect(mockClient.get).toHaveBeenCalledWith('/users/me/tastings', expect.objectContaining({
+        expect(mockClient.get).toHaveBeenCalledWith('/users/me/uncorks', expect.objectContaining({
           params: expect.objectContaining({ pageNumber: 2, pageSize: 10 }),
         }));
       });

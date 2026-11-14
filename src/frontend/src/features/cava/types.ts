@@ -6,14 +6,26 @@ export type WineSortOption = 'default' | 'vintage-desc' | 'vintage-asc';
 
 export type BottleAgingState = 'optimal' | 'aging' | 'peak';
 
+export interface VarietalSegment {
+  name: string;
+  percentage: number;
+  bottleCount: number;
+  wineType: string;
+  color: string;
+  opacity?: number;
+}
+
 export interface CellarVitals {
   totalBottles: number;
   redsCount: number;
   whitesCount: number;
   sparklingCount: number;
+  othersCount?: number;
   optimalCount: number;
   dominantVarietal: string;
   dominantVarietalPercentage: number;
+  undeclaredGrapeBottles: number;
+  varietalSegments: VarietalSegment[];
   oldestVintage: number | null;
   oldestVintageAgingYears: number;
 }
@@ -26,6 +38,8 @@ export interface CellarWine {
   winery: string;
   region: string;
   varietal: string;
+  grapeName?: string | null;
+  wineType?: string | null;
   vintage: number;
   rating: number; // Critic score or user rating, e.g. 99, 100
   userRating?: number | null;
@@ -78,7 +92,7 @@ export interface SommelierRecommendation {
 export interface TastingLogEntry {
   id: string;
   wineName: string;
-  criticScore: string; // "CATA PRIVADA 97 PTS"
+  criticScore: string; // "TU RESEÑA 4,5 ★"
   uncorkDate: string; // "DESCORCHADO EL 14 DE MARZO, 2025"
   notes: string;
   sight: string;

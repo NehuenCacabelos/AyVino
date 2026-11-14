@@ -844,7 +844,7 @@ exports[`WineDetailPage Snapshot Previo > renderiza la plantilla con el vino edi
                   />
                 </svg>
                 <span>
-                  + Registrar mi cata
+                  + Dejar mi reseña
                 </span>
               </button>
             </div>

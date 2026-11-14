@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   MapPin,
@@ -31,8 +31,8 @@ import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
 import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
 import { imageUrl } from '../../../lib/image';
 import WineBottleSilhouette from './WineBottleSilhouette';
-import { createReview } from '../api/reviewsApi';
-import { createTasting } from '../api/tastingsApi';
+import { createReview, updateReview, getMyVintageReview } from '../api/reviewsApi';
+import type { ReviewResponseDto } from '../types/review';
 import RatingInput from '../../../components/RatingInput';
 import { formatRating, normalizeRating } from '../../../lib/formatRating';
 import WineEditBar from './WineEditBar';
@@ -298,8 +298,8 @@ export default function WineDetailView({
 
   const wineryId = wine.winery?.wineryId ?? wine.wineryId;
 
-  // Formulario de nueva reseña / cata
-  const [formMode, setFormMode] = useState<'review' | 'tasting'>('review');
+  // Formulario de reseña única por cosecha
+  const [existingReview, setExistingReview] = useState<ReviewResponseDto | null>(null);
   const [newReviewRating, setNewReviewRating] = useState<number>(4.5);
   const [newReviewComment, setNewReviewComment] = useState<string>('');
 
@@ -1134,18 +1134,46 @@ export default function WineDetailView({
     }
   };
 
-  const handleOpenReviewForm = () => {
-    setFormMode('review');
-    setIsReviewFormOpen(true);
-    const el = document.getElementById('reviews-editorial-section');
-    if (typeof el?.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    let isMounted = true;
+    if (isRealWine && !ownerMode && !isNewMode && activeVintage?.id) {
+      const vId = Number(activeVintage.id);
+      if (!isNaN(vId) && vId > 0 && typeof getMyVintageReview === 'function') {
+        const promise = getMyVintageReview(vId);
+        if (promise && typeof promise.then === 'function') {
+          void promise
+            .then((review) => {
+              if (!isMounted) return;
+              setExistingReview(review);
+              if (review) {
+                setNewReviewRating(review.rating);
+                setNewReviewComment(review.comment || '');
+              } else {
+                setNewReviewRating(4.5);
+                setNewReviewComment('');
+              }
+            })
+            .catch(() => {
+              if (!isMounted) return;
+              setExistingReview(null);
+              setNewReviewRating(4.5);
+              setNewReviewComment('');
+            });
+        }
+      }
     }
-  };
 
-  const handleOpenTastingForm = () => {
-    setFormMode('tasting');
+    return () => {
+      isMounted = false;
+    };
+  }, [isRealWine, ownerMode, isNewMode, activeVintage?.id]);
+
+  const handleOpenReviewForm = () => {
     setIsReviewFormOpen(true);
+    if (existingReview) {
+      setNewReviewRating(existingReview.rating);
+      setNewReviewComment(existingReview.comment || '');
+    }
     const el = document.getElementById('reviews-editorial-section');
     if (typeof el?.scrollIntoView === 'function') {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -1154,101 +1182,56 @@ export default function WineDetailView({
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newReviewComment.trim()) return;
 
-    if (formMode === 'review') {
-      if (!newReviewComment.trim()) return;
+    const normalizedRating = normalizeRating(newReviewRating);
 
-      if (isRealWine) {
-        try {
-          const normalizedRating = normalizeRating(newReviewRating);
-          const vintageId = Number(activeVintage.id);
-          await createReview({
+    if (isRealWine) {
+      try {
+        const vintageId = Number(activeVintage.id);
+        let savedReview: ReviewResponseDto;
+        if (existingReview) {
+          savedReview = await updateReview(existingReview.id, {
+            rating: normalizedRating,
+            comment: newReviewComment.trim(),
+          });
+        } else {
+          savedReview = await createReview({
             wineVintageId: vintageId,
             rating: normalizedRating,
             comment: newReviewComment.trim(),
           });
-          showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue publicada con éxito!`);
-          setNewReviewComment('');
-          setNewReviewRating(4.5);
-          setIsReviewFormOpen(false);
-          if (onReviewPublished) {
-            await onReviewPublished();
-          }
-        } catch (err: unknown) {
-          const maybeAxios = err as { response?: { data?: { detail?: string; message?: string } } };
-          const serverMessage =
-            maybeAxios?.response?.data?.detail ||
-            maybeAxios?.response?.data?.message ||
-            'No se pudo registrar la reseña. Verificá si ya tenés una reseña para esta cosecha.';
-          showToast(serverMessage);
         }
-        return;
-      }
-
-      const authorName = user?.username?.trim() || 'Sommelier Coleccionista';
-      const normalizedRating = normalizeRating(newReviewRating);
-      const createdReview: WineReviewItem = {
-        id: `rev-${Date.now()}`,
-        userName: authorName,
-        vintageYear: activeVintage.year,
-        rating: normalizedRating,
-        createdAt: new Date().toISOString().split('T')[0],
-        comment: newReviewComment.trim(),
-      };
-
-      setSubmittedReviews((prev) => [createdReview, ...prev]);
-      setNewReviewComment('');
-      setNewReviewRating(4.5);
-      setIsReviewFormOpen(false);
-      showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue publicada con éxito!`);
-    } else {
-      // formMode === 'tasting' (Cata privada unificada)
-      if (isRealWine) {
-        try {
-          const normalizedRating = normalizeRating(newReviewRating);
-          const vintageId = Number(activeVintage.id);
-          await createTasting({
-            wineVintageId: vintageId,
-            cellarId: null,
-            rating: normalizedRating,
-            comment: newReviewComment.trim() || undefined,
-            tastedAt: new Date().toISOString(),
-          });
-          showToast(`¡Tu cata (${formatRating(normalizedRating)} ★) fue guardada en tu bitácora!`);
-          setNewReviewComment('');
-          setNewReviewRating(4.5);
-          setIsReviewFormOpen(false);
-          if (onReviewPublished) {
-            await onReviewPublished();
-          }
-        } catch (err: unknown) {
-          const maybeAxios = err as { response?: { data?: { detail?: string; message?: string } } };
-          const serverMessage =
-            maybeAxios?.response?.data?.detail ||
-            maybeAxios?.response?.data?.message ||
-            'No se pudo registrar la cata privada.';
-          showToast(serverMessage);
+        setExistingReview(savedReview);
+        showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
+        setIsReviewFormOpen(false);
+        if (onReviewPublished) {
+          await onReviewPublished();
         }
-        return;
+      } catch (err: unknown) {
+        const maybeAxios = err as { response?: { data?: { detail?: string; message?: string } } };
+        const serverMessage =
+          maybeAxios?.response?.data?.detail ||
+          maybeAxios?.response?.data?.message ||
+          'No se pudo guardar la reseña.';
+        showToast(serverMessage);
       }
-
-      const authorName = user?.username?.trim() || 'Sommelier Coleccionista';
-      const normalizedRating = normalizeRating(newReviewRating);
-      const createdReview: WineReviewItem = {
-        id: `rev-${Date.now()}`,
-        userName: authorName,
-        vintageYear: activeVintage.year,
-        rating: normalizedRating,
-        createdAt: new Date().toISOString().split('T')[0],
-        comment: newReviewComment.trim(),
-      };
-
-      setSubmittedReviews((prev) => [createdReview, ...prev]);
-      setNewReviewComment('');
-      setNewReviewRating(4.5);
-      setIsReviewFormOpen(false);
-      showToast(`¡Tu cata (${formatRating(normalizedRating)} ★) fue guardada en tu bitácora!`);
+      return;
     }
+
+    const authorName = user?.username?.trim() || 'Sommelier Coleccionista';
+    const createdReview: WineReviewItem = {
+      id: `rev-${Date.now()}`,
+      userName: authorName,
+      vintageYear: activeVintage.year,
+      rating: normalizedRating,
+      createdAt: new Date().toISOString().split('T')[0],
+      comment: newReviewComment.trim(),
+    };
+
+    setSubmittedReviews((prev) => [createdReview, ...prev]);
+    setIsReviewFormOpen(false);
+    showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
   };
 
   const [imageError, setImageError] = useState(false);
@@ -1363,7 +1346,7 @@ export default function WineDetailView({
                   }
                 >
                   <Edit3 className="w-4 h-4 text-neutral-400" />
-                  <span>Escribir reseña</span>
+                  <span>{existingReview ? 'Editar reseña' : 'Escribir reseña'}</span>
                 </button>
               </div>
 
@@ -2065,11 +2048,14 @@ export default function WineDetailView({
                 <button
                   type="button"
                   onClick={() => {
-                    if (isReviewFormOpen && formMode === 'tasting') {
-                      setIsReviewFormOpen(false);
-                    } else {
-                      handleOpenTastingForm();
-                    }
+                    setIsReviewFormOpen((prev) => {
+                      const next = !prev;
+                      if (next && existingReview) {
+                        setNewReviewRating(existingReview.rating);
+                        setNewReviewComment(existingReview.comment || '');
+                      }
+                      return next;
+                    });
                   }}
                   disabled={isNewMode}
                   className={
@@ -2079,7 +2065,7 @@ export default function WineDetailView({
                   }
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>{isReviewFormOpen && formMode === 'tasting' ? 'Cerrar cata' : '+ Registrar mi cata'}</span>
+                  <span>{isReviewFormOpen ? 'Cerrar formulario' : (existingReview ? 'Editar mi reseña' : '+ Dejar mi reseña')}</span>
                 </button>
               </div>
 
@@ -2099,9 +2085,9 @@ export default function WineDetailView({
                           {user?.username || 'Miembro Sommelier'}
                         </span>
                         <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-                          {formMode === 'review'
-                            ? `Reseña pública comunitaria · Cosecha ${activeVintage.year}`
-                            : `Cata privada en tu bitácora personal · Cosecha ${activeVintage.year}`}
+                          {existingReview
+                            ? `Editando tu reseña · Cosecha ${activeVintage.year}`
+                            : `Tu reseña · Cosecha ${activeVintage.year}`}
                         </span>
                       </div>
                     </div>
@@ -2113,32 +2099,6 @@ export default function WineDetailView({
                       aria-label="Cerrar formulario"
                     >
                       <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Selector de Modo: Reseña Pública vs Cata Privada */}
-                  <div className="flex items-center gap-2 border-b border-neutral-800/80 pb-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormMode('review')}
-                      className={`text-xs uppercase tracking-wider font-mono px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
-                        formMode === 'review'
-                          ? 'bg-rose-950/80 border border-rose-700/80 text-rose-200 font-semibold'
-                          : 'text-neutral-400 hover:text-neutral-200 border border-transparent'
-                      }`}
-                    >
-                      Reseña pública
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormMode('tasting')}
-                      className={`text-xs uppercase tracking-wider font-mono px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
-                        formMode === 'tasting'
-                          ? 'bg-rose-950/80 border border-rose-700/80 text-rose-200 font-semibold'
-                          : 'text-neutral-400 hover:text-neutral-200 border border-transparent'
-                      }`}
-                    >
-                      Mi cata privada
                     </button>
                   </div>
 
@@ -2155,21 +2115,15 @@ export default function WineDetailView({
 
                   <div>
                     <label htmlFor="review-comment" className="block text-xs font-mono text-neutral-400 mb-1.5">
-                      {formMode === 'review'
-                        ? 'Nota de Cata & Sensaciones en boca (pública, requerida)'
-                        : 'Impresiones y notas de cata personales (privadas en tu bitácora)'}
+                      Nota de Cata & Sensaciones en boca
                     </label>
                     <textarea
                       id="review-comment"
-                      required={formMode === 'review'}
+                      required
                       rows={3}
                       value={newReviewComment}
                       onChange={(e) => setNewReviewComment(e.target.value)}
-                      placeholder={
-                        formMode === 'review'
-                          ? 'Describí aromas primarios, textura en el paladar, estructura de taninos y guarda...'
-                          : 'Aromas percibidos, maridaje elegido, evolución en copa...'
-                      }
+                      placeholder="Describí aromas primarios, textura en el paladar, estructura de taninos y guarda..."
                       className="w-full bg-[#0a0a0c] border border-neutral-800 text-neutral-200 text-xs p-3.5 rounded-sm focus:border-rose-700 focus:outline-none font-sans leading-relaxed"
                     />
                   </div>
@@ -2187,7 +2141,7 @@ export default function WineDetailView({
                       className="h-9 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50 flex items-center gap-2 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>{formMode === 'review' ? 'Publicar Reseña Pública' : 'Guardar en mi bitácora'}</span>
+                      <span>{existingReview ? 'Guardar cambios' : 'Publicar Reseña'}</span>
                     </button>
                   </div>
                 </form>

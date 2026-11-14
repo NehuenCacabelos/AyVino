@@ -4,6 +4,7 @@ import BottleVector from './BottleVector';
 import RatingInput from '../../../components/RatingInput';
 import { formatRating, normalizeRating } from '../../../lib/formatRating';
 import { imageUrl } from '../../../lib/image';
+import { getMyVintageReview, type ReviewResponseDto } from '../../../features/wines';
 import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
 
 interface UncorkDialogProps {
@@ -26,6 +27,7 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [occasion, setOccasion] = useState('Cena en casa');
   const [tastingNotes, setTastingNotes] = useState('');
+  const [existingReview, setExistingReview] = useState<ReviewResponseDto | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [failedImageWineKey, setFailedImageWineKey] = useState<string | null>(null);
@@ -33,6 +35,40 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
 
   const imageKey = wine?.id || wine?.name || null;
   const hasImageError = Boolean(imageKey && failedImageWineKey === imageKey);
+
+  useEffect(() => {
+    let isMounted = true;
+    const vintageId = wine?.wineVintageId ?? Number(wine?.id ? wine.id.replace('api-item-', '') : NaN);
+
+    if (wine && !isNaN(vintageId) && vintageId > 0 && typeof getMyVintageReview === 'function') {
+      const promise = getMyVintageReview(vintageId);
+      if (promise && typeof promise.then === 'function') {
+        void promise
+          .then((review) => {
+            if (!isMounted) return;
+            if (review) {
+              setExistingReview(review);
+              setRating(review.rating);
+              setTastingNotes(review.comment || '');
+            } else {
+              setExistingReview(null);
+              setRating(null);
+              setTastingNotes('');
+            }
+          })
+          .catch(() => {
+            if (!isMounted) return;
+            setExistingReview(null);
+            setRating(null);
+            setTastingNotes('');
+          });
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [wine]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -303,6 +339,17 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
                 </div>
 
               </div>
+
+              {/* Aviso visible de actualización de reseña previa */}
+              {existingReview && (
+                <div
+                  data-testid="uncork-existing-review-notice"
+                  className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-200"
+                >
+                  <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>Ya tenés una reseña de este vino: se va a actualizar</span>
+                </div>
+              )}
 
               {/* Puntuación Decimal Compartida */}
               <div>

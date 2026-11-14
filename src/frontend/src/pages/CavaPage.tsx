@@ -14,14 +14,15 @@ import {
   TechnicalSheetModal,
   QuickAddBottleModal,
   type CellarWine,
+  type CellarVitals,
+  type VarietalSegment,
   type WineSortOption,
   type TastingLogEntry,
 } from '../features/cava';
 import { apiClient } from '../services/apiClient';
 import { imageUrl } from '../lib/image';
 import { formatRating, normalizeRating } from '../lib/formatRating';
-import { getMyTastings } from '../features/wines/api/tastingsApi';
-import type { TastingListItemDto } from '../features/wines/types/tasting';
+import { getMyUncorks, type UncorkListItemDto } from '../features/wines';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 /**
@@ -120,7 +121,9 @@ export default function CavaPage() {
               name: item.name || '—',
               winery: item.wineryName || item.wineryNameText || '—',
               region: item.regionName || '—',
-              varietal: item.grapeName || item.wineType || '—',
+              varietal: item.grapeName?.trim() || '—',
+              grapeName: item.grapeName?.trim() || null,
+              wineType: item.wineType || null,
               vintage: item.year || 0,
               rating: score100 || 0,
               userRating: userRatingNum,
@@ -147,13 +150,13 @@ export default function CavaPage() {
         setWines([]);
       }
 
-      // Cargar la bitácora de cata persistente desde la API unificada de Tastings (U13B)
+      // Cargar la bitácora de descorches persistente desde la API unificada de Uncorks (U14A/U14B)
       try {
-        const tastings = await getMyTastings({ pageNumber: 1, pageSize: 10 });
-        if (Array.isArray(tastings) && isMounted) {
-          const mappedLogs: TastingLogEntry[] = tastings.map((item: TastingListItemDto) => {
-            const dateStr = item.tastedAt
-              ? new Date(item.tastedAt).toLocaleDateString('es-AR', {
+        const uncorks = await getMyUncorks({ pageNumber: 1, pageSize: 10 });
+        if (Array.isArray(uncorks) && isMounted) {
+          const mappedLogs: TastingLogEntry[] = uncorks.map((item: UncorkListItemDto) => {
+            const dateStr = item.uncorkedAt
+              ? new Date(item.uncorkedAt).toLocaleDateString('es-AR', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
@@ -165,26 +168,26 @@ export default function CavaPage() {
                 }).toUpperCase();
 
             return {
-              id: `tasting-${item.id}`,
-              wineName: `${item.wineName}${item.vintageYear ? ` (${item.vintageYear})` : ''}`,
-              criticScore: item.rating && item.rating > 0
-                ? `MI CATA ${formatRating(item.rating)} ★`
-                : 'MI CATA',
+              id: `uncork-${item.id}`,
+              wineName: `${item.wineName}${item.year ? ` (${item.year})` : ''}`,
+              criticScore: item.rating !== null && item.rating !== undefined && item.rating > 0
+                ? `TU RESEÑA ${formatRating(item.rating)} ★`
+                : 'SIN CALIFICACIÓN',
               uncorkDate: `DESCORCHADO EL ${dateStr}`,
               notes:
                 item.comment?.trim() ||
-                `Vino probado y descorchado. Registrado en tu bitácora de cata.`,
+                'Sin notas de cata registradas en la reseña.',
               sight: 'Límpido y brillante',
               agingRemaining: item.wineryName || 'Bodega certificada',
               ratingValue: item.rating ? Math.round(item.rating) : 0,
             };
           });
           setTastingLog(mappedLogs);
-          setHasMoreTastings(tastings.length >= 10);
+          setHasMoreTastings(uncorks.length >= 10);
           setTastingsPage(1);
         }
       } catch (err: unknown) {
-        let errorMsg = 'No pudimos sincronizar la bitácora de cata.';
+        let errorMsg = 'No pudimos sincronizar la bitácora de descorches.';
         if (axios.isAxiosError(err)) {
           errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
         }
@@ -216,38 +219,55 @@ export default function CavaPage() {
 }, [reloadTrigger, showNotification]);
 
   // 2. Cálculo reactivo de Métricas Vitales de la Cava
-  const vitals = useMemo(() => {
+  const vitals = useMemo((): CellarVitals => {
     const totalBottles = wines.reduce((acc, curr) => acc + curr.units, 0);
 
+    const emptyResult: CellarVitals = {
+      totalBottles: 0,
+      redsCount: 0,
+      whitesCount: 0,
+      sparklingCount: 0,
+      othersCount: 0,
+      optimalCount: 0,
+      dominantVarietal: '—',
+      dominantVarietalPercentage: 0,
+      undeclaredGrapeBottles: 0,
+      varietalSegments: [],
+      oldestVintage: null,
+      oldestVintageAgingYears: 0,
+    };
+
     if (totalBottles === 0 || wines.length === 0) {
-      return {
-        totalBottles: 0,
-        redsCount: 0,
-        whitesCount: 0,
-        sparklingCount: 0,
-        optimalCount: 0,
-        dominantVarietal: '—',
-        dominantVarietalPercentage: 0,
-        oldestVintage: null,
-        oldestVintageAgingYears: 0,
-      };
+      return emptyResult;
     }
+
+    const getWineTypeCategory = (type: string | number | null | undefined): 'Red' | 'White' | 'Sparkling' | 'Other' => {
+      if (!type) return 'Other';
+      const s = String(type).trim().toLowerCase();
+      if (s === '1' || s === 'red' || s === 'tinto' || s === 'tintos') return 'Red';
+      if (s === '2' || s === 'white' || s === 'blanco' || s === 'blancos') return 'White';
+      if (s === '4' || s === 'sparkling' || s === 'espumoso' || s === 'espumosos' || s === 'esp.' || s === 'espumante') return 'Sparkling';
+      return 'Other';
+    };
 
     let redsCount = 0;
     let whitesCount = 0;
     let sparklingCount = 0;
+    let othersCount = 0;
     let optimalCount = 0;
     let oldestVintage: number | null = null;
-    const varietalCounts: Record<string, number> = {};
 
+    // Total en Cava: clasificar cada botella por su wineType del backend
     wines.forEach((w) => {
-      const v = (w.varietal || '').toLowerCase();
-      if (v.includes('blanco') || v.includes('chardonnay') || v.includes('torrontés') || w.bottle.includes('white')) {
+      const typeCategory = getWineTypeCategory(w.wineType);
+      if (typeCategory === 'Red') {
+        redsCount += w.units;
+      } else if (typeCategory === 'White') {
         whitesCount += w.units;
-      } else if (v.includes('espumante') || v.includes('champagne') || w.bottle === 'sparkling') {
+      } else if (typeCategory === 'Sparkling') {
         sparklingCount += w.units;
       } else {
-        redsCount += w.units;
+        othersCount += w.units;
       }
 
       if (w.agingStatus === 'optimal') {
@@ -259,38 +279,124 @@ export default function CavaPage() {
           oldestVintage = w.vintage;
         }
       }
-
-      const rawVarietal = w.varietal?.trim();
-      if (rawVarietal && rawVarietal !== '—') {
-        varietalCounts[rawVarietal] = (varietalCounts[rawVarietal] || 0) + w.units;
-      }
     });
-
-    // Calcular varietal dominante real
-    let dominantVarietal = '—';
-    let maxCount = 0;
-    Object.entries(varietalCounts).forEach(([name, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        dominantVarietal = name;
-      }
-    });
-
-    const dominantVarietalPercentage = maxCount > 0
-      ? Math.round((maxCount / totalBottles) * 100)
-      : 0;
 
     const currentYear = new Date().getFullYear();
     const oldestVintageAgingYears = oldestVintage !== null ? Math.max(0, currentYear - oldestVintage) : 0;
+
+    // Conteo por uva principal (grapeName declarado)
+    let declaredBottlesTotal = 0;
+    const grapeMap: Record<string, { count: number; typeCounts: Record<string, number> }> = {};
+
+    wines.forEach((w) => {
+      const grape = w.grapeName?.trim();
+      if (grape && grape !== '—') {
+        declaredBottlesTotal += w.units;
+        if (!grapeMap[grape]) {
+          grapeMap[grape] = { count: 0, typeCounts: {} };
+        }
+        grapeMap[grape].count += w.units;
+        const typeCategory = getWineTypeCategory(w.wineType);
+        grapeMap[grape].typeCounts[typeCategory] = (grapeMap[grape].typeCounts[typeCategory] || 0) + w.units;
+      }
+    });
+
+    const undeclaredGrapeBottles = totalBottles - declaredBottlesTotal;
+
+    if (declaredBottlesTotal === 0) {
+      return {
+        totalBottles,
+        redsCount,
+        whitesCount,
+        sparklingCount,
+        othersCount,
+        optimalCount,
+        dominantVarietal: '—',
+        dominantVarietalPercentage: 0,
+        undeclaredGrapeBottles,
+        varietalSegments: [],
+        oldestVintage,
+        oldestVintageAgingYears,
+      };
+    }
+
+    // Ordenar uvas de mayor a menor cantidad
+    const sortedGrapes = Object.entries(grapeMap)
+      .map(([name, data]) => {
+        let dominantType: 'Red' | 'White' | 'Sparkling' | 'Other' = 'Red';
+        let maxTypeCount = -1;
+        Object.entries(data.typeCounts).forEach(([t, cnt]) => {
+          if (cnt > maxTypeCount) {
+            maxTypeCount = cnt;
+            dominantType = t as 'Red' | 'White' | 'Sparkling' | 'Other';
+          }
+        });
+        return {
+          name,
+          count: data.count,
+          dominantType,
+        };
+      })
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+    // Empates en primer lugar
+    const maxCount = sortedGrapes[0].count;
+    const tiedGrapes = sortedGrapes.filter((g) => g.count === maxCount);
+    const dominantVarietal = tiedGrapes.map((g) => g.name).join(' · ');
+    const dominantVarietalPercentage = Math.round((maxCount / declaredBottlesTotal) * 100);
+
+    // Barra segmentada real: hasta 3 uvas y tramo "Otros" (sobrante si existe)
+    const top3 = sortedGrapes.slice(0, 3);
+    const remainder = sortedGrapes.slice(3);
+    const remainderCount = remainder.reduce((acc, g) => acc + g.count, 0);
+
+    const colorByType: Record<string, string> = {
+      Red: '#722F37',
+      White: '#fbbf24',
+      Sparkling: '#d1d5db',
+      Other: '#525252',
+    };
+
+    const opacityLevels = [1, 0.7, 0.45];
+    const typeUsageCount: Record<string, number> = {};
+
+    const varietalSegments: VarietalSegment[] = top3.map((g) => {
+      const typeIndex = typeUsageCount[g.dominantType] || 0;
+      typeUsageCount[g.dominantType] = typeIndex + 1;
+      const opacity = opacityLevels[Math.min(typeIndex, opacityLevels.length - 1)];
+
+      return {
+        name: g.name,
+        bottleCount: g.count,
+        percentage: Math.round((g.count / declaredBottlesTotal) * 100),
+        wineType: g.dominantType,
+        color: colorByType[g.dominantType] || '#722F37',
+        opacity,
+      };
+    });
+
+    if (remainderCount > 0) {
+      varietalSegments.push({
+        name: 'Otros',
+        bottleCount: remainderCount,
+        percentage: Math.round((remainderCount / declaredBottlesTotal) * 100),
+        wineType: 'Other',
+        color: '#525252',
+        opacity: 1,
+      });
+    }
 
     return {
       totalBottles,
       redsCount,
       whitesCount,
       sparklingCount,
+      othersCount,
       optimalCount,
       dominantVarietal,
       dominantVarietalPercentage,
+      undeclaredGrapeBottles,
+      varietalSegments,
       oldestVintage,
       oldestVintageAgingYears,
     };
@@ -311,6 +417,8 @@ export default function CavaPage() {
   // Conversión a DashboardWine para compatibilidad con UncorkDialog
   const mapCellarWineToDashboardWine = (w: CellarWine): DashboardWine => ({
     id: w.id,
+    wineId: w.wineId,
+    wineVintageId: w.wineVintageId,
     name: w.name,
     winery: w.winery,
     region: w.region,
@@ -337,11 +445,11 @@ export default function CavaPage() {
     setIsLoadingMoreTastings(true);
     try {
       const nextPage = tastingsPage + 1;
-      const moreTastings = await getMyTastings({ pageNumber: nextPage, pageSize: 10 });
-      if (Array.isArray(moreTastings)) {
-        const mappedLogs: TastingLogEntry[] = moreTastings.map((item: TastingListItemDto) => {
-          const dateStr = item.tastedAt
-            ? new Date(item.tastedAt).toLocaleDateString('es-AR', {
+      const moreUncorks = await getMyUncorks({ pageNumber: nextPage, pageSize: 10 });
+      if (Array.isArray(moreUncorks)) {
+        const mappedLogs: TastingLogEntry[] = moreUncorks.map((item: UncorkListItemDto) => {
+          const dateStr = item.uncorkedAt
+            ? new Date(item.uncorkedAt).toLocaleDateString('es-AR', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -353,15 +461,15 @@ export default function CavaPage() {
               }).toUpperCase();
 
           return {
-            id: `tasting-${item.id}`,
-            wineName: `${item.wineName}${item.vintageYear ? ` (${item.vintageYear})` : ''}`,
-            criticScore: item.rating && item.rating > 0
-              ? `MI CATA ${formatRating(item.rating)} ★`
-              : 'MI CATA',
+            id: `uncork-${item.id}`,
+            wineName: `${item.wineName}${item.year ? ` (${item.year})` : ''}`,
+            criticScore: item.rating !== null && item.rating !== undefined && item.rating > 0
+              ? `TU RESEÑA ${formatRating(item.rating)} ★`
+              : 'SIN CALIFICACIÓN',
             uncorkDate: `DESCORCHADO EL ${dateStr}`,
             notes:
               item.comment?.trim() ||
-              `Vino probado y descorchado. Registrado en tu bitácora de cata.`,
+              'Sin notas de cata registradas en la reseña.',
             sight: 'Límpido y brillante',
             agingRemaining: item.wineryName || 'Bodega certificada',
             ratingValue: item.rating ? Math.round(item.rating) : 0,
@@ -369,10 +477,10 @@ export default function CavaPage() {
         });
         setTastingLog((prev) => [...prev, ...mappedLogs]);
         setTastingsPage(nextPage);
-        setHasMoreTastings(moreTastings.length >= 10);
+        setHasMoreTastings(moreUncorks.length >= 10);
       }
     } catch (err: unknown) {
-      let errorMsg = 'No pudimos cargar más notas de cata.';
+      let errorMsg = 'No pudimos cargar más descorches.';
       if (axios.isAxiosError(err)) {
         errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
       }
@@ -383,7 +491,7 @@ export default function CavaPage() {
   };
 
   const handleUncorkSaved = async (data: UncorkSubmission) => {
-    const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
+    const vintageId = data.wine.wineVintageId ?? Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
     if (isNaN(vintageId) || vintageId <= 0 || !cellarId) {
       showNotification('No se pudo identificar la botella para descorchar.');
       return;

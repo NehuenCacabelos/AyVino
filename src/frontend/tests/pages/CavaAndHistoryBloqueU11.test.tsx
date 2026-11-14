@@ -83,7 +83,7 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
         if (url === '/cellars/10/items') {
           return Promise.resolve({ data: [] });
         }
-        if (url === '/users/me/tastings') {
+        if (url === '/users/me/uncorks') {
           return Promise.resolve({
             data: [
               {
@@ -91,11 +91,11 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
                 wineId: 101,
                 wineVintageId: 201,
                 wineName: 'Cobos Chañares Malbec',
-                vintageYear: 2017,
+                year: 2017,
                 wineryName: 'Viña Cobos',
                 rating: 5.0,
                 comment: 'Gran estructura, taninos redondos y largo final mineral.',
-                tastedAt: '2026-11-14T10:00:00Z',
+                uncorkedAt: '2026-11-14T10:00:00Z',
               },
             ],
           });
@@ -111,16 +111,16 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
         </MemoryRouter>
       );
 
-      // Debe consultar a la API de catas para la bitácora
+      // Debe consultar a la API de descorches para la bitácora
       await waitFor(() => {
-        expect(mockClient.get).toHaveBeenCalledWith('/users/me/tastings', expect.objectContaining({
+        expect(mockClient.get).toHaveBeenCalledWith('/users/me/uncorks', expect.objectContaining({
           params: expect.objectContaining({ pageNumber: 1, pageSize: 10 }),
         }));
       });
 
       // La tarjeta de última reseña de cata muestra los datos del vino probado real
       expect(await screen.findByText('Cobos Chañares Malbec (2017)')).toBeInTheDocument();
-      expect(screen.getByText('MI CATA 5,0 ★')).toBeInTheDocument();
+      expect(screen.getByText('TU RESEÑA 5,0 ★')).toBeInTheDocument();
       expect(screen.getByText(/Gran estructura, taninos redondos y largo final mineral/i)).toBeInTheDocument();
     });
 

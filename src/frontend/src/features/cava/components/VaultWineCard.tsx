@@ -32,7 +32,7 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
           </div>
           {wine.userRating && wine.userRating > 0 ? (
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-amber-300 font-mono text-[11px] font-bold border border-amber-400/20 shrink-0">
-              MI CATA {formatRating(wine.userRating)} ★
+              TU RESEÑA {formatRating(wine.userRating)} ★
             </span>
           ) : wine.criticBadge ? (
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-[#fbbf24] font-mono text-[11px] font-bold border border-[#fbbf24]/20 shadow-[0_0_8px_rgba(251,191,36,0.15)] shrink-0">
@@ -40,7 +40,7 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
             </span>
           ) : wine.rating && wine.rating > 0 ? (
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-amber-300 font-mono text-[11px] font-semibold border border-amber-400/15 shrink-0">
-              MI CATA {formatRating(wine.rating > 5 ? wine.rating / 20 : wine.rating)} ★
+              TU RESEÑA {formatRating(wine.rating > 5 ? wine.rating / 20 : wine.rating)} ★
             </span>
           ) : (
             <span className="bg-[#201f25] px-2 py-0.5 rounded text-neutral-400 font-mono text-[11px] shrink-0">
