@@ -64,6 +64,9 @@ using AyVino.Api.Features.WineCare.Services;
 using AyVino.Api.Features.AdminStats.Endpoints;
 using AyVino.Api.Features.AdminStats.Repositories;
 using AyVino.Api.Features.AdminStats.Services;
+using AyVino.Api.Features.Sensory.Endpoints;
+using AyVino.Api.Features.Sensory.Repositories;
+using AyVino.Api.Features.Sensory.Services;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -292,6 +295,8 @@ builder.Services.AddScoped<IAdminStatsService, AdminStatsService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICatalogRepository, CatalogRepository>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<ISensoryRepository, SensoryRepository>();
+builder.Services.AddScoped<ISensoryService, SensoryService>();
 
 // FluentMigrator configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -398,6 +403,7 @@ app.MapImageEndpoints();
 app.MapAuditEndpoints();
 app.MapAdminStatsEndpoints();
 app.MapCatalogEndpoints();
+app.MapSensoryEndpoints();
 
 
 
