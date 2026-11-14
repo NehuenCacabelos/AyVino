@@ -32,6 +32,7 @@ import {
 import type { AppOutletContext } from '../components/layout/AppLayout';
 import { apiClient } from '../services/apiClient';
 import { getMyUserWinesApi } from '../features/users';
+import { formatRating, normalizeRating } from '../lib/formatRating';
 
 interface WineryGroup {
   key: string;
@@ -236,9 +237,12 @@ export default function DashboardPage() {
   const handleUncorkSaved = async (data: UncorkSubmission) => {
     try {
       const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
-      const roundedRating = Math.min(5, Math.max(1, Math.round(data.rating)));
-      const comment = data.tastingNotes?.trim() || data.occasion?.trim() || undefined;
-      const uncorkBody = { rating: roundedRating, comment };
+      const normalizedRating = data.rating !== null ? normalizeRating(data.rating) : null;
+      const comment = (normalizedRating !== null && data.tastingNotes?.trim()) ? data.tastingNotes.trim() : (data.occasion?.trim() || undefined);
+      const uncorkBody = {
+        rating: normalizedRating,
+        comment: normalizedRating !== null ? comment : undefined,
+      };
 
       if (!isNaN(vintageId) && vintageId > 0) {
         await apiClient.post(`/cellars/me/items/${vintageId}/uncork`, uncorkBody);
@@ -262,7 +266,11 @@ export default function DashboardPage() {
         await apiClient.post(`/cellars/${activeCellarId}/items/${matchingItem.wineVintageId}/uncork`, uncorkBody);
       }
 
-      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${roundedRating} estrellas.`);
+      showNotification(
+        normalizedRating !== null
+          ? `¡Descorche registrado! ${data.wine.name} calificado con ${formatRating(normalizedRating)} ★.`
+          : `¡Descorche registrado! ${data.wine.name}.`
+      );
       if (refreshStock) {
         await refreshStock();
       }

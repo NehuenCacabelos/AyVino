@@ -38,7 +38,13 @@ export {
   type UseWineCatalogsOptions,
 } from './hooks/useWineCatalogs';
 export { getWineReviews, createReview } from './api/reviewsApi';
+export { createTasting, getMyTastings } from './api/tastingsApi';
 export type { ReviewResponseDto, CreateReviewRequestDto } from './types/review';
+export type {
+  TastingResponseDto,
+  CreateTastingRequestDto,
+  TastingListItemDto,
+} from './types/tasting';
 
 
 

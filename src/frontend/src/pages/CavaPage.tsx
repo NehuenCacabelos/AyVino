@@ -19,6 +19,7 @@ import {
 } from '../features/cava';
 import { apiClient } from '../services/apiClient';
 import { imageUrl } from '../lib/image';
+import { formatRating, normalizeRating } from '../lib/formatRating';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 /**
@@ -310,15 +311,19 @@ export default function CavaPage() {
     }
 
     try {
-      const roundedRating = Math.min(5, Math.max(1, Math.round(data.rating)));
-      const comment = data.tastingNotes?.trim() || data.occasion?.trim() || undefined;
+      const normalizedRating = data.rating !== null ? normalizeRating(data.rating) : null;
+      const comment = (normalizedRating !== null && data.tastingNotes?.trim()) ? data.tastingNotes.trim() : (data.occasion?.trim() || undefined);
 
       await apiClient.post(`/cellars/${cellarId}/items/${vintageId}/uncork`, {
-        rating: roundedRating,
+        rating: normalizedRating,
         comment,
       });
 
-      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${roundedRating} estrellas.`);
+      showNotification(
+        normalizedRating !== null
+          ? `¡Descorche registrado! ${data.wine.name} calificado con ${formatRating(normalizedRating)} ★.`
+          : `¡Descorche registrado! ${data.wine.name}.`
+      );
 
       // Sincronizar Cava y Bitácora desde backend y actualizar contador de la Navbar
       await fetchBackendCellar();

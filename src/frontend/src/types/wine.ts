@@ -223,7 +223,7 @@ export interface CellarMetrics {
  */
 export interface UncorkSubmission {
   wine: DashboardWine;
-  rating: number;
+  rating: number | null;
   date: string;
   occasion: string;
   tastingNotes: string;

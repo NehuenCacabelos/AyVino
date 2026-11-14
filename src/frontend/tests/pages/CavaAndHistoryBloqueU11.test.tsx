@@ -175,6 +175,10 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
       // El diálogo debe estar visible
       expect(await screen.findByRole('dialog')).toBeInTheDocument();
 
+      // En Bloque U13C, el diálogo de descorche arranca sin valor por defecto; seleccionar 5 estrellas
+      const star5 = screen.getByLabelText(/5 de 5 estrellas/i);
+      fireEvent.click(star5);
+
       // Completar notas de cata
       const notesInput = screen.getByPlaceholderText(/Aromas predominantes/i);
       fireEvent.change(notesInput, { target: { value: 'Acidez punzante, notas de tiza y lima madura.' } });
@@ -194,10 +198,10 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
         );
       });
 
-      // Notificación exitosa
+      // Notificación exitosa en formato es-AR con estrellas
       const toastEl = await screen.findByRole('status');
       expect(toastEl).toHaveTextContent(/¡Descorche registrado!/i);
-      expect(toastEl).toHaveTextContent(/5 estrellas/i);
+      expect(toastEl).toHaveTextContent(/5,0 ★/i);
       expect(refreshStockSpy).toHaveBeenCalled();
     });
 

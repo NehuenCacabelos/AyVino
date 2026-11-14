@@ -485,7 +485,7 @@ exports[`WineDetailPage Snapshot Previo > renderiza la plantilla con el vino edi
                 <span
                   class="text-sm font-medium text-neutral-200 font-mono"
                 >
-                  4.8
+                  4,8
                 </span>
                 <span
                   class="text-amber-400 text-xs"
