@@ -620,3 +620,40 @@ Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyV
 
 ## 5. Pendientes
 - Proceder con el Bloque U11 (`fix/usuario-cata-historial`).
+
+
+---
+
+# BLOQUE U11: Registrar cata completa, bitácora real y contador de la cava
+**Rama**: `fix/usuario-cata-historial`  
+**Fecha**: 14 de noviembre de 2026  
+**Estado**: Completado exitosamente
+
+## 1. Resumen de lo realizado
+- **Descorche con Reseña Transaccional (11.1)**: `POST /api/cellars/{cellarId}/items/{wineVintageId}/uncork` y `POST /api/cellars/me/items/{wineVintageId}/uncork` aceptan cuerpo opcional `{ rating?: int, comment?: string }`. En la misma transacción donde descuenta una botella y marca el vino probado (`user_wines.is_tried = TRUE`), upserta la reseña en `reviews` y recalcula los promedios de calificación de la cosecha y del vino. Validación estricta de rating (1..5) y comentario (<=1000) con 400 ValidationException y cero efectos colaterales si es inválido.
+- **Registro de Cata en Front (11.2)**: `handleUncorkSaved` de `CavaPage.tsx` envía el `rating` redondeado y el comentario a la API, refresca la cava y el stock, y exhibe notificaciones claras de éxito o error sin desincronización de estado local.
+- **Bitácora y Historial Reales (11.3)**: La bitácora en `CavaPage.tsx` se sincroniza con `GET /api/user-wines/me?tried=true&pageSize=100`, con DTOs extendidos (`UserRating` y `UserComment`) vía `LEFT JOIN LATERAL` a `reviews`. En `ProfilePage.tsx`, el Historial de Catas muestra notas y puntajes reales del usuario. En `DashboardPage.tsx`, el descorche envía también reseña y actualiza el backend.
+- **"Joyas de la Cava" (11.4)**: `UserRepository.CellarWinesCount` cuenta solo cosechas con stock (`ci.quantity > 0`). Textos en perfiles dicen "vinos" (singular "vino") en lugar de "botellas".
+- **Limpieza de Errores Silenciosos (11.5)**: Reemplazo de `.catch(() => {})` por notificaciones visibles al usuario.
+
+## 2. Archivos modificados y creados
+- **Backend Creados**: `src/backend/AyVino.Api/Features/Cellars/DTOs/UncorkCellarItemRequestDto.cs`, `tests/AyVino.UnitTests/UsuarioBloqueU11Tests.cs`.
+- **Backend Modificados**: `CellarEndpoints.cs`, `CellarItemEndpoints.cs`, `ICellarItemRepository.cs`, `CellarItemRepository.cs`, `ICellarItemService.cs`, `CellarItemService.cs`, `UserRepository.cs`, `UserWineListItemDto.cs`, `UserWineMappingExtensions.cs`, `UserWineListRow.cs`, `UserWineRepository.cs`.
+- **Frontend Creados**: `src/frontend/tests/pages/CavaAndHistoryBloqueU11.test.tsx`.
+- **Frontend Modificados**: `Metrics.tsx`, `users/types/index.ts`, `CavaPage.tsx`, `DashboardPage.tsx`, `ProfilePage.tsx`, `DashboardAndCavaBloqueU6.test.tsx`, `WineDetailPageBloqueU10.test.tsx`, `WineDetailPage.snapshot.test.tsx.snap`.
+- **Reportes**: `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U11.md`, `docs/reportes/Reporte_Bloque_U11.md`.
+
+## 3. Decisiones técnicas
+- Sobrecargas explícitas en `ICellarItemRepository` y `CellarItemService` para mantener total compatibilidad con pruebas unitarias preexistentes.
+- `LEFT JOIN LATERAL` con `ORDER BY updated_at DESC LIMIT 1` para resolver con máxima eficiencia la reseña propia sin generar duplicidad de filas.
+- Descorche integrado en el Hero Strip ("Listas para Descorchar") de `DashboardPage` para permitir descorches con cata directamente desde la vista principal.
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 774/774 tests superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 697ms.
+- `npm test`: 65 suites / 318 tests superados (0 fallas).
+- `npm run lint`: Cero errores en código modificado/creado.
+
+## 5. Pendientes
+- Ninguno. Todos los bloques de Usuario completados.
