@@ -31,6 +31,7 @@ import {
 } from '../types/wine';
 import type { AppOutletContext } from '../components/layout/AppLayout';
 import { apiClient } from '../services/apiClient';
+import { getMyUserWinesApi } from '../features/users';
 
 interface WineryGroup {
   key: string;
@@ -277,40 +278,93 @@ export default function DashboardPage() {
     }
   };
 
-  const handleOpenUncorkFromMetrics = async () => {
-    try {
-      const cellarRes = await apiClient.get('/cellars/me');
-      const userCellars = cellarRes.data;
-      if (Array.isArray(userCellars) && userCellars.length > 0) {
-        const itemsRes = await apiClient.get(`/cellars/${userCellars[0].id}/items`);
-        if (Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
-          const item = itemsRes.data[0];
-          setUncorkingWine({
-            id: `api-item-${item.wineVintageId}`,
-            name: item.name || 'Vino de la Cava',
-            winery: item.wineryName || 'Bodega',
-            vintage: item.vintageYear || 2020,
-            varietal: item.grapeName || 'Malbec',
-            region: item.region || 'Mendoza',
-            rating: item.userRating || 4.5,
-            bottle: 'red-burgundy',
-          });
-          return;
+  const [metricsStats, setMetricsStats] = useState<{
+    readyToDrink: number;
+    dominantVarietal: string;
+    dominantVarietalSubtitle: string;
+    avgRating: string | null;
+    ratingSubtitle: string;
+  }>({
+    readyToDrink: 0,
+    dominantVarietal: '—',
+    dominantVarietalSubtitle: 'Sin cepas registradas',
+    avgRating: null,
+    ratingSubtitle: 'Sin calificaciones aún',
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUserMetrics() {
+      try {
+        const [triedWines, cellarsRes] = await Promise.all([
+          getMyUserWinesApi({ tried: true, pageSize: 100 }).catch(() => []),
+          apiClient.get('/cellars/me').catch(() => ({ data: [] })),
+        ]);
+
+        if (!isMounted) return;
+
+        // 1. Calificación promedio real del usuario
+        let avgRating: string | null = null;
+        let ratingSubtitle = 'Sin calificaciones aún';
+        if (Array.isArray(triedWines) && triedWines.length > 0) {
+          const rated = triedWines.filter((w) => typeof w.userRating === 'number' && w.userRating > 0);
+          if (rated.length > 0) {
+            const sum = rated.reduce((acc, curr) => acc + (curr.userRating ?? 0), 0);
+            avgRating = (sum / rated.length).toFixed(1);
+            ratingSubtitle = `${rated.length} ${rated.length === 1 ? 'vino calificado' : 'vinos calificados'}`;
+          }
         }
+
+        // 2. Datos de la cava real (listas para descorchar y varietal dominante)
+        let readyToDrink = 0;
+        let dominantVarietal = '—';
+        let dominantVarietalSubtitle = 'Sin cepas registradas';
+
+        const userCellars = cellarsRes.data;
+        if (Array.isArray(userCellars) && userCellars.length > 0) {
+          const itemsRes = await apiClient.get(`/cellars/${userCellars[0].id}/items`).catch(() => ({ data: [] }));
+          if (isMounted && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
+            const items = itemsRes.data;
+            const currentYear = new Date().getFullYear();
+            readyToDrink = items.filter((item: { year?: number }) => item.year && item.year <= currentYear - 3).length;
+
+            const grapeCounts: Record<string, number> = {};
+            items.forEach((item: { grapeName?: string; wineType?: string; quantity?: number }) => {
+              const grape = item.grapeName || item.wineType || 'Otro';
+              grapeCounts[grape] = (grapeCounts[grape] || 0) + (item.quantity || 1);
+            });
+
+            const sortedGrapes = Object.entries(grapeCounts).sort((a, b) => b[1] - a[1]);
+            if (sortedGrapes.length > 0) {
+              const [topGrape, count] = sortedGrapes[0];
+              const totalItemsBottles = items.reduce((acc: number, curr: { quantity?: number }) => acc + (curr.quantity || 1), 0);
+              const pct = totalItemsBottles > 0 ? Math.round((count / totalItemsBottles) * 100) : 100;
+              dominantVarietal = `${topGrape} (${pct}%)`;
+              const uniqueCount = sortedGrapes.length;
+              dominantVarietalSubtitle = `${uniqueCount} ${uniqueCount === 1 ? 'cepa registrada' : 'cepas registradas'}`;
+            }
+          }
+        }
+
+        if (isMounted) {
+          setMetricsStats({
+            readyToDrink,
+            dominantVarietal,
+            dominantVarietalSubtitle,
+            avgRating,
+            ratingSubtitle,
+          });
+        }
+      } catch {
+        // En caso de error, mantener valores limpios
       }
-    } catch {
-      // Fallback seguro a vino destacado
     }
-    setUncorkingWine({
-      name: 'Catena Zapata Malbec Argentino',
-      winery: 'Bodega Catena Zapata',
-      vintage: 2020,
-      varietal: 'Malbec',
-      region: 'Mendoza, Argentina',
-      rating: 4.8,
-      bottle: 'red-burgundy',
-    });
-  };
+
+    void loadUserMetrics();
+    return () => {
+      isMounted = false;
+    };
+  }, [stockCount, reloadKey]);
 
 
   // Filtrado reactivo derivado en cliente exclusivamente para chips rápidos
@@ -536,11 +590,12 @@ export default function DashboardPage() {
             <Metrics
               customStats={{
                 bottles: stockCount,
-                readyToDrink: 3,
-                dominantVarietal: 'Malbec (58%)',
-                topRated: '4.9 ★',
+                readyToDrink: metricsStats.readyToDrink,
+                dominantVarietal: metricsStats.dominantVarietal,
+                dominantVarietalSubtitle: metricsStats.dominantVarietalSubtitle,
+                topRated: metricsStats.avgRating ? `${metricsStats.avgRating} ★` : null,
+                topRatedSubtitle: metricsStats.ratingSubtitle,
               }}
-              onUncorkClick={handleOpenUncorkFromMetrics}
             />
           </div>
         </div>
