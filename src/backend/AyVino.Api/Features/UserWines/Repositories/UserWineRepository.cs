@@ -30,7 +30,7 @@ public class UserWineRepository(IDbConnectionFactory connectionFactory) : IUserW
                    w.rating_sum AS RatingSum, w.review_count AS ReviewCount,
                    uw.is_wanted AS IsWanted, uw.is_tried AS IsTried, uw.is_favorite AS IsFavorite,
                    COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) AS LastChangeAt,
-                   CAST(user_review.rating AS INT) AS UserRating,
+                   user_review.rating AS UserRating,
                    user_review.comment AS UserComment
             FROM user_wines uw
             JOIN wines w ON w.id = uw.wine_id

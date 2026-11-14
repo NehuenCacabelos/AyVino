@@ -264,4 +264,17 @@ public class UsuarioBloqueU13ATests
         Assert.NotNull(result);
         await reviewRepo.Received(1).GetPagedForAdminAsync(1, 10, rating: 4.3m);
     }
+
+    [Fact]
+    public void ReviewResponseDto_HasParameterlessConstructor_ForDapperMaterialization()
+    {
+        var dto = new ReviewResponseDto();
+        Assert.NotNull(dto);
+        Assert.Equal(0, dto.Id);
+        Assert.Equal(0m, dto.Rating);
+
+        var paramDto = new ReviewResponseDto(1, 2, "TestUser", 3, 2020, 4.3m, "Excelente", DateTime.UtcNow, null);
+        Assert.Equal(4.3m, paramDto.Rating);
+        Assert.Equal("TestUser", paramDto.UserName);
+    }
 }

@@ -12,4 +12,7 @@ public record ReviewResponseDto(
     [property: JsonConverter(typeof(DecimalOnePlaceJsonConverter))] decimal Rating,
     string? Comment,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt)
+{
+    public ReviewResponseDto() : this(default, default, string.Empty, default, null, default, null, default, null) { }
+}
