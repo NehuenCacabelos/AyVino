@@ -13,7 +13,6 @@ export { default as WineryKpiRibbon } from './WineryKpiRibbon';
 export { default as WineryQuickActions } from './WineryQuickActions';
 export { default as WineryChecklistCard } from './WineryChecklistCard';
 export { default as WineryRecentWines } from './WineryRecentWines';
-export { default as WineryPublicWineDetailModal } from './WineryPublicWineDetailModal';
 export { default as WineryCatalogBottleSilhouette } from './WineryCatalogBottleSilhouette';
 export { default as WineryCatalogRibbon } from './WineryCatalogRibbon';
 export { default as WineryCatalogCard } from './WineryCatalogCard';

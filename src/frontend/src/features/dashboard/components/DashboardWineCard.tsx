@@ -10,6 +10,7 @@ export interface DashboardWineCardProps {
   wine: DashboardWine;
   onAddToCellar?: (wine: DashboardWine) => void;
   onToggleFavorite?: (wine: DashboardWine, isFav: boolean) => void;
+  hideQuickActions?: boolean;
 }
 
 /**
@@ -21,20 +22,25 @@ export default function DashboardWineCard({
   wine,
   onAddToCellar,
   onToggleFavorite,
+  hideQuickActions = false,
 }: DashboardWineCardProps) {
-  const [overrideFav, setOverrideFav] = useState<boolean | null>(null);
-  const isFav = overrideFav !== null ? overrideFav : Boolean(wine.isFavorite);
+  const [localFav, setLocalFav] = useState<boolean | null>(null);
+  const isFav = onToggleFavorite
+    ? Boolean(wine.isFavorite)
+    : localFav !== null
+      ? localFav
+      : Boolean(wine.isFavorite);
   const wineSlug = wine.id || normalizeWineSlug(wine.name);
 
   const handleToggleFav = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const nextState = !isFav;
-    setOverrideFav(nextState);
 
     if (onToggleFavorite) {
       onToggleFavorite(wine, nextState);
     } else {
+      setLocalFav(nextState);
       const wineId = Number(wine.id);
       if (!isNaN(wineId) && wineId > 0) {
         try {
@@ -44,7 +50,7 @@ export default function DashboardWineCard({
             await apiClient.delete(`/wines/${wineId}/favorite`);
           }
         } catch {
-          setOverrideFav(isFav);
+          setLocalFav(isFav);
         }
       }
     }
@@ -63,18 +69,20 @@ export default function DashboardWineCard({
         className="group relative w-full flex flex-col justify-between rounded-2xl bg-[#131316] border border-white/[0.07] backdrop-blur-xl p-5 hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300 shadow-xl shadow-black/50 cursor-pointer block text-left"
       >
         {/* Botón de Favorito Flotante Esmerilado */}
-        <button
-          type="button"
-          aria-label={isFav ? `Quitar ${wine.name} de favoritos` : `Añadir ${wine.name} a favoritos`}
-          onClick={handleToggleFav}
-          className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c1c22]/80 border border-white/[0.08] backdrop-blur-xl transition-all cursor-pointer ${
-            isFav
-              ? 'text-rose-400 bg-rose-950/60 border-rose-500/30'
-              : 'text-neutral-400 hover:text-white hover:bg-[#1c1c22]'
-          }`}
-        >
-          <Heart className={`h-4 w-4 ${isFav ? 'fill-rose-400' : ''}`} />
-        </button>
+        {!hideQuickActions && (
+          <button
+            type="button"
+            aria-label={isFav ? `Quitar ${wine.name} de favoritos` : `Añadir ${wine.name} a favoritos`}
+            onClick={handleToggleFav}
+            className={`absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-[#1c1c22]/80 border border-white/[0.08] backdrop-blur-xl transition-all cursor-pointer ${
+              isFav
+                ? 'text-rose-400 bg-rose-950/60 border-rose-500/30'
+                : 'text-neutral-400 hover:text-white hover:bg-[#1c1c22]'
+            }`}
+          >
+            <Heart className={`h-4 w-4 ${isFav ? 'fill-rose-400' : ''}`} />
+          </button>
+        )}
 
         {/* Spotlight dedicado para la botella */}
         <div className="relative bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center overflow-hidden mb-3">
@@ -135,16 +143,18 @@ export default function DashboardWineCard({
         </div>
 
         {/* Botón de Acción Añadir a Cava Esmerilado */}
-        <div className="mt-4 pt-1 relative z-20">
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.07] hover:bg-[#722F37] hover:text-white text-xs font-semibold uppercase tracking-wider text-neutral-200 transition-all cursor-pointer backdrop-blur-md"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Añadir a Cava</span>
-          </button>
-        </div>
+        {!hideQuickActions && (
+          <div className="mt-4 pt-1 relative z-20">
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.07] hover:bg-[#722F37] hover:text-white text-xs font-semibold uppercase tracking-wider text-neutral-200 transition-all cursor-pointer backdrop-blur-md"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Añadir a Cava</span>
+            </button>
+          </div>
+        )}
       </Link>
     </li>
   );
