@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   ChevronLeft,
@@ -7,36 +7,23 @@ import {
   Wine,
   RotateCcw,
   AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import type { WineryPublicOutletContext } from './WineryPublicProfileLayout';
+import { useAuth } from '../features/auth';
 import {
   getWineryPublicCatalog,
-  WineryPublicCatalogCard,
-  WineryPublicWineDetailModal,
-  type WineryPublicCatalogWineDto,
+  adaptWineryPublicCatalogWineToDashboardWine,
   type WineryPublicCatalogResponseDto,
-  type WineResponseDto,
 } from '../features/winery';
-
-function adaptCatalogWineToDetail(
-  catalogWine: WineryPublicCatalogWineDto,
-  wineryName: string,
-): WineResponseDto {
-  return {
-    id: catalogWine.id,
-    wineryId: null,
-    wineryNameText: wineryName,
-    name: catalogWine.name,
-    description: catalogWine.description ?? null,
-    wineType: catalogWine.wineType,
-    locationId: null,
-    sourceType: catalogWine.sourceType,
-    duplicateOfWineId: null,
-    averageRating: catalogWine.averageRating ?? null,
-    reviewCount: catalogWine.reviewCount,
-  };
-}
+import {
+  DashboardWineCard,
+  useFavorites,
+  useQuickAddToCellar,
+} from '../features/dashboard';
+import QuickAddBottleModal from '../features/cava/components/QuickAddBottleModal';
+import type { DashboardWine } from '../types/wine';
 
 function getWineTypeSpanish(type: string): string {
   switch (type.toLowerCase()) {
@@ -59,11 +46,71 @@ function getWineTypeSpanish(type: string): string {
  * WineryPublicCatalogPage Component
  * Catálogo público de la bodega en /bodegas/:id/catalogo
  * Servidor filtra y pagina; estado sincronizado en URL searchParams.
- * Punto de entrada único para selección de vinos (onSelectWine).
+ * Cada etiqueta usa DashboardWineCard enlazando a /vinos/:id con acciones rápidas de cava y favoritos.
  */
 export default function WineryPublicCatalogPage() {
   const { profile, locationLabel } = useOutletContext<WineryPublicOutletContext>();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Toast de notificaciones
+  const [notification, setNotification] = useState<string | null>(null);
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const showNotification = useCallback((msg: string) => {
+    clearTimeout(notificationTimerRef.current);
+    setNotification(msg);
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(notificationTimerRef.current);
+    };
+  }, []);
+
+  // Hook compartido para ingreso rápido a la cava
+  const {
+    isModalOpen,
+    activeWine,
+    initialName,
+    openQuickAdd,
+    closeQuickAdd,
+  } = useQuickAddToCellar();
+
+  // Hook compartido para favoritos (batch inicial optimizado + actualización optimista)
+  const {
+    toggleFavorite,
+    isFavorite,
+  } = useFavorites({
+    enabled: isAuthenticated,
+    onError: showNotification,
+  });
+
+  const handleAddToCellar = useCallback(
+    (wine: DashboardWine) => {
+      if (!isAuthenticated) {
+        navigate('/login');
+        return;
+      }
+      openQuickAdd(wine);
+    },
+    [isAuthenticated, navigate, openQuickAdd],
+  );
+
+  const handleToggleFavorite = useCallback(
+    (wine: DashboardWine, nextIsFav: boolean) => {
+      if (!isAuthenticated) {
+        navigate('/login');
+        return;
+      }
+      void toggleFavorite(wine, nextIsFav);
+    },
+    [isAuthenticated, navigate, toggleFavorite],
+  );
 
   // 1. Extraer filtros primitivos de la URL
   const searchParam = searchParams.get('search') ?? '';
@@ -109,9 +156,6 @@ export default function WineryPublicCatalogPage() {
   const [catalogData, setCatalogData] = useState<WineryPublicCatalogResponseDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // 4. Vino seleccionado para el modal provisorio (punto de entrada único)
-  const [selectedWine, setSelectedWine] = useState<WineryPublicCatalogWineDto | null>(null);
 
   const wineryId = profile.id;
 
@@ -163,11 +207,6 @@ export default function WineryPublicCatalogPage() {
       controller.abort();
     };
   }, [wineryId, searchParam, wineTypeParam, grapeIdParam, yearParam, sortParam, pageParam]);
-
-  // Handler único de selección de vino (requerimiento de producto)
-  const handleSelectWine = useCallback((wine: WineryPublicCatalogWineDto) => {
-    setSelectedWine(wine);
-  }, []);
 
   // Actualizador genérico de filtros en URL
   const updateFilter = (key: string, value: string) => {
@@ -372,18 +411,30 @@ export default function WineryPublicCatalogPage() {
           )}
         </div>
       ) : (
-        /* Lista de Tarjetas */
+        /* Lista de Tarjetas con DashboardWineCard */
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {wineList.map((wine) => (
-              <WineryPublicCatalogCard
-                key={wine.id}
-                wine={wine}
-                onSelectWine={handleSelectWine}
-                isPreview={profile.isPreview}
-              />
-            ))}
-          </div>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 list-none p-0 m-0">
+            {wineList.map((wine) => {
+              const dashboardWine = adaptWineryPublicCatalogWineToDashboardWine(
+                wine,
+                profile.name,
+                profile.id,
+                locationLabel,
+              );
+              return (
+                <DashboardWineCard
+                  key={wine.id}
+                  wine={{
+                    ...dashboardWine,
+                    isFavorite: isFavorite(wine.id),
+                  }}
+                  onAddToCellar={handleAddToCellar}
+                  onToggleFavorite={handleToggleFavorite}
+                  hideQuickActions={!isAuthenticated}
+                />
+              );
+            })}
+          </ul>
 
           {/* 3. PAGINACIÓN DEL LADO DEL SERVIDOR */}
           {catalogData && catalogData.totalPages > 1 && (
@@ -439,14 +490,27 @@ export default function WineryPublicCatalogPage() {
         </>
       )}
 
-      {/* 4. MODAL PROVISORIO DE DETALLE DE VINO (Punto de entrada único) */}
-      {selectedWine && (
-        <WineryPublicWineDetailModal
-          wine={adaptCatalogWineToDetail(selectedWine, profile.name)}
-          wineryName={profile.name}
-          locationLabel={locationLabel}
-          onClose={() => setSelectedWine(null)}
-        />
+      {/* 4. MODAL DE ALTA RÁPIDA / INGRESO A CAVA (QuickAddBottleModal) */}
+      <QuickAddBottleModal
+        isOpen={isModalOpen}
+        initialName={initialName}
+        initialWine={activeWine}
+        showToast={showNotification}
+        onClose={closeQuickAdd}
+        onAddBottle={async (payload) => {
+          showNotification(`¡${payload.name} (${payload.vintage}) guardado en tu cava!`);
+        }}
+      />
+
+      {/* Notificación flotante */}
+      {notification && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-mono shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200"
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{notification}</span>
+        </div>
       )}
     </div>
   );
