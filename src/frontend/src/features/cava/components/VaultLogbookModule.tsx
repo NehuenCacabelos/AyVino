@@ -4,9 +4,17 @@ import type { TastingLogEntry } from '../types';
 
 interface VaultLogbookModuleProps {
   entries: TastingLogEntry[];
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
-export default function VaultLogbookModule({ entries }: VaultLogbookModuleProps) {
+export default function VaultLogbookModule({
+  entries,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
+}: VaultLogbookModuleProps) {
   const [showAllModal, setShowAllModal] = useState(false);
   const latest = entries[0];
 
@@ -133,6 +141,19 @@ export default function VaultLogbookModule({ entries }: VaultLogbookModuleProps)
                 </div>
               ))}
             </div>
+
+            {hasMore && onLoadMore && (
+              <div className="p-4 border-t border-neutral-800 bg-[#0c0c0e] flex justify-center">
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[#fbbf24] text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isLoadingMore ? 'Cargando más...' : 'Cargar más notas de cata'}
+                </button>
+              </div>
+            )}
 
             <div className="p-4 border-t border-neutral-800 bg-[#0c0c0e] flex justify-end">
               <button

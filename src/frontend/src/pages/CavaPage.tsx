@@ -20,6 +20,8 @@ import {
 import { apiClient } from '../services/apiClient';
 import { imageUrl } from '../lib/image';
 import { formatRating, normalizeRating } from '../lib/formatRating';
+import { getMyTastings } from '../features/wines/api/tastingsApi';
+import type { TastingListItemDto } from '../features/wines/types/tasting';
 import type { DashboardWine, UncorkSubmission } from '../types/wine';
 
 /**
@@ -44,6 +46,9 @@ export default function CavaPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [tastingLog, setTastingLog] = useState<TastingLogEntry[]>([]);
+  const [tastingsPage, setTastingsPage] = useState<number>(1);
+  const [hasMoreTastings, setHasMoreTastings] = useState<boolean>(false);
+  const [isLoadingMoreTastings, setIsLoadingMoreTastings] = useState<boolean>(false);
   const [sortOption, setSortOption] = useState<WineSortOption>('default');
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -103,28 +108,35 @@ export default function CavaPage() {
         const items = itemsResponse.data;
         if (Array.isArray(items)) {
           const mapped: CellarWine[] = items.map((item, idx) => {
-            const score100 = item.averageRating
-              ? Math.round(Number(item.averageRating) * 20)
-              : undefined;
+            const userRatingNum = item.userRating !== null && item.userRating !== undefined ? Number(item.userRating) : null;
+            const avgRatingNum = item.averageRating !== null && item.averageRating !== undefined ? Number(item.averageRating) : null;
+            const score100 = userRatingNum !== null
+              ? Math.round(userRatingNum * 20)
+              : (avgRatingNum !== null ? Math.round(avgRatingNum * 20) : undefined);
             return {
               id: `api-item-${item.wineVintageId || idx}`,
+              wineId: item.wineId,
+              wineVintageId: item.wineVintageId,
               name: item.name || '—',
               winery: item.wineryName || item.wineryNameText || '—',
               region: item.regionName || '—',
               varietal: item.grapeName || item.wineType || '—',
               vintage: item.year || 0,
               rating: score100 || 0,
-              criticBadge: score100 ? `AY ${score100}` : undefined,
+              userRating: userRatingNum,
+              averageRating: avgRatingNum,
+              criticBadge: userRatingNum !== null ? undefined : (score100 ? `AY ${score100}` : undefined),
               units: item.quantity || 1,
               location: item.notes || '—',
               temperatureConst: '15°C CONSTANTE',
               agingStatus: item.year && item.year <= 2019 ? 'optimal' : 'aging',
               agingStatusLabel:
                 item.year && item.year <= 2019 ? 'Ventana Óptima' : 'En Guarda Prolongada',
-              isJewel: (item.averageRating && Number(item.averageRating) >= 4.5) || false,
+              isJewel: (avgRatingNum !== null && avgRatingNum >= 4.5) || false,
               sourceType: item.wineryId ? 'Official' : 'Community',
               bottle: item.wineType === 'White' ? 'white' : 'red-burgundy',
-              imageUrl: (item.imageId ? imageUrl(item.imageId, 'card') : item.imageUrl) || undefined,
+              imageUrl: (item.imageId ? imageUrl(item.imageId, 'detail') : item.imageUrl) || undefined,
+              imageId: item.imageId,
             };
           });
           setWines(mapped);
@@ -135,17 +147,13 @@ export default function CavaPage() {
         setWines([]);
       }
 
-      // Cargar la bitácora de cata persistente desde la API
+      // Cargar la bitácora de cata persistente desde la API unificada de Tastings (U13B)
       try {
-        const triedResponse = await apiClient.get('/user-wines/me', {
-          params: { tried: true, pageSize: 100 },
-        });
-        const triedItems = triedResponse.data;
-        if (Array.isArray(triedItems)) {
-          const mappedLogs: TastingLogEntry[] = triedItems.map((item) => {
-            const rating = item.userRating ?? (item.averageRating ? Math.round(Number(item.averageRating)) : 5);
-            const dateStr = item.lastChangeAt
-              ? new Date(item.lastChangeAt).toLocaleDateString('es-AR', {
+        const tastings = await getMyTastings({ pageNumber: 1, pageSize: 10 });
+        if (Array.isArray(tastings) && isMounted) {
+          const mappedLogs: TastingLogEntry[] = tastings.map((item: TastingListItemDto) => {
+            const dateStr = item.tastedAt
+              ? new Date(item.tastedAt).toLocaleDateString('es-AR', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
@@ -157,32 +165,32 @@ export default function CavaPage() {
                 }).toUpperCase();
 
             return {
-              id: `log-${item.wineId}`,
-              wineName: `${item.name}${item.vintage ? ` (${item.vintage})` : ''}`,
-              criticScore: item.userRating
-                ? `CATA PRIVADA ${item.userRating * 20} PTS`
-                : item.averageRating
-                  ? `VALORACIÓN ${Math.round(Number(item.averageRating) * 20)} PTS`
-                  : 'CATA PRIVADA',
+              id: `tasting-${item.id}`,
+              wineName: `${item.wineName}${item.vintageYear ? ` (${item.vintageYear})` : ''}`,
+              criticScore: item.rating && item.rating > 0
+                ? `MI CATA ${formatRating(item.rating)} ★`
+                : 'MI CATA',
               uncorkDate: `DESCORCHADO EL ${dateStr}`,
               notes:
-                item.userComment?.trim() ||
+                item.comment?.trim() ||
                 `Vino probado y descorchado. Registrado en tu bitácora de cata.`,
-              sight: 'Gran concentración cromática con ribete de evolución noble',
-              agingRemaining: 'Consumido en ventana óptima de expresión',
-              ratingValue: rating,
+              sight: 'Límpido y brillante',
+              agingRemaining: item.wineryName || 'Bodega certificada',
+              ratingValue: item.rating ? Math.round(item.rating) : 0,
             };
           });
-          if (isMounted) {
-            setTastingLog(mappedLogs);
-          }
+          setTastingLog(mappedLogs);
+          setHasMoreTastings(tastings.length >= 10);
+          setTastingsPage(1);
         }
       } catch (err: unknown) {
         let errorMsg = 'No pudimos sincronizar la bitácora de cata.';
         if (axios.isAxiosError(err)) {
           errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
         }
-        showNotification(errorMsg);
+        if (isMounted) {
+          showNotification(errorMsg);
+        }
       }
     } catch (err: unknown) {
       if (isMounted) {
@@ -211,11 +219,25 @@ export default function CavaPage() {
   const vitals = useMemo(() => {
     const totalBottles = wines.reduce((acc, curr) => acc + curr.units, 0);
 
+    if (totalBottles === 0 || wines.length === 0) {
+      return {
+        totalBottles: 0,
+        redsCount: 0,
+        whitesCount: 0,
+        sparklingCount: 0,
+        optimalCount: 0,
+        dominantVarietal: '—',
+        dominantVarietalPercentage: 0,
+        oldestVintage: null,
+        oldestVintageAgingYears: 0,
+      };
+    }
+
     let redsCount = 0;
     let whitesCount = 0;
     let sparklingCount = 0;
     let optimalCount = 0;
-    let oldestVintage = 2030;
+    let oldestVintage: number | null = null;
     const varietalCounts: Record<string, number> = {};
 
     wines.forEach((w) => {
@@ -232,18 +254,20 @@ export default function CavaPage() {
         optimalCount += 1;
       }
 
-      if (w.vintage && w.vintage < oldestVintage) {
-        oldestVintage = w.vintage;
+      if (w.vintage && w.vintage > 1800 && w.units > 0) {
+        if (oldestVintage === null || w.vintage < oldestVintage) {
+          oldestVintage = w.vintage;
+        }
       }
 
-      const mainVarietal = w.varietal || 'Malbec';
-      varietalCounts[mainVarietal] = (varietalCounts[mainVarietal] || 0) + w.units;
+      const rawVarietal = w.varietal?.trim();
+      if (rawVarietal && rawVarietal !== '—') {
+        varietalCounts[rawVarietal] = (varietalCounts[rawVarietal] || 0) + w.units;
+      }
     });
 
-    if (oldestVintage === 2030) oldestVintage = 2017;
-
-    // Calcular varietal dominante
-    let dominantVarietal = 'Malbec';
+    // Calcular varietal dominante real
+    let dominantVarietal = '—';
     let maxCount = 0;
     Object.entries(varietalCounts).forEach(([name, count]) => {
       if (count > maxCount) {
@@ -252,12 +276,12 @@ export default function CavaPage() {
       }
     });
 
-    const dominantVarietalPercentage = totalBottles > 0
+    const dominantVarietalPercentage = maxCount > 0
       ? Math.round((maxCount / totalBottles) * 100)
-      : 55;
+      : 0;
 
     const currentYear = new Date().getFullYear();
-    const oldestVintageAgingYears = Math.max(1, currentYear - oldestVintage);
+    const oldestVintageAgingYears = oldestVintage !== null ? Math.max(0, currentYear - oldestVintage) : 0;
 
     return {
       totalBottles,
@@ -292,15 +316,70 @@ export default function CavaPage() {
     region: w.region,
     varietal: w.varietal,
     vintage: w.vintage,
-    rating: w.rating > 5 ? Number((w.rating / 20).toFixed(1)) : w.rating,
+    rating: w.userRating !== null && w.userRating !== undefined
+      ? w.userRating
+      : (w.averageRating !== null && w.averageRating !== undefined
+          ? w.averageRating
+          : (w.rating > 5 ? Number((w.rating / 20).toFixed(1)) : w.rating)),
     units: w.units,
     location: w.location,
     bottle: w.bottle,
     imageUrl: w.imageUrl,
+    imageId: w.imageId,
   });
 
   const handleUncorkRequested = (w: CellarWine) => {
     setUncorkingWine(mapCellarWineToDashboardWine(w));
+  };
+
+  const handleLoadMoreTastings = async () => {
+    if (isLoadingMoreTastings || !hasMoreTastings) return;
+    setIsLoadingMoreTastings(true);
+    try {
+      const nextPage = tastingsPage + 1;
+      const moreTastings = await getMyTastings({ pageNumber: nextPage, pageSize: 10 });
+      if (Array.isArray(moreTastings)) {
+        const mappedLogs: TastingLogEntry[] = moreTastings.map((item: TastingListItemDto) => {
+          const dateStr = item.tastedAt
+            ? new Date(item.tastedAt).toLocaleDateString('es-AR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              }).toUpperCase()
+            : new Date().toLocaleDateString('es-AR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              }).toUpperCase();
+
+          return {
+            id: `tasting-${item.id}`,
+            wineName: `${item.wineName}${item.vintageYear ? ` (${item.vintageYear})` : ''}`,
+            criticScore: item.rating && item.rating > 0
+              ? `MI CATA ${formatRating(item.rating)} ★`
+              : 'MI CATA',
+            uncorkDate: `DESCORCHADO EL ${dateStr}`,
+            notes:
+              item.comment?.trim() ||
+              `Vino probado y descorchado. Registrado en tu bitácora de cata.`,
+            sight: 'Límpido y brillante',
+            agingRemaining: item.wineryName || 'Bodega certificada',
+            ratingValue: item.rating ? Math.round(item.rating) : 0,
+          };
+        });
+        setTastingLog((prev) => [...prev, ...mappedLogs]);
+        setTastingsPage(nextPage);
+        setHasMoreTastings(moreTastings.length >= 10);
+      }
+    } catch (err: unknown) {
+      let errorMsg = 'No pudimos cargar más notas de cata.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+      }
+      showNotification(errorMsg);
+    } finally {
+      setIsLoadingMoreTastings(false);
+    }
   };
 
   const handleUncorkSaved = async (data: UncorkSubmission) => {
@@ -425,7 +504,12 @@ export default function CavaPage() {
 
         {/* Bitácora de Catas / Última Reseña Registrada */}
         <div className="pt-2">
-          <VaultLogbookModule entries={tastingLog} />
+          <VaultLogbookModule
+            entries={tastingLog}
+            onLoadMore={handleLoadMoreTastings}
+            hasMore={hasMoreTastings}
+            isLoadingMore={isLoadingMoreTastings}
+          />
         </div>
       </main>
 

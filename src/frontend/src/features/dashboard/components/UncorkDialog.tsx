@@ -3,6 +3,7 @@ import { X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react'
 import BottleVector from './BottleVector';
 import RatingInput from '../../../components/RatingInput';
 import { formatRating, normalizeRating } from '../../../lib/formatRating';
+import { imageUrl } from '../../../lib/image';
 import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
 
 interface UncorkDialogProps {
@@ -27,7 +28,11 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
   const [tastingNotes, setTastingNotes] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
+  const [failedImageWineKey, setFailedImageWineKey] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const imageKey = wine?.id || wine?.name || null;
+  const hasImageError = Boolean(imageKey && failedImageWineKey === imageKey);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -131,8 +136,18 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
               {/* Halos de luz tenue detrás del vidrio */}
               <div className="absolute inset-0 h-64 w-48 rounded-full bg-wine-800/25 blur-3xl pointer-events-none" />
 
-              <div className="relative z-10">
-                <BottleVector kind={wine.bottle} className="h-64 sm:h-72 w-auto drop-shadow-2xl" alt={wine.name} />
+              <div className="relative z-10 flex items-center justify-center">
+                {!hasImageError && (wine.imageUrl || (wine.imageId ? imageUrl(wine.imageId, 'detail') : null)) ? (
+                  <img
+                    src={wine.imageUrl || (wine.imageId ? imageUrl(wine.imageId, 'detail')! : '')}
+                    alt={wine.name}
+                    onError={() => imageKey && setFailedImageWineKey(imageKey)}
+                    className="h-64 sm:h-72 w-auto object-contain drop-shadow-2xl relative z-10 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                ) : (
+                  <BottleVector kind={wine.bottle} className="h-64 sm:h-72 w-auto drop-shadow-2xl" alt={wine.name} />
+                )}
               </div>
 
               {/* Sombra de apoyo */}

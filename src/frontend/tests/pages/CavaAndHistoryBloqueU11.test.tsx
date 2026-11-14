@@ -76,25 +76,26 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
 
   describe('11.2 & 11.3: Registrar cata en /cava y Bitácora persistente desde la API', () => {
     it('carga la bitácora de cata desde GET /api/user-wines/me?tried=true y la muestra en VaultLogbookModule', async () => {
-      mockClient.get.mockImplementation((url: string, config?: { params?: { tried?: boolean } }) => {
+      mockClient.get.mockImplementation((url: string) => {
         if (url === '/cellars/me') {
           return Promise.resolve({ data: [{ id: 10, name: 'Mi Cava' }] });
         }
         if (url === '/cellars/10/items') {
           return Promise.resolve({ data: [] });
         }
-        if (url === '/user-wines/me' && config?.params?.tried) {
+        if (url === '/users/me/tastings') {
           return Promise.resolve({
             data: [
               {
+                id: 1,
                 wineId: 101,
-                name: 'Cobos Chañares Malbec',
-                vintage: 2017,
+                wineVintageId: 201,
+                wineName: 'Cobos Chañares Malbec',
+                vintageYear: 2017,
                 wineryName: 'Viña Cobos',
-                averageRating: 4.9,
-                userRating: 5,
-                userComment: 'Gran estructura, taninos redondos y largo final mineral.',
-                lastChangeAt: '2026-11-14T10:00:00Z',
+                rating: 5.0,
+                comment: 'Gran estructura, taninos redondos y largo final mineral.',
+                tastedAt: '2026-11-14T10:00:00Z',
               },
             ],
           });
@@ -110,16 +111,16 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
         </MemoryRouter>
       );
 
-      // Debe consultar a la API de vinos probados para la bitácora
+      // Debe consultar a la API de catas para la bitácora
       await waitFor(() => {
-        expect(mockClient.get).toHaveBeenCalledWith('/user-wines/me', expect.objectContaining({
-          params: expect.objectContaining({ tried: true, pageSize: 100 }),
+        expect(mockClient.get).toHaveBeenCalledWith('/users/me/tastings', expect.objectContaining({
+          params: expect.objectContaining({ pageNumber: 1, pageSize: 10 }),
         }));
       });
 
       // La tarjeta de última reseña de cata muestra los datos del vino probado real
       expect(await screen.findByText('Cobos Chañares Malbec (2017)')).toBeInTheDocument();
-      expect(screen.getByText('CATA PRIVADA 100 PTS')).toBeInTheDocument();
+      expect(screen.getByText('MI CATA 5,0 ★')).toBeInTheDocument();
       expect(screen.getByText(/Gran estructura, taninos redondos y largo final mineral/i)).toBeInTheDocument();
     });
 

@@ -194,11 +194,13 @@ describe('Bloque U12 - Presentación y Uniformidad de Imágenes de Vinos', () =>
   describe('4. VaultWineCard (Cava)', () => {
     it('mantiene la proporción 4:5 con fondo blanco y usa variante card', () => {
       render(
-        <VaultWineCard
-          wine={sampleCellarWine}
-          onOpenDetails={vi.fn()}
-          onUncork={vi.fn()}
-        />
+        <MemoryRouter>
+          <VaultWineCard
+            wine={sampleCellarWine}
+            onOpenDetails={vi.fn()}
+            onUncork={vi.fn()}
+          />
+        </MemoryRouter>
       );
 
       const container = screen.getByTestId('vault-card-image-container');

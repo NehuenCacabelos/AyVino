@@ -37,25 +37,21 @@ export default function VaultVitals({ vitals }: VaultVitalsProps) {
             {vitals.dominantVarietal}
           </span>
           <span className="font-mono text-xs sm:text-sm text-[#ffb2b8] font-bold">
-            {vitals.dominantVarietalPercentage}%
+            {vitals.totalBottles > 0 && vitals.dominantVarietal !== '—'
+              ? `${vitals.dominantVarietalPercentage}%`
+              : '—'}
           </span>
         </div>
         <div className="w-full bg-[#201f25] rounded-full h-1.5 overflow-hidden flex mt-2">
-          <div
-            className="bg-[#722F37] h-full transition-all duration-500"
-            style={{ width: `${vitals.dominantVarietalPercentage}%` }}
-            title={`Malbec: ${vitals.dominantVarietalPercentage}%`}
-          />
-          <div
-            className="bg-[#fbbf24] h-full"
-            style={{ width: '22%' }}
-            title="Cabernet: 22%"
-          />
-          <div
-            className="bg-neutral-600 h-full"
-            style={{ width: '20%' }}
-            title="Otros: 20%"
-          />
+          {vitals.totalBottles > 0 && vitals.dominantVarietal !== '—' ? (
+            <div
+              className="bg-[#722F37] h-full transition-all duration-500"
+              style={{ width: `${vitals.dominantVarietalPercentage}%` }}
+              title={`${vitals.dominantVarietal}: ${vitals.dominantVarietalPercentage}%`}
+            />
+          ) : (
+            <div className="bg-neutral-800 h-full w-full" />
+          )}
         </div>
       </div>
 
@@ -66,14 +62,18 @@ export default function VaultVitals({ vitals }: VaultVitalsProps) {
         </span>
         <div className="flex items-baseline gap-2">
           <span className="font-serif text-3xl sm:text-4xl text-neutral-100 font-semibold tracking-tight">
-            {vitals.oldestVintage}
+            {vitals.oldestVintage ? vitals.oldestVintage : '—'}
           </span>
-          <span className="font-mono text-[10px] text-[#ffb2b8] font-semibold tracking-wider">
-            GRAN RESERVA
-          </span>
+          {vitals.oldestVintage && (
+            <span className="font-mono text-[10px] text-[#ffb2b8] font-semibold tracking-wider">
+              GRAN RESERVA
+            </span>
+          )}
         </div>
         <p className="text-xs text-neutral-400 font-sans">
-          {vitals.oldestVintageAgingYears} años de estiba impecable
+          {vitals.oldestVintage
+            ? `${vitals.oldestVintageAgingYears} años de estiba impecable`
+            : 'Sin botellas en estiba'}
         </p>
       </div>
     </section>

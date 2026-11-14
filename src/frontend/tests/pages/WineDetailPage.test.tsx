@@ -263,7 +263,7 @@ describe('WineDetailPage Integration', () => {
     const openReviewButtons = screen.getAllByRole('button', { name: /Escribir reseña/i });
     fireEvent.click(openReviewButtons[0]);
 
-    const textarea = screen.getByPlaceholderText(/Describí aromas primarios/i);
+    const textarea = await screen.findByPlaceholderText(/Describí aromas primarios/i);
     fireEvent.change(textarea, { target: { value: 'Comentario duplicado.' } });
 
     const submitBtn = screen.getByRole('button', { name: /Publicar Reseña Pública/i });

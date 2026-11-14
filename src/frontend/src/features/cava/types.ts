@@ -14,18 +14,22 @@ export interface CellarVitals {
   optimalCount: number;
   dominantVarietal: string;
   dominantVarietalPercentage: number;
-  oldestVintage: number;
+  oldestVintage: number | null;
   oldestVintageAgingYears: number;
 }
 
 export interface CellarWine {
   id: string;
+  wineId?: number;
+  wineVintageId?: number;
   name: string;
   winery: string;
   region: string;
   varietal: string;
   vintage: number;
   rating: number; // Critic score or user rating, e.g. 99, 100
+  userRating?: number | null;
+  averageRating?: number | null;
   criticBadge?: string; // e.g. "RP 99", "WA 100", "JS 98"
   units: number;
   location: string; // e.g. "A1 · ESTANTE SUP."
@@ -37,6 +41,7 @@ export interface CellarWine {
   sourceType?: 'Community' | 'Official' | string;
   bottle: BottleKind;
   imageUrl?: string;
+  imageId?: string | null;
   // Ficha técnica extendida
   altitude?: string; // e.g. "1.450 msnm"
   soilType?: string; // e.g. "Calcáreo de grava aluvional"

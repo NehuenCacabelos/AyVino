@@ -193,6 +193,7 @@ export interface DashboardWine {
   location?: string;
   isFavorite?: boolean;
   imageUrl?: string;
+  imageId?: string | null;
 }
 
 /**
