@@ -173,7 +173,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `POST` | `/api/users` | Público | Registra un nuevo aficionado en la comunidad con rol inmutable `User`. | `RegisterUserRequestDto` | `201 Created` (`UserResponseDto`) |
 | `GET` | `/api/users/{username}` | Público | Obtiene el perfil público de un usuario por su nombre (avatar, bio, estadísticas) sin exponer datos privados. | - | `200 OK` (`PublicUserProfileDto`) |
 | `GET` | `/api/users/{username}/cellar-items` | Público | Lista los vinos en cava de un usuario para visualización pública en modo solo lectura. | Query params: `pageNumber = 1`, `pageSize = 20` | `200 OK` (`IReadOnlyList<PublicCellarItemResponseDto>`) |
-| `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
+| `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado (incluye `averageRating` con el promedio real de sus reseñas o `null`). | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/users/me/avatar` | Autenticado | Elimina la foto de perfil física y restaura el avatar por defecto. | - | `200 OK` (`UserResponseDto`) |
@@ -387,6 +387,8 @@ Administración de cavas virtuales del usuario (ej. Cava Hogar, Cava Quincho) y 
 | `GET` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Detalle de una cosecha puntual almacenada en la cava. | - | `200 OK` (`CellarItemResponseDto`) |
 | `PUT` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Reemplaza cantidad (1-999), fecha de compra y notas de la cosecha en la cava. | `UpdateCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
 | `DELETE`| `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Elimina la cosecha de la cava (vacía el stock de esa añada). | - | `204 NoContent` |
+| `POST` | `/api/cellars/{cellarId}/items/{wineVintageId}/uncork` | Autenticado (Solo dueño) | Descorcha una botella de la cava: descuenta stock, marca el vino como probado y registra una cata privada (y actualiza la calificación de la reseña pública si hubo puntaje). | `UncorkCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
+| `POST` | `/api/cellars/me/items/{wineVintageId}/uncork` | Autenticado | Descorcha una botella de la primera cava activa del usuario. | `UncorkCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
 | `GET` | `/api/cellars/{cellarId}/care-summary` | Autenticado (Solo dueño) | Resumen de recomendaciones de temperatura, decantado y ventana de consumo de todas las botellas en cava. | - | `200 OK` (`IReadOnlyList<WineCareResponseDto>`) |
 
 ---

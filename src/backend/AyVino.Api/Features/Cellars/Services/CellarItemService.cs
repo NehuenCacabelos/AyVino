@@ -5,6 +5,7 @@ using AyVino.Api.Features.Cellars.Repositories;
 using AyVino.Api.Features.Grapes.Enums;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Reviews.Validation;
+using AyVino.Api.Features.Tastings.Services;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
@@ -16,7 +17,8 @@ public class CellarItemService(
     ICellarItemRepository itemRepository,
     IWineVintageRepository wineVintageRepository,
     IWineRepository? wineRepository = null,
-    IGrapeRepository? grapeRepository = null) : ICellarItemService
+    IGrapeRepository? grapeRepository = null,
+    ITastingService? tastingService = null) : ICellarItemService
 {
     private const int MaxQuantity = 999;
     private const int MaxNotesLength = 500;
@@ -254,6 +256,15 @@ public class CellarItemService(
 
     public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, UncorkCellarItemRequestDto? request, CancellationToken ct = default)
     {
+        if (tastingService is not null)
+        {
+            var result = await tastingService.RecordAsync(userId, wineVintageId, cellarId, request?.Rating, request?.Comment, null, ct);
+            if (result.UpdatedCellarItem is null)
+                throw new ConflictException("No quedan botellas de esta cosecha en la cava o el ítem no existe.");
+
+            return result.UpdatedCellarItem.ToResponseDto();
+        }
+
         if (request?.Rating.HasValue == true)
             RatingValidator.Validate(request.Rating.Value);
 

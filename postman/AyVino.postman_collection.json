@@ -5263,6 +5263,58 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Uncork Cellar Item",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 4.5,\n  \"comment\": \"Excelente descorche en cena.\",\n  \"tastedAt\": \"2026-11-14T12:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/{{vintageId}}/uncork",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "{{vintageId}}",
+                    "uncork"
+                  ],
+                  "query": []
+                },
+                "description": "Descorcha una botella reduciendo el stock e inserta cata unificada en la bitacora."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(json.remainingQuantity).to.be.a(\"number\");"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             }
           ]
         },
@@ -5298,6 +5350,166 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Tastings",
+          "item": [
+            {
+              "name": "Create Tasting (Direct)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"cellarId\": null,\n  \"rating\": 4.5,\n  \"comment\": \"Gran bouquet frutal y persistencia.\",\n  \"tastedAt\": \"2026-11-14T12:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/tastings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "tastings"
+                  ],
+                  "query": []
+                },
+                "description": "Registra una cata privada de una cosecha para el usuario autenticado."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(json.id).to.be.a(\"number\");",
+                      "pm.expect(json.rating).to.eql(4.5);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Tastings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/tastings?pageNumber=1&pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "tastings"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Obtiene la bitacora paginada de catas privadas del usuario autenticado."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(Array.isArray(json)).to.be.true;"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Tastings Filtered by Vintage",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/tastings?wineVintageId={{vintageId}}&pageNumber=1&pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "tastings"
+                  ],
+                  "query": [
+                    {
+                      "key": "wineVintageId",
+                      "value": "{{vintageId}}"
+                    },
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Filtra las catas privadas del usuario por cosecha especifica."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(Array.isArray(json)).to.be.true;"
                     ],
                     "type": "text/javascript"
                   }
