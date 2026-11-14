@@ -590,9 +590,10 @@ export default function ProfilePage() {
                         <>
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                             {ownerShowcaseWines.map((item) => (
-                              <article
+                              <Link
                                 key={item.wineVintageId}
-                                className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
+                                to={`/vinos/${item.wineId}`}
+                                className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5 cursor-pointer block"
                               >
                                 <div className="w-full aspect-[4/5] bg-white rounded-lg flex items-center justify-center p-2 mb-3 relative overflow-hidden shadow-sm">
                                   <ShowcaseWineBottle src={item.imageId ? imageUrl(item.imageId, 'card') : item.imageUrl} alt={item.name} variant="card" />
@@ -624,7 +625,7 @@ export default function ProfilePage() {
                                     {item.quantity} {item.quantity === 1 ? 'botella' : 'botellas'}
                                   </span>
                                 </div>
-                              </article>
+                              </Link>
                             ))}
 
                             {/* Slot punteado interactivo adicional si hay pocas botellas */}
@@ -681,9 +682,10 @@ export default function ProfilePage() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                           {ownerTriedWines.map((wine) => (
-                            <div
+                            <Link
                               key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
+                              to={`/vinos/${wine.wineId}`}
+                              className="group p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/40 hover:bg-[#1c1920] hover:-translate-y-0.5 transition-all cursor-pointer block"
                             >
                               <div className="flex gap-3">
                                 <div className="w-14 h-18 aspect-[4/5] shrink-0 overflow-hidden">
@@ -698,7 +700,7 @@ export default function ProfilePage() {
                                       Probado
                                     </span>
                                   </div>
-                                  <h3 className="text-sm font-bold text-white truncate font-sans" title={wine.name}>
+                                  <h3 className="text-sm font-bold text-white truncate font-sans group-hover:text-rose-400 transition-colors" title={wine.name}>
                                     {wine.name}
                                   </h3>
                                   <p className="text-xs text-zinc-300 truncate font-sans">
@@ -735,7 +737,7 @@ export default function ProfilePage() {
                                   {new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}
                                 </span>
                               </div>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                       )}
@@ -762,9 +764,10 @@ export default function ProfilePage() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                           {ownerFavWines.map((wine) => (
-                            <div
+                            <Link
                               key={wine.wineId}
-                              className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
+                              to={`/vinos/${wine.wineId}`}
+                              className="group p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/40 hover:bg-[#1c1920] hover:-translate-y-0.5 transition-all cursor-pointer block"
                             >
                               <div className="flex gap-3">
                                 <div className="w-14 h-18 aspect-[4/5] shrink-0 overflow-hidden">
@@ -779,7 +782,7 @@ export default function ProfilePage() {
                                       Favorito
                                     </span>
                                   </div>
-                                  <h3 className="text-sm font-bold text-white truncate font-sans" title={wine.name}>
+                                  <h3 className="text-sm font-bold text-white truncate font-sans group-hover:text-rose-400 transition-colors" title={wine.name}>
                                     {wine.name}
                                   </h3>
                                   <p className="text-xs text-zinc-300 truncate font-sans">
@@ -816,7 +819,7 @@ export default function ProfilePage() {
                                   {new Date(wine.lastChangeAt).toLocaleDateString('es-AR')}
                                 </span>
                               </div>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                       )}
@@ -876,9 +879,10 @@ export default function ProfilePage() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                       {publicShowcaseWines.map((wine) => (
-                        <article
+                        <Link
                           key={wine.wineVintageId}
-                          className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
+                          to={`/vinos/${wine.wineId}`}
+                          className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5 cursor-pointer block"
                         >
                           <div className="w-full aspect-[4/5] bg-white rounded-lg flex items-center justify-center p-2 mb-3 relative overflow-hidden shadow-sm">
                             <ShowcaseWineBottle src={wine.imageId ? imageUrl(wine.imageId, 'card') : wine.imageUrl} alt={wine.name} variant="card" />
@@ -906,7 +910,7 @@ export default function ProfilePage() {
                               <span className="text-xs text-zinc-400 font-sans">{wine.reviewCount} reseñas</span>
                             </div>
                           )}
-                        </article>
+                        </Link>
                       ))}
                     </div>
                   )}
