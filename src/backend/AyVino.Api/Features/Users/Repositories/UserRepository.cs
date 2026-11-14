@@ -71,11 +71,18 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                        FROM user_follows uf
                        WHERE uf.followed_user_id = u.id
                    ), 0)::int AS FollowersCount,
-                   COALESCE((
-                       SELECT COUNT(*)
-                       FROM user_follows uf
-                       WHERE uf.follower_id = u.id
-                   ), 0)::int AS FollowingCount
+                   (
+                       COALESCE((
+                           SELECT COUNT(*)
+                           FROM user_follows uf
+                           WHERE uf.follower_id = u.id
+                       ), 0) +
+                       COALESCE((
+                           SELECT COUNT(*)
+                           FROM winery_follows wf
+                           WHERE wf.follower_id = u.id
+                       ), 0)
+                   )::int AS FollowingCount
             FROM users u
             WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true;
             """;
