@@ -423,5 +423,49 @@ Este documento consolida el avance, decisiones, problemas y verificaciones reali
 - `npm test`: 290/290 pruebas superadas (60 suites pasando, 9 pruebas nuevas en Vitest).
 - `npm run lint`: 0 errores en código creado/modificado.
 
-## 6. Conclusión y Cierre de Bloques de Usuario
-Con la finalización de los bloques U1 a U6, el circuito completo del usuario de AyVino (búsqueda tolerante, catálogo con filtros reales, fichas técnicas con añadas, notas de cata con rating y badges de comunidad, alta de vinos comunitarios con cepas y compresión de fotos, descorche atómico, favoritos y perfil con historial de catas) queda 100% implementado, probado y validado.
+## 6. Conclusión de Bloques U1 a U6
+Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyVino (búsqueda tolerante, catálogo con filtros reales, fichas técnicas con añadas, notas de cata con rating y badges de comunidad, alta de vinos comunitarios con cepas y compresión de fotos, descorche atómico, favoritos y perfil con historial de catas) quedó 100% implementado, probado y validado.
+
+
+---
+
+# USUARIO — BLOQUE U7: Botellas sin fondo blanco (solo imágenes de vinos)
+**Rama**: `fix/usuario-imagen-botella` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **7.1 Backend: Transformación `bottle` en Cloudinary (`CloudinaryImageStorage.cs`)**:
+  - Encadenamiento de `e_make_transparent:{tolerancia}` previo a la transformación `pad` (`c_pad`) existente mediante `.Effect($"make_transparent:{tolerance}").Chain()`.
+  - Tolerancia por defecto de 10 (`BottleBackgroundTolerance`), configurable desde `Cloudinary:BottleBackgroundTolerance` en `CloudinaryOptions.cs`.
+  - Conservación estricta de las variantes `avatar`, `logo`, `banner` y sin variante con cadenas de entrega idénticas.
+- **7.2 Frontend: Rompimiento de Caché de Entrega (`src/frontend/src/lib/image.ts`)**:
+  - Incorporación de `BOTTLE_IMAGE_VERSION = 2` y concatenación de `&v=2` únicamente en la variante `bottle`.
+  - Las restantes variantes permanecen sin parámetro de versión.
+  - Verificación de que el endpoint `GET /api/images/{id}` ignora el query param extra sin errores.
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Images/Configuration/CloudinaryOptions.cs`
+  - `src/backend/AyVino.Api/Features/Images/Services/CloudinaryImageStorage.cs`
+  - `src/backend/AyVino.Api/appsettings.json`
+  - `src/frontend/src/lib/image.ts`
+  - `src/frontend/tests/lib/image.test.ts`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU7Tests.cs`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U7.md`
+
+## 3. Comparativa de URLs
+- **Antes (bottle)**: `https://res.cloudinary.com/test-cloud/image/upload/b_transparent,c_pad,f_auto,h_1200,q_auto,w_600/v1/vinos/cosecha-2021`
+- **Después (bottle)**: `https://res.cloudinary.com/test-cloud/image/upload/e_make_transparent:10/b_transparent,c_pad,f_auto,h_1200,q_auto,w_600/v1/vinos/cosecha-2021`
+- **Otras variantes**: Sin modificaciones (idénticas a producción).
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 758/758 superados (4 nuevas pruebas unitarias).
+- `npm run build`: Compilación exitosa en 823 ms.
+- `npm test`: 290/290 superados (4 pruebas en `tests/lib/image.test.ts`).
+- `npm run lint`: 0 errores en código nuevo/modificado.
+
+## 5. Pendientes
+- Ninguno en este bloque. Procediendo con el Bloque U8.
