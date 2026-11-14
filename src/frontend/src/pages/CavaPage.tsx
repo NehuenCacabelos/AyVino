@@ -123,7 +123,7 @@ export default function CavaPage() {
               isJewel: (item.averageRating && Number(item.averageRating) >= 4.5) || false,
               sourceType: item.wineryId ? 'Official' : 'Community',
               bottle: item.wineType === 'White' ? 'white' : 'red-burgundy',
-              imageUrl: (item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl) || undefined,
+              imageUrl: (item.imageId ? imageUrl(item.imageId, 'card') : item.imageUrl) || undefined,
             };
           });
           setWines(mapped);

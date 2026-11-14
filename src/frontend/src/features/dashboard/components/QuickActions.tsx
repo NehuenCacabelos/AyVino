@@ -540,7 +540,20 @@ export default function QuickActions({
                           : 'hover:bg-white/5 text-stone-300',
                       )}
                     >
-                      <Wine className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
+                      {wine.imageId ? (
+                        <div className="w-6 h-8 aspect-[4/5] bg-white rounded overflow-hidden shrink-0 flex items-center justify-center p-0.5 shadow-sm">
+                          <img
+                            src={imageUrl(wine.imageId, 'thumb') || ''}
+                            alt={wine.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <Wine className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-neutral-100 truncate">
                           {wine.name}

@@ -36,23 +36,31 @@ import { cn } from '../lib/utils';
 import WineBottleSilhouette from '../features/wines/components/WineBottleSilhouette';
 import { getBannerThemeByUsername } from '../constants/bannerThemes';
 
-function ShowcaseWineBottle({ src, alt }: { src?: string | null; alt: string }) {
+function ShowcaseWineBottle({ src, alt, variant = 'card' }: { src?: string | null; alt: string; variant?: 'card' | 'thumb' }) {
   const [hasError, setHasError] = useState(false);
 
-  if (!src || hasError) {
-    return (
-      <WineBottleSilhouette className="w-8 h-20 text-neutral-500 transition-transform duration-300 group-hover:scale-105" />
-    );
-  }
+  const effectiveSrc = useMemo(() => {
+    if (!src) return null;
+    if (variant === 'thumb') {
+      return src.replace('variant=card', 'variant=thumb').replace('variant=bottle', 'variant=thumb');
+    }
+    return src;
+  }, [src, variant]);
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      onError={() => setHasError(true)}
-      className="max-h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-    />
+    <div className="w-full h-full aspect-[4/5] bg-white rounded-lg overflow-hidden flex items-center justify-center p-1 relative shadow-sm">
+      {!effectiveSrc || hasError ? (
+        <WineBottleSilhouette className="w-8 h-20 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />
+      ) : (
+        <img
+          src={effectiveSrc}
+          alt={alt}
+          loading="lazy"
+          onError={() => setHasError(true)}
+          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+        />
+      )}
+    </div>
   );
 }
 
@@ -586,8 +594,8 @@ export default function ProfilePage() {
                                 key={item.wineVintageId}
                                 className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                               >
-                                <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                                  <ShowcaseWineBottle src={item.imageId ? imageUrl(item.imageId, 'bottle') : item.imageUrl} alt={item.name} />
+                                <div className="w-full aspect-[4/5] bg-white rounded-lg flex items-center justify-center p-2 mb-3 relative overflow-hidden shadow-sm">
+                                  <ShowcaseWineBottle src={item.imageId ? imageUrl(item.imageId, 'card') : item.imageUrl} alt={item.name} variant="card" />
                                 </div>
 
                                 <div className="space-y-1">
@@ -678,8 +686,8 @@ export default function ProfilePage() {
                               className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
                             >
                               <div className="flex gap-3">
-                                <div className="w-14 h-24 bg-black/20 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
-                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
+                                <div className="w-14 h-18 aspect-[4/5] shrink-0 overflow-hidden">
+                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} variant="thumb" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-1 mb-1">
@@ -759,8 +767,8 @@ export default function ProfilePage() {
                               className="p-4 rounded-md bg-[#17151a] border border-white/10 space-y-3 flex flex-col justify-between hover:border-rose-900/30 transition-all"
                             >
                               <div className="flex gap-3">
-                                <div className="w-14 h-24 bg-black/20 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
-                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} />
+                                <div className="w-14 h-18 aspect-[4/5] shrink-0 overflow-hidden">
+                                  <ShowcaseWineBottle src={wine.imageUrl} alt={wine.name} variant="thumb" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-1 mb-1">
@@ -872,8 +880,8 @@ export default function ProfilePage() {
                           key={wine.wineVintageId}
                           className="group bg-[#17151a] border border-white/10 hover:border-rose-900/40 rounded-md p-4 flex flex-col justify-between transition-all hover:bg-[#1c1920] hover:-translate-y-0.5"
                         >
-                          <div className="w-full h-44 bg-[#0f0e13] rounded-sm border border-white/5 flex items-center justify-center p-3 mb-3 relative overflow-hidden group-hover:bg-[#121118] transition-colors">
-                            <ShowcaseWineBottle src={wine.imageId ? imageUrl(wine.imageId, 'bottle') : wine.imageUrl} alt={wine.name} />
+                          <div className="w-full aspect-[4/5] bg-white rounded-lg flex items-center justify-center p-2 mb-3 relative overflow-hidden shadow-sm">
+                            <ShowcaseWineBottle src={wine.imageId ? imageUrl(wine.imageId, 'card') : wine.imageUrl} alt={wine.name} variant="card" />
                           </div>
 
                           <div className="space-y-1">

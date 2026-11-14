@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import BottleVector from '../../dashboard/components/BottleVector';
 import type { CellarWine } from '../types';
 
@@ -8,10 +9,11 @@ interface VaultWineCardProps {
 }
 
 export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWineCardProps) {
+  const [hasError, setHasError] = useState(false);
   const isOptimal = wine.agingStatus === 'optimal';
 
   return (
-    <article className="bg-[#121216] border border-neutral-800/80 rounded-xl p-4 sm:p-5 shadow-lg flex flex-col justify-between group hover:border-[#fbbf24]/30 hover:bg-[#15151b] transition-all duration-300">
+    <article className="bg-[#121216] border border-neutral-800/80 rounded-xl p-4 sm:p-5 shadow-lg flex flex-col justify-between group hover:border-[#fbbf24]/30 hover:bg-[#15151b] transition-all duration-300 h-full">
       <div className="space-y-3">
         {/* Header badges: Shelf Location & Score */}
         <div className="flex items-center justify-between gap-2">
@@ -40,31 +42,33 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
           )}
         </div>
 
-        {/* Bottle Imagery Viewport with Dark Cellar Radial Vignette */}
-        <div className="relative w-full h-72 rounded-lg overflow-hidden bg-[#0c0c0e] flex items-center justify-center border border-neutral-900 group-hover:border-neutral-800 transition-colors">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(114,47,55,0.22)_0%,_rgba(12,12,14,0.95)_75%)] pointer-events-none" />
-
-          {wine.imageUrl ? (
+        {/* Escenario blanco en proporción fija 4:5 para entrega de botella sin pérdidas */}
+        <div
+          data-testid="vault-card-image-container"
+          className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-white flex items-center justify-center border border-neutral-200/20 group-hover:border-[#fbbf24]/40 transition-colors shadow-sm"
+        >
+          {wine.imageUrl && !hasError ? (
             <img
               src={wine.imageUrl}
               alt={wine.name}
-              className="h-60 w-auto object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform duration-500 relative z-10"
+              onError={() => setHasError(true)}
+              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 relative z-10"
               loading="lazy"
             />
           ) : (
-            <div className="relative z-10 group-hover:scale-105 transition-transform duration-500">
-              <BottleVector kind={wine.bottle} className="h-60 w-auto filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)]" />
+            <div data-testid="vault-card-fallback" className="relative z-10 group-hover:scale-105 transition-transform duration-500 p-4 flex items-center justify-center w-full h-full">
+              <BottleVector kind={wine.bottle} className="h-56 w-auto object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)]" />
             </div>
           )}
 
           {/* Temperature Badge */}
-          <span className="absolute bottom-2.5 left-2.5 font-mono text-[10px] text-neutral-300 bg-[#0c0c0e]/85 border border-neutral-800/80 px-2 py-0.5 rounded backdrop-blur-sm z-10">
+          <span className="absolute bottom-2.5 left-2.5 font-mono text-[10px] text-neutral-300 bg-[#0c0c0e]/90 border border-neutral-800 px-2 py-0.5 rounded backdrop-blur-sm z-20">
             {wine.temperatureConst || '15°C CONSTANTE'}
           </span>
 
           {/* Units indicator if > 1 */}
           {wine.units > 1 && (
-            <span className="absolute top-2.5 right-2.5 font-mono text-[10px] text-neutral-200 bg-[#722F37]/80 border border-rose-500/30 px-2 py-0.5 rounded backdrop-blur-sm z-10">
+            <span className="absolute top-2.5 right-2.5 font-mono text-[10px] text-neutral-200 bg-[#722F37]/90 border border-rose-500/40 px-2 py-0.5 rounded backdrop-blur-sm z-20">
               {wine.units} {wine.units === 1 ? 'botella' : 'botellas'}
             </span>
           )}
@@ -75,7 +79,7 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
           <span className="font-mono text-[11px] text-[#ffb2b8] block tracking-wide uppercase">
             {wine.region || '—'}
           </span>
-          <h3 className="font-serif text-lg sm:text-xl text-neutral-100 font-medium leading-snug line-clamp-2 group-hover:text-[#fde68a] transition-colors">
+          <h3 className="font-serif text-lg sm:text-xl text-neutral-100 font-medium leading-snug line-clamp-2 min-h-[3.25rem] group-hover:text-[#fde68a] transition-colors">
             {wine.name}
           </h3>
           <p className="text-xs text-neutral-400 font-sans line-clamp-2 leading-relaxed">
@@ -119,4 +123,3 @@ export default function VaultWineCard({ wine, onOpenDetails, onUncork }: VaultWi
     </article>
   );
 }
-

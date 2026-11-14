@@ -16,7 +16,8 @@ export interface DashboardWineCardProps {
 /**
  * DashboardWineCard Component
  * Card de vino con estética editorial mate (#131316), bordes esmerilados border-white/[0.07],
- * spotlight de botella (con fallback determinista a BottleVector), rating con estrellas y acciones.
+ * escenario de proporción 4:5 sobre fondo blanco (#fff) para entrega perfecta del CDN de Cloudinary,
+ * rating con estrellas y acciones de cava.
  */
 export default function DashboardWineCard({
   wine,
@@ -25,6 +26,8 @@ export default function DashboardWineCard({
   hideQuickActions = false,
 }: DashboardWineCardProps) {
   const [localFav, setLocalFav] = useState<boolean | null>(null);
+  const [hasError, setHasError] = useState(false);
+
   const isFav = onToggleFavorite
     ? Boolean(wine.isFavorite)
     : localFav !== null
@@ -63,10 +66,10 @@ export default function DashboardWineCard({
   };
 
   return (
-    <li className="flex list-none">
+    <li className="list-none h-full">
       <Link
         to={`/vinos/${wineSlug}`}
-        className="group relative w-full flex flex-col justify-between rounded-2xl bg-[#131316] border border-white/[0.07] backdrop-blur-xl p-5 hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300 shadow-xl shadow-black/50 cursor-pointer block text-left"
+        className="group relative flex flex-col h-full rounded-2xl bg-[#131316] border border-white/[0.07] p-3 hover:border-amber-500/30 hover:bg-[#18181c] transition-all duration-300 overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-0.5 select-none justify-between"
       >
         {/* Botón de Favorito Flotante Esmerilado */}
         {!hideQuickActions && (
@@ -84,22 +87,30 @@ export default function DashboardWineCard({
           </button>
         )}
 
-        {/* Spotlight dedicado para la botella */}
-        <div className="relative bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center overflow-hidden mb-3">
-          {wine.imageUrl ? (
-            <img
-              src={wine.imageUrl}
-              alt={wine.name}
-              className="h-44 w-auto max-h-full object-contain transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <BottleVector
-              kind={wine.bottle}
-              className="h-44 w-auto max-h-full transition-transform duration-300 group-hover:scale-105"
-              alt={wine.name}
-            />
-          )}
+        {/* Escenario blanco en proporción fija 4:5 para entrega uniforme */}
+        <div className="relative mx-1 mt-1 mb-3 shrink-0">
+          <div
+            data-testid="dashboard-card-image-container"
+            className="w-full aspect-[4/5] bg-white rounded-lg overflow-hidden flex items-center justify-center relative shadow-sm"
+          >
+            {wine.imageUrl && !hasError ? (
+              <img
+                src={wine.imageUrl}
+                alt={wine.name}
+                onError={() => setHasError(true)}
+                className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div data-testid="dashboard-card-fallback" className="flex items-center justify-center w-full h-full p-4">
+                <BottleVector
+                  kind={wine.bottle}
+                  className="h-44 w-auto max-h-full transition-transform duration-300 group-hover:scale-105"
+                  alt={wine.name}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Información y Puntuación */}
@@ -114,11 +125,11 @@ export default function DashboardWineCard({
               </span>
             </div>
 
-            <h4 className="font-serif text-lg font-semibold text-neutral-100 leading-snug tracking-tight group-hover:text-amber-200 transition-colors line-clamp-2">
+            <h4 className="font-serif text-lg font-semibold text-neutral-100 leading-snug tracking-tight group-hover:text-amber-200 transition-colors line-clamp-2 min-h-[3.25rem]">
               {wine.name}
             </h4>
 
-            <p className="text-xs text-neutral-400 font-sans mt-1">
+            <p className="text-xs text-neutral-400 font-sans mt-1 truncate">
               {wine.winery} · {wine.region}
             </p>
           </div>
@@ -159,4 +170,3 @@ export default function DashboardWineCard({
     </li>
   );
 }
-

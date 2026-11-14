@@ -20,7 +20,7 @@ export function mapApiWineToCuratedWine(
     region: locationName ?? 'Argentina',
     rating: wine.averageRating ?? null,
     reviewCount: wine.reviewCount ?? 0,
-    imageUrl: (vintage?.imageId ? imageUrl(vintage.imageId, 'bottle') : vintage?.imageUrl) ?? undefined,
+    imageUrl: (vintage?.imageId ? imageUrl(vintage.imageId, 'card') : vintage?.imageUrl) ?? undefined,
     sourceType: (wine.sourceType as 'Official' | 'Community') ?? 'Community',
     isOfficial: wine.sourceType === 'Official',
     aging: vintage?.agingAdvice ?? undefined,

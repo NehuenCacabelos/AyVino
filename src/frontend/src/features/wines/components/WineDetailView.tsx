@@ -2,7 +2,6 @@ import { useState, useMemo, useRef } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Star,
-  Wine,
   MapPin,
   BookmarkPlus,
   Share2,
@@ -32,6 +31,7 @@ import QuickAddBottleModal from '../../cava/components/QuickAddBottleModal';
 import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
 import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
 import { imageUrl } from '../../../lib/image';
+import WineBottleSilhouette from './WineBottleSilhouette';
 import { createReview } from '../api/reviewsApi';
 import WineEditBar from './WineEditBar';
 import {
@@ -1092,7 +1092,7 @@ export default function WineDetailView({
         vintage: selectedYear,
         rating: averageRating ? parseFloat(averageRating) : 0,
         bottle: resolveBottleKind(wine.type, activeGrape),
-        imageUrl: (activeVintage?.imageId ? imageUrl(activeVintage.imageId, 'bottle') : activeVintage?.imageUrl) || undefined,
+        imageUrl: (activeVintage?.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage?.imageUrl) || undefined,
       };
       openQuickAdd(cellarWinePayload);
       return;
@@ -1122,7 +1122,7 @@ export default function WineDetailView({
         agingStatusLabel: `Guarda recomendada: ${activeVintage.agingAdvice.split('.')[0]}`,
         isJewel: false,
         bottle: 'red-black',
-        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle') : activeVintage.imageUrl) || undefined,
+        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage.imageUrl) || undefined,
         alcoholContent: activeVintage.alcoholContent,
       };
 
@@ -1204,10 +1204,12 @@ export default function WineDetailView({
     showToast(`¡Tu cata (${newReviewRating.toFixed(1)} ★) fue publicada en la bitácora!`);
   };
 
-  // Imagen activa a renderizar
+  const [imageError, setImageError] = useState(false);
+
+  // Imagen activa a renderizar en la ficha técnica (variante 'detail' en alta resolución)
   const displayImageUrl = isEditing
     ? activeVintageDraft.previewUrl
-    : (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle')! : activeVintage.imageUrl!);
+    : (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'detail')! : (activeVintage.imageUrl ? activeVintage.imageUrl.replace('variant=bottle', 'variant=detail') : null));
 
   return (
     <main className="w-full min-h-screen bg-[#0a0a0c] text-[#e5e1e4] antialiased selection:bg-[#722f37] selection:text-white pt-24 sm:pt-28 pb-20">
@@ -1231,62 +1233,58 @@ export default function WineDetailView({
           {/* ========================================================= */}
           <aside className="lg:col-span-5 flex flex-col lg:sticky lg:top-28 space-y-6">
             
-            {/* Contenedor Visual de la Botella (Radio suave rounded-lg y borde sutil) */}
-            <div className="bg-neutral-900/30 border border-neutral-800/80 rounded-lg p-6 shadow-xl relative overflow-hidden flex flex-col items-center justify-center group">
-              <div
-                aria-hidden="true"
-                className="absolute w-72 h-80 rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-900/20 via-rose-950/5 to-transparent blur-2xl pointer-events-none group-hover:from-rose-900/30 transition-all duration-700"
-              />
+            {/* Contenedor Visual de la Botella (Escenario 4:5 blanco con esquinas redondeadas y overflow-hidden) */}
+            <div
+              data-testid="wine-detail-stage"
+              className="w-full aspect-[4/5] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex items-center justify-center p-3 group border border-neutral-200/20"
+            >
+              {displayImageUrl && !imageError ? (
+                <img
+                  src={displayImageUrl}
+                  alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
+                  onError={() => setImageError(true)}
+                  className="w-full h-full object-contain transition-transform duration-700 hover:scale-[1.03]"
+                />
+              ) : (
+                <div data-testid="wine-detail-fallback" className="flex flex-col items-center justify-center text-center p-8 max-w-xs">
+                  <WineBottleSilhouette className="w-20 h-52 text-neutral-400 mb-3" />
+                  <span className="font-serif text-base text-neutral-700 font-semibold">Cosecha en Cava Privada</span>
+                  <span className="text-xs text-neutral-500 mt-1 font-mono">
+                    Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
+                  </span>
+                </div>
+              )}
 
-              {/* Escaparate de la botella */}
-              <div className="w-full h-84 sm:h-96 flex items-center justify-center relative z-10 py-6">
-                {displayImageUrl ? (
-                  <img
-                    src={displayImageUrl}
-                    alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
-                    className="max-h-full object-contain filter drop-shadow-[0_28px_45px_rgba(0,0,0,0.95)] transition-transform duration-700 hover:scale-[1.03]"
+              {/* Controles de Imagen en Modo Edición */}
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20 rounded-2xl">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileChange}
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    aria-label="Subir foto de botella"
                   />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-8 max-w-xs border-y border-neutral-800/80">
-                    <Wine className="w-10 h-10 text-rose-300/80 stroke-[1.25] mb-3" />
-                    <span className="font-serif text-base text-neutral-200">Cosecha en Cava Privada</span>
-                    <span className="text-xs text-neutral-500 mt-1 font-mono">
-                      Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
-                    </span>
-                  </div>
-                )}
-
-                {/* Controles de Imagen en Modo Edición */}
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20 rounded-lg">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageFileChange}
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      aria-label="Subir foto de botella"
-                    />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <Camera className="w-4 h-4 text-rose-300" />
+                    <span>Cambiar foto</span>
+                  </button>
+                  {displayImageUrl && (
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg"
+                      onClick={handleRemoveImage}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 font-mono underline"
                     >
-                      <Camera className="w-4 h-4 text-rose-300" />
-                      <span>Cambiar foto</span>
+                      Quitar foto
                     </button>
-                    {displayImageUrl && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 font-mono underline"
-                      >
-                        Quitar foto
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Botones de Acción Principales */}

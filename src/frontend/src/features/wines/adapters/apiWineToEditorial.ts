@@ -122,7 +122,7 @@ export function apiWineToEditorial(
       wineId: String(v.wineId),
       year: v.year ?? new Date().getFullYear(),
       imageId: v.imageId ? String(v.imageId) : null,
-      imageUrl: v.imageId ? imageUrl(v.imageId, 'bottle') : null,
+      imageUrl: v.imageId ? imageUrl(v.imageId, 'detail') : null,
       alcoholContent:
         v.alcoholContent != null ? `${v.alcoholContent}% Vol.` : '14.0% Vol.',
       servingTemperature:
