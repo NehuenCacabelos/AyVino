@@ -468,4 +468,56 @@ Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyV
 - `npm run lint`: 0 errores en código nuevo/modificado.
 
 ## 5. Pendientes
-- Ninguno en este bloque. Procediendo con el Bloque U8.
+- Ninguno en este bloque. Completado y fusionado en `fix/usuario-reparaciones`.
+
+
+---
+
+# USUARIO — BLOQUE U8: Dashboard — enlace al catálogo de la bodega y sugerencias por filtro
+**Rama**: `fix/usuario-dashboard-ajustes` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **8.1 Enlace "Ver catálogo completo" (`WineryBlock.tsx`)**:
+  - Enlace dinámico hacia `/bodegas/{wineryId}/catalogo` cuando `wineryId` está presente.
+  - Ocultamiento limpio del enlace cuando la bodega es comunitaria o escrita a mano (sin `wineryId`), manteniendo la estética del bloque.
+- **8.2 Backend: Sugerencias limitadas por filtros (`AyVino.Api`)**:
+  - Mapeo de `grapeId`, `stateId` y `wineryId` en `GET /api/search/suggestions`.
+  - Grupo `wines`: filtra garantizando que los vinos devueltos cumplan todos los filtros activos.
+  - Grupos `wineries`, `grapes` y `regions`: se omite la dimensión que ya está filtrada (`wineryId` omite `wineries`, `grapeId` omite `grapes`, `stateId` omite `regions`).
+  - Entidades restantes limitadas a aquellas que cuentan con al menos un vino visible que satisface los demás filtros activos.
+  - Retrocompatibilidad absoluta: consultas sin filtros se resuelven contra la caché sin cambios.
+- **8.3 Frontend: Integración en buscador y combos (`catalogApi.ts` & `QuickActions.tsx`)**:
+  - `getSearchSuggestions` actualizado para admitir filtros activos con `AbortSignal`.
+  - `QuickActions.tsx` sincroniza reactivamente las sugerencias ante cambios en los combos de uva, provincia o bodega.
+  - Conservación permanente de la fila fija "Crear «texto»".
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Catalog/Endpoints/CatalogEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/CatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/ICatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/CatalogService.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/ICatalogService.cs`
+  - `src/frontend/src/features/dashboard/api/catalogApi.ts`
+  - `src/frontend/src/features/dashboard/components/QuickActions.tsx`
+  - `src/frontend/src/features/dashboard/components/WineryBlock.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU8Tests.cs`
+  - `src/frontend/tests/features/dashboard/DashboardAjustesBloqueU8.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U8.md`
+
+## 3. Decisiones técnicas
+- Omisión condicional de tareas asincrónicas en `CatalogService` evitando llamadas redundantes a la base de datos cuando una dimensión ya se encuentra filtrada.
+- Sobrecargas de repositorio sin ambigüedad para compatibilidad con suites de pruebas unitarias previas de U1 y U2.
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 763/763 superados (5 nuevas pruebas en `UsuarioBloqueU8Tests`).
+- `npm run build`: Compilación exitosa en 890 ms.
+- `npm test`: 295/296 superados (1 reintento por JSDOM concurrency timeout en archivo no tocado).
+- `npm run lint`: 0 errores en código nuevo/modificado.
+
+## 5. Pendientes
+- Ninguno en este bloque. Procediendo con el Bloque U9.
