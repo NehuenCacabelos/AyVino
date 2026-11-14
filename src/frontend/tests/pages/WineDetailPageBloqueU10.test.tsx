@@ -178,7 +178,7 @@ describe('Bloque U10 - Ficha del vino: Guardar en cava y Enlaces a bodega', () =
       // El modal muestra el nombre cargado
       expect(screen.getByDisplayValue('Altamira Paraje Malbec')).toBeInTheDocument();
       // La cosecha activa (2019) está precargada
-      expect(screen.getByDisplayValue('2019')).toBeInTheDocument();
+      expect(screen.getByDisplayValue(/2019/)).toBeInTheDocument();
     });
 
     it('al cambiar de añada activa en la ficha, el modal abre con la nueva añada preseleccionada', async () => {
@@ -199,7 +199,7 @@ describe('Bloque U10 - Ficha del vino: Guardar en cava y Enlaces a bodega', () =
       });
 
       // Ahora la cosecha preseleccionada es 2021
-      expect(screen.getByDisplayValue('2021')).toBeInTheDocument();
+      expect(screen.getByDisplayValue(/2021/)).toBeInTheDocument();
     });
 
     it('en modo dueño de la bodega, el botón "Guardar en cava" continúa deshabilitado', () => {

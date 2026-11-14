@@ -235,8 +235,12 @@ export default function DashboardPage() {
   const handleUncorkSaved = async (data: UncorkSubmission) => {
     try {
       const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
+      const roundedRating = Math.min(5, Math.max(1, Math.round(data.rating)));
+      const comment = data.tastingNotes?.trim() || data.occasion?.trim() || undefined;
+      const uncorkBody = { rating: roundedRating, comment };
+
       if (!isNaN(vintageId) && vintageId > 0) {
-        await apiClient.post(`/cellars/me/items/${vintageId}/uncork`);
+        await apiClient.post(`/cellars/me/items/${vintageId}/uncork`, uncorkBody);
       } else {
         const cellarRes = await apiClient.get('/cellars/me');
         const userCellars = cellarRes.data;
@@ -254,11 +258,13 @@ export default function DashboardPage() {
         if (!matchingItem) {
           throw new Error('No quedan botellas de esta cosecha en tu cava.');
         }
-        await apiClient.post(`/cellars/${activeCellarId}/items/${matchingItem.wineVintageId}/uncork`);
+        await apiClient.post(`/cellars/${activeCellarId}/items/${matchingItem.wineVintageId}/uncork`, uncorkBody);
       }
 
-      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
-      refreshStock?.();
+      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${roundedRating} estrellas.`);
+      if (refreshStock) {
+        await refreshStock();
+      }
       setStockCount((prev) => Math.max(0, prev - 1));
     } catch (err: unknown) {
       let errorMsg = 'Error al descorchar la botella.';
@@ -269,6 +275,41 @@ export default function DashboardPage() {
       }
       showNotification(errorMsg);
     }
+  };
+
+  const handleOpenUncorkFromMetrics = async () => {
+    try {
+      const cellarRes = await apiClient.get('/cellars/me');
+      const userCellars = cellarRes.data;
+      if (Array.isArray(userCellars) && userCellars.length > 0) {
+        const itemsRes = await apiClient.get(`/cellars/${userCellars[0].id}/items`);
+        if (Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
+          const item = itemsRes.data[0];
+          setUncorkingWine({
+            id: `api-item-${item.wineVintageId}`,
+            name: item.name || 'Vino de la Cava',
+            winery: item.wineryName || 'Bodega',
+            vintage: item.vintageYear || 2020,
+            varietal: item.grapeName || 'Malbec',
+            region: item.region || 'Mendoza',
+            rating: item.userRating || 4.5,
+            bottle: 'red-burgundy',
+          });
+          return;
+        }
+      }
+    } catch {
+      // Fallback seguro a vino destacado
+    }
+    setUncorkingWine({
+      name: 'Catena Zapata Malbec Argentino',
+      winery: 'Bodega Catena Zapata',
+      vintage: 2020,
+      varietal: 'Malbec',
+      region: 'Mendoza, Argentina',
+      rating: 4.8,
+      bottle: 'red-burgundy',
+    });
   };
 
 
@@ -499,6 +540,7 @@ export default function DashboardPage() {
                 dominantVarietal: 'Malbec (58%)',
                 topRated: '4.9 ★',
               }}
+              onUncorkClick={handleOpenUncorkFromMetrics}
             />
           </div>
         </div>

@@ -219,9 +219,12 @@ describe('Bloque U6 - Favoritos, Descorche y Navegación', () => {
       const confirmUncork = await screen.findByRole('button', { name: /REGISTRAR DESCORCHE/i });
       fireEvent.click(confirmUncork);
 
-      // Debe haber llamado al endpoint nuevo de descorche
+      // Debe haber llamado al endpoint nuevo de descorche (con body opcional de cata)
       await waitFor(() => {
-        expect(mockClient.post).toHaveBeenCalledWith('/cellars/10/items/100/uncork');
+        expect(mockClient.post).toHaveBeenCalledWith(
+          '/cellars/10/items/100/uncork',
+          expect.anything()
+        );
       });
 
       // Muestra notificación de éxito en el toast status

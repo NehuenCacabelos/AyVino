@@ -13,7 +13,6 @@ import {
   VaultLogbookModule,
   TechnicalSheetModal,
   QuickAddBottleModal,
-  initialTastingLog,
   type CellarWine,
   type WineSortOption,
   type TastingLogEntry,
@@ -43,18 +42,7 @@ export default function CavaPage() {
   const [cellarId, setCellarId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [tastingLog, setTastingLog] = useState<TastingLogEntry[]>(() => {
-    const saved = localStorage.getItem('ayvino_vault_logbook');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return initialTastingLog;
-      }
-    }
-    return initialTastingLog;
-  });
-
+  const [tastingLog, setTastingLog] = useState<TastingLogEntry[]>([]);
   const [sortOption, setSortOption] = useState<WineSortOption>('default');
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -65,9 +53,13 @@ export default function CavaPage() {
 
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    localStorage.setItem('ayvino_vault_logbook', JSON.stringify(tastingLog));
-  }, [tastingLog]);
+  const showNotification = useCallback((msg: string) => {
+    clearTimeout(notificationTimerRef.current);
+    setNotification(msg);
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -141,8 +133,65 @@ export default function CavaPage() {
       } else {
         setWines([]);
       }
-    } catch {
-      setWines([]);
+
+      // Cargar la bitácora de cata persistente desde la API
+      try {
+        const triedResponse = await apiClient.get('/user-wines/me', {
+          params: { tried: true, pageSize: 100 },
+        });
+        const triedItems = triedResponse.data;
+        if (Array.isArray(triedItems)) {
+          const mappedLogs: TastingLogEntry[] = triedItems.map((item) => {
+            const rating = item.userRating ?? (item.averageRating ? Math.round(Number(item.averageRating)) : 5);
+            const dateStr = item.lastChangeAt
+              ? new Date(item.lastChangeAt).toLocaleDateString('es-AR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                }).toUpperCase()
+              : new Date().toLocaleDateString('es-AR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                }).toUpperCase();
+
+            return {
+              id: `log-${item.wineId}`,
+              wineName: `${item.name}${item.vintage ? ` (${item.vintage})` : ''}`,
+              criticScore: item.userRating
+                ? `CATA PRIVADA ${item.userRating * 20} PTS`
+                : item.averageRating
+                  ? `VALORACIÓN ${Math.round(Number(item.averageRating) * 20)} PTS`
+                  : 'CATA PRIVADA',
+              uncorkDate: `DESCORCHADO EL ${dateStr}`,
+              notes:
+                item.userComment?.trim() ||
+                `Vino probado y descorchado. Registrado en tu bitácora de cata.`,
+              sight: 'Gran concentración cromática con ribete de evolución noble',
+              agingRemaining: 'Consumido en ventana óptima de expresión',
+              ratingValue: rating,
+            };
+          });
+          if (isMounted) {
+            setTastingLog(mappedLogs);
+          }
+        }
+      } catch (err: unknown) {
+        let errorMsg = 'No pudimos sincronizar la bitácora de cata.';
+        if (axios.isAxiosError(err)) {
+          errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+        }
+        showNotification(errorMsg);
+      }
+    } catch (err: unknown) {
+      if (isMounted) {
+        setWines([]);
+      }
+      let errorMsg = 'No pudimos cargar los vinos de tu cava.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+      }
+      showNotification(errorMsg);
     } finally {
       if (isMounted) {
         setIsLoading(false);
@@ -155,15 +204,7 @@ export default function CavaPage() {
   return () => {
     isMounted = false;
   };
-}, [reloadTrigger]);
-
-  const showNotification = (msg: string) => {
-    clearTimeout(notificationTimerRef.current);
-    setNotification(msg);
-    notificationTimerRef.current = setTimeout(() => {
-      setNotification(null);
-    }, 4000);
-  };
+}, [reloadTrigger, showNotification]);
 
   // 2. Cálculo reactivo de Métricas Vitales de la Cava
   const vitals = useMemo(() => {
@@ -269,32 +310,21 @@ export default function CavaPage() {
     }
 
     try {
-      await apiClient.post(`/cellars/${cellarId}/items/${vintageId}/uncork`);
-      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
+      const roundedRating = Math.min(5, Math.max(1, Math.round(data.rating)));
+      const comment = data.tastingNotes?.trim() || data.occasion?.trim() || undefined;
 
-      // Sincronizar Cava desde backend y actualizar contador de la Navbar
+      await apiClient.post(`/cellars/${cellarId}/items/${vintageId}/uncork`, {
+        rating: roundedRating,
+        comment,
+      });
+
+      showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${roundedRating} estrellas.`);
+
+      // Sincronizar Cava y Bitácora desde backend y actualizar contador de la Navbar
       await fetchBackendCellar();
-      refreshStock?.();
-
-      // Registrar en la bitácora de cata local
-      const newEntry: TastingLogEntry = {
-        id: `log-${Date.now()}`,
-        wineName: `${data.wine.name} (${data.wine.vintage})`,
-        criticScore: `CATA PRIVADA ${data.rating * 20} PTS`,
-        uncorkDate: `DESCORCHADO EL ${new Date().toLocaleDateString('es-AR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        }).toUpperCase()}`,
-        notes:
-          data.tastingNotes ||
-          `Ocasión: ${data.occasion || 'Degustación personal'}. Calificado con ${data.rating} estrellas en cata confidencial.`,
-        sight: 'Gran concentración cromática con ribete de evolución noble',
-        agingRemaining: 'Consumido en ventana óptima de expresión',
-        ratingValue: data.rating,
-      };
-
-      setTastingLog((prev) => [newEntry, ...prev]);
+      if (refreshStock) {
+        await refreshStock();
+      }
     } catch (err: unknown) {
       let errorMsg = 'Error al descorchar la botella.';
       if (axios.isAxiosError(err)) {

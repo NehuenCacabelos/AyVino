@@ -644,7 +644,7 @@ export default function ProfilePage() {
                               to="/cava"
                               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm bg-[#17151a] hover:bg-[#221f26] border border-white/15 hover:border-white/25 text-xs font-sans font-medium text-zinc-200 hover:text-white transition-colors shadow-sm"
                             >
-                              <span>Ver Cava Completa ({profile.cellarWinesCount} botellas)</span>
+                              <span>Ver Cava Completa ({profile.cellarWinesCount} {profile.cellarWinesCount === 1 ? 'vino' : 'vinos'})</span>
                               <ExternalLink className="w-3.5 h-3.5 text-rose-400" />
                             </Link>
                           </div>
@@ -701,11 +701,21 @@ export default function ProfilePage() {
                                       Cosecha {wine.vintage}
                                     </p>
                                   ) : null}
+                                  {wine.userComment ? (
+                                    <p className="text-[11px] text-neutral-300 italic truncate font-sans mt-1">
+                                      &ldquo;{wine.userComment}&rdquo;
+                                    </p>
+                                  ) : null}
                                 </div>
                               </div>
 
                               <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
-                                {wine.averageRating ? (
+                                {wine.userRating ? (
+                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs" title="Tu calificación de cata">
+                                    <Star className="w-3 h-3 fill-amber-400" />
+                                    <span>{wine.userRating}</span>
+                                  </div>
+                                ) : wine.averageRating ? (
                                   <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs">
                                     <Star className="w-3 h-3 fill-amber-400" />
                                     <span>{wine.averageRating}</span>
@@ -772,11 +782,21 @@ export default function ProfilePage() {
                                       Cosecha {wine.vintage}
                                     </p>
                                   ) : null}
+                                  {wine.userComment ? (
+                                    <p className="text-[11px] text-neutral-300 italic truncate font-sans mt-1">
+                                      &ldquo;{wine.userComment}&rdquo;
+                                    </p>
+                                  ) : null}
                                 </div>
                               </div>
 
                               <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-sans text-zinc-400">
-                                {wine.averageRating ? (
+                                {wine.userRating ? (
+                                  <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs" title="Tu calificación de cata">
+                                    <Star className="w-3 h-3 fill-amber-400" />
+                                    <span>{wine.userRating}</span>
+                                  </div>
+                                ) : wine.averageRating ? (
                                   <div className="flex items-center gap-1 text-amber-400 font-mono font-bold text-xs">
                                     <Star className="w-3 h-3 fill-amber-400" />
                                     <span>{wine.averageRating}</span>
@@ -808,7 +828,7 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <span className="font-mono text-xs font-medium text-zinc-300">
-                      {profile.cellarWinesCount} {profile.cellarWinesCount === 1 ? 'botella' : 'botellas'}
+                      {profile.cellarWinesCount} {profile.cellarWinesCount === 1 ? 'vino' : 'vinos'}
                     </span>
                   </div>
 

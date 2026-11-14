@@ -8,6 +8,7 @@ export interface MetricsProps {
     readyToDrink?: string | number;
     dominantVarietal?: string;
   };
+  onUncorkClick?: () => void;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface MetricsProps {
  * - Varietal Insignia (Layers): Malbec (58%) · 8 cepas registradas
  * - Prestigio / Calificación (Award): 4.9 ★ · Nivel Gran Reserva
  */
-export default function Metrics({ customStats }: MetricsProps) {
+export default function Metrics({ customStats, onUncorkClick }: MetricsProps) {
   const totalBottles = customStats?.bottles ?? 24;
   const readyToDrink = customStats?.readyToDrink ?? 3;
   const dominantVarietal = customStats?.dominantVarietal ?? 'Malbec (58%)';
@@ -44,9 +45,20 @@ export default function Metrics({ customStats }: MetricsProps) {
 
         {/* 2. Listas para Descorchar */}
         <div>
-          <div className="text-[10px] sm:text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
-            <span>Listas para Descorchar</span>
+          <div className="text-[10px] sm:text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" aria-hidden="true" />
+              <span>Listas para Descorchar</span>
+            </div>
+            {onUncorkClick && (
+              <button
+                type="button"
+                onClick={onUncorkClick}
+                className="text-[10px] font-mono text-rose-300 hover:text-rose-200 uppercase tracking-wider underline cursor-pointer"
+              >
+                Descorchar
+              </button>
+            )}
           </div>
           <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
             {readyToDrink} Etiquetas

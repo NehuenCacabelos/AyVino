@@ -39,6 +39,8 @@ export interface UserWineListItemDto {
   isTried: boolean;
   isFavorite: boolean;
   lastChangeAt: string;
+  userRating?: number | null;
+  userComment?: string | null;
 }
 
 export interface CellarDto {
