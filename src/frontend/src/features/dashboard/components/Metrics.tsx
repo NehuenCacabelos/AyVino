@@ -81,11 +81,11 @@ export default function Metrics({ customStats }: MetricsProps) {
           </p>
         </div>
 
-        {/* 4. Prestigio / Calificación */}
+        {/* 4. Calificación */}
         <div>
           <div className="text-[10px] sm:text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
             <Award className="w-3.5 h-3.5 text-amber-400/80 shrink-0" aria-hidden="true" />
-            <span>Prestigio / Calificación</span>
+            <span>Calificación</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-amber-200 mt-0.5 sm:mt-1">
             {hasRating ? `${cleanRating} ★` : '—'}

@@ -336,6 +336,17 @@ Gestión de reseñas comunitarias y valoraciones (1 a 5 estrellas) por cosecha y
 
 ---
 
+## 10.1 Catas Privadas y Bitácora (`/api/users/me/tastings`)
+
+Bitácora personal y confidencial de catas del usuario aficionado. Soporta múltiples registros de cata por vino/añada (con fecha, notas privadas y calificación de 1,0 a 5,0 con precisión decimal). Cada registro de cata actualiza la calificación de la reseña pública del usuario de forma desacoplada (las notas privadas nunca se exponen al público).
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/users/me/tastings` | Autenticado | Registra una nueva cata privada para una cosecha de vino (desde ficha técnica con `cellarId: null` o desde cava). | `CreateTastingRequestDto` | `201 Created` (`TastingResponseDto`) |
+| `GET` | `/api/users/me/tastings` | Autenticado | Obtiene la bitácora cronológica paginada de catas del usuario actual, con filtro opcional por cosecha. | Query params: `wineVintageId?`, `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<TastingListItemDto>`) |
+
+---
+
 ## 11. Red Social y Seguimiento (`/api/users/.../follow` y `/api/wineries/.../follow`)
 
 Seguimiento unidireccional entre usuarios y hacia bodegas aprobadas. Protegido contra auto-follow (400) y duplicados (409).

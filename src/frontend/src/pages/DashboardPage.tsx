@@ -275,6 +275,7 @@ export default function DashboardPage() {
         await refreshStock();
       }
       setStockCount((prev) => Math.max(0, prev - 1));
+      setReloadKey((prev) => prev + 1);
     } catch (err: unknown) {
       let errorMsg = 'Error al descorchar la botella.';
       if (axios.isAxiosError(err)) {
@@ -304,21 +305,28 @@ export default function DashboardPage() {
     let isMounted = true;
     async function loadUserMetrics() {
       try {
-        const [triedWines, cellarsRes] = await Promise.all([
-          getMyUserWinesApi({ tried: true, pageSize: 100 }).catch(() => []),
+        const [userRes, cellarsRes, triedWines] = await Promise.all([
+          apiClient.get('/users/me').catch(() => ({ data: null })),
           apiClient.get('/cellars/me').catch(() => ({ data: [] })),
+          getMyUserWinesApi({ tried: true, pageSize: 100 }).catch(() => []),
         ]);
 
         if (!isMounted) return;
 
-        // 1. Calificación promedio real del usuario
+        // 1. Calificación promedio real del usuario (U13B / U13E)
         let avgRating: string | null = null;
         let ratingSubtitle = 'Sin calificaciones aún';
-        if (Array.isArray(triedWines) && triedWines.length > 0) {
+        if (userRes?.data && userRes.data.averageRating !== null && userRes.data.averageRating !== undefined) {
+          const numericVal = Number(userRes.data.averageRating);
+          if (!isNaN(numericVal) && numericVal > 0) {
+            avgRating = formatRating(numericVal);
+            ratingSubtitle = 'Promedio de tus catas';
+          }
+        } else if (Array.isArray(triedWines) && triedWines.length > 0) {
           const rated = triedWines.filter((w) => typeof w.userRating === 'number' && w.userRating > 0);
           if (rated.length > 0) {
             const sum = rated.reduce((acc, curr) => acc + (curr.userRating ?? 0), 0);
-            avgRating = (sum / rated.length).toFixed(1);
+            avgRating = formatRating(sum / rated.length);
             ratingSubtitle = `${rated.length} ${rated.length === 1 ? 'vino calificado' : 'vinos calificados'}`;
           }
         }
