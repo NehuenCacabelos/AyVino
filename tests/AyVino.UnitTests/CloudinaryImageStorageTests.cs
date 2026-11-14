@@ -102,25 +102,31 @@ public class CloudinaryImageStorageTests
     }
 
     [Fact]
-    public void BuildDeliveryUrl_ThrowsWhenExternalIdIsEmpty()
+    public void BuildDeliveryUrl_ReturnsEmptyWhenExternalIdIsEmpty()
     {
         var storage = new CloudinaryImageStorage(_client, _options, _logger);
-        Assert.Throws<ArgumentException>(() => storage.BuildDeliveryUrl("", "avatar"));
-        Assert.Throws<ArgumentException>(() => storage.BuildDeliveryUrl("   ", "avatar"));
+        Assert.Equal(string.Empty, storage.BuildDeliveryUrl("", "avatar"));
+        Assert.Equal(string.Empty, storage.BuildDeliveryUrl("   ", "avatar"));
     }
 
     [Fact]
-    public void BuildDeliveryUrl_ThrowsValidationExceptionOnUnknownVariant()
+    public void BuildDeliveryUrl_FallsBackToCardOnUnknownVariant()
     {
         var storage = new CloudinaryImageStorage(_client, _options, _logger);
-        Assert.Throws<ValidationException>(() => storage.BuildDeliveryUrl("my-id", "unsupported-variant"));
+        _client.BuildUrl("my-id", Arg.Any<CloudinaryDotNet.Transformation>())
+            .Returns("https://res.cloudinary.com/test-cloud/image/upload/card-url");
+
+        var url = storage.BuildDeliveryUrl("my-id", "unsupported-variant");
+        Assert.Equal("https://res.cloudinary.com/test-cloud/image/upload/card-url", url);
     }
 
     [Theory]
     [InlineData("avatar")]
     [InlineData("logo")]
     [InlineData("banner")]
-    [InlineData("bottle")]
+    [InlineData("card")]
+    [InlineData("detail")]
+    [InlineData("thumb")]
     [InlineData(null)]
     public void BuildDeliveryUrl_BuildsUrlForAllowedVariants(string? variant)
     {
