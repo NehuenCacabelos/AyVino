@@ -821,5 +821,58 @@ Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyV
 
 ---
 
-## 7. Pendientes
-- Ninguno. Listo para revisión y merge por Kevin a `fix/usuario-reparaciones`.
+# Ajustes Post-U12: Dashboard, Cava y Perfil
+
+**Fecha**: 14 de Noviembre de 2026  
+**Rama**: `fix/usuario-ajustes-dashboard-perfil`  
+**Estado**: Completado e integrado con tests automatizados  
+
+## 1. Alcance de las Correcciones
+
+1. **/dashboard - Botón "Descorchar" en Hero Strip**:
+   - Eliminado el botón `<button ...>Descorchar</button>` redundante en la tarjeta "Listas para Descorchar" dentro de `Metrics.tsx`.
+   - Removido `onUncorkClick` y handlers en desuso de `DashboardPage.tsx`. El descorche se realiza contextualmente desde cada tarjeta de vino de la cava o catálogo.
+
+2. **/dashboard - Textbox buscador/creador de vinos**:
+   - Desestimado por indicación expresa del usuario ("Punto 2 no hacer nada, fue un error mio").
+
+3. **/dashboard y /cava - Conteo de Cava (5 botellas físicas vs 4 etiquetas)**:
+   - Se clarificó la semántica en `VaultTabs.tsx`: la pestaña ahora se titula `"Todos los vinos (4)"` en lugar de `"Todas las botellas (4)"`, eliminando la ambigüedad entre cantidad de referencias/etiquetas (`wines.length`) y total de botellas físicas en stock (`stockCount` / `bottles`).
+
+4. **/dashboard - Prestigio y Calificación (Opción A implementada)**:
+   - Se removió el valor hardcodeado `4.9 ★`.
+   - Se conectó el cálculo dinámico del promedio real de catas (`avgRating`) del usuario a través de `getMyUserWinesApi({ tried: true })`.
+   - Si el usuario no tiene catas registradas, muestra `—` con subtítulo `"Sin calificaciones aún"`. Si tiene catas, muestra el puntaje real con una estrella (`{rating} ★`) y el texto descriptivo correspondiente.
+
+5. **/cava - Doble Footer y Navbar**:
+   - `CavaPage.tsx` renderizaba un `<DashboardNavbar>` y un `<footer>` locales redundantes, duplicando los provistos globalmente por `AppLayout`. Se eliminaron ambos componentes locales conforme a la Regla 10 de la Constitución (composición mediante `<Outlet />`).
+
+6. **/perfil/:username - Enlaces a Fichas de Vino**:
+   - Se envolvieron las tarjetas de vino de "Joyas de la Cava" (vista propia y pública), "Historial de Catas" y "Favoritos" en componentes `<Link to={'/vinos/' + wineId}>`, permitiendo navegar directamente a la ficha del vino al hacer clic.
+
+7. **/perfil/:username - Contador "Siguiendo" con Bodegas**:
+   - `UserRepository.cs` (`GetPublicProfileByUsernameAsync`) solo contabilizaba `user_follows`. Se actualizó la consulta SQL para sumar mediante `COALESCE` tanto `user_follows` (`follower_id`) como `winery_follows` (`follower_id`), reflejando fielmente el total de perfiles y bodegas que sigue el usuario.
+
+---
+
+## 2. Archivos Modificados y Creados
+
+- **Backend**:
+  - `src/backend/AyVino.Api/Features/Users/Repositories/UserRepository.cs`: Subconsulta combinada de seguidores/siguiendo.
+  - `tests/AyVino.UnitTests/UsuarioAjustesSeguidoresTests.cs`: Test unitario xUnit validando `FollowingCount` con usuarios y bodegas.
+- **Frontend**:
+  - `src/frontend/src/features/dashboard/components/Metrics.tsx`: Remoción de botón descorchar, soporte de calificación real y fallback a `—`.
+  - `src/frontend/src/pages/DashboardPage.tsx`: Carga y cálculo dinámico de métricas reales de catas y Cava.
+  - `src/frontend/src/features/cava/components/VaultTabs.tsx`: Título "Todos los vinos".
+  - `src/frontend/src/pages/CavaPage.tsx`: Remoción de Navbar y Footer duplicados.
+  - `src/frontend/src/pages/ProfilePage.tsx`: Links a `/vinos/:id` en tarjetas de vino.
+  - `src/frontend/tests/pages/CavaAndHistoryBloqueU11.test.tsx`: Test adaptado para verificar remoción de botón Descorchar.
+  - `src/frontend/tests/pages/UsuarioAjustesDashboardPerfil.test.tsx`: 6 tests unitarios verificando métricas, tabs, links de navegación y layout sin doble footer.
+
+---
+
+## 3. Resultado de Verificaciones
+
+- `dotnet test`: **796/796 tests superados** (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite exitosos.
+- `npm test -- --run`: **67 suites / 338 tests superados** (0 fallas, 100% éxito).
