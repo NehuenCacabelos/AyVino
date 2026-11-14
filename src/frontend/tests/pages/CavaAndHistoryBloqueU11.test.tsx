@@ -322,8 +322,8 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
     });
   });
 
-  describe('11.3: Descorche en DashboardPage envía calificación y notas', () => {
-    it('envía rating y comment al descorchar desde el Dashboard', async () => {
+  describe('11.3: DashboardPage métricas y descorche', () => {
+    it('no muestra el botón "Descorchar" en la barra de métricas del Hero', async () => {
       mockClient.get.mockImplementation((url: string) => {
         if (url === '/cellars/me') {
           return Promise.resolve({ data: [{ id: 10, name: 'Mi Cava' }] });
@@ -359,13 +359,6 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
         return Promise.resolve({ data: [] });
       });
 
-      mockClient.post.mockResolvedValue({
-        data: {
-          wineVintageId: 301,
-          quantity: 1,
-        },
-      });
-
       render(
         <MemoryRouter initialEntries={['/dashboard']}>
           <AppOutletHarness>
@@ -376,27 +369,8 @@ describe('Bloque U11 - Registrar cata completa, bitácora real y contador de la 
 
       expect(await screen.findByText('Altamira Paraje Malbec')).toBeInTheDocument();
 
-      // Abrir modal de descorche en Dashboard Wine Card
-      const uncorkActionBtn = screen.getByRole('button', { name: /Descorchar/i });
-      fireEvent.click(uncorkActionBtn);
-
-      expect(await screen.findByRole('dialog')).toBeInTheDocument();
-
-      const notesField = screen.getByPlaceholderText(/Aromas predominantes/i);
-      fireEvent.change(notesField, { target: { value: 'Gran momento de apertura, fruta negra y violetas.' } });
-
-      const submitBtn = screen.getByRole('button', { name: /REGISTRAR DESCORCHE/i });
-      fireEvent.click(submitBtn);
-
-      await waitFor(() => {
-        expect(mockClient.post).toHaveBeenCalledWith(
-          expect.stringContaining('/uncork'),
-          expect.objectContaining({
-            rating: 5,
-            comment: 'Gran momento de apertura, fruta negra y violetas.',
-          })
-        );
-      });
+      // El botón "Descorchar" fue removido de la barra de métricas según requerimiento
+      expect(screen.queryByRole('button', { name: /^Descorchar$/i })).not.toBeInTheDocument();
     });
   });
 });
