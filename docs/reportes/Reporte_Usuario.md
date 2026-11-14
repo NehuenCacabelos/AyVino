@@ -579,3 +579,44 @@ Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyV
 
 ## 5. Pendientes
 - Proceder con el Bloque U10 (`fix/usuario-ficha-vino`).
+
+
+---
+
+# BLOQUE U10: Ficha del vino — Conexión con cava y enlaces a bodega
+**Rama**: `fix/usuario-ficha-vino`  
+**Fecha**: 14 de noviembre de 2026  
+**Estado**: Completado exitosamente
+
+## 1. Resumen de lo realizado
+- **"Guardar en cava" para Vinos Reales**: En `WineDetailView.tsx`, cuando se trata de una etiqueta de catálogo real (`isRealWine === true`), el botón "Guardar en cava" abre `QuickAddBottleModal` precargando los datos de la etiqueta y la añada activa (`selectedVintageYear` / `activeVintage.year`). Si el usuario cambia de cosecha en la ficha antes de abrir el modal, la nueva añada queda automáticamente preseleccionada.
+- **Protección de Dueño**: En modo bodega/dueño (`ownerMode = true`), el botón permanece deshabilitado informando que no es posible guardar vinos propios en la cava personal.
+- **Vinos Editoriales Maqueta**: Conservan su comportamiento en memoria/storage preexistente sin abrir el modal de base de datos.
+- **Navegación a Bodega**:
+  - En el encabezado ("Elaborado por {bodega}"), si `wineryId` está presente se renderiza como `<Link to={'/bodegas/${wineryId}'}>`. Si no está presente, se renderiza como texto plano.
+  - La tarjeta "Bodega Elaboradora" navega a `/bodegas/{wineryId}` tanto desde el enlace de su título como al hacer clic en cualquier área del contenedor (con guarda para no interferir con enlaces internos). Si `wineryId` no está presente, se renderiza como tarjeta estática.
+- **Tipado y Adaptador**: Se agregó `wineryId?: number` a `WineWineryInfo` y `EditorialWine`, y se mapeó en `apiWineToEditorial.ts` a partir de `winery.id` o `wine.wineryId`.
+- **Fidelidad Visual y Snapshot**: Se preservó de manera 100% idéntica el test de snapshot `WineDetailPage.snapshot.test.tsx` para `catena-zapata-malbec-argentino`.
+
+## 2. Archivos modificados y creados
+- **Modificados**:
+  - `src/frontend/src/features/wines/adapters/apiWineToEditorial.ts`
+  - `src/frontend/src/features/wines/components/WineDetailView.tsx`
+  - `src/frontend/src/features/wines/data/editorialWines.ts`
+- **Creados**:
+  - `src/frontend/tests/pages/WineDetailPageBloqueU10.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U10.md`
+  - `docs/reportes/Reporte_Bloque_U10.md`
+
+## 3. Decisiones técnicas
+- Formateo estricto del marcado JSX en `Elaborado por ` para no alterar el resultado bit a bit del snapshot test de regresión visual.
+- Event delegation defensivo en la tarjeta de bodega para evitar múltiples navegaciones cuando el usuario hace clic en el enlace web externo.
+
+## 4. Resultado de verificaciones
+- `dotnet test`: 763/763 superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 694ms.
+- `npm test`: 64 archivos / 313 tests superados (0 fallas). Snapshot inmodificado (1/1).
+- `npm run lint`: 0 errores o advertencias en código modificado/creado.
+
+## 5. Pendientes
+- Proceder con el Bloque U11 (`fix/usuario-cata-historial`).
