@@ -1198,62 +1198,68 @@ export default function WineDetailView({
           {/* ========================================================= */}
           <aside className="lg:col-span-5 flex flex-col lg:sticky lg:top-28 space-y-6">
             
-            {/* Contenedor Visual de la Botella (Radio suave rounded-lg y borde sutil) */}
-            <div className="bg-neutral-900/30 border border-neutral-800/80 rounded-lg p-6 shadow-xl relative overflow-hidden flex flex-col items-center justify-center group">
-              <div
-                aria-hidden="true"
-                className="absolute w-72 h-80 rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-900/20 via-rose-950/5 to-transparent blur-2xl pointer-events-none group-hover:from-rose-900/30 transition-all duration-700"
-              />
+            {/* Contenedor Visual de la Botella (Estudio vertical estilizado responsive) */}
+            <div
+              className={`w-full h-[460px] sm:h-[540px] max-h-[75vh] rounded-2xl shadow-2xl relative overflow-hidden flex items-center justify-center group transition-colors ${
+                displayImageUrl
+                  ? 'bg-white border border-white/20 p-4 sm:p-6'
+                  : 'bg-[#141417] border border-white/[0.08] p-6'
+              }`}
+            >
+              {!displayImageUrl && (
+                <div
+                  aria-hidden="true"
+                  className="absolute w-72 h-80 rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-900/20 via-rose-950/5 to-transparent blur-2xl pointer-events-none group-hover:from-rose-900/30 transition-all duration-700"
+                />
+              )}
 
               {/* Escaparate de la botella */}
-              <div className="w-full h-84 sm:h-96 flex items-center justify-center relative z-10 py-6">
-                {displayImageUrl ? (
-                  <img
-                    src={displayImageUrl}
-                    alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
-                    className="max-h-full object-contain filter drop-shadow-[0_28px_45px_rgba(0,0,0,0.95)] transition-transform duration-700 hover:scale-[1.03]"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-8 max-w-xs border-y border-neutral-800/80">
-                    <Wine className="w-10 h-10 text-rose-300/80 stroke-[1.25] mb-3" />
-                    <span className="font-serif text-base text-neutral-200">Cosecha en Cava Privada</span>
-                    <span className="text-xs text-neutral-500 mt-1 font-mono">
-                      Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
-                    </span>
-                  </div>
-                )}
+              {displayImageUrl ? (
+                <img
+                  src={displayImageUrl}
+                  alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
+                  className="w-full h-full object-contain filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.25)] transition-transform duration-700 hover:scale-[1.03]"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 max-w-xs border-y border-neutral-800/80 relative z-10">
+                  <Wine className="w-10 h-10 text-rose-300/80 stroke-[1.25] mb-3" />
+                  <span className="font-serif text-base text-neutral-200">Cosecha en Cava Privada</span>
+                  <span className="text-xs text-neutral-500 mt-1 font-mono">
+                    Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
+                  </span>
+                </div>
+              )}
 
-                {/* Controles de Imagen en Modo Edición */}
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20 rounded-lg">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageFileChange}
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      aria-label="Subir foto de botella"
-                    />
+              {/* Controles de Imagen en Modo Edición */}
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileChange}
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    aria-label="Subir foto de botella"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <Camera className="w-4 h-4 text-rose-300" />
+                    <span>Cambiar foto</span>
+                  </button>
+                  {displayImageUrl && (
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg"
+                      onClick={handleRemoveImage}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 font-mono underline"
                     >
-                      <Camera className="w-4 h-4 text-rose-300" />
-                      <span>Cambiar foto</span>
+                      Quitar foto
                     </button>
-                    {displayImageUrl && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 font-mono underline"
-                      >
-                        Quitar foto
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Botones de Acción Principales */}

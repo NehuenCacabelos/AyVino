@@ -58,21 +58,23 @@ export default function DashboardWineCard({
           <Heart className={`h-4 w-4 ${isFav ? 'fill-rose-400' : ''}`} />
         </button>
 
-        {/* Spotlight dedicado para la botella */}
-        <div className="relative bg-gradient-to-b from-white/[0.02] to-transparent rounded-lg mx-2.5 mt-2.5 py-6 flex items-center justify-center overflow-hidden mb-3">
+        {/* Contenedor Rectangular Editorial (3:4) para la Imagen del Vino */}
+        <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-3.5 bg-[#18181b]/80 border border-white/[0.06] flex items-center justify-center">
           {wine.imageUrl ? (
             <img
               src={wine.imageUrl}
               alt={wine.name}
-              className="h-44 w-auto max-h-full object-contain transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
             />
           ) : (
-            <BottleVector
-              kind={wine.bottle}
-              className="h-44 w-auto max-h-full transition-transform duration-300 group-hover:scale-105"
-              alt={wine.name}
-            />
+            <div className="w-full h-full py-4 flex items-center justify-center bg-gradient-to-b from-white/[0.02] to-transparent">
+              <BottleVector
+                kind={wine.bottle}
+                className="h-full w-auto max-h-full transition-transform duration-500 group-hover:scale-105"
+                alt={wine.name}
+              />
+            </div>
           )}
         </div>
 
