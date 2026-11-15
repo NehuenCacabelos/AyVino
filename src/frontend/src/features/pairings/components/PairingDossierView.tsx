@@ -8,7 +8,6 @@ import {
   Lightbulb,
   FlaskConical,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 import {
   WineGlassSilhouette,
@@ -175,137 +174,138 @@ function PairingClashCard({ target, reason }: { target: string; reason: string }
   );
 }
 
-// ─── Tarjetas Paralelas Editoriales (Modo Cepa: Stitch Design) ───────────────
-interface WineEditorialDualCardsProps {
+// ─── Tarjeta Unificada Editorial: Fundamento + Voz del Sommelier ─────────────
+interface WineUnifiedEditorialCardProps {
   style: WineStyleProfile;
   wineName: string;
 }
 
-function WineEditorialDualCards({ style, wineName }: WineEditorialDualCardsProps) {
+function WineUnifiedEditorialCard({ style, wineName }: WineUnifiedEditorialCardProps) {
   const serviceMeta = style.serviceMetadata ?? {
     label: 'TEMPERATURA RECOMENDADA',
     value: style.servingTemperature,
   };
 
-  const tipTitle = style.serviceTipTitle ?? 'Oxigenación y Temperatura Óptima';
+  const tipTitle = style.serviceTipTitle ?? 'Consejo de Servicio';
   const rationaleQuestion =
     style.rationaleQuestion ?? `¿Por qué el ${wineName} es ideal para este maridaje?`;
 
   const metrics = style.pairingMetrics ?? [
-    { label: 'AFINIDAD GRASA', percentage: 92, variant: 'amber' as const },
-    { label: 'BALANCE TÁNICO', percentage: 88, variant: 'wine' as const },
-    { label: 'RETROGUSTO Y NOTAS', percentage: 85, variant: 'zinc' as const },
+    { label: 'CORTE DE GRASA', percentage: 92, variant: 'amber' as const },
+    { label: 'SUAVE AL PALADAR', percentage: 88, variant: 'wine' as const },
+    { label: 'TOQUE A MADERA', percentage: 85, variant: 'zinc' as const },
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-      {/* Tarjeta Izquierda (Tip del Sommelier) - lg:col-span-4 */}
-      <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-[#121113] p-7 flex flex-col justify-between shadow-xl">
-        <div>
-          {/* Header */}
-          <div className="flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
-            <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-semibold">
-              TIP DEL SOMMELIER
-            </span>
-          </div>
-
-          {/* Cuerpo con espaciado equilibrado */}
-          <h3 className="font-serif text-xl sm:text-2xl text-zinc-100 font-normal mt-5 mb-4 tracking-tight">
-            {tipTitle}
-          </h3>
-          <p className="text-zinc-300 text-sm leading-relaxed font-light mb-4">
-            {style.serviceTip}
-          </p>
-
-          {/* Segundo tip casero / humano de servicio */}
-          {style.practicalTip && (
-            <div className="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-400/[0.04] border border-amber-400/20 flex items-start gap-3">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
-              <div className="min-w-0">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-semibold block mb-1">
-                  CONSEJO CASERO DE SERVICIO
-                </span>
-                <p className="text-xs text-zinc-300 leading-relaxed font-light">
-                  {style.practicalTip}
-                </p>
-              </div>
+    <div className="rounded-2xl border border-white/10 bg-[#121113] shadow-xl overflow-hidden mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12">
+        {/* Columna Izquierda: Fundamento y Por qué funciona (~65% / 8 cols) */}
+        <div className="lg:col-span-8 p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            {/* Header de Fundamento */}
+            <div className="flex items-center gap-2">
+              <FlaskConical className="w-4 h-4 text-amber-400/90 shrink-0" aria-hidden="true" />
+              <span className="text-xs font-mono uppercase tracking-widest text-amber-400/90 font-semibold">
+                POR QUÉ FUNCIONA • FUNDAMENTO
+              </span>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="mt-6 pt-5 border-t border-white/5 flex items-center justify-between text-xs font-mono text-zinc-500">
-          <div className="flex items-center gap-2 min-w-0">
-            <Clock className="w-3.5 h-3.5 text-zinc-500 shrink-0" aria-hidden="true" />
-            <span className="truncate">{serviceMeta.label}</span>
+            {/* Pregunta editorial y fundamentación */}
+            <h3 className="font-serif text-2xl sm:text-3xl text-zinc-100 font-normal mt-4 mb-3 tracking-tight leading-snug">
+              {rationaleQuestion}
+            </h3>
+            <p className="text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+              {style.chemicalRationale}
+            </p>
           </div>
-          <span className="text-amber-400 font-medium shrink-0 ml-2">
-            {serviceMeta.value}
-          </span>
-        </div>
-      </div>
 
-      {/* Tarjeta Derecha (Fundamento y Por qué funciona el maridaje) - lg:col-span-8 */}
-      <div className="lg:col-span-8 rounded-2xl border border-white/10 bg-[#121113] p-7 flex flex-col justify-between shadow-xl">
-        <div>
-          {/* Header */}
-          <div className="flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-amber-400/90 shrink-0" aria-hidden="true" />
-            <span className="text-xs font-mono uppercase tracking-widest text-amber-400/90 font-semibold">
-              POR QUÉ FUNCIONA • FUNDAMENTO
+          {/* Barras de Métricas Sensoriales (al pie del fundamento) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 mt-6 border-t border-white/5">
+            {metrics.map((metric) => {
+              const isAmber = metric.variant === 'amber';
+              const isWine = metric.variant === 'wine';
+              const valueColor = isAmber
+                ? 'text-amber-400'
+                : isWine
+                ? 'text-[#e27385]'
+                : 'text-zinc-300';
+              const barFillColor = isAmber
+                ? 'bg-amber-400'
+                : isWine
+                ? 'bg-[#841b2d]'
+                : 'bg-zinc-400';
+
+              return (
+                <div key={metric.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">
+                      {metric.label}
+                    </span>
+                    <span className={`text-xs font-semibold ${valueColor}`}>
+                      {metric.percentage}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${barFillColor}`}
+                      style={{ width: `${Math.min(100, Math.max(0, metric.percentage))}%` }}
+                      role="progressbar"
+                      aria-valuenow={metric.percentage}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={metric.label}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Columna Derecha: Voz del Sommelier (~35% / 4 cols) */}
+        <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-white/10 bg-white/[0.015] p-6 sm:p-8 flex flex-col justify-between">
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
+              <span className="text-xs font-mono uppercase tracking-widest text-amber-400 font-semibold">
+                VOZ DEL SOMMELIER
+              </span>
+            </div>
+
+            {/* Título opcional */}
+            {tipTitle && (
+              <h4 className="font-serif text-lg sm:text-xl text-zinc-100 font-normal tracking-tight">
+                {tipTitle}
+              </h4>
+            )}
+
+            {/* Consejo principal de servicio */}
+            <p className="text-zinc-300 text-sm leading-relaxed font-light">
+              {style.serviceTip}
+            </p>
+
+            {/* Consejo cotidiano integrado fluidamente */}
+            {style.practicalTip && (
+              <div className="pt-3 border-t border-white/5 text-xs text-zinc-400 leading-relaxed font-light">
+                <span className="text-amber-400 font-medium block mb-1">
+                  En la práctica:
+                </span>
+                {style.practicalTip}
+              </div>
+            )}
+          </div>
+
+          {/* Footer de servicio */}
+          <div className="mt-6 pt-5 border-t border-white/5 flex items-center justify-between text-xs font-mono text-zinc-500">
+            <div className="flex items-center gap-2 min-w-0">
+              <Clock className="w-3.5 h-3.5 text-zinc-500 shrink-0" aria-hidden="true" />
+              <span className="truncate">{serviceMeta.label}</span>
+            </div>
+            <span className="text-amber-400 font-medium shrink-0 ml-2">
+              {serviceMeta.value}
             </span>
           </div>
-
-          {/* Cuerpo con el mismo espaciado armónico */}
-          <h3 className="font-serif text-2xl sm:text-3xl text-zinc-100 font-normal mt-5 mb-4 tracking-tight leading-snug">
-            {rationaleQuestion}
-          </h3>
-          <p className="text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
-            {style.chemicalRationale}
-          </p>
-        </div>
-
-        {/* Barras de Balance y Afinidad (Footer) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 mt-6 border-t border-white/5">
-          {metrics.map((metric) => {
-            const isAmber = metric.variant === 'amber';
-            const isWine = metric.variant === 'wine';
-            const valueColor = isAmber
-              ? 'text-amber-400'
-              : isWine
-              ? 'text-zinc-300'
-              : 'text-zinc-300';
-            const barFillColor = isAmber
-              ? 'bg-amber-400'
-              : isWine
-              ? 'bg-[#7a1c2d]'
-              : 'bg-zinc-400';
-
-            return (
-              <div key={metric.label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono tracking-wider text-zinc-500 uppercase">
-                    {metric.label}
-                  </span>
-                  <span className={`text-xs font-semibold ${valueColor}`}>
-                    {metric.percentage}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${barFillColor}`}
-                    style={{ width: `${Math.min(100, Math.max(0, metric.percentage))}%` }}
-                    role="progressbar"
-                    aria-valuenow={metric.percentage}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={metric.label}
-                  />
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>
@@ -769,8 +769,8 @@ export default function PairingDossierView({
           </div>
         </section>
 
-        {/* 2. TIP DEL SOMMELIER Y FUNDAMENTO (TARJETAS PARALELAS STITCH) */}
-        <WineEditorialDualCards
+        {/* 2. FUNDAMENTO Y VOZ DEL SOMMELIER (TARJETA UNIFICADA INTEGRADA) */}
+        <WineUnifiedEditorialCard
           style={activeStyle}
           wineName={wine.name}
         />

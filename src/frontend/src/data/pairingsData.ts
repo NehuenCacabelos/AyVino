@@ -383,17 +383,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Dulces, pulposos y maduros',
         servingTemperature: '16 °C a 18 °C',
         glassware: 'Copa Burdeos clásica de cáliz amplio',
-        serviceTip: 'Decantar 30 minutos para oxigenar descriptores terciarios de roble y fruta madura.',
+        serviceTip: 'Decantar 30 minutos para despertar los aromas a madera y fruta madura.',
         serviceTipTitle: 'Oxigenación y Temperatura Óptima',
-        serviceMetadata: { label: 'APERTURA AROMÁTICA', value: '30 MIN' },
+        serviceMetadata: { label: 'APERTURA EN COPA', value: '30 MIN' },
         practicalTip: '¿Sin decantador? Descorchá la botella 45 minutos antes y serví media copa: al bajar el nivel por debajo del cuello, entra mucho más aire y el vino se abre solo.',
         rationaleQuestion: '¿Por qué el Malbec es el rey indiscutido de las brasas argentinas?',
         chemicalRationale:
           'El paso por barrica le da al Malbec taninos dóciles y suaves que abrazan la grasa y los jugos de la carne asada. En lugar de raspar la boca, limpia el paladar entre bocado y bocado, haciendo que cada corte a las brasas se sienta más sabroso y tierno.',
         pairingMetrics: [
-          { label: 'AFINIDAD GRASA', percentage: 96, variant: 'amber' },
-          { label: 'BALANCE TÁNICO', percentage: 92, variant: 'wine' },
-          { label: 'NOTAS DE CRIANZA', percentage: 85, variant: 'zinc' },
+          { label: 'CORTE DE GRASA', percentage: 96, variant: 'amber' },
+          { label: 'SUAVE AL PALADAR', percentage: 92, variant: 'wine' },
+          { label: 'TOQUE A MADERA', percentage: 85, variant: 'zinc' },
         ],
         affinities: [
           { id: 'asado-tira', label: 'Asado de tira a las brasas' },
@@ -506,7 +506,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Calcáreos, finos y con textura de tiza',
         servingTemperature: '15 °C a 17 °C',
         glassware: 'Copa Borgoña o Burdeos de boca afinada',
-        serviceTip: 'Servir fresco (15 °C) para enaltecer la tensión mineral y la frescura herbal.',
+        serviceTip: 'Servir fresco (15 °C) para resaltar su frescura viva y notas herbales.',
         serviceTipTitle: 'Tensión Calcárea y Servicio',
         serviceMetadata: { label: 'TEMPERATURA ÓPTIMA', value: '15 °C' },
         practicalTip: 'En días cálidos, dale 15 a 20 minutos en la puerta de la heladera antes de servir (unos 15 °C). Ese toque fresco despierta su textura mineral y suaviza el alcohol.',
@@ -514,9 +514,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'El frío de las alturas le da a este Malbec una frescura vibrante y una textura mineral única (como una tiza fina). Esa frescura funciona como un cuchillo filoso: corta al instante la grasa de cortes intensos como el ojo de bife, dejando la boca limpia y lista para otro bocado.',
         pairingMetrics: [
-          { label: 'AFINIDAD GRASA', percentage: 90, variant: 'amber' },
-          { label: 'TENSIÓN MINERAL', percentage: 95, variant: 'zinc' },
-          { label: 'BALANCE TÁNICO', percentage: 88, variant: 'wine' },
+          { label: 'CORTE DE GRASA', percentage: 90, variant: 'amber' },
+          { label: 'FRESCURA VIBRANTE', percentage: 95, variant: 'zinc' },
+          { label: 'SUAVE AL PALADAR', percentage: 88, variant: 'wine' },
         ],
         affinities: [
           { id: 'ojo-de-bife', label: 'Ojo de bife a la leña' },
@@ -555,7 +555,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Firmes, densos y secantes',
         servingTemperature: '16 °C a 18 °C',
         glassware: 'Copa Burdeos clásica',
-        serviceTip: 'Decantar 40 minutos para integrar pirazinas y abrir capas balsámicas.',
+        serviceTip: 'Decantar 40 minutos para redondear su fuerza y abrir aromas de frutos negros.',
         serviceTipTitle: 'Decantación y Apertura de Capas',
         serviceMetadata: { label: 'APERTURA EN DECANTER', value: '40 MIN' },
         practicalTip: 'Si no tenés decanter, trasvasalo despacio a una jarra de vidrio limpia 30 minutos antes. El contacto con el aire doma sus taninos firmes y despierta aromas a frutos negros.',
@@ -563,9 +563,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Tiene cuerpo robusto y taninos con carácter que necesitan platos contundentes. La grasa y la proteína de carnes como el asado de tira o el cordero suavizan su fuerza en boca, mientras que sus notas a pimiento asado y especias combinan a la perfección con el humo de las brasas.',
         pairingMetrics: [
-          { label: 'ESTRUCTURA TÁNICA', percentage: 98, variant: 'wine' },
-          { label: 'AFINIDAD PROTEICA', percentage: 94, variant: 'amber' },
-          { label: 'COMPLEJIDAD HERBAL', percentage: 85, variant: 'zinc' },
+          { label: 'PRESENCIA Y CUERPO', percentage: 98, variant: 'wine' },
+          { label: 'IDEAL PARA CARNES', percentage: 94, variant: 'amber' },
+          { label: 'NOTAS AHUMADAS', percentage: 85, variant: 'zinc' },
         ],
         affinities: [
           { id: 'asado-tira', label: 'Asado de tira a las brasas' },
@@ -604,7 +604,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Finos, granulosos y lineales',
         servingTemperature: '15 °C a 17 °C',
         glassware: 'Copa Burdeos estilizada',
-        serviceTip: 'Servir a 16 °C para preservar las sutiles notas de hierbas de montaña y grafito.',
+        serviceTip: 'Servir a 16 °C para conservar sus notas herbales y frescura natural.',
         serviceTipTitle: 'Preservación de Hierbas y Frescura',
         serviceMetadata: { label: 'TEMPERATURA DE SERVICIO', value: '16 °C' },
         practicalTip: 'Evitá beberlo a temperatura ambiente si hace calor. 15 minutos en la puerta de la heladera resaltan sus aromas herbales y pimienta sin perder cuerpo.',
@@ -612,9 +612,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Es más ágil y elegante que el Cabernet Sauvignon, con una frescura natural que despierta el apetito. Es el compañero perfecto para platos con salsa de tomate casera (como unas pastas con tuco) o verduras asadas, realzando los sabores sin taparlos.',
         pairingMetrics: [
-          { label: 'ACIDEZ GASTRONÓMICA', percentage: 94, variant: 'amber' },
-          { label: 'AFINIDAD PIRAZÍNICA', percentage: 91, variant: 'zinc' },
-          { label: 'FINURA TÁNICA', percentage: 87, variant: 'wine' },
+          { label: 'FRESCURA NATURAL', percentage: 94, variant: 'amber' },
+          { label: 'TOQUE A PIMIENTO ASADO', percentage: 91, variant: 'zinc' },
+          { label: 'PASO ELEGANTE', percentage: 87, variant: 'wine' },
         ],
         affinities: [
           { id: 'fideos-tuco-estofado', label: 'Fideos con tuco y estofado' },
@@ -653,7 +653,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Dóciles, redondos y pulposos',
         servingTemperature: '13 °C a 15 °C',
         glassware: 'Copa Borgoña o Tulipán amplia',
-        serviceTip: 'Darle 20 minutos de heladera antes de servir para realzar la crocancia de la fruta.',
+        serviceTip: 'Darle 20 minutos de heladera antes de servir para acentuar la frescura de la fruta.',
         serviceTipTitle: 'Golpe de Frío y Fruta Viva',
         serviceMetadata: { label: 'TIEMPO EN HELADERA', value: '20 MIN' },
         practicalTip: 'El gran secreto de la Bonarda es tomarla fresca. 20 a 25 minutos de heladera previa hacen que la fruta roja estalle en la boca y el trago sea súper ágil.',
@@ -661,9 +661,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Pura fruta roja jugosa y trago amable. Al no tener taninos que sequen la boca, acompaña sin vueltas comidas cotidianas como una pizza al molde, unas milanesas o fideos caseros, refrescando cada bocado con sencillez y alegría.',
         pairingMetrics: [
-          { label: 'FLUIDEZ Y TRAGO', percentage: 96, variant: 'amber' },
-          { label: 'ACIDEZ FRUTAL', percentage: 90, variant: 'zinc' },
-          { label: 'DOCILIDAD TÁNICA', percentage: 86, variant: 'wine' },
+          { label: 'TRAGO FÁCIL Y AMABLE', percentage: 96, variant: 'amber' },
+          { label: 'FRUTA FRESCA', percentage: 90, variant: 'zinc' },
+          { label: 'CERO ASPEREZA', percentage: 86, variant: 'wine' },
         ],
         affinities: [
           { id: 'fideos-tuco-estofado', label: 'Fideos con tuco y estofado' },
@@ -701,17 +701,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Delicados, sedosos y pulidos',
         servingTemperature: '13 °C a 15 °C',
         glassware: 'Copa Borgoña de cáliz ancho (para oxigenar ésteres delicados)',
-        serviceTip: 'Temperatura fresca constante; nunca beberlo tibio.',
-        serviceTipTitle: 'Oxigenación Delicada y Temperatura Constante',
+        serviceTip: 'Servir fresco a 14 °C; nunca dejarlo calentar para cuidar su sutileza.',
+        serviceTipTitle: 'Frescura Delicada y Temperatura Constante',
         serviceMetadata: { label: 'TEMPERATURA CONSTANTE', value: '14 °C' },
         practicalTip: 'Temperatura fresca constante (14 °C). Si está a temperatura ambiente, dale 30 minutos de heladera. Si se enfría de más, entibiá el cáliz de la copa con las palmas de las manos.',
         rationaleQuestion: '¿Cómo logra un tinto sutil armonizar con pescados grasos y cordero patagónico?',
         chemicalRationale:
           'Es un tinto suave, fluido y lleno de elegancia. Su acidez refrescante equilibra las grasas saludables de pescados como el salmón o la trucha y acaricia la terneza de carnes como el cordero, sin tapar jamás la sutileza del plato.',
         pairingMetrics: [
-          { label: 'LIMPIEZA LIPÍDICA', percentage: 93, variant: 'amber' },
-          { label: 'SUTILEZA TÁNICA', percentage: 95, variant: 'wine' },
-          { label: 'REGUSTO DE BOSQUE', percentage: 89, variant: 'zinc' },
+          { label: 'EQUILIBRIO DE GRASA', percentage: 93, variant: 'amber' },
+          { label: 'TEXTURA SEDOSA', percentage: 95, variant: 'wine' },
+          { label: 'AROMAS DE BOSQUE', percentage: 89, variant: 'zinc' },
         ],
         affinities: [
           { id: 'cordero-patagonico', label: 'Cordero patagónico' },
@@ -752,17 +752,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Envolventes y corpulentos',
         servingTemperature: '16 °C a 18 °C',
         glassware: 'Copa Burdeos amplia',
-        serviceTip: 'Servir a 17 °C para balancear la calidez del tenor alcohólico.',
-        serviceTipTitle: 'Atemperado y Concentración Especiada',
+        serviceTip: 'Servir a 17 °C para disfrutar su perfil especiado en armonía con la comida.',
+        serviceTipTitle: 'Atemperado y Notas Especiadas',
         serviceMetadata: { label: 'TEMPERATURA DE SERVICIO', value: '17 °C' },
         practicalTip: 'Descorchalo apenas prendas el fuego o prepares la tabla. Si la noche está calurosa, 10 minutos de heladera bastan para atemperarlo a 17 °C sin matar sus aromas a pimienta.',
         rationaleQuestion: '¿Por qué las notas especiadas del Syrah son ideales para achuras y embutidos?',
         chemicalRationale:
           'Se destaca por sus aromas a pimienta negra recién molida y su cuerpo generoso. Ese perfil especiado y envolvente se complementa a la perfección con achuras crujientes, embutidos y carnes sazonadas, creando un choque de sabores sabroso y bien criollo.',
         pairingMetrics: [
-          { label: 'AFINIDAD ESPECIADA', percentage: 97, variant: 'zinc' },
-          { label: 'VOLUMEN Y CUERPO', percentage: 92, variant: 'wine' },
-          { label: 'COMPENSACIÓN GRASA', percentage: 89, variant: 'amber' },
+          { label: 'TOQUE A PIMIENTA', percentage: 97, variant: 'zinc' },
+          { label: 'CUERPO Y CALIDEZ', percentage: 92, variant: 'wine' },
+          { label: 'EQUILIBRIO DE GRASA', percentage: 89, variant: 'amber' },
         ],
         affinities: [
           { id: 'achuras', label: 'Mollejas y achuras crocantes' },
@@ -800,17 +800,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Sedosos, dulces y aterciopelados',
         servingTemperature: '15 °C a 17 °C',
         glassware: 'Copa Burdeos clásica',
-        serviceTip: 'Excelente temperatura a 16 °C para resaltar sus notas de ciruela y trufa.',
-        serviceTipTitle: 'Expresión Balsámica y Fruta Madura',
+        serviceTip: 'Servir a 16 °C para realzar su textura redonda y notas de fruta madura.',
+        serviceTipTitle: 'Servicio y Textura Aterciopelada',
         serviceMetadata: { label: 'TEMPERATURA ÓPTIMA', value: '16 °C' },
         practicalTip: 'Con abrirlo 20 minutos antes de comer alcanza para que respire. Si el ambiente supera los 22 °C, un toque de 15 minutos en la heladera mantiene su textura aterciopelada.',
         rationaleQuestion: '¿Por qué la redondez esférica del Merlot complementa carnes de cerdo y hongos?',
         chemicalRationale:
           'Es un vino redondo y suave como el terciopelo. Esa textura amable envuelve la grasa de carnes como la bondiola de cerdo o platos con salsas cremosas y hongos, dejando un final en boca placentero y reconfortante.',
         pairingMetrics: [
-          { label: 'SEDOSIDAD TÁNICA', percentage: 95, variant: 'wine' },
-          { label: 'EMULSIÓN DE GRASA', percentage: 91, variant: 'amber' },
-          { label: 'AFINIDAD TERROSA', percentage: 88, variant: 'zinc' },
+          { label: 'TACTO ATERCIOPELADO', percentage: 95, variant: 'wine' },
+          { label: 'SUAVIZA CREMAS Y GRASAS', percentage: 91, variant: 'amber' },
+          { label: 'NOTAS A HONGOS Y TIERRA', percentage: 88, variant: 'zinc' },
         ],
         affinities: [
           { id: 'bondiola-cerdo', label: 'Bondiola y cortes de cerdo' },
@@ -849,7 +849,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Polimerizados, nobles y de larga persistencia',
         servingTemperature: '16 °C a 18 °C',
         glassware: 'Copa Burdeos Gran Reserva',
-        serviceTip: 'Decantar 45 a 60 minutos previos; imprescindible servir a 17 °C.',
+        serviceTip: 'Decantar 45 a 60 minutos previos; imprescindible servir a 17 °C para desplegar toda su elegancia.',
         serviceTipTitle: 'Decantación Prolongada y Oxigenación',
         serviceMetadata: { label: 'TIEMPO EN DECANTER', value: '50 MIN' },
         practicalTip: 'Descorchalo 1 hora antes de la comida. Al servir la primera copa, hacelo con caída suave desde cierta altura para que el vino "respire" al chocar con las paredes del cristal.',
@@ -857,9 +857,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'El tiempo de guarda afinó sus taninos y sumó aromas profundos a cuero, tabaco y cacao. Pide platos de olla cocinados a fuego lento, como un guiso de lentejas o un puchero de bodegón, donde los sabores concentrados se funden con la nobleza del vino.',
         pairingMetrics: [
-          { label: 'PERSISTENCIA Y VOLUMEN', percentage: 98, variant: 'wine' },
-          { label: 'POLIMERIZACIÓN TÁNICA', percentage: 96, variant: 'zinc' },
-          { label: 'BALANCE LIPÍDICO', percentage: 90, variant: 'amber' },
+          { label: 'FINAL LARGO Y PROFUNDO', percentage: 98, variant: 'wine' },
+          { label: 'SUAVIDAD Y MADUREZ', percentage: 96, variant: 'zinc' },
+          { label: 'IDEAL PARA GUISOS', percentage: 90, variant: 'amber' },
         ],
         affinities: [
           { id: 'guiso-de-lentejas', label: 'Guiso de lentejas de olla' },
@@ -897,17 +897,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         body: 'Ligero a medio, con entrada crujiente',
         servingTemperature: '8 °C a 10 °C',
         glassware: 'Copa Tulipán o degustación blanca',
-        serviceTip: 'Servir en frapera a 9 °C; no dejar que tome temperatura ambiente para evitar amargor terpénico.',
-        serviceTipTitle: 'Control Estricto de Temperatura',
+        serviceTip: 'Servir bien frío en frapera a 9 °C para mantener su chispa refrescante.',
+        serviceTipTitle: 'Temperatura Fresca y Frapera',
         serviceMetadata: { label: 'SERVICIO EN FRAPERA', value: '9 °C' },
         practicalTip: '¿Frapera express en 10 minutos? Sumergí la botella en un bowl con agua, cubitos de hielo y un puñado de sal gruesa. Enfría el doble de rápido que el freezer sin alterar los aromas.',
         rationaleQuestion: '¿Por qué el contraste entre perfume exuberante y boca seca vence al picante y la grasa?',
         chemicalRationale:
           'En nariz promete dulzura por sus aromas a flores y durazno, pero al beberlo es seco, fresco y chispeante. Esa frescura limpia al instante el aceite de empanadas fritas y apaga la sensación de picor de platos norteños como el locro.',
         pairingMetrics: [
-          { label: 'CONTRASTE DE PICOR', percentage: 95, variant: 'amber' },
-          { label: 'TENSIÓN CÍTRICA', percentage: 93, variant: 'zinc' },
-          { label: 'DESENGRASANTE', percentage: 91, variant: 'wine' },
+          { label: 'ALIVIA EL PICANTE', percentage: 95, variant: 'amber' },
+          { label: 'FRESCURA CHISPEANTE', percentage: 93, variant: 'zinc' },
+          { label: 'LIMPIEZA TOTAL', percentage: 91, variant: 'wine' },
         ],
         affinities: [
           { id: 'sushi-nikkei', label: 'Sushi y rolls nikkei' },
@@ -944,7 +944,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         body: 'Ligero y sumamente ágil',
         servingTemperature: '8 °C a 10 °C',
         glassware: 'Copa Sauvignon Blanc de boca estrecha',
-        serviceTip: '1 hora en heladera antes de servir.',
+        serviceTip: 'Una hora de heladera previa (8-9 °C) para que resalte su filo cítrico.',
         serviceTipTitle: 'Enfriado y Conservación Marina',
         serviceMetadata: { label: 'TIEMPO EN FRÍO', value: '60 MIN' },
         practicalTip: 'Mantenelo entre 8 °C y 9 °C. Si vas a tomarlo al aire libre, envolvé la botella en un repasador húmedo frío para que no se caliente en la mesa y mantenga su filo cítrico.',
@@ -952,9 +952,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Es eléctrico, cítrico y muy refrescante. Su acidez actúa exactamente como exprimir unas gotas de limón fresco sobre mariscos, rabas o pescados: disuelve cualquier sensación grasa y despierta el paladar al instante.',
         pairingMetrics: [
-          { label: 'ACIDEZ MÁLICA VIVA', percentage: 96, variant: 'amber' },
-          { label: 'CORTE DE ACEITE', percentage: 94, variant: 'wine' },
-          { label: 'MINERALIDAD', percentage: 90, variant: 'zinc' },
+          { label: 'FRESCURA CÍTRICA', percentage: 96, variant: 'amber' },
+          { label: 'CORTA EL ACEITE', percentage: 94, variant: 'wine' },
+          { label: 'SENSACIÓN FRESCA', percentage: 90, variant: 'zinc' },
         ],
         affinities: [
           { id: 'sushi-nikkei', label: 'Sushi y rolls nikkei' },
@@ -992,7 +992,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         body: 'Medio y fluido',
         servingTemperature: '8 °C a 10 °C',
         glassware: 'Copa Tulipán para blancos jóvenes',
-        serviceTip: 'Mantener en frapera fresca.',
+        serviceTip: 'Servir directo de la heladera en frapera para conservar su vivacidad.',
         serviceTipTitle: 'Frescura Mineral y Servicio Ligero',
         serviceMetadata: { label: 'TEMPERATURA DE SERVICIO', value: '9 °C' },
         practicalTip: 'Directo de la heladera a la copa (unos 8-9 °C). Es conveniente servir de a medias copas para que no gane temperatura en la mesa y mantenga su textura crujiente.',
@@ -1000,9 +1000,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Pura fruta fresca como manzana verde y pera, sin paso por madera. Al ser tan ágil y limpio, acompaña platos frescos como sushi, mariscos y pescados a la plancha dejando que el sabor del mar sea el protagonista.',
         pairingMetrics: [
-          { label: 'FINURA Y LIGEREZA', percentage: 94, variant: 'zinc' },
-          { label: 'ACIDEZ LIMPIADORA', percentage: 91, variant: 'amber' },
-          { label: 'ARMONÍA YODO/SAL', percentage: 88, variant: 'wine' },
+          { label: 'TRAGO LIGERO Y LIMPIO', percentage: 94, variant: 'zinc' },
+          { label: 'LIMPIA EL PALADAR', percentage: 91, variant: 'amber' },
+          { label: 'COMPAÑERO DEL MAR', percentage: 88, variant: 'wine' },
         ],
         affinities: [
           { id: 'sushi-nikkei', label: 'Sushi y rolls nikkei' },
@@ -1026,17 +1026,17 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         body: 'Pleno, mantecoso y envolvente',
         servingTemperature: '10 °C a 12 °C',
         glassware: 'Copa Borgoña ancha para oxigenar ésteres terciarios',
-        serviceTip: 'No enfriar en exceso (nunca a menos de 10 °C) para no opacar las notas tostadas.',
-        serviceTipTitle: 'Temperatura Templada para Ésteres',
+        serviceTip: 'No servirlo helado (11-12 °C) para que se luzcan sus aromas a manteca y tostado.',
+        serviceTipTitle: 'Temperatura Templada para Crianza',
         serviceMetadata: { label: 'TEMPERATURA MÍNIMA', value: '11 °C' },
         practicalTip: 'No lo sirvas helado. Si estuvo en la heladera, retiralo 20 minutos antes de descorchar (11-12 °C): el frío excesivo "duerme" la manteca y los aromas nobles de la barrica.',
         rationaleQuestion: '¿Por qué la untuosidad y notas de roble del Chardonnay abrazan platos cremosos?',
         chemicalRationale:
           'Su crianza en barrica le regala una textura cremosa, casi mantecosa, con notas a pan tostado y avellana. Es ideal para pescados grasos, pastas con crema o pollo al horno, acompañando la untuosidad del plato con gran elegancia.',
         pairingMetrics: [
-          { label: 'AFINIDAD MANTECOSA', percentage: 96, variant: 'amber' },
-          { label: 'VOLUMEN EN BOCA', percentage: 93, variant: 'zinc' },
-          { label: 'BALANCE ÁCIDO-GRASO', percentage: 89, variant: 'wine' },
+          { label: 'TEXTURA MANTECOSA', percentage: 96, variant: 'amber' },
+          { label: 'CUERPO Y UNTUOSIDAD', percentage: 93, variant: 'zinc' },
+          { label: 'EQUILIBRIO ELEGANTE', percentage: 89, variant: 'wine' },
         ],
         affinities: [
           { id: 'salmon-trucha-patagonica', label: 'Salmón rosado y trucha patagónica' },
@@ -1075,7 +1075,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Sutiles trazas fenólicas de maceración corta',
         servingTemperature: '9 °C a 12 °C',
         glassware: 'Copa Tulipán o copa Borgoña mediana',
-        serviceTip: 'Servir en frapera con agua y cubos de hielo.',
+        serviceTip: 'Servir en frapera fresca a 10 °C para acompañar comidas de principio a fin.',
         serviceTipTitle: 'Servicio en Frapera Continua',
         serviceMetadata: { label: 'TEMPERATURA DE CAVA', value: '10 °C' },
         practicalTip: 'Mantenelo en frapera con hielo durante toda la comida. Si no tenés frapera, serví una copa y guardá la botella en la puerta de la heladera entre rondas para cuidar su frescura.',
@@ -1083,9 +1083,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Combina la chispa fresca de un vino blanco con el sutil cuerpo de un tinto joven. Es el gran comodín de la mesa: corta la grasa de un choripán o achuras y, al mismo tiempo, respeta la delicadeza de una paella o unas piezas de sushi.',
         pairingMetrics: [
-          { label: 'VERSATILIDAD POLIVALENTE', percentage: 95, variant: 'amber' },
-          { label: 'ACIDEZ DESENGRASANTE', percentage: 92, variant: 'wine' },
-          { label: 'ARMONÍA FLORAL', percentage: 87, variant: 'zinc' },
+          { label: 'GRAN COMODÍN DE MESA', percentage: 95, variant: 'amber' },
+          { label: 'FRESCURA DESENGRASANTE', percentage: 92, variant: 'wine' },
+          { label: 'AROMAS FRESCOS', percentage: 87, variant: 'zinc' },
         ],
         affinities: [
           { id: 'paella-mariscos', label: 'Paella y arroces con mariscos' },
@@ -1126,7 +1126,7 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         tannins: 'Textura granulosa fina de hollejo blanco',
         servingTemperature: '10 °C a 12 °C',
         glassware: 'Copa Tulipán amplia o Burdeos mediana',
-        serviceTip: 'Servir a temperatura de cava (11 °C) para que los taninos no se sientan rígidos.',
+        serviceTip: 'Servir a temperatura de cava (11 °C) para disfrutar su textura sin asperezas.',
         serviceTipTitle: 'Atemperado de Hollejos',
         serviceMetadata: { label: 'TEMPERATURA DE CAVA', value: '11 °C' },
         practicalTip: 'Temperatura intermedia (11 °C). No lo enfríes tanto como un blanco común porque los taninos de piel blanca se vuelven ásperos: 20 minutos de heladera previa son ideales.',
@@ -1134,9 +1134,9 @@ export const WINE_VARIETIES: Record<string, WineVarietyEntry> = {
         chemicalRationale:
           'Un blanco fermentado con las pieles de la uva, como si fuera tinto. Eso le da un cuerpo y una textura únicas que desengrasan como nada las achuras crocantes (mollejas, chinchulines), refrescando la boca sin tapar el sabor del asado.',
         pairingMetrics: [
-          { label: 'EMULSIÓN GLANDULAR', percentage: 97, variant: 'amber' },
-          { label: 'AGRESIVIDAD TÁNICA TENUE', percentage: 91, variant: 'wine' },
-          { label: 'TEXTURA TÁCTIL', percentage: 89, variant: 'zinc' },
+          { label: 'CUERPO Y CARÁCTER', percentage: 97, variant: 'amber' },
+          { label: 'AGARRE JUSTO', percentage: 91, variant: 'wine' },
+          { label: 'SENSACIÓN EN BOCA', percentage: 89, variant: 'zinc' },
         ],
         affinities: [
           { id: 'achuras', label: 'Mollejas y achuras crocantes' },

@@ -170,7 +170,7 @@ Para reemplazar con imágenes propias: modificar las URLs en `src/data/pairingsD
               ├── PairingHeroImage  ← foto inmersiva
               ├── TechBar ×3        ← acidez / cuerpo / taninos
               ├── EditorialBlock    ← tip + fundamento (modo food)
-              ├── WineEditorialDualCards ← tip sommelier + fundamento bioquímico (modo wine)
+              ├── WineUnifiedEditorialCard ← Tarjeta unificada integrada: Fundamento + Voz del Sommelier + Métricas cotidianas (modo wine)
               ├── WineFoodPairingSection ← Grid de 3 columnas (Afinidad, Contraste, Evitar) (modo wine)
               │     ├── FeaturedPairingCard (con EditorialDishImage)
               │     ├── SecondaryPairingCard ×N
@@ -178,6 +178,23 @@ Para reemplazar con imágenes propias: modificar las URLs en `src/data/pairingsD
               ├── SuggestionsSection ← afinidad, contraste y alertas en modo food
               └── WitnessBottleList
 ```
+
+---
+
+## Actualización Editorial: Tarjeta Unificada y Métricas Cotidianas (2026-11-15)
+
+1. **`WineUnifiedEditorialCard` (sustituye a `WineEditorialDualCards`)**:
+   - Se reemplazó la disposición de dos cajas separadas e inconexas por un único contenedor fluido de doble columna (`lg:grid-cols-12`):
+     - **Columna Izquierda (~65% / 8 cols)**: Pregunta de fundamento y explicación gastronómica clara, acompañada al pie de las 3 barras de métricas.
+     - **Columna Derecha (~35% / 4 cols)**: `VOZ DEL SOMMELIER`, con consejos de servicio directos y prácticos integrados (incorporando sugerencias cotidianas como qué hacer sin decantador), eliminando jerga pretenciosa como descriptores terciarios.
+2. **Humanización de las 3 Barras de Métricas (`pairingsData.ts`)**:
+   - Se tradujeron los términos bioquímicos a sensaciones gustativas cotidianas y comprensibles para el comensal:
+     - De *Afinidad grasa / Limpieza lipídica* → **Corte de grasa** / **Equilibrio de grasa**
+     - De *Balance tánico / Finura tánica / Polimerización tánica* → **Suave al paladar** / **Paso elegante** / **Suavidad y madurez**
+     - De *Afinidad pirazínica* → **Toque a pimiento asado**
+     - De *Emulsión glandular / Textura táctil* → **Cuerpo y carácter** / **Sensación en boca**
+     - De *Acidez málica viva / Tensión cítrica* → **Frescura cítrica** / **Frescura chispeante**
+
 
 ## Estado y URL
 
