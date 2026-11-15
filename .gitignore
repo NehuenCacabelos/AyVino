@@ -12,6 +12,11 @@
 *.user
 *.userosscache
 *.sln.docstates
+.vs/
+bin/
+obj/
+appsettings.Development.json
+appsettings.*.local.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -480,3 +485,15 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# User uploads in wwwroot
+**/wwwroot/uploads/**
+!**/wwwroot/uploads/**/.gitkeep
+
+# Obsidian Vault (local state and cache)
+**/.obsidian/workspace*.json
+**/.obsidian/cache/
+**/.obsidian/graph.json
+**/.trash/
+
+
