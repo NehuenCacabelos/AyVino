@@ -80,7 +80,9 @@ import type {
   WineryWinePairingDto,
   CreateWineRequestDto,
   CreateWineVintageRequestDto,
+  GrapeResponseDto,
 } from '../../winery/types';
+import VarietalGrapeCombobox from './VarietalGrapeCombobox';
 
 interface ToastState {
   message: string;
@@ -554,6 +556,21 @@ export default function WineDetailView({
     const currentBlend = activeVintageDraft.blend;
     const updated = currentBlend.filter((row) => row.id !== rowId);
     updateActiveVintageDraft({ blend: updated });
+  };
+
+  // Seleccionar uva directamente desde el combobox / buscador
+  const handleSelectGrapeFromSearch = (grape: GrapeResponseDto) => {
+    const currentBlend = activeVintageDraft.blend;
+    const alreadyExists = currentBlend.some((row) => row.grapeId === grape.id);
+    if (alreadyExists) {
+      showToast(`La uva "${grape.name}" ya está en la composición varietal.`);
+      setGrapeSearch('');
+      return;
+    }
+
+    const newRow = createNewBlendRow(grape.id, currentBlend.length, `blend-${selectedVintageYear}`);
+    updateActiveVintageDraft({ blend: [...currentBlend, newRow] });
+    setGrapeSearch('');
   };
 
   const blendTotal = calculateTotalPercentage(activeVintageDraft.blend);
@@ -1832,18 +1849,14 @@ export default function WineDetailView({
                 /* Editor de Blend en Modo Edición */
                 <div className="space-y-3 bg-neutral-900/40 border border-neutral-800/80 p-4 rounded-lg">
                   <div className="space-y-2">
-                    {/* Buscador de uvas */}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-2.5 top-2.5" />
-                      <input
-                        type="text"
-                        value={grapeSearch}
-                        onChange={(e) => setGrapeSearch(e.target.value)}
-                        placeholder="Buscar uva..."
-                        className="w-full bg-[#121015] border border-neutral-700 rounded pl-8 pr-2.5 py-1.5 text-xs font-mono text-neutral-200 focus:border-rose-500 focus:outline-none placeholder:text-neutral-500"
-                        aria-label="Buscar uva"
-                      />
-                    </div>
+                    {/* Buscador de uvas (Combobox con listbox y selección directa) */}
+                    <VarietalGrapeCombobox
+                      grapes={filteredGrapesCatalog}
+                      searchQuery={grapeSearch}
+                      onSearchChange={setGrapeSearch}
+                      onSelectGrape={handleSelectGrapeFromSearch}
+                      selectedGrapeIds={activeVintageDraft.blend.map((r) => r.grapeId)}
+                    />
 
                     {activeVintageDraft.blend.length === 0 && (
                       <p className="text-xs text-neutral-500 font-mono py-1">

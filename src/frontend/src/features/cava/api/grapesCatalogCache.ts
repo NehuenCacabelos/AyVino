@@ -4,7 +4,20 @@ import type { GrapeResponseDto } from '../../winery/types';
 let inMemoryGrapesCache: GrapeResponseDto[] | null = null;
 
 /**
+ * Limpia la caché en memoria y en sessionStorage (útil para pruebas y recarga manual).
+ */
+export function clearGrapesCatalogCache(): void {
+  inMemoryGrapesCache = null;
+  try {
+    sessionStorage.removeItem('ayvino_grapes_catalog');
+  } catch {
+    // Ignorar fallas de sessionStorage
+  }
+}
+
+/**
  * Carga el catálogo de uvas exactamente una vez por sesión (memoria + sessionStorage).
+ * Utiliza paginación con pageSize: 100 para no exceder los límites del backend.
  */
 export async function fetchGrapesCatalogOnce(): Promise<GrapeResponseDto[]> {
   if (inMemoryGrapesCache && inMemoryGrapesCache.length > 0) {
@@ -25,17 +38,31 @@ export async function fetchGrapesCatalogOnce(): Promise<GrapeResponseDto[]> {
   }
 
   try {
-    const res = await apiClient.get<GrapeResponseDto[]>('/grapes', {
-      params: { pageNumber: 1, pageSize: 200 },
-    });
-    const list = Array.isArray(res.data) ? res.data : [];
-    inMemoryGrapesCache = list;
-    try {
-      sessionStorage.setItem('ayvino_grapes_catalog', JSON.stringify(list));
-    } catch {
-      // Ignorar quota errors
+    const all: GrapeResponseDto[] = [];
+    let page = 1;
+    const pageSize = 100;
+
+    while (true) {
+      const res = await apiClient.get<GrapeResponseDto[]>('/grapes', {
+        params: { pageNumber: page, pageSize },
+      });
+      const data = Array.isArray(res?.data) ? res.data : [];
+      all.push(...data);
+      if (data.length < pageSize) break;
+      page++;
     }
-    return list;
+
+    if (all.length > 0) {
+      inMemoryGrapesCache = all;
+      try {
+        sessionStorage.setItem('ayvino_grapes_catalog', JSON.stringify(all));
+      } catch {
+        // Ignorar quota errors
+      }
+      return all;
+    }
+
+    return inMemoryGrapesCache || [];
   } catch {
     return inMemoryGrapesCache || [];
   }
