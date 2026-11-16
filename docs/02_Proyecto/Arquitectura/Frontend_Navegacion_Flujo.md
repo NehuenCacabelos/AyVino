@@ -197,13 +197,17 @@ flowchart TD
   - Carga y reemplazo de foto de botella.
   - Catálogo flotante de maridajes y recálculo reactivo del gráfico de radar sensorial.
   - Detección de colisiones 409 (`WINE_VINTAGE_DUPLICATE`) y bloqueo de navegación con cambios sin guardar.
+- **Eliminación de Vino y Añadas (`ownerMode`)**:
+  - Botón *"Eliminar vino"* junto a las acciones de la etiqueta y botón *"Eliminar añada"* bajo el selector de cosechas activas.
+  - Diálogos modales destructivos (`ConfirmDialog`, `tone="danger"`). El de vino aclara que borra todas sus añadas.
+  - Bloqueo por historial de usuarios o última añada restante (409) desplegado mediante toast amigable sin cierre silencioso. Redirección automática a `/bodega/vinos` al eliminar vino o reseteo a otra añada existente al eliminar añada.
 - Formulario de reseñas conectado a `POST /api/reviews` para vinos reales.
 
 ### 2.9 Alta de Nueva Etiqueta en Plantilla (`WineryNewWinePage.tsx` en `/bodega/vinos/nuevo`)
 - Plantilla editorial vacía en modo edición permanente (`isCreating={true}`).
 - Barra flotante con botón *"Publicar etiqueta"* y confirmador de salida ante cambios pendientes.
 - Secuencia de creación: `createWine` -> `uploadVintageImage` -> `addWinePairing` -> navegación a `/bodega/vinos/{id}`.
-- Manejo de conflictos 409: `WINE_VINTAGE_DUPLICATE` (toast con link directo) y `WINE_EXISTS_ADD_VINTAGE` (diálogo modal de confirmación).
+- Manejo de conflictos 409: `WINE_VINTAGE_DUPLICATE` (toast con link directo) y `WINE_EXISTS_ADD_VINTAGE` (diálogo modal de confirmación con listado de añadas existentes, detección inteligente de distinta variedad de uva y opción de forzar nueva etiqueta mediante `confirmNewLabel`).
 
 ### 2.9 Reclamo de Vinos Comunitarios (`WineryClaimPage.tsx` en `/bodega/reclamar`)
 - Detección automática de botellas cargadas por aficionados que coinciden con el nombre de la bodega.

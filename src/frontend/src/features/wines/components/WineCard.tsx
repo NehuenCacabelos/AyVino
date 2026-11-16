@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Star, ArrowRight } from 'lucide-react';
 import type { CuratedWine } from '../../../types/wine';
 import WineBottleSilhouette from './WineBottleSilhouette';
@@ -9,10 +10,13 @@ interface WineCardProps {
 
 /**
  * WineCard Component
- * Tarjeta de vino editorial a dos columnas para escaneo visual rápido en la Landing.
- * Escala tipográfica generosa, alto contraste y sin cápsulas/badges.
+ * Tarjeta de vino editorial para escaneo visual rápido en catálogo y landing.
+ * Escenario de proporción fija 4:5 con fondo blanco (#fff) para que el lienzo de Cloudinary
+ * se funda sin bordes y la botella destaque con proporciones uniformes.
  */
 export default function WineCard({ wine, onSelect }: WineCardProps) {
+  const [hasError, setHasError] = useState(false);
+
   const {
     name,
     winery,
@@ -31,23 +35,29 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
   return (
     <article
       onClick={() => onSelect?.(wine)}
-      className="group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl"
+      className="group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden cursor-pointer shadow-lg hover:shadow-xl items-stretch"
     >
-      {/* Columna Izquierda: Espacio para botella con imagen real */}
-      <div className="w-full sm:w-40 h-52 sm:h-auto bg-[#0d0d0f] sm:border-r border-b sm:border-b-0 border-white/[0.08] flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#141417] relative overflow-hidden">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={name}
-            loading="lazy"
-            decoding="async"
-            width={160}
-            height={192}
-            className="max-h-40 sm:max-h-48 w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <WineBottleSilhouette className="w-14 h-36 sm:w-16 sm:h-40 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />
-        )}
+      {/* Columna Izquierda: Escenario blanco para botella en proporción 4:5 */}
+      <div className="w-full sm:w-44 p-3 shrink-0 flex items-center justify-center">
+        <div
+          data-testid="wine-card-image-container"
+          className="w-full aspect-[4/5] bg-white rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner"
+        >
+          {imageUrl && !hasError ? (
+            <img
+              src={imageUrl}
+              alt={name}
+              loading="lazy"
+              decoding="async"
+              onError={() => setHasError(true)}
+              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div data-testid="wine-card-fallback" className="flex items-center justify-center w-full h-full">
+              <WineBottleSilhouette className="w-14 h-36 sm:w-16 sm:h-40 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Columna Derecha: Información técnica esencial y escaneo rápido */}
@@ -70,13 +80,13 @@ export default function WineCard({ wine, onSelect }: WineCardProps) {
             </span>
           </div>
 
-          {/* Nombre del vino con mayor escala */}
-          <h4 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight leading-tight">
+          {/* Nombre del vino con mayor escala y altura mínima para grid uniforme */}
+          <h4 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight leading-tight line-clamp-2 min-h-[3.5rem]">
             {name}
           </h4>
 
           {/* Bodega y Región con mayor jerarquía */}
-          <p className="text-sm text-neutral-300 font-normal leading-relaxed mt-1">
+          <p className="text-sm text-neutral-300 font-normal leading-relaxed mt-1 truncate">
             {winery} <span className="text-neutral-500">·</span> {region}
           </p>
         </div>

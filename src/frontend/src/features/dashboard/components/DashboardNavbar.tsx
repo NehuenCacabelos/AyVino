@@ -291,26 +291,26 @@ export default function DashboardNavbar({
                     </Link>
 
                     {/* Mi historial */}
-                    <a
+                    <Link
                       role="menuitem"
-                      href="#historial"
+                      to={user?.username ? `/perfil/${user.username}?tab=historial` : '/perfil?tab=historial'}
                       onClick={() => setProfileOpen(false)}
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                     >
                       <History className="h-4 w-4 text-zinc-400" />
                       <span>Mi historial</span>
-                    </a>
+                    </Link>
 
-                    {/* Deseados */}
-                    <a
+                    {/* Favoritos */}
+                    <Link
                       role="menuitem"
-                      href="#deseados"
+                      to={user?.username ? `/perfil/${user.username}?tab=favoritos` : '/perfil?tab=favoritos'}
                       onClick={() => setProfileOpen(false)}
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                     >
                       <Bookmark className="h-4 w-4 text-zinc-400" />
-                      <span>Deseados</span>
-                    </a>
+                      <span>Favoritos</span>
+                    </Link>
                   </div>
 
                   {/* Separador sutil */}
@@ -449,21 +449,21 @@ export default function DashboardNavbar({
                 </span>
               </Link>
 
-              <a
-                href="#historial"
+              <Link
+                to={user?.username ? `/perfil/${user.username}?tab=historial` : '/perfil?tab=historial'}
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
               >
                 Mi historial
-              </a>
+              </Link>
 
-              <a
-                href="#deseados"
+              <Link
+                to={user?.username ? `/perfil/${user.username}?tab=favoritos` : '/perfil?tab=favoritos'}
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 text-[15px] font-medium text-zinc-300 hover:text-white"
               >
-                Deseados
-              </a>
+                Favoritos
+              </Link>
 
               <Link
                 to="/cuenta"

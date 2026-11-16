@@ -4,26 +4,33 @@ export interface MetricsProps {
   customStats?: {
     bottles?: number;
     varietals?: string | number;
-    topRated?: string | number;
+    topRated?: string | number | null;
+    topRatedSubtitle?: string;
     readyToDrink?: string | number;
     dominantVarietal?: string;
+    dominantVarietalSubtitle?: string;
   };
+  onUncorkClick?: () => void;
 }
 
 /**
  * Metrics Component (Cava Strip - Barra de Métricas Horizontal Compacta)
  * Cierra la sección Hero con un diseño aireado, tipográfico y limpio:
- * - Total en Cava (Wine): 24 Botellas · Colección activa
- * - Listas para Descorchar (Clock): 3 Etiquetas · En ventana óptima (con punto verde)
- * - Varietal Insignia (Layers): Malbec (58%) · 8 cepas registradas
- * - Prestigio / Calificación (Award): 4.9 ★ · Nivel Gran Reserva
+ * - Total en Cava (Wine): Total de botellas físicas en colección activa
+ * - Listas para Descorchar (Clock): Etiquetas en ventana óptima
+ * - Varietal Insignia (Layers): Cepa más representativa de la cava
+ * - Prestigio / Calificación (Award): Calificación real de catas o estado inicial
  */
 export default function Metrics({ customStats }: MetricsProps) {
-  const totalBottles = customStats?.bottles ?? 24;
-  const readyToDrink = customStats?.readyToDrink ?? 3;
-  const dominantVarietal = customStats?.dominantVarietal ?? 'Malbec (58%)';
-  const rawRating = customStats?.topRated ? String(customStats.topRated) : '4.9';
-  const cleanRating = rawRating.replace(' ★', '').split('/')[0].trim();
+  const totalBottles = customStats?.bottles ?? 0;
+  const readyToDrink = customStats?.readyToDrink ?? 0;
+  const dominantVarietal = customStats?.dominantVarietal ?? '—';
+  const dominantVarietalSubtitle = customStats?.dominantVarietalSubtitle ?? 'Cepas registradas';
+
+  const rawRating = customStats?.topRated;
+  const hasRating = rawRating !== null && rawRating !== undefined && rawRating !== '—' && rawRating !== '';
+  const cleanRating = hasRating ? String(rawRating).replace(' ★', '').split('/')[0].trim() : '—';
+  const ratingSubtitle = customStats?.topRatedSubtitle ?? (hasRating ? 'Promedio de catas' : 'Sin calificaciones aún');
 
   return (
     <div className="w-full max-w-5xl mx-auto pt-3 sm:pt-3.5 border-t border-white/5">
@@ -35,7 +42,7 @@ export default function Metrics({ customStats }: MetricsProps) {
             <span>Total en Cava</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
-            {totalBottles} Botellas
+            {totalBottles} {totalBottles === 1 ? 'Botella' : 'Botellas'}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
             Colección activa
@@ -49,7 +56,7 @@ export default function Metrics({ customStats }: MetricsProps) {
             <span>Listas para Descorchar</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-white mt-0.5 sm:mt-1">
-            {readyToDrink} Etiquetas
+            {readyToDrink} {readyToDrink === 1 ? 'Etiqueta' : 'Etiquetas'}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 flex items-center font-sans">
             <span
@@ -70,21 +77,21 @@ export default function Metrics({ customStats }: MetricsProps) {
             {dominantVarietal}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
-            8 cepas registradas
+            {dominantVarietalSubtitle}
           </p>
         </div>
 
-        {/* 4. Prestigio / Calificación */}
+        {/* 4. Calificación */}
         <div>
           <div className="text-[10px] sm:text-[11px] font-medium tracking-wider text-stone-400 uppercase flex items-center gap-1.5">
             <Award className="w-3.5 h-3.5 text-amber-400/80 shrink-0" aria-hidden="true" />
-            <span>Prestigio / Calificación</span>
+            <span>Calificación</span>
           </div>
           <p className="text-lg sm:text-xl font-serif text-amber-200 mt-0.5 sm:mt-1">
-            {cleanRating} ★
+            {hasRating ? `${cleanRating} ★` : '—'}
           </p>
           <p className="text-[10px] sm:text-[11px] text-stone-400 mt-0.5 font-sans">
-            Nivel Gran Reserva
+            {ratingSubtitle}
           </p>
         </div>
       </div>

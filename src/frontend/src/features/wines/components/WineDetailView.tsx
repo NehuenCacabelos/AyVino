@@ -1,8 +1,6 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  Star,
-  Wine,
   MapPin,
   BookmarkPlus,
   Share2,
@@ -23,21 +21,44 @@ import {
   Camera,
   Search,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import type { EditorialWine, WineReviewItem, WineVintageDetail } from '../data/editorialWines';
 import { useAuth } from '../../auth';
 import type { AppOutletContext } from '../../../components/layout/AppLayout';
 import type { CellarWine } from '../../cava';
+import QuickAddBottleModal from '../../cava/components/QuickAddBottleModal';
+import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
+import { useVintageSensory } from '../hooks/useVintageSensory';
+import {
+  buildSensoryAttributes,
+  getTypeSensoryFallback,
+  type SensoryAttribute,
+} from '../utils/sensoryUtils';
+import {
+  previewSensory,
+  updateVintageSensory,
+  type SensoryAxisKey,
+  type VintageSensoryDto,
+} from '../api/sensoryApi';
+import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
 import { imageUrl } from '../../../lib/image';
-import { createReview } from '../api/reviewsApi';
+import WineBottleSilhouette from './WineBottleSilhouette';
+import { createReview, updateReview, getMyVintageReview } from '../api/reviewsApi';
+import type { ReviewResponseDto } from '../types/review';
+import RatingInput from '../../../components/RatingInput';
+import { formatRating, normalizeRating } from '../../../lib/formatRating';
 import WineEditBar from './WineEditBar';
 import {
   createWine,
   updateWine,
+  deleteWine,
   updateWineVintage,
   createWineVintage,
+  deleteWineVintage,
   getWineVintages,
 } from '../../winery/api/wineApi';
+import { ConfirmDialog, getApiErrorMessage } from '../../admin';
 import { uploadVintageImage, deleteVintageImage } from '../../winery/api/imageApi';
 import {
   addWinePairing,
@@ -45,7 +66,6 @@ import {
 } from '../../winery/api/wineryWinePairingsApi';
 import { useWineCatalogs } from '../hooks/useWineCatalogs';
 import { getWineTypeLabel, REAL_WINE_TYPES } from '../utils/wineTypeUtils';
-import ConfirmDialog from '../../admin/components/ConfirmDialog';
 import {
   createNewBlendRow,
   calculateTotalPercentage,
@@ -63,18 +83,16 @@ import type {
   WineryWinePairingDto,
   CreateWineRequestDto,
   CreateWineVintageRequestDto,
+  GrapeResponseDto,
+  ExistingVintageSummaryDto,
+  WineDuplicateErrorData,
 } from '../../winery/types';
+import VarietalGrapeCombobox from './VarietalGrapeCombobox';
 
 interface ToastState {
   message: string;
   actionLabel?: string;
   actionTo?: string;
-}
-
-interface SensoryAttribute {
-  key: string;
-  label: string;
-  value: number; // 1.0 a 5.0
 }
 
 function calculateRating(reviews: WineReviewItem[]): string | null {
@@ -96,23 +114,6 @@ function getPairingIcon(iconName?: string) {
     default:
       return <Utensils className="w-4 h-4 text-[#ffb2b8]" />;
   }
-}
-
-function FractionalStar({ fillPercent }: { fillPercent: number }) {
-  const percent = Math.max(0, Math.min(100, Math.round(fillPercent)));
-  return (
-    <div className="relative inline-block w-4 h-4 text-neutral-700">
-      <Star className="w-4 h-4 text-neutral-700" />
-      {percent > 0 && (
-        <div
-          className="absolute top-0 left-0 overflow-hidden h-full text-amber-400 fill-amber-400"
-          style={{ width: `${percent}%` }}
-        >
-          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-        </div>
-      )}
-    </div>
-  );
 }
 
 function WineSensoryRadarChart({ attributes }: { attributes: SensoryAttribute[] }) {
@@ -252,6 +253,8 @@ export interface EditableVintageDraft {
   imageFile?: File | null;
   imageRemoved?: boolean;
   previewUrl?: string | null;
+  sensory?: Partial<Record<SensoryAxisKey, number | null>>;
+  sensoryModified?: boolean;
 }
 
 export interface WineDetailViewProps {
@@ -299,7 +302,19 @@ export default function WineDetailView({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
 
-  // Formulario de nueva reseña
+  // Hook para alta rápida en cava (vino real)
+  const {
+    isModalOpen: isCellarModalOpen,
+    activeWine: cellarActiveWine,
+    initialName: cellarInitialName,
+    openQuickAdd,
+    closeQuickAdd,
+  } = useQuickAddToCellar();
+
+  const wineryId = wine.winery?.wineryId ?? wine.wineryId;
+
+  // Formulario de reseña única por cosecha
+  const [existingReview, setExistingReview] = useState<ReviewResponseDto | null>(null);
   const [newReviewRating, setNewReviewRating] = useState<number>(4.5);
   const [newReviewComment, setNewReviewComment] = useState<string>('');
 
@@ -320,6 +335,7 @@ export default function WineDetailView({
     existingWineId: number;
     name: string;
     year: number;
+    existingVintages?: ExistingVintageSummaryDto[];
   } | null>(null);
   const [isAddingVintage, setIsAddingVintage] = useState<boolean>(false);
 
@@ -548,8 +564,70 @@ export default function WineDetailView({
     updateActiveVintageDraft({ blend: updated });
   };
 
+  // Seleccionar uva directamente desde el combobox / buscador
+  const handleSelectGrapeFromSearch = (grape: GrapeResponseDto) => {
+    const currentBlend = activeVintageDraft.blend;
+    const alreadyExists = currentBlend.some((row) => row.grapeId === grape.id);
+    if (alreadyExists) {
+      showToast(`La uva "${grape.name}" ya está en la composición varietal.`);
+      setGrapeSearch('');
+      return;
+    }
+
+    const newRow = createNewBlendRow(grape.id, currentBlend.length, `blend-${selectedVintageYear}`);
+    updateActiveVintageDraft({ blend: [...currentBlend, newRow] });
+    setGrapeSearch('');
+  };
+
   const blendTotal = calculateTotalPercentage(activeVintageDraft.blend);
   const blendValidation = validateGrapeBlend(activeVintageDraft.blend);
+
+  // Uva principal de la añada en borrador (mayor porcentaje del blend; desempate por menor id)
+  const draftMainGrape = useMemo(() => {
+    const valid = activeVintageDraft.blend.filter(
+      (b): b is { id: string; grapeId: number; percentage: number | '' } =>
+        typeof b.grapeId === 'number'
+    );
+    if (valid.length === 0) return null;
+    const sorted = [...valid].sort((a, b) => {
+      const percA = typeof a.percentage === 'number' ? a.percentage : 0;
+      const percB = typeof b.percentage === 'number' ? b.percentage : 0;
+      if (percB !== percA) {
+        return percB - percA;
+      }
+      return a.grapeId - b.grapeId;
+    });
+    const main = sorted[0];
+    const grapeInfo = grapesCatalog.find((g) => g.id === main.grapeId);
+    return {
+      grapeId: main.grapeId,
+      percentage: typeof main.percentage === 'number' ? main.percentage : null,
+      name: grapeInfo?.name || '',
+    };
+  }, [activeVintageDraft.blend, grapesCatalog]);
+
+  // Si la uva principal del draft es distinta a todas las añadas listadas
+  const isDifferentVariety = useMemo(() => {
+    if (!draftMainGrape || !confirmAddVintage?.existingVintages || confirmAddVintage.existingVintages.length === 0) {
+      return false;
+    }
+    const matchesAny = confirmAddVintage.existingVintages.some(
+      (v) => v.mainGrapeId === draftMainGrape.grapeId
+    );
+    return !matchesAny;
+  }, [draftMainGrape, confirmAddVintage]);
+
+  // Cierre por tecla Escape en el modal de confirmación de cosecha/etiqueta
+  useEffect(() => {
+    if (!confirmAddVintage) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isAddingVintage && !isSaving) {
+        setConfirmAddVintage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmAddVintage, isAddingVintage, isSaving]);
 
   // Manejo de Imagen de Botella
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -698,6 +776,24 @@ export default function WineDetailView({
             if (draft.imageFile) {
               await uploadVintageImage(numericWineId, createdV.id, draft.imageFile);
             }
+
+            // Perfil sensorial manual si hay valores
+            if (draft.sensory && Object.values(draft.sensory).some((v) => v != null)) {
+              try {
+                await updateVintageSensory(numericWineId, createdV.id, {
+                  body: draft.sensory.body ?? null,
+                  tannins: draft.sensory.tannins ?? null,
+                  acidity: draft.sensory.acidity ?? null,
+                  fruit: draft.sensory.fruit ?? null,
+                  oak: draft.sensory.oak ?? null,
+                  persistence: draft.sensory.persistence ?? null,
+                });
+                savedSteps.push('perfil sensorial');
+              } catch (err: unknown) {
+                failedSteps.push('perfil sensorial');
+                throw err;
+              }
+            }
           } catch (err: unknown) {
             failedSteps.push(`cosecha ${yearNum}`);
             const maybeAxios = err as {
@@ -731,6 +827,24 @@ export default function WineDetailView({
                 await uploadVintageImage(numericWineId, targetVintageId, draft.imageFile);
               } else if (draft.imageRemoved) {
                 await deleteVintageImage(numericWineId, targetVintageId);
+              }
+
+              // Perfil sensorial si cambió
+              if (draft.sensoryModified) {
+                try {
+                  await updateVintageSensory(numericWineId, targetVintageId, {
+                    body: draft.sensory?.body ?? null,
+                    tannins: draft.sensory?.tannins ?? null,
+                    acidity: draft.sensory?.acidity ?? null,
+                    fruit: draft.sensory?.fruit ?? null,
+                    oak: draft.sensory?.oak ?? null,
+                    persistence: draft.sensory?.persistence ?? null,
+                  });
+                  savedSteps.push('perfil sensorial');
+                } catch (err: unknown) {
+                  failedSteps.push('perfil sensorial');
+                  throw err;
+                }
               }
             } catch (err: unknown) {
               failedSteps.push(`cosecha ${yearNum}`);
@@ -795,8 +909,9 @@ export default function WineDetailView({
   // ==========================================
   // PUBLICAR ETIQUETA NUEVA (Paso 3)
   // ==========================================
-  const handlePublish = async () => {
+  const handlePublish = async (options?: { confirmNewLabel?: boolean }) => {
     if (isSubmittingRef.current || isSaving) return;
+    const confirmNewLabel = options?.confirmNewLabel ?? false;
 
     // Validación de campos obligatorios
     const missing: string[] = [];
@@ -846,6 +961,7 @@ export default function WineDetailView({
         wineryId: targetWineryId as number,
         locationId: rawWine?.locationId ?? null,
         description: draftDescription.trim() || null,
+        confirmNewLabel,
         firstVintage: {
           year: yearNum,
           ...(alcoholNum != null ? { alcoholContent: alcoholNum } : {}),
@@ -882,13 +998,43 @@ export default function WineDetailView({
         }
       }
 
-      // 4. Navegar a /bodega/vinos/{id}
-      if (imageFailed && pairingFailed) {
-        showToast('Se creó el vino, pero no se pudo subir la foto ni asociar maridajes.');
-      } else if (imageFailed) {
-        showToast('Se creó el vino, pero no se pudo subir la foto.');
-      } else if (pairingFailed) {
-        showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+      // 4. Perfil sensorial manual si hay algún valor
+      let sensoryFailed = false;
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          const firstV = vintages.find((v) => v.year === yearNum) ?? vintages[0];
+          if (firstV) {
+            await updateVintageSensory(created.id, firstV.id, {
+              body: activeVintageDraft.sensory.body ?? null,
+              tannins: activeVintageDraft.sensory.tannins ?? null,
+              acidity: activeVintageDraft.sensory.acidity ?? null,
+              fruit: activeVintageDraft.sensory.fruit ?? null,
+              oak: activeVintageDraft.sensory.oak ?? null,
+              persistence: activeVintageDraft.sensory.persistence ?? null,
+            });
+          }
+        } catch {
+          sensoryFailed = true;
+        }
+      }
+
+      // 5. Navegar a /bodega/vinos/{id}
+      const failures: string[] = [];
+      if (imageFailed) failures.push('subir la foto');
+      if (pairingFailed) failures.push('asociar maridajes');
+      if (sensoryFailed) failures.push('guardar el perfil sensorial');
+
+      if (failures.length > 0) {
+        if (failures.length === 1 && sensoryFailed) {
+          showToast('Se creó el vino, pero no se pudo guardar el perfil sensorial.');
+        } else if (failures.length === 1 && imageFailed) {
+          showToast('Se creó el vino, pero no se pudo subir la foto.');
+        } else if (failures.length === 1 && pairingFailed) {
+          showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+        } else {
+          showToast(`Se creó el vino, pero no se pudo ${failures.join(' ni ')}.`);
+        }
       }
 
       navigate(`/bodega/vinos/${created.id}`);
@@ -896,7 +1042,7 @@ export default function WineDetailView({
       const maybeAxios = err as {
         response?: {
           status?: number;
-          data?: { code?: string; detail?: string; existingWineId?: number };
+          data?: WineDuplicateErrorData;
         };
       };
       const status = maybeAxios?.response?.status;
@@ -904,22 +1050,23 @@ export default function WineDetailView({
       const code = data?.code;
 
       if (status === 409) {
-        if (code === 'WINE_VINTAGE_DUPLICATE') {
-          const existingId = data?.existingWineId;
-          showToast(
-            `Ya registraste este vino con la cosecha ${yearNum}.`,
-            existingId ? 'Ver etiqueta' : undefined,
-            existingId ? `/bodega/vinos/${existingId}` : undefined
-          );
-          return;
-        }
-
-        if (code === 'WINE_EXISTS_ADD_VINTAGE' && data?.existingWineId) {
+        if (!confirmNewLabel && code === 'WINE_EXISTS_ADD_VINTAGE' && data?.existingWineId) {
           setConfirmAddVintage({
             existingWineId: data.existingWineId,
             name: draftName.trim(),
             year: yearNum,
+            existingVintages: Array.isArray(data.existingVintages) ? data.existingVintages : [],
           });
+          return;
+        }
+
+        if (code === 'WINE_VINTAGE_DUPLICATE') {
+          const existingId = data?.existingWineId;
+          showToast(
+            data?.detail || `Ya registraste este vino con la cosecha ${yearNum}.`,
+            existingId ? 'Ver etiqueta' : undefined,
+            existingId ? `/bodega/vinos/${existingId}` : undefined
+          );
           return;
         }
       }
@@ -930,6 +1077,11 @@ export default function WineDetailView({
       isSubmittingRef.current = false;
       setIsSaving(false);
     }
+  };
+
+  const handleCreateNewLabel = async () => {
+    setConfirmAddVintage(null);
+    await handlePublish({ confirmNewLabel: true });
   };
 
   const handleConfirmAddVintage = async () => {
@@ -977,6 +1129,22 @@ export default function WineDetailView({
         }
       }
 
+      // Perfil sensorial manual si hay algún valor
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          await updateVintageSensory(confirmAddVintage.existingWineId, createdVintage.id, {
+            body: activeVintageDraft.sensory.body ?? null,
+            tannins: activeVintageDraft.sensory.tannins ?? null,
+            acidity: activeVintageDraft.sensory.acidity ?? null,
+            fruit: activeVintageDraft.sensory.fruit ?? null,
+            oak: activeVintageDraft.sensory.oak ?? null,
+            persistence: activeVintageDraft.sensory.persistence ?? null,
+          });
+        } catch {
+          showToast('Se agregó la cosecha, pero no se pudo guardar el perfil sensorial.');
+        }
+      }
+
       setConfirmAddVintage(null);
       navigate(`/bodega/vinos/${confirmAddVintage.existingWineId}`);
     } catch (err: unknown) {
@@ -993,54 +1161,96 @@ export default function WineDetailView({
 
   const averageRating = useMemo(() => calculateRating(reviews), [reviews]);
 
-  // Perfil sensorial (en vivo con draftType en edición)
+  // Carga de perfil sensorial en vino real
+  const numericWineId = isRealWine && !isNaN(Number(wine.id)) ? Number(wine.id) : undefined;
+  const numericVintageId = isRealWine && !isNaN(Number(activeVintage.id)) ? Number(activeVintage.id) : undefined;
+  const { sensory: serverSensory } = useVintageSensory(numericWineId, numericVintageId);
+
+  // Previsualización de perfil sensorial en vivo calculada desde las uvas del borrador
+  const [previewSensoryData, setPreviewSensoryData] = useState<VintageSensoryDto | null>(null);
+
+  const activeBlendGrapes = useMemo(() => {
+    if (!isEditing && !isNewMode) return [];
+    return activeVintageDraft.blend
+      .filter((b) => typeof b.grapeId === 'number' && b.grapeId > 0)
+      .map((b) => ({
+        grapeId: Number(b.grapeId),
+        percentage: typeof b.percentage === 'number' ? b.percentage : null,
+      }));
+  }, [isEditing, isNewMode, activeVintageDraft.blend]);
+
+  useEffect(() => {
+    if (!isEditing && !isNewMode) return;
+    if (activeBlendGrapes.length === 0) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      previewSensory(activeBlendGrapes, controller.signal)
+        .then((data) => {
+          setPreviewSensoryData(data);
+        })
+        .catch((err: unknown) => {
+          if ((err as { name?: string })?.name === 'CanceledError' || (err as { name?: string })?.name === 'AbortError') {
+            return;
+          }
+          setPreviewSensoryData(null);
+        });
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isEditing, isNewMode, activeBlendGrapes]);
+
+  const effectivePreviewSensory =
+    (isEditing || isNewMode) && activeBlendGrapes.length > 0 ? previewSensoryData : null;
+
+  const handleSensoryChange = (key: SensoryAxisKey, val: number) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    updateActiveVintageDraft({
+      sensory: {
+        ...currentSensory,
+        [key]: val,
+      },
+      sensoryModified: true,
+    });
+  };
+
+  const handleSensoryReset = (key: SensoryAxisKey) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    const nextSensory = { ...currentSensory };
+    delete nextSensory[key];
+    updateActiveVintageDraft({
+      sensory: nextSensory,
+      sensoryModified: true,
+    });
+  };
+
+  // Perfil sensorial (en vivo con draftType en edición y con prioridad efectiva)
   const currentEffectiveType = isEditing ? draftType : wine.type;
   const sensoryAttributes: SensoryAttribute[] = useMemo(() => {
-    if (!currentEffectiveType) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 0 },
-        { key: 'tannins', label: 'Taninos', value: 0 },
-        { key: 'acidity', label: 'Acidez', value: 0 },
-        { key: 'fruit', label: 'Fruta', value: 0 },
-        { key: 'oak', label: 'Crianza', value: 0 },
-        { key: 'persistence', label: 'Persistencia', value: 0 },
-      ];
+    if (isRealWine || isEditing || isNewMode) {
+      return buildSensoryAttributes({
+        type: currentEffectiveType,
+        server: serverSensory,
+        manual: activeVintageDraft.sensory,
+        preview: effectivePreviewSensory,
+        isEditingOrNew: isEditing || isNewMode,
+      });
     }
 
-    const isWhite = currentEffectiveType === 'White' || currentEffectiveType === 'Orange';
-    const isRose = currentEffectiveType === 'Rose';
-
-    if (isWhite) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 3.2 },
-        { key: 'tannins', label: 'Taninos', value: 1.2 },
-        { key: 'acidity', label: 'Acidez', value: 4.8 },
-        { key: 'fruit', label: 'Fruta', value: 4.6 },
-        { key: 'oak', label: 'Crianza', value: 3.5 },
-        { key: 'persistence', label: 'Persistencia', value: 4.4 },
-      ];
-    }
-
-    if (isRose) {
-      return [
-        { key: 'body', label: 'Cuerpo', value: 2.8 },
-        { key: 'tannins', label: 'Taninos', value: 2.0 },
-        { key: 'acidity', label: 'Acidez', value: 4.6 },
-        { key: 'fruit', label: 'Fruta', value: 4.7 },
-        { key: 'oak', label: 'Crianza', value: 1.8 },
-        { key: 'persistence', label: 'Persistencia', value: 3.9 },
-      ];
-    }
-
-    return [
-      { key: 'body', label: 'Cuerpo', value: 4.7 },
-      { key: 'tannins', label: 'Taninos', value: 4.8 },
-      { key: 'acidity', label: 'Acidez', value: 4.3 },
-      { key: 'fruit', label: 'Fruta', value: 4.4 },
-      { key: 'oak', label: 'Crianza', value: 4.1 },
-      { key: 'persistence', label: 'Persistencia', value: 4.9 },
-    ];
-  }, [currentEffectiveType]);
+    return getTypeSensoryFallback(wine.type);
+  }, [
+    isRealWine,
+    isEditing,
+    isNewMode,
+    currentEffectiveType,
+    serverSensory,
+    activeVintageDraft.sensory,
+    effectivePreviewSensory,
+    wine.type,
+  ]);
 
   const filteredReviews = useMemo(() => {
     if (starFilter === 'all') return reviews;
@@ -1062,8 +1272,88 @@ export default function WineDetailView({
     }, 4500);
   };
 
+  // Estados y acciones para eliminación de vino y cosecha (ownerMode)
+  const [isDeleteWineOpen, setIsDeleteWineOpen] = useState(false);
+  const [isDeletingWine, setIsDeletingWine] = useState(false);
+  const [isDeleteVintageOpen, setIsDeleteVintageOpen] = useState(false);
+  const [isDeletingVintage, setIsDeletingVintage] = useState(false);
+
+  const handleConfirmDeleteWine = async () => {
+    const wineIdNum = Number(wine.id);
+    if (isNaN(wineIdNum) || wineIdNum <= 0) return;
+    setIsDeletingWine(true);
+    try {
+      await deleteWine(wineIdNum);
+      showToast('Vino eliminado exitosamente.');
+      setIsDeleteWineOpen(false);
+      navigate('/bodega/vinos');
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: { data?: { detail?: string; message?: string; title?: string } };
+      };
+      const errorMsg =
+        maybeAxios?.response?.data?.detail ||
+        maybeAxios?.response?.data?.message ||
+        maybeAxios?.response?.data?.title ||
+        getApiErrorMessage(err);
+      showToast(errorMsg);
+    } finally {
+      setIsDeletingWine(false);
+    }
+  };
+
+  const handleConfirmDeleteVintage = async () => {
+    const wineIdNum = Number(wine.id);
+    const vintageIdNum = Number(activeVintage.id);
+    if (isNaN(wineIdNum) || isNaN(vintageIdNum) || wineIdNum <= 0 || vintageIdNum <= 0) return;
+    setIsDeletingVintage(true);
+    try {
+      await deleteWineVintage(wineIdNum, vintageIdNum);
+      showToast('Añada eliminada exitosamente.');
+      setIsDeleteVintageOpen(false);
+      const remaining = wine.vintages.filter((v) => Number(v.id) !== vintageIdNum);
+      if (remaining.length > 0) {
+        setSelectedVintageYear(remaining[0].year);
+      }
+      if (onReload) {
+        await onReload();
+      }
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: { data?: { detail?: string; message?: string; title?: string } };
+      };
+      const errorMsg =
+        maybeAxios?.response?.data?.detail ||
+        maybeAxios?.response?.data?.message ||
+        maybeAxios?.response?.data?.title ||
+        getApiErrorMessage(err);
+      showToast(errorMsg);
+    } finally {
+      setIsDeletingVintage(false);
+    }
+  };
+
   const handleSaveToCellar = () => {
     if (ownerMode || isNewMode) return;
+
+    if (isRealWine) {
+      const activeGrape = activeVintage?.grapes?.[0]?.variety || (wine.type === 'White' ? 'Blancos' : 'Malbec');
+      const selectedYear = activeVintage?.year || selectedVintageYear || new Date().getFullYear();
+      const cellarWinePayload: DashboardWine = {
+        id: wine.id,
+        wineryId,
+        name: wine.name,
+        winery: wine.winery?.name || wine.wineryNameText,
+        region: wine.winery?.region || 'Mendoza, Argentina',
+        varietal: activeGrape,
+        vintage: selectedYear,
+        rating: averageRating ? parseFloat(averageRating) : 0,
+        bottle: resolveBottleKind(wine.type, activeGrape),
+        imageUrl: (activeVintage?.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage?.imageUrl) || undefined,
+      };
+      openQuickAdd(cellarWinePayload);
+      return;
+    }
 
     if (outletCtx?.setStockCount) {
       outletCtx.setStockCount((prev) => prev + 1);
@@ -1089,7 +1379,7 @@ export default function WineDetailView({
         agingStatusLabel: `Guarda recomendada: ${activeVintage.agingAdvice.split('.')[0]}`,
         isJewel: false,
         bottle: 'red-black',
-        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle') : activeVintage.imageUrl) || undefined,
+        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage.imageUrl) || undefined,
         alcoholContent: activeVintage.alcoholContent,
       };
 
@@ -1115,8 +1405,46 @@ export default function WineDetailView({
     }
   };
 
+  useEffect(() => {
+    let isMounted = true;
+    if (isRealWine && !ownerMode && !isNewMode && activeVintage?.id) {
+      const vId = Number(activeVintage.id);
+      if (!isNaN(vId) && vId > 0 && typeof getMyVintageReview === 'function') {
+        const promise = getMyVintageReview(vId);
+        if (promise && typeof promise.then === 'function') {
+          void promise
+            .then((review) => {
+              if (!isMounted) return;
+              setExistingReview(review);
+              if (review) {
+                setNewReviewRating(review.rating);
+                setNewReviewComment(review.comment || '');
+              } else {
+                setNewReviewRating(4.5);
+                setNewReviewComment('');
+              }
+            })
+            .catch(() => {
+              if (!isMounted) return;
+              setExistingReview(null);
+              setNewReviewRating(4.5);
+              setNewReviewComment('');
+            });
+        }
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isRealWine, ownerMode, isNewMode, activeVintage?.id]);
+
   const handleOpenReviewForm = () => {
     setIsReviewFormOpen(true);
+    if (existingReview) {
+      setNewReviewRating(existingReview.rating);
+      setNewReviewComment(existingReview.comment || '');
+    }
     const el = document.getElementById('reviews-editorial-section');
     if (typeof el?.scrollIntoView === 'function') {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -1127,18 +1455,26 @@ export default function WineDetailView({
     e.preventDefault();
     if (!newReviewComment.trim()) return;
 
+    const normalizedRating = normalizeRating(newReviewRating);
+
     if (isRealWine) {
       try {
-        const roundedRating = Math.max(1, Math.min(5, Math.round(newReviewRating)));
         const vintageId = Number(activeVintage.id);
-        await createReview({
-          wineVintageId: vintageId,
-          rating: roundedRating,
-          comment: newReviewComment.trim(),
-        });
-        showToast(`¡Tu cata (${roundedRating} ★) fue publicada en la bitácora!`);
-        setNewReviewComment('');
-        setNewReviewRating(4.5);
+        let savedReview: ReviewResponseDto;
+        if (existingReview) {
+          savedReview = await updateReview(existingReview.id, {
+            rating: normalizedRating,
+            comment: newReviewComment.trim(),
+          });
+        } else {
+          savedReview = await createReview({
+            wineVintageId: vintageId,
+            rating: normalizedRating,
+            comment: newReviewComment.trim(),
+          });
+        }
+        setExistingReview(savedReview);
+        showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
         setIsReviewFormOpen(false);
         if (onReviewPublished) {
           await onReviewPublished();
@@ -1148,7 +1484,7 @@ export default function WineDetailView({
         const serverMessage =
           maybeAxios?.response?.data?.detail ||
           maybeAxios?.response?.data?.message ||
-          'No se pudo registrar la cata. Verificá si ya tenés una reseña para esta cosecha.';
+          'No se pudo guardar la reseña.';
         showToast(serverMessage);
       }
       return;
@@ -1159,22 +1495,22 @@ export default function WineDetailView({
       id: `rev-${Date.now()}`,
       userName: authorName,
       vintageYear: activeVintage.year,
-      rating: newReviewRating,
+      rating: normalizedRating,
       createdAt: new Date().toISOString().split('T')[0],
       comment: newReviewComment.trim(),
     };
 
     setSubmittedReviews((prev) => [createdReview, ...prev]);
-    setNewReviewComment('');
-    setNewReviewRating(4.5);
     setIsReviewFormOpen(false);
-    showToast(`¡Tu cata (${newReviewRating.toFixed(1)} ★) fue publicada en la bitácora!`);
+    showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
   };
 
-  // Imagen activa a renderizar
+  const [imageError, setImageError] = useState(false);
+
+  // Imagen activa a renderizar en la ficha técnica (variante 'detail' en alta resolución)
   const displayImageUrl = isEditing
     ? activeVintageDraft.previewUrl
-    : (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'bottle')! : activeVintage.imageUrl!);
+    : (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'detail')! : (activeVintage.imageUrl ? activeVintage.imageUrl.replace('variant=bottle', 'variant=detail') : null));
 
   return (
     <main className="w-full min-h-screen bg-[#0a0a0c] text-[#e5e1e4] antialiased selection:bg-[#722f37] selection:text-white pt-24 sm:pt-28 pb-20">
@@ -1198,32 +1534,22 @@ export default function WineDetailView({
           {/* ========================================================= */}
           <aside className="lg:col-span-5 flex flex-col lg:sticky lg:top-28 space-y-6">
             
-            {/* Contenedor Visual de la Botella (Estudio vertical estilizado responsive) */}
+            {/* Contenedor Visual de la Botella (Escenario 4:5 blanco con esquinas redondeadas y overflow-hidden) */}
             <div
-              className={`w-full h-[460px] sm:h-[540px] max-h-[75vh] rounded-2xl shadow-2xl relative overflow-hidden flex items-center justify-center group transition-colors ${
-                displayImageUrl
-                  ? 'bg-white border border-white/20 p-4 sm:p-6'
-                  : 'bg-[#141417] border border-white/[0.08] p-6'
-              }`}
+              data-testid="wine-detail-stage"
+              className="w-full aspect-[4/5] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex items-center justify-center p-3 group border border-neutral-200/20"
             >
-              {!displayImageUrl && (
-                <div
-                  aria-hidden="true"
-                  className="absolute w-72 h-80 rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-rose-900/20 via-rose-950/5 to-transparent blur-2xl pointer-events-none group-hover:from-rose-900/30 transition-all duration-700"
-                />
-              )}
-
-              {/* Escaparate de la botella */}
-              {displayImageUrl ? (
+              {displayImageUrl && !imageError ? (
                 <img
                   src={displayImageUrl}
                   alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
-                  className="w-full h-full object-contain filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.25)] transition-transform duration-700 hover:scale-[1.03]"
+                  onError={() => setImageError(true)}
+                  className="w-full h-full object-contain transition-transform duration-700 hover:scale-[1.03]"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-center p-8 max-w-xs border-y border-neutral-800/80 relative z-10">
-                  <Wine className="w-10 h-10 text-rose-300/80 stroke-[1.25] mb-3" />
-                  <span className="font-serif text-base text-neutral-200">Cosecha en Cava Privada</span>
+                <div data-testid="wine-detail-fallback" className="flex flex-col items-center justify-center text-center p-8 max-w-xs">
+                  <WineBottleSilhouette className="w-20 h-52 text-neutral-400 mb-3" />
+                  <span className="font-serif text-base text-neutral-700 font-semibold">Cosecha en Cava Privada</span>
                   <span className="text-xs text-neutral-500 mt-1 font-mono">
                     Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
                   </span>
@@ -1232,7 +1558,7 @@ export default function WineDetailView({
 
               {/* Controles de Imagen en Modo Edición */}
               {isEditing && (
-                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20">
+                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20 rounded-2xl">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1291,7 +1617,7 @@ export default function WineDetailView({
                   }
                 >
                   <Edit3 className="w-4 h-4 text-neutral-400" />
-                  <span>Escribir reseña</span>
+                  <span>{existingReview ? 'Editar reseña' : 'Escribir reseña'}</span>
                 </button>
               </div>
 
@@ -1341,10 +1667,38 @@ export default function WineDetailView({
                   </button>
                 )}
               </div>
+
+              {/* Botón para eliminar la añada activa en ownerMode */}
+              {ownerMode && isRealWine && !isNewMode && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteVintageOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 text-xs font-mono transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar añada</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Bloque Espacioso de Bodega & Terruño */}
-            <div className="rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4">
+            <div
+              {...(wineryId
+                ? {
+                    onClick: (e: React.MouseEvent) => {
+                      if ((e.target as HTMLElement).closest('a')) return;
+                      navigate(`/bodegas/${wineryId}`);
+                    },
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4 cursor-pointer hover:border-neutral-700/80 transition-colors',
+                  }
+                : {
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4',
+                  })}
+            >
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 block font-medium">
                 Bodega Elaboradora
               </span>
@@ -1353,8 +1707,20 @@ export default function WineDetailView({
                 <div className="space-y-3">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight hover:text-amber-200 transition-colors cursor-pointer flex items-center justify-between group/winery">
-                      <span>{wine.winery.name}</span>
-                      <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                      {wineryId ? (
+                        <Link
+                          to={`/bodegas/${wineryId}`}
+                          className="hover:underline flex items-center justify-between w-full"
+                        >
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </Link>
+                      ) : (
+                        <>
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </>
+                      )}
                     </h3>
                     <p className="text-xs text-neutral-400 flex items-center gap-1.5 font-sans mt-1">
                       <MapPin className="w-3.5 h-3.5 text-rose-300" />
@@ -1506,7 +1872,14 @@ export default function WineDetailView({
               )}
 
               <p className="text-sm text-neutral-400 font-sans">
-                Elaborado por <span className="text-neutral-200 font-medium">{wine.winery?.name || wine.wineryNameText}</span>
+                Elaborado por {wineryId ? (
+                  <Link
+                    to={`/bodegas/${wineryId}`}
+                    className="text-neutral-200 font-medium hover:underline cursor-pointer"
+                  >
+                    {wine.winery?.name || wine.wineryNameText}
+                  </Link>
+                ) : <span className="text-neutral-200 font-medium">{wine.winery?.name || wine.wineryNameText}</span>}
               </p>
             </header>
 
@@ -1520,7 +1893,7 @@ export default function WineDetailView({
                   {averageRating ? (
                     <>
                       <span className="text-sm font-medium text-neutral-200 font-mono">
-                        {averageRating}
+                        {formatRating(parseFloat(averageRating))}
                       </span>
                       <span className="text-amber-400 text-xs">★</span>
                       <span className="text-[11px] font-mono text-neutral-500">
@@ -1612,18 +1985,14 @@ export default function WineDetailView({
                 /* Editor de Blend en Modo Edición */
                 <div className="space-y-3 bg-neutral-900/40 border border-neutral-800/80 p-4 rounded-lg">
                   <div className="space-y-2">
-                    {/* Buscador de uvas */}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-2.5 top-2.5" />
-                      <input
-                        type="text"
-                        value={grapeSearch}
-                        onChange={(e) => setGrapeSearch(e.target.value)}
-                        placeholder="Buscar uva..."
-                        className="w-full bg-[#121015] border border-neutral-700 rounded pl-8 pr-2.5 py-1.5 text-xs font-mono text-neutral-200 focus:border-rose-500 focus:outline-none placeholder:text-neutral-500"
-                        aria-label="Buscar uva"
-                      />
-                    </div>
+                    {/* Buscador de uvas (Combobox con listbox y selección directa) */}
+                    <VarietalGrapeCombobox
+                      grapes={filteredGrapesCatalog}
+                      searchQuery={grapeSearch}
+                      onSearchChange={setGrapeSearch}
+                      onSelectGrape={handleSelectGrapeFromSearch}
+                      selectedGrapeIds={activeVintageDraft.blend.map((r) => r.grapeId)}
+                    />
 
                     {activeVintageDraft.blend.length === 0 && (
                       <p className="text-xs text-neutral-500 font-mono py-1">
@@ -1912,30 +2281,45 @@ export default function WineDetailView({
 
             {/* Barra de Acciones en el flujo del formulario (debajo de Maridajes sugeridos) */}
             {((ownerMode && isRealWine) || isNewMode) && (
-              <WineEditBar
-                isEditing={isEditing}
-                isSaving={isSaving}
-                hasChanges={hasChanges}
-                onStartEdit={handleStartEdit}
-                onCancelEdit={handleCancelEdit}
-                onSaveEdit={handleSaveEdit}
-                isNewMode={isNewMode}
-                onPublish={() => {
-                  if (onPublishNewWine) {
-                    return onPublishNewWine({
-                      wine: {
-                        ...wine,
-                        name: draftName,
-                        type: draftType,
-                        description: draftDescription,
-                      },
-                      firstVintage: activeVintageDraft,
-                      pairings: draftPairings,
-                    });
-                  }
-                  return handlePublish();
-                }}
-              />
+              <div className="space-y-3">
+                <WineEditBar
+                  isEditing={isEditing}
+                  isSaving={isSaving}
+                  hasChanges={hasChanges}
+                  onStartEdit={handleStartEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  isNewMode={isNewMode}
+                  onPublish={() => {
+                    if (onPublishNewWine) {
+                      return onPublishNewWine({
+                        wine: {
+                          ...wine,
+                          name: draftName,
+                          type: draftType,
+                          description: draftDescription,
+                        },
+                        firstVintage: activeVintageDraft,
+                        pairings: draftPairings,
+                      });
+                    }
+                    return handlePublish();
+                  }}
+                />
+
+                {ownerMode && isRealWine && !isNewMode && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsDeleteWineOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar vino</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
           </section>
@@ -1959,7 +2343,16 @@ export default function WineDetailView({
                 
                 <button
                   type="button"
-                  onClick={() => setIsReviewFormOpen((prev) => !prev)}
+                  onClick={() => {
+                    setIsReviewFormOpen((prev) => {
+                      const next = !prev;
+                      if (next && existingReview) {
+                        setNewReviewRating(existingReview.rating);
+                        setNewReviewComment(existingReview.comment || '');
+                      }
+                      return next;
+                    });
+                  }}
                   disabled={isNewMode}
                   className={
                     isNewMode
@@ -1968,7 +2361,7 @@ export default function WineDetailView({
                   }
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>{isReviewFormOpen ? 'Cerrar formulario' : '+ Registrar mi cata'}</span>
+                  <span>{isReviewFormOpen ? 'Cerrar formulario' : (existingReview ? 'Editar mi reseña' : '+ Dejar mi reseña')}</span>
                 </button>
               </div>
 
@@ -1988,7 +2381,9 @@ export default function WineDetailView({
                           {user?.username || 'Miembro Sommelier'}
                         </span>
                         <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-                          Registrando como usuario verificado · Cosecha {activeVintage.year}
+                          {existingReview
+                            ? `Editando tu reseña · Cosecha ${activeVintage.year}`
+                            : `Tu reseña · Cosecha ${activeVintage.year}`}
                         </span>
                       </div>
                     </div>
@@ -1996,48 +2391,23 @@ export default function WineDetailView({
                     <button
                       type="button"
                       onClick={() => setIsReviewFormOpen(false)}
-                      className="text-neutral-500 hover:text-neutral-300 p-1 rounded-sm"
+                      className="text-neutral-500 hover:text-neutral-300 p-1 rounded-sm cursor-pointer"
                       aria-label="Cerrar formulario"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Puntuación Decimal Flotante */}
-                  <div className="space-y-2 bg-[#0a0a0c]/60 p-4 rounded-lg border border-neutral-800/60">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-neutral-400 uppercase tracking-wider">
-                        Calificación organoléptica
-                      </span>
-                      <span className="font-mono text-sm text-amber-300 font-bold">
-                        {newReviewRating.toFixed(1)} / 5.0 ★
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 pt-1">
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((starIndex) => {
-                          const fillPercent = Math.max(0, Math.min(1, newReviewRating - (starIndex - 1))) * 100;
-                          return <FractionalStar key={starIndex} fillPercent={fillPercent} />;
-                        })}
-                      </div>
-
-                      <span className="text-[11px] font-mono text-neutral-500">
-                        Deslizá con precisión de décimas
-                      </span>
-                    </div>
-
-                    <input
-                      type="range"
-                      min="1.0"
-                      max="5.0"
-                      step="0.1"
-                      value={newReviewRating}
-                      onChange={(e) => setNewReviewRating(parseFloat(e.target.value))}
-                      className="w-full accent-rose-700 h-1.5 bg-neutral-800 rounded-lg cursor-pointer mt-1"
-                      aria-label="Seleccionar puntuación decimal"
-                    />
-                  </div>
+                  {/* Puntuación Decimal Flotante Compartida */}
+                  <RatingInput
+                    id="wine-review-rating-input"
+                    value={newReviewRating}
+                    onChange={(val) => setNewReviewRating(val ?? 4.5)}
+                    allowClear={false}
+                    label="Calificación organoléptica"
+                    helperText="Deslizá con precisión de décimas (1,0 - 5,0)"
+                    ariaLabel="Seleccionar puntuación decimal"
+                  />
 
                   <div>
                     <label htmlFor="review-comment" className="block text-xs font-mono text-neutral-400 mb-1.5">
@@ -2058,7 +2428,7 @@ export default function WineDetailView({
                     <button
                       type="button"
                       onClick={() => setIsReviewFormOpen(false)}
-                      className="text-xs font-mono text-neutral-400 hover:text-white px-3 py-1.5 transition-colors rounded-sm"
+                      className="text-xs font-mono text-neutral-400 hover:text-white px-3 py-1.5 transition-colors rounded-sm cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -2067,7 +2437,7 @@ export default function WineDetailView({
                       className="h-9 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50 flex items-center gap-2 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>Publicar Anotación</span>
+                      <span>{existingReview ? 'Guardar cambios' : 'Publicar Reseña'}</span>
                     </button>
                   </div>
                 </form>
@@ -2223,22 +2593,83 @@ export default function WineDetailView({
 
               {/* Desglose de Atributos */}
               <div className="space-y-2.5 pt-2 border-t border-neutral-800/80">
-                {sensoryAttributes.map((attr) => (
-                  <div key={attr.key} className="flex items-center justify-between text-xs font-mono text-neutral-300">
-                    <span>{attr.label}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
-                          style={{ width: `${(attr.value / 5) * 100}%` }}
+                {sensoryAttributes.map((attr) => {
+                  const isEditingMode = isEditing || isNewMode;
+                  if (!isEditingMode) {
+                    return (
+                      <div key={attr.key} className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <span>{attr.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const hasManual = activeVintageDraft.sensory?.[attr.key as SensoryAxisKey] != null;
+                  const showCalculated =
+                    (attr.key === 'body' || attr.key === 'tannins' || attr.key === 'acidity') &&
+                    attr.calculatedValue != null;
+
+                  return (
+                    <div key={attr.key} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <div className="flex items-center gap-2">
+                          <span>{attr.label}</span>
+                          {hasManual && (
+                            <button
+                              type="button"
+                              onClick={() => handleSensoryReset(attr.key as SensoryAxisKey)}
+                              className="text-[10px] text-neutral-400 hover:text-rose-400 underline cursor-pointer"
+                            >
+                              Restablecer
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-0.5">
+                        <input
+                          type="range"
+                          min="1.0"
+                          max="5.0"
+                          step="0.1"
+                          value={attr.value || 1.0}
+                          onChange={(e) =>
+                            handleSensoryChange(attr.key as SensoryAxisKey, parseFloat(e.target.value))
+                          }
+                          aria-label={`Ajustar ${attr.label}`}
+                          className="w-full h-1 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
                         />
                       </div>
-                      <span className="text-neutral-200 font-semibold w-7 text-right">
-                        {attr.value.toFixed(1)}
-                      </span>
+
+                      {showCalculated && (
+                        <span className="text-[10px] text-neutral-400 font-mono block">
+                          Calculado desde las uvas: {attr.calculatedValue!.toFixed(1).replace('.', ',')}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Dictamen Enológico al pie del gráfico */}
@@ -2251,18 +2682,166 @@ export default function WineDetailView({
           </div>
         </section>
 
-        {/* Diálogo de confirmación en caso de que el vino ya exista con otra cosecha */}
+        {/* Modal de resolución de etiqueta existente o nueva variedad */}
         {confirmAddVintage && (
-          <ConfirmDialog
-            open={true}
-            title="Etiqueta existente"
-            message={`Ya tenés «${confirmAddVintage.name}» en tu catálogo. ¿Querés agregar la cosecha ${confirmAddVintage.year} a ese vino?`}
-            confirmLabel="Agregar cosecha"
-            tone="default"
-            isLoading={isAddingVintage}
-            onConfirm={() => void handleConfirmAddVintage()}
-            onCancel={() => setConfirmAddVintage(null)}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-add-vintage-title"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+          >
+            <div className="relative w-full max-w-2xl rounded-2xl border border-neutral-800 bg-[#121216] p-6 sm:p-7 shadow-2xl shadow-black/90 animate-in zoom-in-95 duration-150 text-neutral-200">
+              <button
+                type="button"
+                onClick={() => setConfirmAddVintage(null)}
+                disabled={isAddingVintage || isSaving}
+                className="absolute top-5 right-5 text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-rose-800/50 bg-rose-950/40 text-rose-300">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+
+                <div className="flex-1 min-w-0 pr-6">
+                  <h2
+                    id="confirm-add-vintage-title"
+                    className="text-xl font-serif font-semibold text-zinc-100 tracking-tight"
+                  >
+                    Etiqueta existente
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-400 font-sans leading-relaxed">
+                    Ya tenés «{confirmAddVintage.name}» en tu catálogo. ¿Querés agregar la cosecha {confirmAddVintage.year} a ese vino?
+                  </p>
+
+                  {/* Listado de cosechas existentes */}
+                  {confirmAddVintage.existingVintages && confirmAddVintage.existingVintages.length > 0 && (
+                    <div className="mt-4 rounded-xl border border-neutral-800 bg-[#0e0e11] p-3.5">
+                      <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2">
+                        Cosechas registradas en tu bodega:
+                      </span>
+                      <ul className="space-y-1.5 text-xs font-mono text-neutral-300">
+                        {confirmAddVintage.existingVintages.map((v, i) => (
+                          <li
+                            key={`${v.year ?? 'sa'}-${v.mainGrapeId ?? i}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-400/80" />
+                            <span>
+                              {v.year != null ? v.year : 'S/A'} · {v.mainGrapeName || 'Variedad no especificada'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Sugerencia según variedad */}
+                  {isDifferentVariety && (
+                    <div className="mt-3 flex items-center gap-2 text-xs font-mono text-rose-200 bg-rose-950/30 border border-rose-800/40 rounded-lg px-3 py-2">
+                      <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
+                      <span>Parece una variedad distinta</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botones de acción del mismo tamaño con la estética de la ficha de vino */}
+              <div className="mt-6 pt-5 border-t border-neutral-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmAddVintage(null)}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800/80 text-neutral-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmAddVintage()}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl border border-dashed border-rose-500/60 text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 bg-rose-950/20 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 text-center"
+                >
+                  {isAddingVintage ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-rose-300" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 text-rose-300" />
+                  )}
+                  <span>Agregar cosecha</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateNewLabel()}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-lg shadow-black/40 border border-rose-500/30 hover:scale-[1.01] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-center"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                  )}
+                  <span>Crear etiqueta nueva</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Cava para Vino Real */}
+        {isRealWine && (
+          <QuickAddBottleModal
+            isOpen={isCellarModalOpen}
+            initialName={cellarInitialName}
+            initialWine={cellarActiveWine}
+            showToast={(msg) => showToast(msg)}
+            onClose={closeQuickAdd}
+            onAddBottle={async (payload) => {
+              if (outletCtx?.refreshStock) {
+                await outletCtx.refreshStock();
+              } else if (outletCtx?.setStockCount) {
+                outletCtx.setStockCount((prev) => prev + payload.units);
+              }
+              showToast(
+                `¡"${payload.name} (${payload.vintage})" guardado en tu Cava!`,
+                'Ver en mi Cava',
+                '/cava'
+              );
+            }}
           />
+        )}
+
+        {/* Modales de Confirmación de Eliminación (ownerMode) */}
+        {ownerMode && isRealWine && !isNewMode && (
+          <>
+            <ConfirmDialog
+              open={isDeleteWineOpen}
+              title="¿Eliminar vino?"
+              message={`¿Estás seguro de que deseás eliminar el vino "${wine.name}"? Esta acción borrará la etiqueta y todas sus añadas asociadas. Si tiene reseñas, marcas o cava no se podrá eliminar.`}
+              confirmLabel="Eliminar"
+              tone="danger"
+              isLoading={isDeletingWine}
+              onConfirm={() => void handleConfirmDeleteWine()}
+              onCancel={() => {
+                if (!isDeletingWine) setIsDeleteWineOpen(false);
+              }}
+            />
+
+            <ConfirmDialog
+              open={isDeleteVintageOpen}
+              title="¿Eliminar añada?"
+              message={`¿Estás seguro de que deseás eliminar la añada ${activeVintage.year} de "${wine.name}"? Si tiene reseñas o está guardada en cavas no se podrá eliminar.`}
+              confirmLabel="Eliminar"
+              tone="danger"
+              isLoading={isDeletingVintage}
+              onConfirm={() => void handleConfirmDeleteVintage()}
+              onCancel={() => {
+                if (!isDeletingVintage) setIsDeleteVintageOpen(false);
+              }}
+            />
+          </>
         )}
 
         {/* Notificación Toast Flotante */}

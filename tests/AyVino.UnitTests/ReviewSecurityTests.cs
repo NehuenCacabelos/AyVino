@@ -133,6 +133,24 @@ public class ReviewSecurityTests
             ));
         }
 
+        public Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default)
+        {
+            if (ExistingReview is null || ExistingReview.WineVintageId != wineVintageId || ExistingReview.UserId != userId)
+                return Task.FromResult<ReviewResponseDto?>(null);
+
+            return Task.FromResult<ReviewResponseDto?>(new ReviewResponseDto(
+                ExistingReview.Id,
+                ExistingReview.UserId,
+                "testuser",
+                ExistingReview.WineVintageId,
+                2022,
+                ExistingReview.Rating,
+                ExistingReview.Comment,
+                ExistingReview.CreatedAt,
+                ExistingReview.UpdatedAt
+            ));
+        }
+
         public Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<ReviewResponseDto>>([]);
 
@@ -145,7 +163,7 @@ public class ReviewSecurityTests
             int? wineId = null,
             int? wineVintageId = null,
             int? userId = null,
-            int? rating = null,
+            decimal? rating = null,
             CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<AdminReviewListItemDto>>([]);
 

@@ -74,7 +74,7 @@ public class WineApprovalAndDuplicateTests
 
         var wineRepo = Substitute.For<IWineRepository>();
         WineVintage? capturedVintage = null;
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 1 });
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -103,7 +103,7 @@ public class WineApprovalAndDuplicateTests
         const int wineryId = 10;
         var wineRepo = Substitute.For<IWineRepository>();
         WineVintage? capturedVintage = null;
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 1 });
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -130,7 +130,7 @@ public class WineApprovalAndDuplicateTests
         // Arrange
         var wineRepo = Substitute.For<IWineRepository>();
         WineVintage? capturedVintage = null;
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Do<WineVintage>(v => capturedVintage = v), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 1 });
 
         var locationRepo = Substitute.For<ILocationRepository>();

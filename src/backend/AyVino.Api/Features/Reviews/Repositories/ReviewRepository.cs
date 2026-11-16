@@ -27,7 +27,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
+                   r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
@@ -39,12 +39,29 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    public async Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
+                   r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
+                   r.rating AS Rating, r.comment AS Comment,
+                   r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
+            FROM reviews r
+            JOIN users u ON u.id = r.user_id
+            JOIN wine_vintages wv ON wv.id = r.wine_vintage_id
+            WHERE r.wine_vintage_id = @WineVintageId AND r.user_id = @UserId;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<ReviewResponseDto>(
+            new CommandDefinition(sql, new { WineVintageId = wineVintageId, UserId = userId }, cancellationToken: ct));
+    }
+
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default)
     {
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
+                   r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
@@ -68,7 +85,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         const string sql = """
             SELECT r.id AS Id, r.user_id AS UserId, u.username AS UserName,
                    r.wine_vintage_id AS WineVintageId, wv.year AS VintageYear,
-                   CAST(r.rating AS INT) AS Rating, r.comment AS Comment,
+                   r.rating AS Rating, r.comment AS Comment,
                    r.created_at AS CreatedAt, r.updated_at AS UpdatedAt
             FROM reviews r
             JOIN users u ON u.id = r.user_id
@@ -93,7 +110,7 @@ public class ReviewRepository(IDbConnectionFactory connectionFactory) : IReviewR
         int? wineId = null,
         int? wineVintageId = null,
         int? userId = null,
-        int? rating = null,
+        decimal? rating = null,
         CancellationToken ct = default)
     {
         var conditions = new List<string>();

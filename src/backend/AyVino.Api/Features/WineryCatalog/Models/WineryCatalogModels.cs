@@ -24,10 +24,10 @@ public record WineryCatalogWineRow(
     string? Description,
     WineType WineType,
     SourceType SourceType,
-    int RatingSum,
+    decimal RatingSum,
     int ReviewCount)
 {
-    public WineryCatalogWineRow() : this(0, string.Empty, null, WineType.Red, SourceType.Community, 0, 0) { }
+    public WineryCatalogWineRow() : this(0, string.Empty, null, WineType.Red, SourceType.Community, 0m, 0) { }
 }
 
 public record WineryCatalogVintageRow(
@@ -40,10 +40,10 @@ public record WineryCatalogVintageRow(
     Guid? ImageId,
     ApprovalStatus ApprovalStatus,
     DateTime RegisterDate,
-    int RatingSum,
+    decimal RatingSum,
     int ReviewCount)
 {
-    public WineryCatalogVintageRow() : this(0, 0, null, null, null, null, null, ApprovalStatus.Pending, default, 0, 0) { }
+    public WineryCatalogVintageRow() : this(0, 0, null, null, null, null, null, ApprovalStatus.Pending, default, 0m, 0) { }
 }
 
 public record WineryCatalogGrapeRow(
@@ -78,10 +78,10 @@ public record WineryPublicProfileRow(
 public record WineryPublicRatingsAndTotalsRow(
     int Labels,
     int Vintages,
-    long RatingSum,
+    decimal RatingSum,
     int ReviewCount)
 {
-    public WineryPublicRatingsAndTotalsRow() : this(0, 0, 0, 0) { }
+    public WineryPublicRatingsAndTotalsRow() : this(0, 0, 0m, 0) { }
 }
 
 public record WineryPublicCatalogQueryParams(

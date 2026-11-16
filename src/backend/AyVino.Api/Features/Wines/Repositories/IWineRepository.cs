@@ -15,7 +15,9 @@ public interface IWineRepository
     Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
         GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, ct);
 
-    Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default);
+    Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, bool confirmNewLabel = false, CancellationToken ct = default);
+    Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct) =>
+        CreateWithFirstVintageAsync(wine, firstVintage, grapes, false, ct);
     Task<bool> UpdateAsync(Wine wine, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default);
@@ -38,6 +40,9 @@ public interface IWineRepository
         int pageSize,
         int? currentUserId,
         bool isAdmin,
+        int? grapeId = null,
+        int? stateId = null,
+        int? wineryId = null,
         CancellationToken ct = default);
 
     Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default);

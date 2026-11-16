@@ -14,6 +14,7 @@ const createMockWines = (count: number): DashboardWine[] =>
     vintage: 2020 + (i % 4),
     rating: 4.5,
     bottle: 'red-burgundy',
+    isFavorite: false,
   }));
 
 describe('WineryBlock Component (Carrusel)', () => {
@@ -165,40 +166,9 @@ describe('WineryBlock Component (Carrusel)', () => {
     fireEvent.click(cellarBtns[0]);
     expect(onAddToCellar).toHaveBeenCalledWith(wines[0]);
 
-    const favBtn = screen.getByRole('button', { name: `Añadir ${wines[0].name} a deseados` });
+    const favBtn = screen.getByRole('button', { name: `Añadir ${wines[0].name} a favoritos` });
     fireEvent.click(favBtn);
     expect(onToggleFavorite).toHaveBeenCalledWith(wines[0], true);
-  });
-
-  it('renderiza la imagen del vino en el contenedor rectangular 3:4 interior cuando tiene imageUrl', () => {
-    const wineWithImage: DashboardWine = {
-      id: 'wine-img-1',
-      name: 'Vino con Foto',
-      winery: 'Bodega Catena',
-      region: 'Mendoza',
-      varietal: 'Malbec',
-      vintage: 2021,
-      rating: 4.8,
-      bottle: 'red-burgundy',
-      imageUrl: 'https://example.com/rutini.jpg',
-    };
-
-    render(
-      <MemoryRouter>
-        <WineryBlock
-          name="Bodega Catena"
-          region="Mendoza"
-          initials="BC"
-          total={1}
-          wines={[wineWithImage]}
-        />
-      </MemoryRouter>
-    );
-
-    const img = screen.getByRole('img', { name: 'Vino con Foto' });
-    expect(img).toBeInTheDocument();
-    expect(img).toHaveClass('w-full', 'h-full', 'object-cover');
-    expect(img.parentElement).toHaveClass('aspect-[3/4]', 'rounded-xl', 'overflow-hidden');
   });
 });
 

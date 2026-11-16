@@ -5,6 +5,7 @@ using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Audit.Services;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Repositories;
+using AyVino.Api.Features.Reviews.Validation;
 using AyVino.Api.Features.Wines.Repositories;
 
 namespace AyVino.Api.Features.Reviews.Services;
@@ -82,7 +83,7 @@ public class ReviewService(
         int? wineId = null,
         int? wineVintageId = null,
         int? userId = null,
-        int? rating = null,
+        decimal? rating = null,
         CancellationToken ct = default)
     {
         ValidatePagination(pageNumber, pageSize);
@@ -92,6 +93,14 @@ public class ReviewService(
         }
 
         return await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
+    }
+
+    public async Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default)
+    {
+        if (wineVintageId <= 0)
+            throw new ValidationException("El ID de la cosecha debe ser mayor a 0.");
+
+        return await reviewRepository.GetByVintageAndUserAsync(wineVintageId, userId, ct);
     }
 
     public async Task<IEnumerable<ReviewResponseDto>> GetAllByVintageAsync(int wineVintageId, int pageNumber, int pageSize, CancellationToken ct = default)
@@ -106,10 +115,9 @@ public class ReviewService(
         return await reviewRepository.GetAllByWineAsync(wineId, pageNumber, pageSize, ct);
     }
 
-    private static void ValidateRating(int rating)
+    private static void ValidateRating(decimal rating)
     {
-        if (rating is < 1 or > 5)
-            throw new ValidationException("El rating debe estar entre 1 y 5.");
+        RatingValidator.Validate(rating);
     }
 
     private static void ValidatePagination(int pageNumber, int pageSize)

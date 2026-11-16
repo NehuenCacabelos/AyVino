@@ -12,6 +12,7 @@ using AyVino.Api.Features.Wineries.Models;
 using AyVino.Api.Features.Wineries.Repositories;
 using AyVino.Api.Features.Images.Services;
 using AyVino.Api.Features.Wineries.Rules;
+using AyVino.Api.Features.Wines;
 
 namespace AyVino.Api.Features.Wineries.Services;
 
@@ -267,5 +268,16 @@ public class WineryService(
         }
 
         return (0, null, null);
+    }
+
+    public async Task<IReadOnlyList<WinerySuggestItemDto>> SuggestAsync(string? query, CancellationToken ct = default)
+    {
+        var key = WineLabelNormalizer.ToSearchKey(query);
+        if (key.Length < 2)
+        {
+            return Array.Empty<WinerySuggestItemDto>();
+        }
+
+        return await wineryRepository.SuggestAsync(key, ct);
     }
 }

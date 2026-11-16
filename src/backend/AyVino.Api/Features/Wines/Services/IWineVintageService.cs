@@ -10,6 +10,6 @@ public interface IWineVintageService
     Task<WineVintageResponseDto> CreateAsync(int wineId, CreateWineVintageRequestDto dto, Actor actor, CancellationToken ct = default);
     Task<WineVintageResponseDto> UpdateAsync(int wineId, int vintageId, UpdateWineVintageRequestDto dto, Actor actor, CancellationToken ct = default);
     Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, ChangeWineVintageStatusRequestDto dto, CancellationToken ct = default);
-    Task DeleteAsync(int wineId, int vintageId, CancellationToken ct = default);
+    Task DeleteAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default);
 }

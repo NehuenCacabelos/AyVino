@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.WineryCatalog.DTOs;
 
 public record WineryCatalogTotalsDto(
@@ -20,7 +23,7 @@ public record WineryCatalogVintageDto(
     string? AgingAdvice,
     Guid? ImageId,
     string ApprovalStatus,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount,
     DateTime RegisterDate,
     IReadOnlyList<WineryCatalogGrapeDto> Grapes);
@@ -31,7 +34,7 @@ public record WineryCatalogWineDto(
     string? Description,
     string WineType,
     string SourceType,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount,
     IReadOnlyList<WineryCatalogVintageDto> Vintages);
 

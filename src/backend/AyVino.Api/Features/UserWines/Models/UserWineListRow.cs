@@ -10,10 +10,15 @@ public record UserWineListRow
     public WineType WineType { get; init; }
     public int? WineryId { get; init; }
     public string? WineryNameText { get; init; }
-    public int RatingSum { get; init; }
+    public string? WineryName { get; init; }
+    public int? Vintage { get; init; }
+    public string? ImageUrl { get; init; }
+    public decimal RatingSum { get; init; }
     public int ReviewCount { get; init; }
     public bool IsWanted { get; init; }
     public bool IsTried { get; init; }
     public bool IsFavorite { get; init; }
     public DateTime LastChangeAt { get; init; }
+    public decimal? UserRating { get; init; }
+    public string? UserComment { get; init; }
 }

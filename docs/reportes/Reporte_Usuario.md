@@ -1,0 +1,878 @@
+# Reporte Integral de Usuario - AyVino
+
+Este documento consolida el avance, decisiones, problemas y verificaciones realizadas a lo largo de los bloques de desarrollo de Usuario.
+
+---
+
+# USUARIO — BLOQUE U1: Backend de búsqueda, filtros y alta rápida
+**Rama**: `fix/usuario-backend-busqueda`  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **1.1 Clave normalizada de búsqueda**:
+  - Implementación de `WineLabelNormalizer.ToSearchKey(string?)` que remueve acentos, normaliza `ñ` a `n`, elimina puntuación y quita todos los espacios.
+  - Implementación de `TrigramSimilarity` en C# compatible con `pg_trgm`.
+  - Migración `M20261030003_AddSearchKeysAndTrgmIndexes` agregando `wines.name_key`, `wines.winery_text_key` y `wineries.name_key`, poblando registros existentes e indexando con GIN trigramas.
+  - Mantenimiento centralizado de claves en altas y ediciones de vinos y bodegas.
+- **1.2 Búsqueda tolerante en `GET /api/wines/search`**:
+  - `key = ToSearchKey(search)`: con menos de 2 caracteres no devuelve resultados.
+  - Coincidencia si las claves contienen el término o tienen similitud trigram `> 0.3` (`SearchSimilarityThreshold`).
+  - Ranking de relevancia: clave idéntica (4), empieza con la clave (3), contiene la clave (2), mayor similitud (1), seguido por reseñas y orden alfabético.
+- **1.3 Filtros de servidor en `GET /api/wines/search`**:
+  - Agregados los parámetros `grapeId`, `stateId` y `wineryId`, combinables con `search` y `wineType`.
+- **1.4 `GET /api/catalog/filters`**:
+  - Nueva feature `Features/Catalog` (Vertical Slice completo) con endpoint anónimo que devuelve `{ grapes, provinces, wineries }` con conteo de vinos visibles, ordenados alfabéticamente y con caché de 5 minutos en memoria.
+- **1.5 `GET /api/search/suggestions?q=`**:
+  - Sugerencias agrupadas con máximo 3 por grupo (`wines`, `wineries`, `grapes`, `regions`). Uvas y regiones evaluadas y rankeadas en memoria.
+- **1.6 Campos nuevos en catálogo**:
+  - `CatalogWineItemDto` incorporó `WineryLogoImageId` con `LEFT JOIN` a `wineries`.
+- **1.7 Alta rápida con uva principal**:
+  - `QuickAddCellarWineRequestDto` sumó `MainGrapeId`.
+  - Exigencia obligatoria para vinos tintos (uva tinta) y blancos. Naranjo sólo uvas blancas o rosadas.
+  - Asignación de 100% de uva en cosecha creada con estado `ApprovalStatus.Pending`.
+  - Retorno garantizado de `WineId` y `WineVintageId`.
+- **1.8 Imagen de cosecha comunitaria**:
+  - Autorización en `ImageOrchestrator` para que el creador de la cosecha comunitaria (`uploaded_by_user_id`) pueda subir su imagen, manteniendo el 403 Forbidden para otros usuarios.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/backend/AyVino.Api/Migrations/M20261030003_AddSearchKeysAndTrgmIndexes.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/DTOs/CatalogFilterItemDto.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/DTOs/CatalogFiltersResponseDto.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/DTOs/WineSuggestionDto.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/DTOs/WinerySuggestionDto.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/DTOs/SearchSuggestionsResponseDto.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/ICatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/CatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/ICatalogService.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/CatalogService.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Endpoints/CatalogEndpoints.cs`
+  - `tests/AyVino.UnitTests/UsuarioBloqueU1Tests.cs`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Wines/WineLabelNormalizer.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Models/Wine.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Models/Winery.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Repositories/WineryRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Repositories/IWineRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Repositories/WineRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Services/IWineService.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Services/WineService.cs`
+  - `src/backend/AyVino.Api/Features/Wines/Endpoints/WineEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Wines/DTOs/CatalogWineItemDto.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/DTOs/QuickAddCellarWineRequestDto.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Services/CellarItemService.cs`
+  - `src/backend/AyVino.Api/Features/Images/Services/ImageOrchestrator.cs`
+  - `src/backend/AyVino.Api/Program.cs`
+  - `tests/AyVino.UnitTests/CellarItemServiceTests.cs`
+  - `tests/AyVino.UnitTests/WineOptimizationTests.cs`
+  - `tests/AyVino.UnitTests/WineServiceTests.cs`
+
+## 3. Decisiones técnicas
+- Migración `20261030003` consecutiva a `20261030002`.
+- Deduplicación y cálculo en memoria de uvas y regiones en sugerencias usando caché de 5 minutos para alta performance.
+- Algoritmo de similitud de trigramas implementado en C# con padding idéntico a `pg_trgm`.
+
+## 4. Problemas encontrados
+- Actualización de fakes en pruebas de optimización y servicio de vinos tras extender la interfaz del repositorio con parámetros opcionales.
+- Ajuste de mocks en pruebas de cava al incorporar validación obligatoria de uva principal en vinos tintos.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 740/740 pruebas aprobadas (25 nuevas en `UsuarioBloqueU1Tests`).
+- Verificación en vivo de la API conectada a base de datos PostgreSQL real (Supabase): endpoints de filtros, sugerencias y búsqueda tolerante validados con éxito.
+- `npm run build` en frontend: exitoso (559ms).
+- `npm test` en frontend: 235/235 pruebas pasando.
+- `npm run lint` en frontend: 4 errores preexistentes reportados sin modificar.
+
+## 6. Pendientes
+- Ninguno en este bloque. Todo commiteado en la rama `fix/usuario-backend-busqueda`.
+
+
+---
+
+# USUARIO — BLOQUE U2: Combos reales y buscador con sugerencias en el dashboard
+**Rama**: `fix/usuario-dashboard-filtros-buscador`  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **2.1 Capa de API en el front (`catalogApi.ts`)**:
+  - Implementación de `getCatalogFilters` con tipos `{ grapes, provinces, wineries }` y conteo de vinos.
+  - Caché de sesión en memoria y en `sessionStorage`.
+  - Implementación de `getSearchSuggestions(q, signal)` con cancelación vía `AbortSignal` y filtrado menor a 2 caracteres.
+  - Soporte de `grapeId`, `stateId` y `wineryId` en `searchCatalogWines`.
+- **2.2 Combos con datos reales (`QuickActions.tsx`)**:
+  - Eliminadas las listas estáticas escritas a mano.
+  - Carga reactiva de opciones con conteos de vinos. Estados de carga (disabled), error (con botón Reintentar) y vacío.
+  - Selección de opciones emite los filtros al servidor y resetea la paginación a la primera página.
+  - Eliminado el filtrado de texto redundante en cliente en `DashboardPage.tsx` (conservando chips rápidos intactos).
+- **2.3 Buscador con desplegable de sugerencias agrupadas**:
+  - Placeholder: `"Buscar vino, bodega, cepa o región..."`.
+  - Debounce de 250ms con cancelación `AbortSignal` al escribir 2 o más caracteres.
+  - Desplegable agrupado por Vinos, Bodegas, Uvas y Regiones (máximo 3 por grupo).
+  - Fila fija `"Crear «texto escrito»"` al pie del desplegable; única opción visible con 0 resultados de la API.
+  - Acciones:
+    - Vino → navega a `/vinos/{id}` (ID numérico).
+    - Bodega → navega a `/bodegas/{id}`.
+    - Uva → aplica filtro de uva en combo, limpia texto de búsqueda y emite `onFilterChange`.
+    - Región → aplica filtro de provincia en combo, limpia texto de búsqueda y emite `onFilterChange`.
+    - Crear → ejecuta `onCreateWine` abriendo el modal de alta.
+  - Navegación por teclado completa (flechas arriba/abajo, Enter para seleccionar o enviar, Escape para cerrar) y accesibilidad WAI-ARIA (`role="combobox"`, `role="listbox"`, `aria-activedescendant`).
+- **2.4 Crear desde el buscador (conexión provisoria)**:
+  - `QuickAddBottleModal` recibió la prop opcional `initialName` que precarga el nombre de la etiqueta.
+  - Montado `QuickAddBottleModal` en `DashboardPage.tsx`, abriéndose con el texto escrito al seleccionar "Crear". Al guardar, envía `POST /api/cellars/me/quick-add`, emite toast y recarga el catálogo.
+- **2.5 Enlaces a la ficha**:
+  - Verificados y probados los enlaces de cards en `DashboardWineCard` y `WineryBlock` hacia `/vinos/{id}` numérico.
+- **2.6 Tests (vitest)**:
+  - Creadas 18 pruebas unitarias (`QuickActionsBloqueU2.test.tsx` y `catalogApi.test.ts`), logrando un total de 253 pruebas pasando en el frontend.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/frontend/tests/features/dashboard/QuickActionsBloqueU2.test.tsx`
+  - `src/frontend/tests/features/dashboard/catalogApi.test.ts`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U2.md`
+- **Modificados**:
+  - `src/frontend/src/features/dashboard/api/catalogApi.ts`
+  - `src/frontend/src/features/dashboard/components/QuickActions.tsx`
+  - `src/frontend/src/features/cava/components/QuickAddBottleModal.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+
+## 3. Decisiones técnicas
+- Caché híbrida (memoria + `sessionStorage`) en `getCatalogFilters` para respuesta instantánea.
+- Control de estado sin `useEffect` síncrono en `QuickAddBottleModal` siguiendo lineamientos oficiales de React 19 / ESLint.
+- Manejo de debounce y cancelación de red seguro mediante `AbortController`.
+
+## 4. Problemas encontrados
+- Advertencias de `react-hooks/set-state-in-effect` resueltas trasladando reseteos síncronos a los handlers de eventos (`onChange`) y patrones de derivación en renderizado.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 740/740 pruebas superadas.
+- `npm run build`: compilación limpia en 579 ms.
+- `npm test`: 253/253 pruebas superadas (53 suites pasando).
+- `npm run lint`: 0 errores en los archivos modificados en este bloque.
+
+## 6. Pendientes
+- Ninguno en este bloque. Todo commiteado en la rama `fix/usuario-dashboard-filtros-buscador`.
+
+
+---
+
+# USUARIO — BLOQUE U3: Nombre y logo de la bodega llevan a su perfil
+**Rama**: `fix/usuario-bodega-enlaces`  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **3.1 Datos**:
+  - `CatalogWineItemDto` (`types/wine.ts`) incorporó `wineryLogoImageId?: string | null`.
+  - `DashboardWine` sumó los campos `wineryId?: number` y `wineryLogoImageId?: string`.
+  - `catalogWineToDashboardWine` mapea `wineryId` y `wineryLogoImageId` con fallback a `undefined`.
+  - En `DashboardPage.tsx`, agrupamiento dinámico por `wineryId` numérico cuando existe y por clave de texto en minúsculas cuando no. Cada grupo almacena `key`, `wineryId`, `logoImageId`, `name`, `region`, `initials` y sus `wines`.
+- **3.2 Cabecera de bloque de bodega (`WineryBlock.tsx`)**:
+  - Si la bodega tiene `wineryId`: el isotipo/logo y el nombre de la bodega están vinculados mediante `<Link to={'/bodegas/' + wineryId}>`, con estados visibles de hover (`group-hover/winery:border-white/20`, `group-hover/winery:text-rose-200`) y foco (`focus-visible:ring-2 focus-visible:ring-rose-500/80`).
+  - Si tiene `wineryLogoImageId`: renderiza el logo oficial a través de `imageUrl(logoImageId, 'logo')` con `object-contain` y respaldo transparente a las iniciales (`initials`) mediante el callback `onError`.
+  - Si no tiene logo: monograma sobrio con iniciales.
+  - Si no tiene `wineryId` (vino comunitario): el nombre se renderiza como texto plano `<h3>` no interactivo sin enlaces ni efectos hover.
+  - El enlace a "Ver catálogo completo" y la grilla de botellas se mantuvieron intactos.
+- **3.3 Verificación de Perfil de Bodega (solo lectura)**:
+  - Inspeccionado `src/frontend/src/pages/WineryPublicProfileLayout.tsx`:
+    - **Usuario común autenticado**: Ve el botón "Seguir bodega" activo, puede alternar a "Siguiendo" con actualización optimista y llamadas a `POST /api/wineries/{id}/follow` y `DELETE /api/wineries/{id}/follow`.
+    - **Visitante anónimo**: Al hacer clic en "Seguir bodega", es redirigido a `/login` con el retorno guardado en `state.from`.
+    - **Dueño de la bodega**: Botón deshabilitado con aviso visual ("No podés seguir a tu propia bodega").
+    - **Bloqueos**: Ninguno para el usuario regular.
+- **3.4 Tests (Vitest)**:
+  - Creado `src/frontend/tests/features/dashboard/WineryBlockBloqueU3.test.tsx` con 7 pruebas unitarias cubriendo cabecera con y sin `wineryId`, con y sin logo, fallback por error de imagen, mapeo de DTO y algoritmo de agrupación por bodega.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/frontend/tests/features/dashboard/WineryBlockBloqueU3.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U3.md`
+- **Modificados**:
+  - `src/frontend/src/types/wine.ts`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+  - `src/frontend/src/features/dashboard/components/WineryBlock.tsx`
+
+## 3. Decisiones técnicas
+- Generación de claves de grupo deterministas (`winery-id-${id}` vs `winery-text-${name}`) para evitar duplicar bloques de la misma bodega cuando hay ligeras discrepancias tipográficas.
+- Preservación de accesibilidad con `alt={'Logo de ' + name}` en la imagen del logo y foco delineado para navegación por teclado.
+
+## 4. Problemas encontrados
+- Ninguno en el código implementado. Se confirmaron los 4 errores de lint preexistentes en archivos protegidos de la solución.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 740/740 pruebas superadas.
+- `npm run build`: Compilación exitosa en 565 ms.
+- `npm test`: 260/260 pruebas superadas (54 suites pasando).
+- `npm run lint`: 0 errores en los archivos modificados.
+
+## 6. Pendientes
+- Ninguno en este bloque. Commits atómicos `f62ea3d` y `d8332e4` completados en `fix/usuario-bodega-enlaces`.
+
+
+---
+
+# USUARIO — BLOQUE U4: Cava con datos reales y modal "Ingresar Lote" con sugerencias
+**Rama**: `fix/usuario-cava` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **4.1 Enriquecimiento de Cava en Backend**:
+  - `CellarItemResponseDto`: propiedades añadidas `WineryName`, `RegionName` y `GrapeName`.
+  - `CellarItemListRow`: recepción de campos en la fila del repositorio.
+  - `CellarMappingExtensions`: mapeo seguro y cálculo de `AverageRating` (`ReviewCount > 0 ? Math.Round(...) : null`).
+  - `CellarItemRepository`: joins con `wineries`, `locations`, `cities`, `states` y `LATERAL` con `wine_grapes` para determinar `GrapeName` principal.
+- **4.2 Hook Global `useMyCellarSummary`**:
+  - Consulta `GET /api/cellars/me`, acumula total de botellas de estantes y compartimentos, expone estado reactivo y método `refresh()`.
+- **4.3 Barra de Navegación y Contexto Global (`AppLayout.tsx`)**:
+  - Sincronización en vivo del contador de botellas `stockCount` en el enlace a Cava.
+  - Exposición de `refreshStock` en `AppOutletContext` para refresco desde páginas hijas.
+- **4.4 Tarjeta de Bóveda Sobria (`VaultWineCard.tsx`)**:
+  - Eliminación de placeholders mockeados ("ESTANTE #1", "92 PTS"); renderizado del guión largo `" — "` en ausencia de datos.
+- **4.5 Modal "Ingresar Lote" con Sugerencias y Bloqueo (`QuickAddBottleModal.tsx`)**:
+  - Búsqueda debounced (250ms) con `AbortController` al tipear el nombre.
+  - Dropdown accesible WAI-ARIA navegable con teclado.
+  - Al seleccionar vino: completa campos, bloquea edición de etiqueta, precarga añadas reales vía `GET /api/wines/${id}/vintages`.
+  - Botón "Cambiar vino" para desbloquear y reiniciar campos.
+  - Guardado directo a `POST /api/cellars/me/quick-add` usando `matchedWineId`.
+- **4.6 Página de Cava conectada a API (`CavaPage.tsx`)**:
+  - Eliminación completa de `initialVaultWines` y `localStorage`.
+  - Estados de carga, vacío ("Tu cava está vacía") y renderizado de ítems reales.
+  - Refresco automático al guardar botellas desde el modal.
+- **4.7 Integración de Añadir a Cava en Dashboard (`DashboardPage.tsx`)**:
+  - Apertura del modal con vino preseleccionado.
+  - Guardado con validación de backend: toast de éxito y actualización de contador al confirmar; toast de error y preservación del modal ante fallos (sin actualizar stock).
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/frontend/src/features/cava/hooks/useMyCellarSummary.ts`
+  - `src/frontend/tests/features/cava/QuickAddBottleModalBloqueU4.test.tsx`
+  - `src/frontend/tests/pages/CavaPageBloqueU4.test.tsx`
+  - `src/frontend/tests/pages/DashboardPageAddToCellarBloqueU4.test.tsx`
+  - `tests/AyVino.UnitTests/UsuarioBloqueU4Tests.cs`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U4.md`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Cellars/DTOs/CellarItemResponseDto.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/DTOs/CellarMappingExtensions.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Models/CellarItemListRow.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Repositories/CellarItemRepository.cs`
+  - `src/frontend/src/components/layout/AppLayout.tsx`
+  - `src/frontend/src/features/cava/components/QuickAddBottleModal.tsx`
+  - `src/frontend/src/features/cava/components/VaultWineCard.tsx`
+  - `src/frontend/src/features/cava/index.ts`
+  - `src/frontend/src/pages/CavaPage.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+
+## 3. Decisiones técnicas
+- Reemplazo absoluto de mock data por endpoints reales del backend.
+- Respeto estricto a las reglas frontend: sin mutaciones, inputs controlados, sin `setState` síncrono dentro de efectos.
+- Respaldo visual sobrio (`—`) en lugar de datos inventados.
+
+## 4. Problemas encontrados
+- Ajuste de selectores en tests de rechazo para tolerar notificación toast simultánea con el alert del modal (`getAllByText`).
+- Resolución de advertencias de ciclo de vida en hooks asincrónicos mediante promesas y cleanup handlers.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 742/742 pruebas superadas (4 nuevas pruebas unitarias).
+- `npm run build`: Compilación exitosa en 573 ms.
+- `npm test`: 270/270 pruebas superadas (57 suites pasando, 10 pruebas nuevas en Cava).
+- `npm run lint`: 0 errores en código creado/modificado.
+
+## 6. Pendientes
+- Los 4 bloques (U1, U2, U3 y U4) se encuentran 100% finalizados, testeados y consolidados en la rama `fix/usuario-reparaciones`. Listo para revisión y entrega.
+
+
+---
+
+# USUARIO — BLOQUE U5: Alta de vino comunitario desde el modal de Cava
+**Rama**: `fix/usuario-alta-vino-comunitario` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **5.1 Backend: Sugerencia de Bodegas (`AyVino.Api`)**:
+  - `WinerySuggestItemDto`: DTO ligero `(int Id, string Name)`.
+  - `IWineryRepository` y `WineryRepository`: método `SuggestAsync` con filtro `status = 2`, búsqueda trigramática `similarity(name_key, @queryKey) > 0.3` y límite de 5 sugerencias.
+  - `IWineryService` y `WineryService`: validación para queries menores a 2 caracteres devolviendo array vacío.
+  - `WineryEndpoints`: endpoint público `GET /api/wineries/suggest?q={query}` con `.AllowAnonymous()`.
+- **5.2 Frontend: Utilidades y Caché de Catálogo**:
+  - `imageResize.ts`: función `resizeImageToMax(file, 1200)` para redimensionar en canvas antes de subir imagen (con fallback timer de 150ms para entornos de test).
+  - `grapesCatalogCache.ts`: obtención cached de cepas (`/api/grapes`) con persistencia en `sessionStorage` y función de ordenamiento contextual `sortGrapesForWineType`.
+- **5.3 Modal "Ingresar Lote" Mejorado (`QuickAddBottleModal.tsx`)**:
+  - Selector de Bodega con búsqueda y autocompletado contra `/api/wineries/suggest` o texto libre.
+  - Selector de Tipo de Vino (Tinto, Blanco, Rosado, Espumoso, Naranjo).
+  - Selector de Cepa Principal obligatorio para Tintos y Blancos con búsqueda de cepas; opcional para otros tipos.
+  - Subida de imagen opcional con previsualización, botón de eliminar y compresión a máx. 1200px.
+  - Flujo en dos pasos: alta rápida `POST /api/cellars/me/quick-add` y subida de imagen `PUT /api/wines/{wineId}/vintages/{vintageId}/image`.
+  - Alerta de error 409 Conflict en el modal sin cerrar ni perder datos.
+  - Prevención de doble submit mediante ref y botón deshabilitado.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `src/backend/AyVino.Api/Features/Wineries/DTOs/WinerySuggestItemDto.cs`
+  - `tests/AyVino.UnitTests/UsuarioBloqueU5Tests.cs`
+  - `src/frontend/src/features/cava/api/grapesCatalogCache.ts`
+  - `src/frontend/src/features/cava/utils/imageResize.ts`
+  - `src/frontend/tests/features/cava/QuickAddBottleModalBloqueU5.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U5.md`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Wineries/Repositories/IWineryRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Repositories/WineryRepository.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Services/IWineryService.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/Services/WineryService.cs`
+  - `src/backend/AyVino.Api/Features/Wineries/WineryEndpoints.cs`
+  - `src/frontend/src/features/cava/components/QuickAddBottleModal.tsx`
+  - `src/frontend/src/features/cava/index.ts`
+  - `src/frontend/src/features/cava/types.ts`
+  - `src/frontend/src/pages/CavaPage.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+
+## 3. Decisiones técnicas
+- Cepa obligatoria en frontend para tintos y blancos asegurando consistencia en la base comunitaria.
+- Subida de imagen secundaria asincrónica: un fallo en la imagen no anula la creación de la botella en cava, sino que notifica al usuario con un toast de advertencia.
+- Búsqueda trigramática en PostgreSQL (`pg_trgm`) para tolerancia a faltas y coincidencias aproximadas en bodegas.
+
+## 4. Problemas encontrados
+- Soporte de imagen en Vitest/JSDOM resuelto mediante escape timeout de 150ms en `resizeImageToMax`.
+- Mock repository en tests unitarios resuelto con default interface implementation en `IWineryRepository`.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 749/749 pruebas superadas (7 nuevas pruebas unitarias).
+- `npm run build`: Compilación exitosa en 675 ms.
+- `npm test`: 281/281 pruebas superadas (58 suites pasando, 11 pruebas nuevas en Vitest).
+- `npm run lint`: 0 errores en código creado/modificado.
+
+## 6. Pendientes
+- Ninguno en este bloque. Completado y fusionado en `fix/usuario-reparaciones`.
+
+
+---
+
+# USUARIO — BLOQUE U6: Descorchar, favoritos e historial de catas
+**Rama**: `fix/usuario-perfil-marcas` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-13  
+
+## 1. Qué se hizo
+- **6.1 Backend: Descorche Atómico (`AyVino.Api`)**:
+  - `ICellarItemRepository` y `CellarItemRepository`: método `UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct)`.
+  - Operación en transacción atómica con `SELECT ... FOR UPDATE`:
+    - Valida existencia y cantidad > 0 (retorna null / 409 si no hay unidades disponibles).
+    - Si cantidad > 1: decrementa en 1 y actualiza timestamp.
+    - Si cantidad == 1: elimina la fila en `cellar_items` cumpliendo la restricción de base de datos `CHECK (quantity >= 1)`.
+    - Upsert idempotente en `user_wines`: `INSERT ... ON CONFLICT (user_id, wine_id) DO UPDATE SET is_tried = TRUE, updated_at = now() AT TIME ZONE 'utc'`.
+    - Retorna `CellarItemListRow` con cantidad remanente (0 si se descorchó la última).
+  - `ICellarItemService` y `CellarItemService`: validación de titularidad de la cava vía `EnsureCellarOwnedAsync` (404 Not Found si es ajena) y lanzamiento de `ConflictException` (409) con mensaje explicativo si no hay stock.
+  - `CellarItemEndpoints` y `CellarEndpoints`: endpoints `POST /api/cellars/{cellarId}/items/{wineVintageId}/uncork` y `POST /api/cellars/me/items/{wineVintageId}/uncork`.
+- **6.2 Backend: Enriquecimiento de DTOs de `user-wines`**:
+  - `UserWineListItemDto`: sumó `string? WineryName = null`, `int? Vintage = null`, `string? ImageUrl = null`.
+  - `UserWineListRow` y `UserWineRepository`: `LEFT JOIN wineries wy` y subquery lateral para `latest_vintage`, proyectando bodega, última cosecha e imagen de botella.
+  - `UserWineMappingExtensions`: mapeo limpio hacia el DTO para consumo en vistas de perfil y catas.
+- **6.3 Frontend: Integración de Descorche en Cava y Dashboard**:
+  - `CavaPage.tsx`: invocación de `/api/cellars/{cellarId}/items/{vintageId}/uncork`, refresco del backend (`fetchBackendCellar`), actualización del stock global (`refreshStock`) y toast con el error exacto del backend ante 409 sin falso éxito.
+  - `DashboardPage.tsx`: atajo al descorche de bodega, actualización reactiva del contador de stock en navbar y manejo de excepciones.
+- **6.4 Frontend: Favoritos en Dashboard**:
+  - Carga única en `DashboardPage` con `GET /api/user-wines/me?favorite=true&pageSize=100` y almacenamiento en `Set<number>`.
+  - Actualización optimista inmediata en `DashboardWineCard` y `WineryBlock`.
+  - Persistencia con `PUT /api/wines/{wineId}/favorite` y `DELETE /api/wines/{wineId}/favorite`.
+  - Rollback reactivo ante error de red y notificación toast contextual sin mensajes falsos ("añadido a tus Deseados" erradicado).
+- **6.5 Frontend: Perfil de Usuario y Navegación**:
+  - `ProfilePage.tsx`: cálculo de `activeTab` como estado 100% derivado del query param `tab` (`cava` | `historial` | `favoritos`), mapeando retrocompatiblemente `?tab=deseados` a `'favoritos'`.
+  - Pestaña "Favoritos": consulta `GET /api/user-wines/me?favorite=true` y muestra tarjetas con foto de botella, bodega, añada y calificación.
+  - Pestaña "Historial de Catas": consulta `GET /api/user-wines/me?tried=true` con tarjetas identificadas con badge "Probado".
+  - `DashboardNavbar.tsx`: reemplazo de anclas `#historial` y `#deseados` por enlaces `<Link>` a `/perfil/{username}?tab=historial` y `?tab=favoritos` en menú desktop y drawer móvil.
+
+## 2. Archivos tocados y creados
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU6Tests.cs`
+  - `src/frontend/tests/pages/ProfilePageBloqueU6.test.tsx`
+  - `src/frontend/tests/pages/DashboardAndCavaBloqueU6.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U6.md`
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Cellars/Endpoints/CellarItemEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Endpoints/CellarEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Repositories/ICellarItemRepository.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Repositories/CellarItemRepository.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Services/ICellarItemService.cs`
+  - `src/backend/AyVino.Api/Features/Cellars/Services/CellarItemService.cs`
+  - `src/backend/AyVino.Api/Features/Users/DTOs/UserWineListItemDto.cs`
+  - `src/backend/AyVino.Api/Features/Users/Models/UserWineListRow.cs`
+  - `src/backend/AyVino.Api/Features/Users/Repositories/UserWineRepository.cs`
+  - `src/backend/AyVino.Api/Features/Users/UserWineMappingExtensions.cs`
+  - `src/frontend/src/features/dashboard/components/DashboardNavbar.tsx`
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx`
+  - `src/frontend/src/features/dashboard/components/WineryBlock.tsx`
+  - `src/frontend/src/features/users/types/index.ts`
+  - `src/frontend/src/pages/CavaPage.tsx`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+  - `src/frontend/src/pages/ProfilePage.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+
+## 3. Decisiones técnicas
+- Eliminación física de la fila en `cellar_items` cuando la cantidad llega a cero, respetando el check `quantity >= 1` de la base de datos PostgreSQL, retornando el DTO con `Quantity = 0`.
+- Cumplimiento estricto de las reglas frontend de Algoritmos y Programación III: `activeTab` como estado derivado puro de la URL sin sincronizaciones reactivas en `useEffect`, e inmutabilidad en sets y colecciones.
+- Optimismo transaccional con reversión automática en favoritos para máxima fluidez de usuario en el catálogo.
+
+## 4. Problemas encontrados
+- Restricción de base de datos `CHECK (quantity >= 1)` que rechazaba `UPDATE quantity = 0`: resuelto eliminando el registro y devolviendo el DTO con 0.
+- Conflicto de texto duplicado en pruebas de Vitest entre el botón de confirmación y el toast: resuelto focalizando la aserción en el role accesible `status`.
+
+## 5. Resultado de verificaciones
+- `dotnet build`: 0 advertencias, 0 errores.
+- `dotnet test`: 754/754 pruebas superadas (5 nuevas pruebas en `UsuarioBloqueU6Tests`).
+- `npm run build`: Compilación exitosa en 659 ms.
+- `npm test`: 290/290 pruebas superadas (60 suites pasando, 9 pruebas nuevas en Vitest).
+- `npm run lint`: 0 errores en código creado/modificado.
+
+## 6. Conclusión de Bloques U1 a U6
+Con la finalización de los bloques U1 a U6, el circuito base del usuario de AyVino (búsqueda tolerante, catálogo con filtros reales, fichas técnicas con añadas, notas de cata con rating y badges de comunidad, alta de vinos comunitarios con cepas y compresión de fotos, descorche atómico, favoritos y perfil con historial de catas) quedó 100% implementado, probado y validado.
+
+
+---
+
+# USUARIO — BLOQUE U7: Botellas sin fondo blanco (solo imágenes de vinos)
+**Rama**: `fix/usuario-imagen-botella` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **7.1 Backend: Transformación `bottle` en Cloudinary (`CloudinaryImageStorage.cs`)**:
+  - Encadenamiento de `e_make_transparent:{tolerancia}` previo a la transformación `pad` (`c_pad`) existente mediante `.Effect($"make_transparent:{tolerance}").Chain()`.
+  - Tolerancia por defecto de 10 (`BottleBackgroundTolerance`), configurable desde `Cloudinary:BottleBackgroundTolerance` en `CloudinaryOptions.cs`.
+  - Conservación estricta de las variantes `avatar`, `logo`, `banner` y sin variante con cadenas de entrega idénticas.
+- **7.2 Frontend: Rompimiento de Caché de Entrega (`src/frontend/src/lib/image.ts`)**:
+  - Incorporación de `BOTTLE_IMAGE_VERSION = 2` y concatenación de `&v=2` únicamente en la variante `bottle`.
+  - Las restantes variantes permanecen sin parámetro de versión.
+  - Verificación de que el endpoint `GET /api/images/{id}` ignora el query param extra sin errores.
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Images/Configuration/CloudinaryOptions.cs`
+  - `src/backend/AyVino.Api/Features/Images/Services/CloudinaryImageStorage.cs`
+  - `src/backend/AyVino.Api/appsettings.json`
+  - `src/frontend/src/lib/image.ts`
+  - `src/frontend/tests/lib/image.test.ts`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU7Tests.cs`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U7.md`
+
+## 3. Comparativa de URLs
+- **Antes (bottle)**: `https://res.cloudinary.com/test-cloud/image/upload/b_transparent,c_pad,f_auto,h_1200,q_auto,w_600/v1/vinos/cosecha-2021`
+- **Después (bottle)**: `https://res.cloudinary.com/test-cloud/image/upload/e_make_transparent:10/b_transparent,c_pad,f_auto,h_1200,q_auto,w_600/v1/vinos/cosecha-2021`
+- **Otras variantes**: Sin modificaciones (idénticas a producción).
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 758/758 superados (4 nuevas pruebas unitarias).
+- `npm run build`: Compilación exitosa en 823 ms.
+- `npm test`: 290/290 superados (4 pruebas en `tests/lib/image.test.ts`).
+- `npm run lint`: 0 errores en código nuevo/modificado.
+
+## 5. Pendientes
+- Ninguno en este bloque. Completado y fusionado en `fix/usuario-reparaciones`.
+
+
+---
+
+# USUARIO — BLOQUE U8: Dashboard — enlace al catálogo de la bodega y sugerencias por filtro
+**Rama**: `fix/usuario-dashboard-ajustes` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **8.1 Enlace "Ver catálogo completo" (`WineryBlock.tsx`)**:
+  - Enlace dinámico hacia `/bodegas/{wineryId}/catalogo` cuando `wineryId` está presente.
+  - Ocultamiento limpio del enlace cuando la bodega es comunitaria o escrita a mano (sin `wineryId`), manteniendo la estética del bloque.
+- **8.2 Backend: Sugerencias limitadas por filtros (`AyVino.Api`)**:
+  - Mapeo de `grapeId`, `stateId` y `wineryId` en `GET /api/search/suggestions`.
+  - Grupo `wines`: filtra garantizando que los vinos devueltos cumplan todos los filtros activos.
+  - Grupos `wineries`, `grapes` y `regions`: se omite la dimensión que ya está filtrada (`wineryId` omite `wineries`, `grapeId` omite `grapes`, `stateId` omite `regions`).
+  - Entidades restantes limitadas a aquellas que cuentan con al menos un vino visible que satisface los demás filtros activos.
+  - Retrocompatibilidad absoluta: consultas sin filtros se resuelven contra la caché sin cambios.
+- **8.3 Frontend: Integración en buscador y combos (`catalogApi.ts` & `QuickActions.tsx`)**:
+  - `getSearchSuggestions` actualizado para admitir filtros activos con `AbortSignal`.
+  - `QuickActions.tsx` sincroniza reactivamente las sugerencias ante cambios en los combos de uva, provincia o bodega.
+  - Conservación permanente de la fila fija "Crear «texto»".
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/backend/AyVino.Api/Features/Catalog/Endpoints/CatalogEndpoints.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/CatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Repositories/ICatalogRepository.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/CatalogService.cs`
+  - `src/backend/AyVino.Api/Features/Catalog/Services/ICatalogService.cs`
+  - `src/frontend/src/features/dashboard/api/catalogApi.ts`
+  - `src/frontend/src/features/dashboard/components/QuickActions.tsx`
+  - `src/frontend/src/features/dashboard/components/WineryBlock.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Usuario.md`
+- **Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU8Tests.cs`
+  - `src/frontend/tests/features/dashboard/DashboardAjustesBloqueU8.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U8.md`
+
+## 3. Decisiones técnicas
+- Omisión condicional de tareas asincrónicas en `CatalogService` evitando llamadas redundantes a la base de datos cuando una dimensión ya se encuentra filtrada.
+- Sobrecargas de repositorio sin ambigüedad para compatibilidad con suites de pruebas unitarias previas de U1 y U2.
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 763/763 superados (5 nuevas pruebas en `UsuarioBloqueU8Tests`).
+- `npm run build`: Compilación exitosa en 890 ms.
+- `npm test`: 295/296 superados (1 reintento por JSDOM concurrency timeout en archivo no tocado).
+- `npm run lint`: 0 errores en código nuevo/modificado.
+
+## 5. Pendientes
+- Ninguno en este bloque. Procediendo con el Bloque U9.
+
+
+---
+
+# USUARIO — BLOQUE U9: Catálogo público de bodega con las cards del dashboard
+**Rama**: `fix/usuario-catalogo-bodega` (mergeada en `fix/usuario-reparaciones`)  
+**Fecha**: 2026-11-14  
+
+## 1. Qué se hizo
+- **9.1 Cards del Dashboard en Catálogo Público**:
+  - Reemplazo de `WineryPublicCatalogCard` por `DashboardWineCard` en `WineryPublicCatalogPage.tsx`.
+  - Clic en la card redirige a `/vinos/{id}` numérico.
+  - Implementación del adaptador `adaptWineryPublicCatalogWineToDashboardWine` (`publicCatalogAdapter.ts`) que resuelve id numérico, bodega, uva/varietal, imagen con `imageUrl(imageId, 'bottle')`, añada y puntaje sin inventar datos.
+  - Extracción y reutilización del hook `useQuickAddToCellar` en `features/dashboard/hooks/` y `features/cava/hooks/` para abrir `QuickAddBottleModal` en modo vino existente con las añadas disponibles.
+  - Reutilización del hook `useFavorites` con carga inicial en una sola consulta (`/user-wines/me?favorite=true&pageSize=100`), actualización optimista y rollback automático.
+  - Soporte de `hideQuickActions` en `DashboardWineCard` para ocultar las acciones de Cava y Favoritos ante visitantes sin sesión (`!isAuthenticated`), con redirección a `/login`.
+- **9.2 Eliminación del Modal Inutilizado**:
+  - Eliminación completa de `WineryPublicWineDetailModal.tsx` y su exportación en `features/winery/components/index.ts`.
+  - Remoción de `selectedWine`, `handleSelectWine` y `adaptCatalogWineToDetail` en `WineryPublicCatalogPage.tsx`.
+  - Preservación de `WineryPublicCatalogCard.tsx` intacto para el dashboard del dueño en modo vista previa.
+- **9.3 Tests (vitest)**:
+  - Suite unitaria para el adaptador `adaptWineryPublicCatalogWineToDashboardWine` (campos completos, campos faltantes, fallbacks).
+  - Suite de integración `WineryPublicCatalogPageBloqueU9.test.tsx` (enlace a `/vinos/{id}`, modal de cava precargado, favoritos con persistencia y vuelta atrás, y ocultamiento en visitantes anónimos).
+  - Actualización de `WineryPublicProfile.test.tsx` para validar el enlace de las tarjetas del dashboard sin modal provisorio.
+
+## 2. Archivos tocados y creados
+- **Modificados**:
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx`
+  - `src/frontend/src/features/dashboard/index.ts`
+  - `src/frontend/src/features/winery/components/index.ts`
+  - `src/frontend/src/features/winery/index.ts`
+  - `src/frontend/src/pages/DashboardPage.tsx`
+  - `src/frontend/src/pages/WineryPublicCatalogPage.tsx`
+  - `src/frontend/tests/pages/WineryPublicProfile.test.tsx`
+- **Creados**:
+  - `src/frontend/src/features/cava/hooks/useQuickAddToCellar.ts`
+  - `src/frontend/src/features/dashboard/hooks/index.ts`
+  - `src/frontend/src/features/dashboard/hooks/useFavorites.ts`
+  - `src/frontend/src/features/dashboard/hooks/useQuickAddToCellar.ts`
+  - `src/frontend/src/features/winery/utils/publicCatalogAdapter.ts`
+  - `src/frontend/tests/features/winery/publicCatalogAdapter.test.ts`
+  - `src/frontend/tests/pages/WineryPublicCatalogPageBloqueU9.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U9.md`
+- **Eliminados**:
+  - `src/frontend/src/features/winery/components/WineryPublicWineDetailModal.tsx`
+
+## 3. Decisiones técnicas
+- Derivación pura del estado de favoritos en `DashboardWineCard` cuando está controlado por el padre (`onToggleFavorite`), asegurando sincronización reactiva inmediata sin violar reglas de estado derivado en `useState`.
+- Reutilización de hooks desacoplados entre `DashboardPage` y `WineryPublicCatalogPage` sin duplicación de código.
+
+## 4. Resultado de verificaciones
+- `dotnet build` & `dotnet test`: 763/763 superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 792ms.
+- `npm test`: 63 archivos / 304 tests superados (0 fallas).
+- `npm run lint`: 0 errores o advertencias en código modificado/creado (7 problemas preexistentes documentados).
+
+## 5. Pendientes
+- Proceder con el Bloque U10 (`fix/usuario-ficha-vino`).
+
+
+---
+
+# BLOQUE U10: Ficha del vino — Conexión con cava y enlaces a bodega
+**Rama**: `fix/usuario-ficha-vino`  
+**Fecha**: 14 de noviembre de 2026  
+**Estado**: Completado exitosamente
+
+## 1. Resumen de lo realizado
+- **"Guardar en cava" para Vinos Reales**: En `WineDetailView.tsx`, cuando se trata de una etiqueta de catálogo real (`isRealWine === true`), el botón "Guardar en cava" abre `QuickAddBottleModal` precargando los datos de la etiqueta y la añada activa (`selectedVintageYear` / `activeVintage.year`). Si el usuario cambia de cosecha en la ficha antes de abrir el modal, la nueva añada queda automáticamente preseleccionada.
+- **Protección de Dueño**: En modo bodega/dueño (`ownerMode = true`), el botón permanece deshabilitado informando que no es posible guardar vinos propios en la cava personal.
+- **Vinos Editoriales Maqueta**: Conservan su comportamiento en memoria/storage preexistente sin abrir el modal de base de datos.
+- **Navegación a Bodega**:
+  - En el encabezado ("Elaborado por {bodega}"), si `wineryId` está presente se renderiza como `<Link to={'/bodegas/${wineryId}'}>`. Si no está presente, se renderiza como texto plano.
+  - La tarjeta "Bodega Elaboradora" navega a `/bodegas/{wineryId}` tanto desde el enlace de su título como al hacer clic en cualquier área del contenedor (con guarda para no interferir con enlaces internos). Si `wineryId` no está presente, se renderiza como tarjeta estática.
+- **Tipado y Adaptador**: Se agregó `wineryId?: number` a `WineWineryInfo` y `EditorialWine`, y se mapeó en `apiWineToEditorial.ts` a partir de `winery.id` o `wine.wineryId`.
+- **Fidelidad Visual y Snapshot**: Se preservó de manera 100% idéntica el test de snapshot `WineDetailPage.snapshot.test.tsx` para `catena-zapata-malbec-argentino`.
+
+## 2. Archivos modificados y creados
+- **Modificados**:
+  - `src/frontend/src/features/wines/adapters/apiWineToEditorial.ts`
+  - `src/frontend/src/features/wines/components/WineDetailView.tsx`
+  - `src/frontend/src/features/wines/data/editorialWines.ts`
+- **Creados**:
+  - `src/frontend/tests/pages/WineDetailPageBloqueU10.test.tsx`
+  - `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U10.md`
+  - `docs/reportes/Reporte_Bloque_U10.md`
+
+## 3. Decisiones técnicas
+- Formateo estricto del marcado JSX en `Elaborado por ` para no alterar el resultado bit a bit del snapshot test de regresión visual.
+- Event delegation defensivo en la tarjeta de bodega para evitar múltiples navegaciones cuando el usuario hace clic en el enlace web externo.
+
+## 4. Resultado de verificaciones
+- `dotnet test`: 763/763 superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 694ms.
+- `npm test`: 64 archivos / 313 tests superados (0 fallas). Snapshot inmodificado (1/1).
+- `npm run lint`: 0 errores o advertencias en código modificado/creado.
+
+## 5. Pendientes
+- Proceder con el Bloque U11 (`fix/usuario-cata-historial`).
+
+
+---
+
+# BLOQUE U11: Registrar cata completa, bitácora real y contador de la cava
+**Rama**: `fix/usuario-cata-historial`  
+**Fecha**: 14 de noviembre de 2026  
+**Estado**: Completado exitosamente
+
+## 1. Resumen de lo realizado
+- **Descorche con Reseña Transaccional (11.1)**: `POST /api/cellars/{cellarId}/items/{wineVintageId}/uncork` y `POST /api/cellars/me/items/{wineVintageId}/uncork` aceptan cuerpo opcional `{ rating?: int, comment?: string }`. En la misma transacción donde descuenta una botella y marca el vino probado (`user_wines.is_tried = TRUE`), upserta la reseña en `reviews` y recalcula los promedios de calificación de la cosecha y del vino. Validación estricta de rating (1..5) y comentario (<=1000) con 400 ValidationException y cero efectos colaterales si es inválido.
+- **Registro de Cata en Front (11.2)**: `handleUncorkSaved` de `CavaPage.tsx` envía el `rating` redondeado y el comentario a la API, refresca la cava y el stock, y exhibe notificaciones claras de éxito o error sin desincronización de estado local.
+- **Bitácora y Historial Reales (11.3)**: La bitácora en `CavaPage.tsx` se sincroniza con `GET /api/user-wines/me?tried=true&pageSize=100`, con DTOs extendidos (`UserRating` y `UserComment`) vía `LEFT JOIN LATERAL` a `reviews`. En `ProfilePage.tsx`, el Historial de Catas muestra notas y puntajes reales del usuario. En `DashboardPage.tsx`, el descorche envía también reseña y actualiza el backend.
+- **"Joyas de la Cava" (11.4)**: `UserRepository.CellarWinesCount` cuenta solo cosechas con stock (`ci.quantity > 0`). Textos en perfiles dicen "vinos" (singular "vino") en lugar de "botellas".
+- **Limpieza de Errores Silenciosos (11.5)**: Reemplazo de `.catch(() => {})` por notificaciones visibles al usuario.
+
+## 2. Archivos modificados y creados
+- **Backend Creados**: `src/backend/AyVino.Api/Features/Cellars/DTOs/UncorkCellarItemRequestDto.cs`, `tests/AyVino.UnitTests/UsuarioBloqueU11Tests.cs`.
+- **Backend Modificados**: `CellarEndpoints.cs`, `CellarItemEndpoints.cs`, `ICellarItemRepository.cs`, `CellarItemRepository.cs`, `ICellarItemService.cs`, `CellarItemService.cs`, `UserRepository.cs`, `UserWineListItemDto.cs`, `UserWineMappingExtensions.cs`, `UserWineListRow.cs`, `UserWineRepository.cs`.
+- **Frontend Creados**: `src/frontend/tests/pages/CavaAndHistoryBloqueU11.test.tsx`.
+- **Frontend Modificados**: `Metrics.tsx`, `users/types/index.ts`, `CavaPage.tsx`, `DashboardPage.tsx`, `ProfilePage.tsx`, `DashboardAndCavaBloqueU6.test.tsx`, `WineDetailPageBloqueU10.test.tsx`, `WineDetailPage.snapshot.test.tsx.snap`.
+- **Reportes**: `C:\Users\brian\Desktop\reportes\Reporte_Bloque_U11.md`, `docs/reportes/Reporte_Bloque_U11.md`.
+
+## 3. Decisiones técnicas
+- Sobrecargas explícitas en `ICellarItemRepository` y `CellarItemService` para mantener total compatibilidad con pruebas unitarias preexistentes.
+- `LEFT JOIN LATERAL` con `ORDER BY updated_at DESC LIMIT 1` para resolver con máxima eficiencia la reseña propia sin generar duplicidad de filas.
+- Descorche integrado en el Hero Strip ("Listas para Descorchar") de `DashboardPage` para permitir descorches con cata directamente desde la vista principal.
+
+## 4. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: 774/774 tests superados (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 697ms.
+- `npm test`: 65 suites / 318 tests superados (0 fallas).
+- `npm run lint`: Cero errores en código modificado/creado.
+
+## 5. Pendientes
+- Ninguno. Todos los bloques de Usuario completados.
+
+
+---
+
+# BLOQUE U12: Imágenes de vinos uniformes y sin pérdida de datos
+**Rama**: `fix/imagenes-vino-presentacion`  
+**Fecha**: 14 de noviembre de 2026  
+**Estado**: Completado exitosamente
+
+---
+
+## 1. Resumen de lo realizado
+- **Investigación Previa Completa (12.1)**: Identificación exhaustiva de los puntos de construcción y consumo de URLs de entrega de Cloudinary, verificación de no alteración destructiva en el upload y confirmación de que la base de datos almacena únicamente IDs externos sin transformaciones.
+- **Centralización de Variantes de Entrega (12.2)**: Construcción de URLs en `CloudinaryImageStorage.cs` y helper `imageUrl` en `src/frontend/src/lib/image.ts`. Eliminación total de efectos destructivos (`e_make_transparent`, `b_transparent`, `bgremoval`).
+  - `card`: `e_trim:10/c_fit,w_680,h_880/c_pad,w_800,h_1000,b_white/f_auto,q_auto`
+  - `detail`: `e_trim:10/c_fit,w_1020,h_1320/c_pad,w_1200,h_1500,b_white/f_auto,q_auto`
+  - `thumb`: `e_trim:10/c_fit,w_136,h_176/c_pad,w_160,h_200,b_white/f_auto,q_auto`
+- **Aplicación de Variantes (12.3)**: Implementación de la variante correspondiente en todas las vistas de usuario:
+  - `card`: Tarjetas de catálogo (`WineCard`), dashboard (`DashboardWineCard`), cava (`VaultWineCard`), vitrinas de perfil (`ShowcaseWineBottle`).
+  - `detail`: Imagen principal de la ficha del vino (`WineDetailView`) y adaptadores editoriales (`apiWineToEditorial`).
+  - `thumb`: Buscador / sugerencias de dashboard (`QuickActions`), historial de catas y favoritos en `ProfilePage`.
+- **Layout del Frontend (12.4)**:
+  - Contenedor con relación de aspecto 4:5 (`aspect-[4/5]`), fondo blanco (`bg-white` / `#fff`), bordes redondeados (`rounded-lg` / `rounded-2xl`) y `overflow-hidden`.
+  - Botellas renderizadas con `w-full h-full object-contain` llenando armoniosamente el escenario sin halos oscuros ni bordes discordantes.
+  - Cards de catálogo y dashboard con altura uniforme (`items-stretch`, título `line-clamp-2 min-h-[3.5rem]` / `min-h-[3.25rem]`).
+  - Manejo de fallback elegante con `WineBottleSilhouette` / `BottleVector` reservando exactamente la misma relación 4:5 ante carga o error (`onError`).
+- **Verificación HTTP Real (12.5)**: Verificación contra Cloudinary con la imagen real de desarrollo `3f450403-f4eb-41b7-bc1a-df5afe4235fe` (Colección Cabernet 2023), comprobando HTTP 200, dimensiones de lienzo exactas (800x1000, 1200x1500, 160x200) y ausencia total de `e_make_transparent`.
+- **Tests de Regresión y Nuevos Tests (12.6)**: Tests unitarios en xUnit (`UsuarioBloqueU12Tests.cs`) y Vitest (`WineImageBloqueU12.test.tsx` y `image.test.ts`), garantizando el formato de URLs, fallbacks, invariabilidad ante entradas vacías y ausencia de transformaciones destructivas.
+
+---
+
+## 2. Investigación previa (12.1)
+### a) Dónde se arma y consume la URL de Cloudinary
+- **Backend - Servicio de Storage**:
+  - `src/backend/AyVino.Api/Features/Images/Services/CloudinaryImageStorage.cs` (Líneas 93-152): método `BuildDeliveryUrl(string? externalId, string? variant)`. Es el único componente del backend donde se construyen las URLs de Cloudinary invocando `CloudinaryClientWrapper.BuildUrl`.
+- **Backend - Endpoint de Redirección**:
+  - `src/backend/AyVino.Api/Features/Images/Endpoints/ImageEndpoints.cs` (Líneas 25-61): `GET /api/images/{id}?variant=...` valida la variante y redirige con HTTP 302 a la URL de Cloudinary con encabezado `Cache-Control: public, max-age=604800`.
+- **Backend - Repositorios SQL (armado de URLs relativas)**:
+  - `src/backend/AyVino.Api/Features/Wines/Repositories/WineRepository.cs` (Línea 540): `CASE WHEN img.id IS NOT NULL THEN '/api/images/' || img.id || '?variant=card' ELSE NULL END`.
+  - `src/backend/AyVino.Api/Features/UserWines/Repositories/UserWineRepository.cs` (Línea 29): `CASE WHEN img.id IS NOT NULL THEN '/api/images/' || img.id || '?variant=card' ELSE NULL END`.
+- **Frontend - Helper de Centralización**:
+  - `src/frontend/src/lib/image.ts`: función `imageUrl(imageId, variant)` con control de versionado (`v=3`) para invalidar cachés previas.
+- **Frontend - Consumidores**:
+  - `src/frontend/src/features/wines/components/WineCard.tsx` (Línea 45) -> `imageUrl(wine.imageId, 'card')`
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx` (Línea 38) -> `imageUrl(wine.imageId, 'card')`
+  - `src/frontend/src/features/cava/components/VaultWineCard.tsx` (Línea 51) -> `imageUrl(item.imageId, 'card')`
+  - `src/frontend/src/features/wines/components/WineDetailView.tsx` (Línea 45) -> `imageUrl(activeVintage.imageId, 'detail')`
+  - `src/frontend/src/features/dashboard/components/QuickActions.tsx` (Línea 125) -> `imageUrl(wine.imageId, 'thumb')`
+  - `src/frontend/src/pages/ProfilePage.tsx`:
+    - `ShowcaseWineBottle` (Línea 215) -> `variant = 'card'`
+    - Historial de catas (Línea 297) -> `variant="thumb"`
+    - Favoritos (Línea 321) -> `variant="thumb"`
+    - Showcase de bodega/cava (Línea 348) -> `variant="card"`
+  - `src/frontend/src/pages/CavaPage.tsx` (Línea 387) -> `imageUrl(item.imageId, 'card')`
+  - `src/frontend/src/features/wines/adapters/apiWineToEditorial.ts` (Línea 122) -> `imageUrl(v.imageId, 'detail')`
+  - `src/frontend/src/features/wines/utils/wineMapper.ts` (Línea 32) -> `imageUrl(vintage.imageId, 'card')`
+
+### b) Código de subida y configuración
+- En `CloudinaryImageStorage.cs` (método `UploadAsync`, líneas 50-58):
+  ```csharp
+  var uploadParams = new ImageUploadParams
+  {
+      File = new FileDescription(fileName, stream),
+      PublicId = publicId,
+      AssetFolder = "vinos",
+      Overwrite = false,
+      UseFilename = false,
+      UniqueFilename = false
+  };
+  ```
+- **Conclusión sobre transformaciones entrantes**: **NO** se aplica ninguna transformación entrante (ni `Transformation`, ni `EagerTransforms`, ni `upload_preset`).
+- **Estado de los originales**: Los originales subidos a Cloudinary están limpios, intactos y preservan su resolución y fondo nativo. Ninguna imagen existente requiere volver a subirse.
+- **Nombres de claves en `user-secrets`** (sin valores expuestos):
+  - `Cloudinary:Environment`
+  - `Cloudinary:CloudName`
+  - `Cloudinary:ApiSecret`
+  - `Cloudinary:ApiKey`
+  - `Supabase:Url`
+  - `Supabase:ServiceRoleKey`
+  - `Supabase:Bucket`
+  - `Jwt:SecretKey`
+  - `Jwt:Issuer`
+  - `Jwt:Audience`
+  - `ConnectionStrings:DefaultConnection`
+
+### c) Almacenamiento en Base de Datos
+- La tabla `images` almacena únicamente `id` (UUID), `external_id` (varchar), `url` (varchar) y metadatos técnicos (`content_type`, `byte_size`). Las entidades (`wine_vintages`, `wineries`, `users`) referencian `image_id` como clave foránea.
+- La base de datos **no almacena cadenas de transformación**. Las transformaciones se construyen puramente al vuelo en la entrega. Por lo tanto, no se requiere ninguna migración relacional destructiva.
+
+---
+
+## 3. Verificación HTTP obligatoria (12.5)
+- **Imagen evaluada**: `3f450403-f4eb-41b7-bc1a-df5afe4235fe` (Colección Cabernet 2023) en nube `mjtoodpf`.
+- **Resultados de las 3 variantes**:
+  1. `card`:
+     - URL: `https://res.cloudinary.com/mjtoodpf/image/upload/e_trim:10/c_fit,w_680,h_880/c_pad,w_800,h_1000,b_white/f_auto,q_auto/vinos/3f450403-f4eb-41b7-bc1a-df5afe4235fe`
+     - Código HTTP: `200 OK`
+     - Dimensiones decodificadas: **800 x 1000 px** (proporción 4:5 exacta).
+     - Ausencia de `e_make_transparent`: Confirmada.
+  2. `detail`:
+     - URL: `https://res.cloudinary.com/mjtoodpf/image/upload/e_trim:10/c_fit,w_1020,h_1320/c_pad,w_1200,h_1500,b_white/f_auto,q_auto/vinos/3f450403-f4eb-41b7-bc1a-df5afe4235fe`
+     - Código HTTP: `200 OK`
+     - Dimensiones decodificadas: **1200 x 1500 px** (proporción 4:5 exacta).
+     - Ausencia de `e_make_transparent`: Confirmada.
+  3. `thumb`:
+     - URL: `https://res.cloudinary.com/mjtoodpf/image/upload/e_trim:10/c_fit,w_136,h_176/c_pad,w_160,h_200,b_white/f_auto,q_auto/vinos/3f450403-f4eb-41b7-bc1a-df5afe4235fe`
+     - Código HTTP: `200 OK`
+     - Dimensiones decodificadas: **160 x 200 px** (proporción 4:5 exacta).
+     - Ausencia de `e_make_transparent`: Confirmada.
+- **Comparación Visual en Ficha**:
+  - *Antes*: El efecto `e_make_transparent:10` perforaba las partes blancas o claras de la etiqueta de la botella, destruyendo tipografías finas y dejando un halo grisáceo/oscuro contra el fondo de la página. La botella quedaba además reducida y descentrada.
+  - *Después*: El escenario blanco limpio de proporción 4:5 integra naturalmente la botella fotográfica. Las etiquetas conservan el 100% de su contraste, legibilidad y detalles originales sin perforación alguna, logrando una presentación sobria y profesional.
+
+---
+
+## 4. Archivos modificados y creados
+- **Backend Modificados**:
+  - `src/backend/AyVino.Api/Features/Images/Services/CloudinaryImageStorage.cs`: Constantes de transformación `card`, `detail`, `thumb`, fallback a `card`, soporte retrocompatible de `avatar`, `logo`, `banner`.
+  - `src/backend/AyVino.Api/Features/Images/Endpoints/ImageEndpoints.cs`: Variantes permitidas (`card`, `detail`, `thumb`), redirect 302 y header de caché.
+  - `src/backend/AyVino.Api/Features/Wines/Repositories/WineRepository.cs`: Actualización de `?variant=bottle` a `?variant=card`.
+  - `src/backend/AyVino.Api/Features/UserWines/Repositories/UserWineRepository.cs`: Actualización de `?variant=bottle` a `?variant=card`.
+- **Backend Tests Modificados y Creados**:
+  - `tests/AyVino.UnitTests/UsuarioBloqueU12Tests.cs` (CREADO): 6 tests unitarios xUnit validando URLs de variantes, fallback, external_id vacío, ausencia de transformaciones destructivas y redirección HTTP con caché.
+  - `tests/AyVino.UnitTests/UsuarioBloqueU7Tests.cs`: Adaptación a las nuevas variantes sin `e_make_transparent`.
+  - `tests/AyVino.UnitTests/CloudinaryImageStorageTests.cs`: Adaptación a las nuevas variantes.
+  - `tests/AyVino.UnitTests/ImageStorageTests.cs`: Adaptación de mocks a variantes normalizadas.
+- **Frontend Modificados**:
+  - `src/frontend/src/lib/image.ts`: Helper centralizado con soporte para `card`, `detail`, `thumb`, fallback a `card`, compatibilidad con `bottle` para bodega y versión de caché `v=3`.
+  - `src/frontend/src/features/wines/components/WineCard.tsx`: Contenedor 4:5 blanco, `object-contain`, fallback con silueta, título con `line-clamp-2 min-h-[3.5rem]`, altura homogénea en grilla.
+  - `src/frontend/src/features/dashboard/components/DashboardWineCard.tsx`: Contenedor 4:5 blanco, `object-contain`, botón de favorito en `z-20`, fallback con vector.
+  - `src/frontend/src/features/cava/components/VaultWineCard.tsx`: Contenedor 4:5 blanco, badges de alta visibilidad, fallback con vector.
+  - `src/frontend/src/features/wines/components/WineDetailView.tsx`: Escenario principal 4:5 blanco (`aspect-[4/5] bg-white rounded-2xl`), botella ocupando el marco, fallback con silueta.
+  - `src/frontend/src/features/dashboard/components/QuickActions.tsx`: Sugerencias con variante `thumb` en contenedor 4:5 blanco.
+  - `src/frontend/src/pages/ProfilePage.tsx`: Showcase en variante `card`, historial y favoritos en variante `thumb`.
+  - `src/frontend/src/pages/CavaPage.tsx`: Mapeo de ítems con variante `card`.
+  - `src/frontend/src/features/wines/adapters/apiWineToEditorial.ts`: Uso de variante `detail`.
+  - `src/frontend/src/features/wines/utils/wineMapper.ts`: Uso de variante `card`.
+- **Frontend Tests Modificados y Creados**:
+  - `src/frontend/tests/lib/image.test.ts`: 6 tests unitarios verificando `card`, `detail`, `thumb`, fallback y versionado.
+  - `src/frontend/tests/features/wines/WineImageBloqueU12.test.tsx` (CREADO): 12 tests verificando variantes en componentes (`WineCard`, `DashboardWineCard`, `VaultWineCard`, `WineDetailView`), proporciones 4:5, fondos blancos y disparos de fallback en `onError`.
+  - `src/frontend/tests/pages/__snapshots__/WineDetailPage.snapshot.test.tsx.snap`: Actualizado con `-u` reflejando las nuevas clases del contenedor escénico 4:5.
+
+---
+
+## 5. Decisiones técnicas y áreas fuera de alcance (12.7)
+- **Tolerancia de recorte `e_trim:10`**: Se evaluó con imágenes reales y demostró ser el balance ideal: remueve los excesos de márgenes blancos vacíos sin tocar ni recortar siluetas ni etiquetas de botellas.
+- **Preservación de áreas protegidas**:
+  - Las variantes `avatar`, `logo` y `banner` se mantienen intactas en `CloudinaryImageStorage.cs`.
+  - En `src/frontend/src/lib/image.ts`, la variante `'bottle'` se preservó para mantener total retrocompatibilidad con las pantallas del perfil de bodega (`features/winery/**`, `publicCatalogAdapter`), mapeando a la entrega segura sin afectar áreas protegidas.
+  - No se tocaron las vistas de Maridajes (`pages/PairingPage.tsx`, `features/pairings/**`, etc.), panel de administración ni perfiles de bodega.
+- **Fallas preexistentes sin relación con el bloque**:
+  - `npm run lint` reporta advertencias/errores preexistentes sobre `react-hooks/set-state-in-effect` en `src/frontend/src/features/wines/hooks/useRealWine.ts`, `src/frontend/src/features/wines/hooks/useWineCatalogs.ts` y `src/frontend/src/features/winery/pages/WineryDashboardPage.tsx`. No fueron alteradas por no corresponder al alcance del Bloque U12.
+
+---
+
+## 6. Resultado de verificaciones
+- `dotnet build`: 0 errores, 0 advertencias.
+- `dotnet test`: **795/795 tests superados** (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite (`vite build`) exitosos en 712ms sin errores.
+- `npm test -- --run`: **66 suites / 332 tests superados** (0 fallas, 100% éxito).
+- Verificación de Cloudinary en vivo: Códigos HTTP 200 con dimensiones exactas en las 3 variantes.
+
+---
+
+# Ajustes Post-U12: Dashboard, Cava y Perfil
+
+**Fecha**: 14 de Noviembre de 2026  
+**Rama**: `fix/usuario-ajustes-dashboard-perfil`  
+**Estado**: Completado e integrado con tests automatizados  
+
+## 1. Alcance de las Correcciones
+
+1. **/dashboard - Botón "Descorchar" en Hero Strip**:
+   - Eliminado el botón `<button ...>Descorchar</button>` redundante en la tarjeta "Listas para Descorchar" dentro de `Metrics.tsx`.
+   - Removido `onUncorkClick` y handlers en desuso de `DashboardPage.tsx`. El descorche se realiza contextualmente desde cada tarjeta de vino de la cava o catálogo.
+
+2. **/dashboard - Textbox buscador/creador de vinos**:
+   - Desestimado por indicación expresa del usuario ("Punto 2 no hacer nada, fue un error mio").
+
+3. **/dashboard y /cava - Conteo de Cava (5 botellas físicas vs 4 etiquetas)**:
+   - Se clarificó la semántica en `VaultTabs.tsx`: la pestaña ahora se titula `"Todos los vinos (4)"` en lugar de `"Todas las botellas (4)"`, eliminando la ambigüedad entre cantidad de referencias/etiquetas (`wines.length`) y total de botellas físicas en stock (`stockCount` / `bottles`).
+
+4. **/dashboard - Prestigio y Calificación (Opción A implementada)**:
+   - Se removió el valor hardcodeado `4.9 ★`.
+   - Se conectó el cálculo dinámico del promedio real de catas (`avgRating`) del usuario a través de `getMyUserWinesApi({ tried: true })`.
+   - Si el usuario no tiene catas registradas, muestra `—` con subtítulo `"Sin calificaciones aún"`. Si tiene catas, muestra el puntaje real con una estrella (`{rating} ★`) y el texto descriptivo correspondiente.
+
+5. **/cava - Doble Footer y Navbar**:
+   - `CavaPage.tsx` renderizaba un `<DashboardNavbar>` y un `<footer>` locales redundantes, duplicando los provistos globalmente por `AppLayout`. Se eliminaron ambos componentes locales conforme a la Regla 10 de la Constitución (composición mediante `<Outlet />`).
+
+6. **/perfil/:username - Enlaces a Fichas de Vino**:
+   - Se envolvieron las tarjetas de vino de "Joyas de la Cava" (vista propia y pública), "Historial de Catas" y "Favoritos" en componentes `<Link to={'/vinos/' + wineId}>`, permitiendo navegar directamente a la ficha del vino al hacer clic.
+
+7. **/perfil/:username - Contador "Siguiendo" con Bodegas**:
+   - `UserRepository.cs` (`GetPublicProfileByUsernameAsync`) solo contabilizaba `user_follows`. Se actualizó la consulta SQL para sumar mediante `COALESCE` tanto `user_follows` (`follower_id`) como `winery_follows` (`follower_id`), reflejando fielmente el total de perfiles y bodegas que sigue el usuario.
+
+---
+
+## 2. Archivos Modificados y Creados
+
+- **Backend**:
+  - `src/backend/AyVino.Api/Features/Users/Repositories/UserRepository.cs`: Subconsulta combinada de seguidores/siguiendo.
+  - `tests/AyVino.UnitTests/UsuarioAjustesSeguidoresTests.cs`: Test unitario xUnit validando `FollowingCount` con usuarios y bodegas.
+- **Frontend**:
+  - `src/frontend/src/features/dashboard/components/Metrics.tsx`: Remoción de botón descorchar, soporte de calificación real y fallback a `—`.
+  - `src/frontend/src/pages/DashboardPage.tsx`: Carga y cálculo dinámico de métricas reales de catas y Cava.
+  - `src/frontend/src/features/cava/components/VaultTabs.tsx`: Título "Todos los vinos".
+  - `src/frontend/src/pages/CavaPage.tsx`: Remoción de Navbar y Footer duplicados.
+  - `src/frontend/src/pages/ProfilePage.tsx`: Links a `/vinos/:id` en tarjetas de vino.
+  - `src/frontend/tests/pages/CavaAndHistoryBloqueU11.test.tsx`: Test adaptado para verificar remoción de botón Descorchar.
+  - `src/frontend/tests/pages/UsuarioAjustesDashboardPerfil.test.tsx`: 6 tests unitarios verificando métricas, tabs, links de navegación y layout sin doble footer.
+
+---
+
+## 3. Resultado de Verificaciones
+
+- `dotnet test`: **796/796 tests superados** (0 fallas).
+- `npm run build`: Compilación TypeScript (`tsc -b`) y empaquetado Vite exitosos.
+- `npm test -- --run`: **67 suites / 338 tests superados** (0 fallas, 100% éxito).

@@ -304,9 +304,10 @@ Unifica las superficies, fondos y elevación visual en toda la aplicación, elim
   - Soporte de gestos táctiles (swipe) para pantallas móviles.
   - Elevación Nivel 1 refinada: `bg-[#131316]` con borde fino `border border-white/[0.07]`.
   - Microinteracción de elevación física en hover: `hover:border-white/[0.18] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 transition-all duration-300`.
-- **Recuadro Interior Rectangular (3:4) para Fotos de Vinos en Cards y Detalle**:
-  - En tarjetas de catálogo (`WineryBlock.tsx` y `DashboardWineCard.tsx`): Contenedor vertical proporcionado (`aspect-[3/4]`, `rounded-xl overflow-hidden`) donde las fotos completas subidas por las bodegas cubren el 100% del cuadro sin bordes residuales (`w-full h-full object-cover`), con micro-zoom al pasar el mouse (`hover:scale-105`), manteniendo la silueta vectorial centrada y protegida (`BottleVector`) en caso de ausencia de imagen.
-  - En la vista individual del vino (`WineDetailView.tsx`): Contenedor de estudio vertical estilizado y responsive (`w-full h-[460px] sm:h-[540px] max-h-[75vh] rounded-2xl shadow-2xl`) con fondo blanco estudio (`bg-white`) cuando hay imagen de botella para fusionar sin costuras las fotografías subidas por las bodegas y mostrar la botella completa de cápsula a base (`w-full h-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.25)]`), preservando el estado oscuro `#141417` para añadas sin imagen registrada.
+- **Escenario Blanco Fijo (4:5) para Botellas y Unificación de Componentes**:
+  - Homologación de tarjetas en catálogo y dashboard: se utiliza el mismo componente `DashboardWineCard.tsx` tanto en los bloques de bodega del dashboard (`WineryBlock.tsx`) como en el catálogo completo de la bodega (`/bodegas/:id/catalogo`).
+  - En tarjetas (`DashboardWineCard.tsx`): Escenario blanco en proporción fija 4:5 (`aspect-[4/5]`, `bg-white rounded-lg shadow-sm`) con entrega uniforme, imagen contenida (`object-contain`) con micro-zoom al hover (`group-hover:scale-105`), y fallback limpio (`BottleVector`) ante ausencia o error de carga de imagen (`data-testid="dashboard-card-image-container"`).
+  - En la vista individual del vino (`WineDetailView.tsx`): Contenedor de escenario blanco 4:5 (`w-full aspect-[4/5] bg-white rounded-2xl shadow-2xl`, `data-testid="wine-detail-stage"`) con imagen completa de botella (`object-contain`) y fallback `WineBottleSilhouette` con microtipografía editorial de añada en caso de no disponer de imagen o error de carga.
 - **Píldoras de Filtros con Contraste Editorial (`FilterChips.tsx`)**:
   - Activo ("TODOS"): `bg-rose-950/40 border border-rose-700/60 text-rose-200 shadow-sm`.
   - Inactivo: `border border-white/[0.08] hover:border-white/[0.16] text-neutral-400 hover:text-neutral-200`.

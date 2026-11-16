@@ -3,11 +3,13 @@ namespace AyVino.Api.Features.Images.Configuration;
 public class CloudinaryOptions
 {
     public const string SectionName = "Cloudinary";
+    public const int DefaultBottleBackgroundTolerance = 10;
 
     public string CloudName { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public string ApiSecret { get; set; } = string.Empty;
     public string Environment { get; set; } = "dev";
+    public int BottleBackgroundTolerance { get; set; } = DefaultBottleBackgroundTolerance;
 
     public void Validate()
     {

@@ -9,11 +9,11 @@ public interface IWineService
     Task<IEnumerable<WineResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default);
     Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default);
     Task<WineResponseDto> UpdateAsync(int id, UpdateWineRequestDto dto, Actor actor, CancellationToken ct = default);
-    Task DeleteAsync(int id, CancellationToken ct = default);
+    Task DeleteAsync(int id, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<WineResponseDto>> GetClaimCandidatesAsync(int wineryId, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<WineResponseDto>> ClaimWinesAsync(int wineryId, List<int> wineIds, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<WineResponseDto>> SearchAsync(string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default);
-    Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default);
+    Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default);
     Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default);
     Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, Actor actor, CancellationToken ct = default);
 }

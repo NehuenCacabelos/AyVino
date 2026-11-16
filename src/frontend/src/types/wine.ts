@@ -46,6 +46,7 @@ export interface CatalogWineItemDto {
   wineryId: number | null;
   wineryNameText: string | null;
   wineryName: string | null;
+  wineryLogoImageId?: string | null;
   name: string;
   description: string | null;
   wineType: WineTypeEnum | string;
@@ -103,6 +104,8 @@ export function resolveBottleKind(
 export function catalogWineToDashboardWine(item: CatalogWineItemDto): DashboardWine {
   return {
     id: String(item.id),
+    wineryId: item.wineryId ?? undefined,
+    wineryLogoImageId: item.wineryLogoImageId ?? undefined,
     name: item.name,
     winery: item.wineryName || item.wineryNameText || 'Bodega',
     region: item.regionName || 'Mendoza, Argentina',
@@ -177,6 +180,8 @@ export interface CuratedWine {
  */
 export interface DashboardWine {
   id?: string;
+  wineryId?: number;
+  wineryLogoImageId?: string;
   name: string;
   winery: string;
   region: string;
@@ -188,6 +193,9 @@ export interface DashboardWine {
   location?: string;
   isFavorite?: boolean;
   imageUrl?: string;
+  imageId?: string | null;
+  wineId?: number;
+  wineVintageId?: number;
 }
 
 /**
@@ -218,7 +226,7 @@ export interface CellarMetrics {
  */
 export interface UncorkSubmission {
   wine: DashboardWine;
-  rating: number;
+  rating: number | null;
   date: string;
   occasion: string;
   tastingNotes: string;

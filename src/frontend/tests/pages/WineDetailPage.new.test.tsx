@@ -480,4 +480,28 @@ describe('Alta de Vino Nuevo en Plantilla (Paso 3)', () => {
     // Se solicita confirmación
     expect(confirmSpy).toHaveBeenCalled();
   });
+
+  it('permite agregar la primera uva al 100% mediante el combobox de búsqueda', async () => {
+    renderComponent();
+
+    expect(screen.getByText('Agregá la primera uva')).toBeInTheDocument();
+
+    const searchInput = screen.getByRole('combobox', { name: /Buscar uva/i });
+    fireEvent.focus(searchInput);
+
+    // Al abrir el combobox, las uvas del catálogo se despliegan en el listbox
+    const malbecOption = await screen.findByRole('option', { name: /Malbec/i });
+    expect(malbecOption).toBeInTheDocument();
+    fireEvent.click(malbecOption);
+
+    // La guía 'Agregá la primera uva' desaparece
+    expect(screen.queryByText('Agregá la primera uva')).not.toBeInTheDocument();
+
+    // Se crea la fila con 100%
+    const percentageInput = screen.getByLabelText('Porcentaje de uva');
+    expect(percentageInput).toHaveValue(100);
+
+    // Total muestra 100%
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
 });

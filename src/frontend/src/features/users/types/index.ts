@@ -30,12 +30,17 @@ export interface UserWineListItemDto {
   wineType: string;
   wineryId?: number | null;
   wineryNameText?: string | null;
+  wineryName?: string | null;
+  vintage?: number | null;
+  imageUrl?: string | null;
   averageRating?: number | null;
   reviewCount: number;
   isWanted: boolean;
   isTried: boolean;
   isFavorite: boolean;
   lastChangeAt: string;
+  userRating?: number | null;
+  userComment?: string | null;
 }
 
 export interface CellarDto {

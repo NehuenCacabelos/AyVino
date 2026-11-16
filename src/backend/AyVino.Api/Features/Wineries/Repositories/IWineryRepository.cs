@@ -1,4 +1,5 @@
 using System.Data;
+using AyVino.Api.Features.Wineries.DTOs;
 using AyVino.Api.Features.Wineries.Models;
 
 namespace AyVino.Api.Features.Wineries.Repositories;
@@ -8,6 +9,7 @@ public interface IWineryRepository
     Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default);
     Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<WinerySuggestItemDto>> SuggestAsync(string searchKey, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<WinerySuggestItemDto>>(Array.Empty<WinerySuggestItemDto>());
     Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default);
     Task<bool> UpdateAsync(Winery winery, CancellationToken ct = default);
     Task<bool> UpdateLogoImageIdAsync(int wineryId, Guid? logoImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default) => Task.FromResult(true);

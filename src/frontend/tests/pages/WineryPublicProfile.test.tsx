@@ -282,7 +282,7 @@ describe('WineryPublicProfile Integration Flow', () => {
     expect(screen.getByText('120')).toBeInTheDocument();
   });
 
-  it('pestaña catálogo renderiza tarjetas y abre modal provisorio con punto de entrada único', async () => {
+  it('pestaña catálogo renderiza tarjetas del dashboard enlazando a /vinos/:id sin modal provisorio', async () => {
     render(
       <MemoryRouter initialEntries={['/bodegas/1/catalogo']}>
         <Routes>
@@ -297,22 +297,12 @@ describe('WineryPublicProfile Integration Flow', () => {
       expect(screen.getByText('Catena Zapata Malbec Argentino')).toBeInTheDocument();
     });
 
-    // Clic en la tarjeta de vino (punto de entrada único onSelectWine)
-    const wineCard = screen.getByTestId('catalog-card-101');
-    fireEvent.click(wineCard);
+    // Enlace de la tarjeta lleva a /vinos/101
+    const link = screen.getByRole('link', { name: /Catena Zapata Malbec Argentino/i });
+    expect(link).toHaveAttribute('href', '/vinos/101');
 
-    // Modal provisorio abierto
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
-
-    // Cerrar modal provisorio
-    const closeBtn = screen.getByRole('button', { name: /cerrar modal/i });
-    fireEvent.click(closeBtn);
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
+    // No existe ningún modal provisorio abierto
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renderiza correctamente textos de valoración para 0, 1, 4 y 5 reseñas según el umbral', async () => {

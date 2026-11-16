@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Cellars.DTOs;
 
 public record PublicCellarItemResponseDto(
@@ -9,5 +12,5 @@ public record PublicCellarItemResponseDto(
     string? WineryNameText,
     int? Year,
     Guid? ImageId,
-    decimal? AverageRating,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating,
     int ReviewCount);

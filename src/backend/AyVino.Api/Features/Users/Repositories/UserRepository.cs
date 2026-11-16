@@ -9,16 +9,17 @@ namespace AyVino.Api.Features.Users.Repositories;
 public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
 {
     private const string SelectUserColumns = """
-        id, username, email, role, register_date AS RegisterDate, is_active AS IsActive,
-        avatar_image_id AS AvatarImageId, bio
+        u.id, u.username, u.email, u.role, u.register_date AS RegisterDate, u.is_active AS IsActive,
+        u.avatar_image_id AS AvatarImageId, u.bio,
+        (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.user_id = u.id) AS AverageRating
         """;
 
     public async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         const string sql = $"""
             SELECT {SelectUserColumns}
-            FROM users
-            WHERE id = @Id;
+            FROM users u
+            WHERE u.id = @Id;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -30,8 +31,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     {
         const string sql = $"""
             SELECT {SelectUserColumns}
-            FROM users
-            WHERE LOWER(email) = LOWER(@Email);
+            FROM users u
+            WHERE LOWER(u.email) = LOWER(@Email);
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -43,8 +44,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     {
         const string sql = $"""
             SELECT {SelectUserColumns}
-            FROM users
-            WHERE LOWER(username) = LOWER(@Username);
+            FROM users u
+            WHERE LOWER(u.username) = LOWER(@Username);
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
@@ -64,18 +65,26 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                        SELECT COUNT(DISTINCT ci.wine_vintage_id)
                        FROM cellars c
                        JOIN cellar_items ci ON ci.cellar_id = c.id
-                       WHERE c.user_id = u.id
+                       WHERE c.user_id = u.id AND ci.quantity > 0
                    ), 0)::int AS CellarWinesCount,
                    COALESCE((
                        SELECT COUNT(*)
                        FROM user_follows uf
                        WHERE uf.followed_user_id = u.id
                    ), 0)::int AS FollowersCount,
-                   COALESCE((
-                       SELECT COUNT(*)
-                       FROM user_follows uf
-                       WHERE uf.follower_id = u.id
-                   ), 0)::int AS FollowingCount
+                   (
+                       COALESCE((
+                           SELECT COUNT(*)
+                           FROM user_follows uf
+                           WHERE uf.follower_id = u.id
+                       ), 0) +
+                       COALESCE((
+                           SELECT COUNT(*)
+                           FROM winery_follows wf
+                           WHERE wf.follower_id = u.id
+                       ), 0)
+                   )::int AS FollowingCount,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.user_id = u.id) AS AverageRating
             FROM users u
             WHERE LOWER(u.username) = LOWER(@Username) AND u.is_active = true;
             """;
@@ -89,8 +98,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
     {
         const string sql = $"""
             SELECT {SelectUserColumns}
-            FROM users
-            ORDER BY id ASC
+            FROM users u
+            ORDER BY u.id ASC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
