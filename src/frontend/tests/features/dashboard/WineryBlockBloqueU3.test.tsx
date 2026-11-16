@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import WineryBlock from '@/features/dashboard/components/WineryBlock';
@@ -264,5 +264,96 @@ describe('Bloque U3 - WineryBlock Component', () => {
     expect(pedroGroup).toBeDefined();
     expect(pedroGroup?.wineryId).toBeUndefined();
     expect(pedroGroup?.wines).toHaveLength(1);
+  });
+
+  it('renderiza el contenedor data-testid="dashboard-card-image-container" por cada vino, el botón favorito alterna el estado y llama a onToggleFavorite, y "Añadir a Cava" llama a onAddToCellar', () => {
+    const handleToggleFavorite = vi.fn();
+    const handleAddToCellar = vi.fn();
+
+    const sampleWines: DashboardWine[] = [
+      {
+        id: '101',
+        wineryId: 42,
+        name: 'Gran Reserva Malbec',
+        winery: 'Bodega Catena Zapata',
+        region: 'Mendoza, Argentina',
+        varietal: 'Malbec',
+        vintage: '2020',
+        rating: 4.8,
+        bottle: 'bordeaux',
+        isFavorite: false,
+      },
+      {
+        id: '102',
+        wineryId: 42,
+        name: 'Adrianna Vineyard Chardonnay',
+        winery: 'Bodega Catena Zapata',
+        region: 'Mendoza, Argentina',
+        varietal: 'Chardonnay',
+        vintage: '2021',
+        rating: 4.9,
+        bottle: 'burgundy',
+        isFavorite: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <WineryBlock
+          wineryId={42}
+          name="Bodega Catena Zapata"
+          region="Mendoza, Argentina"
+          initials="CZ"
+          total={2}
+          wines={sampleWines}
+          onAddToCellar={handleAddToCellar}
+          onToggleFavorite={handleToggleFavorite}
+        />
+      </MemoryRouter>,
+    );
+
+    // 1. Renderiza el contenedor data-testid="dashboard-card-image-container" por cada vino
+    const imageContainers = screen.getAllByTestId('dashboard-card-image-container');
+    expect(imageContainers).toHaveLength(2);
+
+    // 2. Botón favorito alterna el estado y llama a onToggleFavorite
+    const favButton1 = screen.getByRole('button', { name: /Añadir Gran Reserva Malbec a favoritos/i });
+    expect(favButton1).toBeInTheDocument();
+
+    // Primer click: alterna a true y llama a onToggleFavorite
+    fireEvent.click(favButton1);
+    expect(handleToggleFavorite).toHaveBeenCalledTimes(1);
+    expect(handleToggleFavorite).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '101', name: 'Gran Reserva Malbec' }),
+      true,
+    );
+
+    // El botón se actualiza optimistamente en el DOM
+    const unfavButton1 = screen.getByRole('button', { name: /Quitar Gran Reserva Malbec de favoritos/i });
+    expect(unfavButton1).toBeInTheDocument();
+
+    // Segundo click: alterna a false y llama a onToggleFavorite
+    fireEvent.click(unfavButton1);
+    expect(handleToggleFavorite).toHaveBeenCalledTimes(2);
+    expect(handleToggleFavorite).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '101', name: 'Gran Reserva Malbec' }),
+      false,
+    );
+
+    // 3. "Añadir a Cava" llama a onAddToCellar
+    const addToCellarButtons = screen.getAllByRole('button', { name: /Añadir a Cava/i });
+    expect(addToCellarButtons).toHaveLength(2);
+
+    fireEvent.click(addToCellarButtons[0]);
+    expect(handleAddToCellar).toHaveBeenCalledTimes(1);
+    expect(handleAddToCellar).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '101', name: 'Gran Reserva Malbec' }),
+    );
+
+    fireEvent.click(addToCellarButtons[1]);
+    expect(handleAddToCellar).toHaveBeenCalledTimes(2);
+    expect(handleAddToCellar).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '102', name: 'Adrianna Vineyard Chardonnay' }),
+    );
   });
 });

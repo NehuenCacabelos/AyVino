@@ -1,18 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CavaPage from '@/pages/CavaPage';
 import WineDetailPage from '@/pages/WineDetailPage';
 import UncorkDialog from '@/features/dashboard/components/UncorkDialog';
 import VaultVitals from '@/features/cava/components/VaultVitals';
 import * as reviewsApi from '@/features/wines/api/reviewsApi';
-import * as uncorksApi from '@/features/wines/api/uncorksApi';
 import * as wineApi from '@/features/winery/api/wineApi';
 import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as pairingsApi from '@/features/winery/api/wineryWinePairingsApi';
 import * as grapeApi from '@/features/winery/api/grapeApi';
 import { apiClient } from '@/services/apiClient';
-import type { CellarVitals, CellarWine } from '@/features/cava/types';
+import type { CellarVitals } from '@/features/cava/types';
 import type { DashboardWine } from '@/types/wine';
 
 vi.mock('@/features/auth', () => ({
