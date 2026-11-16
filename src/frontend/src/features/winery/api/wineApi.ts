@@ -160,3 +160,11 @@ export async function updateWineVintage(
   return response.data;
 }
 
+/**
+ * Elimina una cosecha puntual de una etiqueta de vino.
+ */
+export async function deleteWineVintage(wineId: number, vintageId: number): Promise<void> {
+  await apiClient.delete<void>(`/wines/${wineId}/vintages/${vintageId}`);
+}
+
+

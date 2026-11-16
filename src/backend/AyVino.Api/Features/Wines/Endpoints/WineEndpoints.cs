@@ -39,12 +39,12 @@ public static class WineEndpoints
             .WithSummary("Updates a wine label's data (name, type, winery, location, description).")
             .WithAudit(AuditAction.WineUpdatedByAdmin, "Wine", idRouteKey: "id", adminOnly: true, details: (ctx, res) => ctx.Arguments.OfType<UpdateWineRequestDto>().FirstOrDefault()?.Name);
 
-        group.MapDelete("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
+        group.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
         {
-            await service.DeleteAsync(id, ct);
+            await service.DeleteAsync(id, user.GetActor(), ct);
             return Results.NoContent();
         })
-            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .RequireAuthorization()
             .WithName("DeleteWine")
             .WithSummary("Deletes a wine label and all of its vintages (cascade).")
             .WithAudit(AuditAction.WineDeleted, "Wine", idRouteKey: "id");

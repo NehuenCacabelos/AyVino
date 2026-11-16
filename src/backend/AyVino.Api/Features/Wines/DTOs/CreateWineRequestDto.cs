@@ -11,4 +11,5 @@ public record CreateWineRequestDto(
     [property: Range(1, int.MaxValue, ErrorMessage = "El id de la bodega debe ser mayor a 0.")] int? WineryId = null,
     [property: StringLength(150, ErrorMessage = "El nombre de la bodega no puede superar los 150 caracteres.")] string? WineryNameText = null,
     [property: StringLength(1000, ErrorMessage = "La descripción no puede superar los 1000 caracteres.")] string? Description = null,
-    [property: Range(1, int.MaxValue, ErrorMessage = "El id de la ubicación debe ser mayor a 0.")] int? LocationId = null);
+    [property: Range(1, int.MaxValue, ErrorMessage = "El id de la ubicación debe ser mayor a 0.")] int? LocationId = null,
+    bool ConfirmNewLabel = false);

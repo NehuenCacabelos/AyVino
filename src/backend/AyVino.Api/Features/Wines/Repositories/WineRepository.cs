@@ -115,7 +115,45 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-    public async Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default)
+    public static int? GetMainGrapeId(IEnumerable<WineGrape>? grapes)
+    {
+        if (grapes == null) return null;
+        var list = grapes as IReadOnlyCollection<WineGrape> ?? grapes.ToList();
+        if (list.Count == 0) return null;
+        return list
+            .OrderByDescending(g => g.Percentage.HasValue)
+            .ThenByDescending(g => g.Percentage ?? 0m)
+            .ThenBy(g => g.GrapeId)
+            .First()
+            .GrapeId;
+    }
+
+    private sealed record CandidateVintageRow
+    {
+        public int Id { get; init; }
+        public int WineId { get; init; }
+        public int? Year { get; init; }
+        public short ApprovalStatus { get; init; }
+        public int? MainGrapeId { get; init; }
+        public string? MainGrapeName { get; init; }
+
+        public CandidateVintageRow() { }
+
+        public CandidateVintageRow(int id, int wineId, int? year, short approvalStatus, int? mainGrapeId, string? mainGrapeName)
+        {
+            Id = id;
+            WineId = wineId;
+            Year = year;
+            ApprovalStatus = approvalStatus;
+            MainGrapeId = mainGrapeId;
+            MainGrapeName = mainGrapeName;
+        }
+    }
+
+    public Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct) =>
+        CreateWithFirstVintageAsync(wine, firstVintage, grapes, false, ct);
+
+    public async Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, bool confirmNewLabel = false, CancellationToken ct = default)
     {
         var (nameKey, wineryTextKey) = WineLabelNormalizer.ComputeWineKeys(wine.Name, wine.WineryNameText);
         const string insertWineSql = """
@@ -156,41 +194,105 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             var candidates = (await connection.QueryAsync<Wine>(
                 new CommandDefinition(findWinesSql, new { WineryId = wine.WineryId.Value, WineType = (int)wine.WineType }, transaction: transaction, cancellationToken: ct))).ToList();
 
-            var existingWine = candidates.FirstOrDefault(c => WineLabelNormalizer.Normalize(c.Name) == normalizedName);
-            if (existingWine != null)
+            var matchingCandidates = candidates.Where(c => WineLabelNormalizer.Normalize(c.Name) == normalizedName).ToList();
+            if (matchingCandidates.Count > 0)
             {
-                const string findVintagesSql = """
-                    SELECT id, wine_id, year, approval_status
-                    FROM wine_vintages
-                    WHERE wine_id = @WineId;
+                var newVintageMainGrapeId = GetMainGrapeId(grapes);
+                var candidateIds = matchingCandidates.Select(c => c.Id).ToArray();
+
+                const string findCandidateVintagesSql = """
+                    SELECT 
+                        wv.id AS Id,
+                        wv.wine_id AS WineId,
+                        wv.year AS Year,
+                        wv.approval_status AS ApprovalStatus,
+                        mg.grape_id AS MainGrapeId,
+                        mg.grape_name AS MainGrapeName
+                    FROM wine_vintages wv
+                    LEFT JOIN LATERAL (
+                        SELECT wg.grape_id, g.name AS grape_name
+                        FROM wine_grapes wg
+                        INNER JOIN grapes g ON g.id = wg.grape_id
+                        WHERE wg.wine_vintage_id = wv.id
+                        ORDER BY wg.percentage DESC NULLS LAST, wg.grape_id ASC
+                        LIMIT 1
+                    ) mg ON TRUE
+                    WHERE wv.wine_id = ANY(@CandidateIds)
+                    ORDER BY wv.year DESC NULLS LAST, wv.id DESC;
                     """;
 
-                var vintages = (await connection.QueryAsync<WineVintage>(
-                    new CommandDefinition(findVintagesSql, new { WineId = existingWine.Id }, transaction: transaction, cancellationToken: ct))).ToList();
+                var candidateVintages = (await connection.QueryAsync<CandidateVintageRow>(
+                    new CommandDefinition(findCandidateVintagesSql, new { CandidateIds = candidateIds }, transaction: transaction, cancellationToken: ct))).ToList();
 
-                var existingVintage = firstVintage.Year.HasValue
-                    ? vintages.FirstOrDefault(v => v.Year == firstVintage.Year)
-                    : null;
-
-                if (existingVintage != null)
+                void ThrowConflict(Wine targetWine, List<CandidateVintageRow> targetVintages)
                 {
+                    var existingVintageSummaries = targetVintages
+                        .OrderByDescending(v => v.Year.HasValue)
+                        .ThenByDescending(v => v.Year)
+                        .Select(v => new ExistingVintageSummaryDto(v.Year, v.MainGrapeId, v.MainGrapeName))
+                        .ToList();
+
+                    var existingVintage = firstVintage.Year.HasValue
+                        ? targetVintages.FirstOrDefault(v => v.Year == firstVintage.Year)
+                        : null;
+
+                    if (existingVintage != null)
+                    {
+                        throw new ConflictException(
+                            $"Ya existe el vino '{targetWine.Name}' con la cosecha {firstVintage.Year} en esta bodega.",
+                            new Dictionary<string, object?>
+                            {
+                                ["code"] = "WINE_VINTAGE_DUPLICATE",
+                                ["existingWineId"] = targetWine.Id,
+                                ["existingVintageId"] = existingVintage.Id,
+                                ["existingVintages"] = existingVintageSummaries
+                            });
+                    }
+
                     throw new ConflictException(
-                        $"Ya existe el vino '{existingWine.Name}' con la cosecha {firstVintage.Year} en esta bodega.",
+                        $"Ya existe el vino '{targetWine.Name}' en esta bodega. Podés agregarle una nueva cosecha.",
                         new Dictionary<string, object?>
                         {
-                            ["code"] = "WINE_VINTAGE_DUPLICATE",
-                            ["existingWineId"] = existingWine.Id,
-                            ["existingVintageId"] = existingVintage.Id
+                            ["code"] = "WINE_EXISTS_ADD_VINTAGE",
+                            ["existingWineId"] = targetWine.Id,
+                            ["existingVintages"] = existingVintageSummaries
                         });
                 }
 
-                throw new ConflictException(
-                    $"Ya existe el vino '{existingWine.Name}' en esta bodega. Podés agregarle una nueva cosecha.",
-                    new Dictionary<string, object?>
+                if (!confirmNewLabel)
+                {
+                    Wine existingWine;
+                    if (newVintageMainGrapeId.HasValue)
                     {
-                        ["code"] = "WINE_EXISTS_ADD_VINTAGE",
-                        ["existingWineId"] = existingWine.Id
-                    });
+                        var sharingCandidate = matchingCandidates
+                            .Where(w => candidateVintages.Any(v => v.WineId == w.Id && v.MainGrapeId == newVintageMainGrapeId.Value))
+                            .OrderBy(w => w.Id)
+                            .FirstOrDefault();
+
+                        existingWine = sharingCandidate ?? matchingCandidates.OrderBy(w => w.Id).First();
+                    }
+                    else
+                    {
+                        existingWine = matchingCandidates.OrderBy(w => w.Id).First();
+                    }
+
+                    ThrowConflict(existingWine, candidateVintages.Where(v => v.WineId == existingWine.Id).ToList());
+                }
+                else
+                {
+                    if (newVintageMainGrapeId.HasValue)
+                    {
+                        var candidateWithSameGrape = matchingCandidates
+                            .Where(w => candidateVintages.Any(v => v.WineId == w.Id && v.MainGrapeId == newVintageMainGrapeId.Value))
+                            .OrderBy(w => w.Id)
+                            .FirstOrDefault();
+
+                        if (candidateWithSameGrape != null)
+                        {
+                            ThrowConflict(candidateWithSameGrape, candidateVintages.Where(v => v.WineId == candidateWithSameGrape.Id).ToList());
+                        }
+                    }
+                }
             }
         }
 
@@ -292,10 +394,10 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
     {
         const string sql = """
             SELECT
-                (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id) AS DuplicateWinesCount,
-                (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id) AS ReviewCount,
-                (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id) AS UserWineCount,
-                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id) AS CellarItemCount;
+                (SELECT COUNT(*) FROM wines WHERE duplicate_of_wine_id = @Id)::int AS DuplicateWinesCount,
+                (SELECT COUNT(*) FROM reviews r JOIN wine_vintages wv ON wv.id = r.wine_vintage_id WHERE wv.wine_id = @Id)::int AS ReviewCount,
+                (SELECT COUNT(*) FROM user_wines WHERE wine_id = @Id)::int AS UserWineCount,
+                (SELECT COUNT(*) FROM cellar_items ci JOIN wine_vintages wv ON wv.id = ci.wine_vintage_id WHERE wv.wine_id = @Id)::int AS CellarItemCount;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleAsync<WineUsageCounts>(

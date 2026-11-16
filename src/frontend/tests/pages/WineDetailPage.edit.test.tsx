@@ -168,10 +168,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte Modificado' } });
@@ -196,10 +197,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     // Esperar a que el catálogo de uvas esté cargado en los selects
     await waitFor(() => {
@@ -230,10 +232,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     // Quitar maridaje existente
     const removeBtn = screen.getByLabelText(/Quitar maridaje Chivito a las brasas/i);
@@ -257,10 +260,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte 2020' } });
@@ -292,12 +296,13 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
-    const saveBtn = screen.getByRole('button', { name: /Guardar edición/i });
+    const saveBtn = await screen.findByRole('button', { name: /Guardar edición/i });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
@@ -314,10 +319,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Cambio sin guardar' } });

@@ -99,6 +99,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `FirstVintage` | `[Required]` (valida anidado recursivo) | "La primera cosecha es obligatoria." |
 | | | `WineryId`, `LocationId` | `[Range(1, int.MaxValue)]` (nullable) | "El id de la bodega/ubicación debe ser mayor a 0." |
 | | | `WineryNameText`, `Description` | `[StringLength(150)]`, `[StringLength(1000)]` | "El nombre de la bodega... no puede superar los 150/1000 caracteres." |
+| | | `ConfirmNewLabel` | `bool` (opcional, default `false`) | Si es `true`, permite crear una etiqueta nueva aún cuando coincida el nombre y bodega de un vino existente pero con uva principal distinta. |
 | | `UpdateWineRequestDto` | Igual a `CreateWineRequestDto` sin `FirstVintage`. | | |
 | | `CreateWineVintageRequestDto` / `UpdateWineVintageRequestDto` | `Year` | `[Range(1800, 2100)]` | "El año de la cosecha debe estar entre 1800 y 2100." |
 | | | `AlcoholContent` | `[Range(0.0, 99.99)]` | "El contenido de alcohol debe estar entre 0 y 99.99." |
@@ -267,7 +268,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
 | `POST` | `/api/wines` | Autenticado (Admin o Dueño si incluye `WineryId`; comunitario: cualquier autenticado) | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
 | `PUT` | `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Actualiza los datos de la botella y mantiene consistente `source_type`. Solo Admin cambia de bodega. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
-| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. | - | `204 NoContent` / `409 Conflict` |
+| `DELETE`| `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Elimina un vino y sus cosechas (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. Vino comunitario solo Admin. | - | `204 NoContent` / `403 Forbidden` / `409 Conflict` |
 | `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/search` | Público | Búsqueda difusa y avanzada de vinos por nombre, bodega, año o tipo con trigramas PostgreSQL. | Query params: `pageNumber`, `pageSize`, `name?`, `winery?`, `year?`, `wineType?` | `200 OK` (`IEnumerable<WineSearchResponseDto>`) |
@@ -278,7 +279,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
-| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica (solo si no tiene reseñas ni cava). Devuelve 409 si posee historial, sugiriendo rechazarla para preservarlo. | - | `204 NoContent` / `409 Conflict` |
+| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin o Dueño de la bodega) | Elimina una cosecha específica (solo si no tiene reseñas ni cava y no es la única del vino). Devuelve 409 si posee historial o es la única añada. Vino comunitario solo Admin. | - | `204 NoContent` / `403 Forbidden` / `409 Conflict` |
 | `GET` | `/api/wine-vintages` | Admin (`RequireAdmin`) | Bandeja global de cosechas para moderación administrativa. Filtro opcional por estado (`Pending`, `Approved`, `Rejected`). | Query params: `pageNumber = 1`, `pageSize = 10`, `status?` | `200 OK` (`IEnumerable<AdminWineVintageListItemDto>`) |
 
 #### Ejemplo de Respuesta `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (200 OK)

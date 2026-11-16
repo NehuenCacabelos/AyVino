@@ -256,7 +256,7 @@ public class WineOptimizationTests
         public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default) =>
             Task.FromResult<IEnumerable<Wine>>([]);
 
-        public Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, CancellationToken ct = default) =>
+        public Task<Wine> CreateWithFirstVintageAsync(Wine wine, WineVintage firstVintage, IEnumerable<WineGrape> grapes, bool confirmNewLabel = false, CancellationToken ct = default) =>
             throw new NotImplementedException();
 
         public Task<bool> UpdateAsync(Wine wine, CancellationToken ct = default) =>

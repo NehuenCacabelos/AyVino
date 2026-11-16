@@ -92,7 +92,7 @@ public class WineServiceAuthorizationTests
         // Arrange
         var winery = CreateWinery(10, userId: 10, status: WineryStatus.Approved);
         var wineRepo = Substitute.For<IWineRepository>();
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 100 });
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -115,6 +115,7 @@ public class WineServiceAuthorizationTests
             Arg.Is<Wine>(w => w.SourceType == SourceType.Official && w.WineryId == 10),
             Arg.Any<WineVintage>(),
             Arg.Any<IEnumerable<WineGrape>>(),
+            Arg.Any<bool>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -124,7 +125,7 @@ public class WineServiceAuthorizationTests
         // Arrange
         var winery = CreateWinery(10, userId: 10, status: WineryStatus.Pending);
         var wineRepo = Substitute.For<IWineRepository>();
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 100 });
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -173,7 +174,7 @@ public class WineServiceAuthorizationTests
     {
         // Arrange
         var wineRepo = Substitute.For<IWineRepository>();
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 100 });
 
         var wineryRepo = Substitute.For<IWineryRepository>();
@@ -198,7 +199,7 @@ public class WineServiceAuthorizationTests
     {
         // Arrange
         var wineRepo = Substitute.For<IWineRepository>();
-        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<CancellationToken>())
+        wineRepo.CreateWithFirstVintageAsync(Arg.Any<Wine>(), Arg.Any<WineVintage>(), Arg.Any<IEnumerable<WineGrape>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(args => ((Wine)args[0]) with { Id = 100 });
 
         var locationRepo = Substitute.For<ILocationRepository>();
@@ -217,6 +218,7 @@ public class WineServiceAuthorizationTests
             Arg.Is<Wine>(w => w.SourceType == SourceType.Community && w.WineryId == null),
             Arg.Any<WineVintage>(),
             Arg.Any<IEnumerable<WineGrape>>(),
+            Arg.Any<bool>(),
             Arg.Any<CancellationToken>());
     }
 

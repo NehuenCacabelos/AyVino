@@ -79,6 +79,26 @@ export interface CreateWineVintageRequestDto {
 }
 
 /**
+ * Resumen de añada existente retornado en respuestas de conflicto 409.
+ */
+export interface ExistingVintageSummaryDto {
+  year?: number | null;
+  mainGrapeId?: number | null;
+  mainGrapeName?: string | null;
+}
+
+/**
+ * Detalle del cuerpo de error en respuestas de conflicto 409 al crear vino.
+ */
+export interface WineDuplicateErrorData {
+  code?: string;
+  detail?: string;
+  existingWineId?: number;
+  existingVintageId?: number;
+  existingVintages?: ExistingVintageSummaryDto[];
+}
+
+/**
  * DTO de entrada para crear una etiqueta de vino con su primera añada (C# CreateWineRequestDto).
  */
 export interface CreateWineRequestDto {
@@ -89,6 +109,7 @@ export interface CreateWineRequestDto {
   wineryNameText?: string | null;
   description?: string | null;
   locationId?: number | null;
+  confirmNewLabel?: boolean;
 }
 
 /**
