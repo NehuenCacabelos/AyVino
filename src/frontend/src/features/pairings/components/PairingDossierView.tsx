@@ -8,6 +8,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { WineCard, normalizeWineSlug } from '../../wines';
+import { usePairingRealWines } from '../hooks/usePairingRealWines';
 import {
   WineGlassSilhouette,
   detectGlassType,
@@ -337,7 +338,7 @@ function EditorialBlock({ tip, rationale }: { tip: string; rationale: string }) 
   );
 }
 
-// ─── Lista de etiquetas testigo con WineCard polimórfico ──────────────────────
+// ─── Lista de etiquetas testigo con WineCard polimórfico y búsqueda real ───────
 function WitnessBottleList({
   bottles,
   varietalName,
@@ -345,50 +346,94 @@ function WitnessBottleList({
   bottles: WitnessBottle[];
   varietalName?: string;
 }) {
-  if (!bottles || bottles.length === 0) return null;
+  const { realWines, hasRealWines, isLoading } = usePairingRealWines(varietalName, 4);
+
+  if ((!bottles || bottles.length === 0) && !hasRealWines && !isLoading) {
+    return null;
+  }
+
+  const titleCount = hasRealWines ? realWines.length : bottles.length;
 
   return (
     <div className="space-y-4 pt-6 border-t border-white/[0.08]">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
-          <span className={`${LABEL_MONO} text-[#fbbf24] font-bold block mb-1`}>
-            Curaduría de Cava
-          </span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`${LABEL_MONO} text-[#fbbf24] font-bold block`}>
+              Curaduría de Cava
+            </span>
+            {hasRealWines && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                Catálogo Real
+              </span>
+            )}
+          </div>
           <h4 className="font-serif text-2xl sm:text-3xl text-white font-semibold tracking-tight">
-            Etiquetas de la Cava ({bottles.length})
+            Etiquetas de la Cava ({titleCount})
           </h4>
         </div>
         <p className="text-xs font-sans text-zinc-400 max-w-sm">
-          Ejemplares icónicos de bodegas asociadas que expresan este perfil organoléptico en su máxima pureza.
+          {hasRealWines
+            ? 'Etiquetas reales activas en el catálogo que expresan este perfil organoléptico.'
+            : 'Ejemplares icónicos de bodegas asociadas que expresan este perfil organoléptico en su máxima pureza.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-        {bottles.map((bottle) => {
-          const wineSlug = bottle.catalogWineId
-            ? String(bottle.catalogWineId)
-            : normalizeWineSlug(bottle.label);
-          const targetHref = `/vinos/${wineSlug}`;
+        {hasRealWines
+          ? realWines.map((item) => (
+              <WineCard
+                key={`real-wine-${item.id}`}
+                variant="pairing"
+                badgeText={
+                  item.sourceType === 'Official'
+                    ? 'Ficha Oficial'
+                    : 'Selección Cava'
+                }
+                to={`/vinos/${item.id}`}
+                wine={{
+                  id: item.id,
+                  name: item.name,
+                  winery:
+                    item.wineryName ||
+                    item.wineryNameText ||
+                    'Bodega Argentina',
+                  region: item.regionName || undefined,
+                  vintage: item.vintage ? String(item.vintage) : undefined,
+                  grape: item.varietal || varietalName,
+                  imageUrl: item.imageUrl || undefined,
+                  rating: item.averageRating,
+                  reviewCount: item.reviewCount,
+                  sourceType: item.sourceType,
+                  isOfficial: item.sourceType === 'Official',
+                }}
+              />
+            ))
+          : bottles.map((bottle) => {
+              const wineSlug = bottle.catalogWineId
+                ? String(bottle.catalogWineId)
+                : normalizeWineSlug(bottle.label);
+              const targetHref = `/vinos/${wineSlug}`;
 
-          return (
-            <WineCard
-              key={`${bottle.winery}-${bottle.label}`}
-              variant="pairing"
-              badgeText="Etiqueta Testigo"
-              to={targetHref}
-              wine={{
-                id: bottle.catalogWineId,
-                name: bottle.label,
-                winery: bottle.winery,
-                region: bottle.region,
-                vintage: bottle.vintage,
-                grape: varietalName,
-                sourceType: 'Official',
-                isOfficial: true,
-              }}
-            />
-          );
-        })}
+              return (
+                <WineCard
+                  key={`${bottle.winery}-${bottle.label}`}
+                  variant="pairing"
+                  badgeText="Etiqueta Testigo"
+                  to={targetHref}
+                  wine={{
+                    id: bottle.catalogWineId,
+                    name: bottle.label,
+                    winery: bottle.winery,
+                    region: bottle.region,
+                    vintage: bottle.vintage,
+                    grape: varietalName,
+                    sourceType: 'Official',
+                    isOfficial: true,
+                  }}
+                />
+              );
+            })}
       </div>
     </div>
   );
@@ -593,7 +638,10 @@ export default function PairingDossierView({
           titleLabel="Armonizaciones Enológicas Sugeridas"
         />
 
-        <WitnessBottleList bottles={dish.witnessBottles} />
+        <WitnessBottleList
+          bottles={dish.witnessBottles}
+          varietalName={dish.affinities?.[0]?.label || dish.name}
+        />
       </article>
     );
   }

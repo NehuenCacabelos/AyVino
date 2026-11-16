@@ -9,4 +9,5 @@ export { SecondaryPairingCard } from './components/SecondaryPairingCard';
 export { PairingAlertCard } from './components/PairingAlertCard';
 export { EditorialDishImage } from './components/EditorialDishImage';
 export { usePairingParams } from './hooks/usePairingParams';
+export { usePairingRealWines } from './hooks/usePairingRealWines';
 export * from '../../data/pairingsData';
