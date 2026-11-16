@@ -410,9 +410,7 @@ function WitnessBottleList({
               />
             ))
           : bottles.map((bottle) => {
-              const wineSlug = bottle.catalogWineId
-                ? String(bottle.catalogWineId)
-                : normalizeWineSlug(bottle.label);
+              const wineSlug = normalizeWineSlug(bottle.label);
               const targetHref = `/vinos/${wineSlug}`;
 
               return (
@@ -422,7 +420,6 @@ function WitnessBottleList({
                   badgeText="Etiqueta Testigo"
                   to={targetHref}
                   wine={{
-                    id: bottle.catalogWineId,
                     name: bottle.label,
                     winery: bottle.winery,
                     region: bottle.region,
