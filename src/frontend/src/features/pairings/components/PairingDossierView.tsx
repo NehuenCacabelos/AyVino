@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowUpRight,
   ArrowRight,
   X,
   AlertTriangle,
@@ -9,6 +7,7 @@ import {
   FlaskConical,
   Clock,
 } from 'lucide-react';
+import { WineCard, normalizeWineSlug } from '../../wines';
 import {
   WineGlassSilhouette,
   detectGlassType,
@@ -338,49 +337,58 @@ function EditorialBlock({ tip, rationale }: { tip: string; rationale: string }) 
   );
 }
 
-// ─── Lista de etiquetas testigo ───────────────────────────────────────────────
-function WitnessBottleList({ bottles }: { bottles: WitnessBottle[] }) {
+// ─── Lista de etiquetas testigo con WineCard polimórfico ──────────────────────
+function WitnessBottleList({
+  bottles,
+  varietalName,
+}: {
+  bottles: WitnessBottle[];
+  varietalName?: string;
+}) {
   if (!bottles || bottles.length === 0) return null;
+
   return (
-    <div className="space-y-3">
-      <h4 className={`${LABEL_MONO} text-[#a18c8c]`}>
-        Etiquetas de la Cava ({bottles.length})
-      </h4>
-      <div className="divide-y divide-white/[0.05] border border-white/[0.06] rounded-none overflow-hidden">
-        {bottles.map((bottle) => (
-          <div
-            key={`${bottle.winery}-${bottle.label}`}
-            className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-[#1c1b1d] hover:bg-[#201f21] transition-colors group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              {bottle.vintage && (
-                <span className="text-[11px] font-mono text-[#fbbf24]/70 shrink-0">
-                  {bottle.vintage}
-                </span>
-              )}
-              <span className="text-sm text-[#e5e1e4] font-medium group-hover:text-white transition-colors truncate">
-                {bottle.label}
-              </span>
-              <span className="text-[11px] text-[#a18c8c] shrink-0 hidden sm:inline">
-                · {bottle.winery}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-[#a18c8c] shrink-0">
-              <span className="truncate max-w-[160px]">{bottle.region}</span>
-              {bottle.catalogWineId && (
-                <Link
-                  to={`/catalogo?q=${encodeURIComponent(bottle.winery)}`}
-                  className="inline-flex items-center gap-0.5 text-[#ffb2b8] hover:text-white transition-colors shrink-0"
-                  title="Ver en catálogo"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span>Ver</span>
-                  <ArrowUpRight className="w-3 h-3" />
-                </Link>
-              )}
-            </div>
-          </div>
-        ))}
+    <div className="space-y-4 pt-6 border-t border-white/[0.08]">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <span className={`${LABEL_MONO} text-[#fbbf24] font-bold block mb-1`}>
+            Curaduría de Cava
+          </span>
+          <h4 className="font-serif text-2xl sm:text-3xl text-white font-semibold tracking-tight">
+            Etiquetas de la Cava ({bottles.length})
+          </h4>
+        </div>
+        <p className="text-xs font-sans text-zinc-400 max-w-sm">
+          Ejemplares icónicos de bodegas asociadas que expresan este perfil organoléptico en su máxima pureza.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+        {bottles.map((bottle) => {
+          const wineSlug = bottle.catalogWineId
+            ? String(bottle.catalogWineId)
+            : normalizeWineSlug(bottle.label);
+          const targetHref = `/vinos/${wineSlug}`;
+
+          return (
+            <WineCard
+              key={`${bottle.winery}-${bottle.label}`}
+              variant="pairing"
+              badgeText="Etiqueta Testigo"
+              to={targetHref}
+              wine={{
+                id: bottle.catalogWineId,
+                name: bottle.label,
+                winery: bottle.winery,
+                region: bottle.region,
+                vintage: bottle.vintage,
+                grape: varietalName,
+                sourceType: 'Official',
+                isOfficial: true,
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -786,7 +794,10 @@ export default function PairingDossierView({
         />
 
         {/* 4. ETIQUETAS DE LA CAVA */}
-        <WitnessBottleList bottles={activeStyle.witnessBottles} />
+        <WitnessBottleList
+          bottles={activeStyle.witnessBottles}
+          varietalName={wine.name}
+        />
       </article>
     );
   }

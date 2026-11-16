@@ -29,7 +29,7 @@ export function EditorialDishImage({
 
   return (
     <div
-      className={`relative w-full h-52 overflow-hidden bg-[#1c1b1d] select-none ${className}`}
+      className={`relative w-full h-36 sm:h-40 overflow-hidden bg-[#1c1b1d] select-none ${className}`}
     >
       {/* Fallback o Placeholder mientras carga o si falla */}
       {(!imageLoaded || hasError) && (
@@ -60,15 +60,15 @@ export function EditorialDishImage({
         />
       )}
 
-      {/* Gradiente de sombra editorial nocturna */}
+      {/* Gradiente de sombra editorial nocturna suavizado para no generar hueco negro */}
       <div
-        className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-[#0e0e10]/30 to-transparent pointer-events-none"
+        className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-transparent to-transparent pointer-events-none"
         aria-hidden="true"
       />
 
       {/* Badge Flotante Superior (si existe) */}
       {badge && (
-        <div className="absolute top-3 left-3 px-2.5 py-1 rounded bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
+        <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
           {badgeIcon && <span className="text-[#fbbf24] shrink-0">{badgeIcon}</span>}
           <span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#fbbf24]">
             {badge}
