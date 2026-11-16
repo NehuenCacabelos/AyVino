@@ -15,3 +15,8 @@ export interface CreateReviewRequestDto {
   rating: number;
   comment?: string;
 }
+
+export interface UpdateReviewRequestDto {
+  rating: number;
+  comment?: string | null;
+}

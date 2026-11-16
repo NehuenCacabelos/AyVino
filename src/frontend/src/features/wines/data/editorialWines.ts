@@ -9,6 +9,7 @@ export interface WineWineryInfo {
   foundedYear: number;
   websiteUrl?: string;
   region: string;
+  wineryId?: number;
 }
 
 export interface WineGrapeRatio {
@@ -51,6 +52,7 @@ export interface EditorialWine {
   description: string;
   wineryNameText: string;
   winery: WineWineryInfo | null;
+  wineryId?: number;
   pairings: WinePairingItem[];
   vintages: WineVintageDetail[];
   reviews: WineReviewItem[];

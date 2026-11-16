@@ -14,6 +14,6 @@ public record WineVintage
     public ApprovalStatus ApprovalStatus { get; init; }
     public int UploadedByUserId { get; init; }
     public DateTime RegisterDate { get; init; }
-    public int RatingSum { get; init; }
+    public decimal RatingSum { get; init; }
     public int ReviewCount { get; init; }
 }

@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Users.DTOs;
 
 public record PublicUserProfileDto(
@@ -8,5 +11,9 @@ public record PublicUserProfileDto(
     DateTime RegisterDate,
     int CellarWinesCount,
     int FollowersCount,
-    int FollowingCount
-);
+    int FollowingCount,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null)
+{
+    public PublicUserProfileDto() : this(default, string.Empty, null, null, default, default, default, default, null) { }
+}
+

@@ -6,26 +6,44 @@ export type WineSortOption = 'default' | 'vintage-desc' | 'vintage-asc';
 
 export type BottleAgingState = 'optimal' | 'aging' | 'peak';
 
+export interface VarietalSegment {
+  name: string;
+  percentage: number;
+  bottleCount: number;
+  wineType: string;
+  color: string;
+  opacity?: number;
+}
+
 export interface CellarVitals {
   totalBottles: number;
   redsCount: number;
   whitesCount: number;
   sparklingCount: number;
+  othersCount?: number;
   optimalCount: number;
   dominantVarietal: string;
   dominantVarietalPercentage: number;
-  oldestVintage: number;
+  undeclaredGrapeBottles: number;
+  varietalSegments: VarietalSegment[];
+  oldestVintage: number | null;
   oldestVintageAgingYears: number;
 }
 
 export interface CellarWine {
   id: string;
+  wineId?: number;
+  wineVintageId?: number;
   name: string;
   winery: string;
   region: string;
   varietal: string;
+  grapeName?: string | null;
+  wineType?: string | null;
   vintage: number;
   rating: number; // Critic score or user rating, e.g. 99, 100
+  userRating?: number | null;
+  averageRating?: number | null;
   criticBadge?: string; // e.g. "RP 99", "WA 100", "JS 98"
   units: number;
   location: string; // e.g. "A1 · ESTANTE SUP."
@@ -37,6 +55,7 @@ export interface CellarWine {
   sourceType?: 'Community' | 'Official' | string;
   bottle: BottleKind;
   imageUrl?: string;
+  imageId?: string | null;
   // Ficha técnica extendida
   altitude?: string; // e.g. "1.450 msnm"
   soilType?: string; // e.g. "Calcáreo de grava aluvional"
@@ -73,7 +92,7 @@ export interface SommelierRecommendation {
 export interface TastingLogEntry {
   id: string;
   wineName: string;
-  criticScore: string; // "CATA PRIVADA 97 PTS"
+  criticScore: string; // "TU RESEÑA 4,5 ★"
   uncorkDate: string; // "DESCORCHADO EL 14 DE MARZO, 2025"
   notes: string;
   sight: string;
@@ -92,5 +111,8 @@ export interface QuickAddBottlePayload {
   isJewel?: boolean;
   bottle: BottleKind;
   matchedWineId?: number | null;
+  wineType?: string;
+  mainGrapeId?: number | null;
+  imageFile?: File | null;
 }
 

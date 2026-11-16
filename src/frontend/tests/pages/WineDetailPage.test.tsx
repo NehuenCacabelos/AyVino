@@ -105,10 +105,22 @@ describe('WineDetailPage Integration', () => {
       userName: 'Mariano Sommelier',
       wineVintageId: 201,
       vintageYear: 2020,
-      rating: 4,
+      rating: 4.2,
       comment: 'Muy buena concentración.',
       createdAt: '2025-03-01T10:00:00Z',
       updatedAt: null,
+    });
+    vi.mocked(reviewsApi.getMyVintageReview).mockResolvedValue(null);
+    vi.mocked(reviewsApi.updateReview).mockResolvedValue({
+      id: 100,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.5,
+      comment: 'Muy buena concentración.',
+      createdAt: '2025-03-01T10:00:00Z',
+      updatedAt: '2025-03-01T10:00:00Z',
     });
   });
 
@@ -150,7 +162,19 @@ describe('WineDetailPage Integration', () => {
     expect(wineApi.getWineById).not.toHaveBeenCalled();
   });
 
-  it('publicación de reseña en vino real: redondea rating a entero y llama a createReview', async () => {
+  it('publicación de reseña en vino real: envía rating decimal sin redondear a entero', async () => {
+    vi.mocked(reviewsApi.createReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.2,
+      comment: 'Notas de vainilla y pimientos dulces.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
     render(
       <MemoryRouter initialEntries={['/vinos/101']}>
         <Routes>
@@ -163,29 +187,123 @@ describe('WineDetailPage Integration', () => {
       expect(screen.getByText('Rutini Cabernet Malbec 2020')).toBeInTheDocument();
     });
 
-    // Abrir formulario
-    const openReviewButtons = screen.getAllByRole('button', { name: /Escribir reseña|\+ Registrar mi cata/i });
+    // Abrir formulario en modo reseña
+    const openReviewButtons = screen.getAllByRole('button', { name: /Escribir reseña/i });
     fireEvent.click(openReviewButtons[0]);
 
     const textarea = screen.getByPlaceholderText(/Describí aromas primarios/i);
     fireEvent.change(textarea, { target: { value: 'Notas de vainilla y pimientos dulces.' } });
 
-    // El rating inicial es 4.5 -> redondeado es 5 (o si cambiamos slider a 3.7 -> 4)
+    // Cambiamos slider a 4.2 (decimal con paso 0.1)
     const slider = screen.getByLabelText(/Seleccionar puntuación decimal/i);
     fireEvent.change(slider, { target: { value: '4.2' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Publicar Anotación/i });
+    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(reviewsApi.createReview).toHaveBeenCalledWith({
         wineVintageId: 201,
-        rating: 4, // 4.2 redondeado a 4
+        rating: 4.2, // Sin redondear a entero
         comment: 'Notas de vainilla y pimientos dulces.',
       });
     });
 
-    // Verifica que se haya mostrado toast de éxito
-    expect(await screen.findByText(/¡Tu cata \(4 ★\) fue publicada en la bitácora!/i)).toBeInTheDocument();
+    // Verifica que se haya mostrado toast de éxito en formato es-AR
+    expect(await screen.findByText(/¡Tu reseña \(4,2 ★\) fue guardada!/i)).toBeInTheDocument();
+  });
+
+  it('edición de reseña existente en vino real: formulario precargado y llama a updateReview', async () => {
+    vi.mocked(reviewsApi.getMyVintageReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.3,
+      comment: 'Excelente acidez con pastas rellenas.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    vi.mocked(reviewsApi.updateReview).mockResolvedValueOnce({
+      id: 501,
+      userId: 10,
+      username: 'Mariano Sommelier',
+      wineVintageId: 201,
+      vintageYear: 2020,
+      rating: 4.5,
+      comment: 'Actualizado: aún mejor en boca.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/vinos/101']}>
+        <Routes>
+          <Route path="/vinos/:id" element={<WineDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Rutini Cabernet Malbec 2020')).toBeInTheDocument();
+    });
+
+    // El botón debe decir "Editar reseña" o "Editar mi reseña"
+    const editBtn = await screen.findByRole('button', { name: /Editar reseña/i });
+    fireEvent.click(editBtn);
+
+    const textarea = screen.getByPlaceholderText(/Describí aromas primarios/i);
+    expect(textarea).toHaveValue('Excelente acidez con pastas rellenas.');
+
+    fireEvent.change(textarea, { target: { value: 'Actualizado: aún mejor en boca.' } });
+
+    const slider = screen.getByLabelText(/Seleccionar puntuación decimal/i);
+    fireEvent.change(slider, { target: { value: '4.5' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Guardar cambios/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(reviewsApi.updateReview).toHaveBeenCalledWith(
+        501,
+        expect.objectContaining({
+          rating: 4.5,
+          comment: 'Actualizado: aún mejor en boca.',
+        })
+      );
+    });
+
+    // Verifica aviso de éxito en formato es-AR
+    expect(await screen.findByText(/¡Tu reseña \(4,5 ★\) fue guardada!/i)).toBeInTheDocument();
+  });
+
+  it('error en reseña muestra el mensaje devuelto por el backend sin romper estado', async () => {
+    vi.mocked(reviewsApi.createReview).mockRejectedValueOnce({
+      response: { data: { detail: 'Ya registraste una reseña para esta cosecha.' } },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/vinos/101']}>
+        <Routes>
+          <Route path="/vinos/:id" element={<WineDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Rutini Cabernet Malbec 2020')).toBeInTheDocument();
+    });
+
+    const openReviewButtons = screen.getAllByRole('button', { name: /Escribir reseña/i });
+    fireEvent.click(openReviewButtons[0]);
+
+    const textarea = await screen.findByPlaceholderText(/Describí aromas primarios/i);
+    fireEvent.change(textarea, { target: { value: 'Comentario duplicado.' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Publicar Reseña/i });
+    fireEvent.click(submitBtn);
+
+    expect(await screen.findByText(/Ya registraste una reseña para esta cosecha/i)).toBeInTheDocument();
   });
 });

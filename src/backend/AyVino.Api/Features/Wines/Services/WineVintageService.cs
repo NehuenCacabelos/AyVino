@@ -227,15 +227,36 @@ public class WineVintageService(
         return vintage.ToResponseDto(grapes);
     }
 
-    public async Task DeleteAsync(int wineId, int vintageId, CancellationToken ct = default)
+    public async Task DeleteAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default)
     {
         await GetOwnedVintageOrThrowAsync(wineId, vintageId, ct);
+
+        if (!actor.IsAdmin)
+        {
+            var wine = await wineRepository.GetByIdAsync(wineId, ct)
+                ?? throw new NotFoundException($"Wine with ID {wineId} not found.");
+
+            if (wine.WineryId is null)
+                throw new ForbiddenException("No tenés permiso para eliminar esta añada.");
+
+            var winery = await wineryRepository.GetByIdAsync(wine.WineryId.Value, ct);
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("No tenés permiso para eliminar esta añada.");
+        }
+
+        var allVintages = await vintageRepository.GetAllByWineIdAsync(wineId, ct);
+        if (allVintages.Count() <= 1)
+        {
+            throw new ConflictException("No se puede eliminar la única añada del vino. Eliminá el vino completo.");
+        }
+
         var usage = await vintageRepository.GetUsageCountsAsync(vintageId, ct);
         if (usage.HasUserHistory)
         {
             throw new ConflictException(
                 $"No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: {usage.ReviewCount}, cava: {usage.CellarItemCount}). Podés rechazarla en lugar de eliminarla para preservar el historial.");
         }
+
         await vintageRepository.DeleteAsync(vintageId, ct);
     }
 

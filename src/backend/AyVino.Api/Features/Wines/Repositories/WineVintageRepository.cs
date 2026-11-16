@@ -248,9 +248,8 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
     {
         const string sql = """
             SELECT 
-                (SELECT COUNT(*) FROM user_wines WHERE wine_vintage_id = @Id) AS UserWinesCount,
-                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id) AS CellarItemsCount,
-                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id) AS ReviewsCount;
+                (SELECT COUNT(*) FROM reviews WHERE wine_vintage_id = @Id)::int AS ReviewCount,
+                (SELECT COUNT(*) FROM cellar_items WHERE wine_vintage_id = @Id)::int AS CellarItemCount;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QuerySingleAsync<WineVintageUsageCounts>(

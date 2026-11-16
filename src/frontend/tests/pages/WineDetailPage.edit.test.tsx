@@ -168,10 +168,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte Modificado' } });
@@ -196,10 +197,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     // Esperar a que el catálogo de uvas esté cargado en los selects
     await waitFor(() => {
@@ -230,10 +232,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     // Quitar maridaje existente
     const removeBtn = screen.getByLabelText(/Quitar maridaje Chivito a las brasas/i);
@@ -257,10 +260,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Enzo Bianchi Gran Corte 2020' } });
@@ -292,12 +296,13 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
-    const saveBtn = screen.getByRole('button', { name: /Guardar edición/i });
+    const saveBtn = await screen.findByRole('button', { name: /Guardar edición/i });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
@@ -314,10 +319,11 @@ describe('Modo Editar Vino (Paso 2)', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText('Enzo Bianchi Gran Corte')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+    const editBtn = await screen.findByRole('button', { name: /Editar vino/i });
+    fireEvent.click(editBtn);
 
     const nameInput = await screen.findByDisplayValue('Enzo Bianchi Gran Corte');
     fireEvent.change(nameInput, { target: { value: 'Cambio sin guardar' } });
@@ -330,5 +336,51 @@ describe('Modo Editar Vino (Paso 2)', () => {
     expect(screen.getByRole('button', { name: /Guardar edición/i })).toBeInTheDocument();
 
     confirmSpy.mockRestore();
+  });
+
+  it('permite seleccionar uvas directamente desde el combobox Buscar uva y previene duplicados', async () => {
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Enzo Bianchi Gran Corte' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar vino/i }));
+
+    // Esperar a que el catálogo de uvas esté cargado en los selects
+    await waitFor(() => {
+      expect(screen.getAllByRole('option', { name: /Merlot/i }).length).toBeGreaterThan(0);
+    });
+
+    const searchInput = screen.getByRole('combobox', { name: /Buscar uva/i });
+
+    // Foco en el buscador abre el listbox
+    fireEvent.focus(searchInput);
+    expect(screen.getByRole('listbox', { name: /Catálogo de uvas/i })).toBeInTheDocument();
+
+    // Intentar seleccionar Malbec (que ya está en el blend)
+    const malbecOption = screen.getAllByRole('option').find((opt) => opt.textContent?.includes('Malbec'));
+    expect(malbecOption).toBeDefined();
+    fireEvent.click(malbecOption!);
+
+    // Debe mostrar toast avisando que ya está en la composición y no agregar filas extra
+    await waitFor(() => {
+      expect(screen.getByText(/La uva "Malbec" ya está en la composición varietal/i)).toBeInTheDocument();
+    });
+    expect(screen.getAllByLabelText('Seleccionar uva')).toHaveLength(2);
+
+    // Ahora seleccionar Merlot (id 3, no está en el blend)
+    fireEvent.focus(searchInput);
+    const merlotOption = screen.getAllByRole('option').find((opt) => opt.textContent?.includes('Merlot'));
+    expect(merlotOption).toBeDefined();
+    fireEvent.click(merlotOption!);
+
+    // Se agrega una tercera fila con porcentaje 0%
+    await waitFor(() => {
+      expect(screen.getAllByLabelText('Seleccionar uva')).toHaveLength(3);
+    });
+    const percentageInputs = screen.getAllByLabelText('Porcentaje de uva');
+    expect(percentageInputs).toHaveLength(3);
+    expect(percentageInputs[2]).toHaveValue(0);
   });
 });

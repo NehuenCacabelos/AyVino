@@ -19,4 +19,5 @@ public record Winery
     public Guid? BannerImageId { get; init; }
     public string? StateName { get; init; }
     public string? RegionName { get; init; }
+    public string NameKey { get; init; } = string.Empty;
 }

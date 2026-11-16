@@ -17,8 +17,11 @@ import {
   WineryBlock,
   UncorkDialog,
   WineCardSkeleton,
+  useQuickAddToCellar,
+  useFavorites,
 } from '../features/dashboard';
 import { searchCatalogWines } from '../features/dashboard/api/catalogApi';
+import QuickAddBottleModal from '../features/cava/components/QuickAddBottleModal';
 import { useDebounce } from '../hooks/useDebounce';
 import type { HeroFilterState } from '../features/dashboard/components/QuickActions';
 import {
@@ -27,8 +30,14 @@ import {
   type UncorkSubmission,
 } from '../types/wine';
 import type { AppOutletContext } from '../components/layout/AppLayout';
+import { apiClient } from '../services/apiClient';
+import { getMyUserWinesApi } from '../features/users';
+import { formatRating, normalizeRating } from '../lib/formatRating';
 
 interface WineryGroup {
+  key: string;
+  wineryId?: number;
+  logoImageId?: string;
   name: string;
   region: string;
   initials: string;
@@ -54,7 +63,7 @@ function getWineryInitials(name: string): string {
  * - Grilla unificada de cards con skeletons tenues durante la carga y Empty State editorial.
  */
 export default function DashboardPage() {
-  const { stockCount, setStockCount } = useOutletContext<AppOutletContext>();
+  const { stockCount, setStockCount, refreshStock } = useOutletContext<AppOutletContext>();
   const [activeFilter, setActiveFilter] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [heroFilters, setHeroFilters] = useState<HeroFilterState>({
@@ -74,6 +83,32 @@ export default function DashboardPage() {
   const isAutoScrollingRef = useRef(false);
   const lastScrollYRef = useRef(0);
 
+  const showNotification = useCallback((msg: string) => {
+    clearTimeout(notificationTimerRef.current);
+    setNotification(msg);
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+  }, []);
+
+  // Hook compartido para ingreso rápido a la cava
+  const {
+    isModalOpen: isCreateModalOpen,
+    activeWine: activeCellarWine,
+    initialName: createInitialName,
+    openQuickAdd: handleAddToCellar,
+    openQuickAddNew: handleCreateWine,
+    closeQuickAdd: handleCloseQuickAdd,
+  } = useQuickAddToCellar();
+
+  // Hook compartido para favoritos (batch inicial optimizado + actualización optimista)
+  const {
+    favoriteWineIds,
+    toggleFavorite: handleToggleFavorite,
+  } = useFavorites({
+    onError: showNotification,
+  });
+
   // Debounce de 350ms del término de búsqueda efectivo
   const effectiveQuery = searchQuery.trim() || heroFilters.query.trim();
   const debouncedQuery = useDebounce(effectiveQuery, 350);
@@ -87,7 +122,10 @@ export default function DashboardPage() {
 
     async function loadCatalog() {
       try {
-        const wineryParam = heroFilters.winery !== 'Todas' ? heroFilters.winery : undefined;
+        const wineryParam =
+          heroFilters.wineryId === undefined && heroFilters.winery !== 'Todas'
+            ? heroFilters.winery
+            : undefined;
         let wineTypeParam: string | undefined = undefined;
 
         if (heroFilters.varietal === 'Blancos' || activeFilter === 'Blancos') {
@@ -100,6 +138,9 @@ export default function DashboardPage() {
           {
             search: debouncedQuery || undefined,
             winery: wineryParam,
+            wineryId: heroFilters.wineryId,
+            grapeId: heroFilters.grapeId,
+            stateId: heroFilters.stateId,
             wineType: wineTypeParam,
             pageSize: 48,
           },
@@ -130,7 +171,16 @@ export default function DashboardPage() {
       isMounted = false;
       controller.abort();
     };
-  }, [debouncedQuery, heroFilters.winery, heroFilters.varietal, activeFilter, reloadKey]);
+  }, [
+    debouncedQuery,
+    heroFilters.wineryId,
+    heroFilters.winery,
+    heroFilters.grapeId,
+    heroFilters.stateId,
+    heroFilters.varietal,
+    activeFilter,
+    reloadKey,
+  ]);
 
   const handleRetry = useCallback(() => {
     setIsLoading(true);
@@ -182,62 +232,161 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const showNotification = (msg: string) => {
-    clearTimeout(notificationTimerRef.current);
-    setNotification(msg);
-    notificationTimerRef.current = setTimeout(() => {
-      setNotification(null);
-    }, 3500);
-  };
 
-  const handleUncorkSaved = (data: UncorkSubmission) => {
-    setStockCount((prev) => Math.max(0, prev - 1));
-    showNotification(`¡Descorche registrado! ${data.wine.name} calificado con ${data.rating} estrellas.`);
-  };
 
-  const handleAddToCellar = (wine: DashboardWine) => {
-    setStockCount((prev) => prev + 1);
-    showNotification(`"${wine.name}" fue agregado con éxito a tu Cava.`);
-  };
+  const handleUncorkSaved = async (data: UncorkSubmission) => {
+    try {
+      const vintageId = Number(data.wine.id ? data.wine.id.replace('api-item-', '') : NaN);
+      const normalizedRating = data.rating !== null ? normalizeRating(data.rating) : null;
+      const comment = (normalizedRating !== null && data.tastingNotes?.trim()) ? data.tastingNotes.trim() : (data.occasion?.trim() || undefined);
+      const uncorkBody = {
+        rating: normalizedRating,
+        comment: normalizedRating !== null ? comment : undefined,
+      };
 
-  // Filtrado reactivo derivado en cliente para complementar filtros rápidos y chips
-  const filteredWines = useMemo(() => {
-    return catalogWines.filter((wine) => {
-      // 1. Filtro de bodega del Hero
-      if (heroFilters.winery !== 'Todas') {
-        if (!wine.winery.toLowerCase().includes(heroFilters.winery.toLowerCase())) {
-          return false;
+      if (!isNaN(vintageId) && vintageId > 0) {
+        await apiClient.post(`/cellars/me/items/${vintageId}/uncork`, uncorkBody);
+      } else {
+        const cellarRes = await apiClient.get('/cellars/me');
+        const userCellars = cellarRes.data;
+        if (!Array.isArray(userCellars) || userCellars.length === 0) {
+          throw new Error('No tenés una cava creada.');
         }
+        const activeCellarId = userCellars[0].id;
+        const itemsRes = await apiClient.get(`/cellars/${activeCellarId}/items`);
+        const matchingItem = Array.isArray(itemsRes.data)
+          ? itemsRes.data.find(
+              (it: { name?: string; wineId?: number; wineVintageId?: number }) =>
+                it.name === data.wine.name || it.wineId === Number(data.wine.id)
+            )
+          : null;
+        if (!matchingItem) {
+          throw new Error('No quedan botellas de esta cosecha en tu cava.');
+        }
+        await apiClient.post(`/cellars/${activeCellarId}/items/${matchingItem.wineVintageId}/uncork`, uncorkBody);
       }
 
-      // 2. Filtro de región del Hero
-      if (heroFilters.region !== 'Todas') {
-        if (!wine.region.toLowerCase().includes(heroFilters.region.toLowerCase())) {
-          return false;
-        }
+      showNotification(
+        normalizedRating !== null
+          ? `¡Descorche registrado! ${data.wine.name} calificado con ${formatRating(normalizedRating)} ★.`
+          : `¡Descorche registrado! ${data.wine.name}.`
+      );
+      if (refreshStock) {
+        await refreshStock();
       }
+      setStockCount((prev) => Math.max(0, prev - 1));
+      setReloadKey((prev) => prev + 1);
+    } catch (err: unknown) {
+      let errorMsg = 'Error al descorchar la botella.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.message || errorMsg;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      showNotification(errorMsg);
+    }
+  };
 
-      // 3. Filtro de varietal del Hero
-      if (heroFilters.varietal !== 'Todos') {
-        if (heroFilters.varietal === 'Blancos') {
-          const isWhite =
-            wine.varietal.toLowerCase().includes('blanco') ||
-            wine.varietal.toLowerCase().includes('chardonnay') ||
-            wine.varietal.toLowerCase().includes('torrontés') ||
-            wine.varietal.toLowerCase().includes('torrontes') ||
-            wine.bottle === 'white' ||
-            wine.bottle === 'white-flute';
-          if (!isWhite) return false;
-        } else if (heroFilters.varietal === 'Blends') {
-          if (!wine.varietal.toLowerCase().includes('blend')) return false;
-        } else {
-          if (!wine.varietal.toLowerCase().includes(heroFilters.varietal.toLowerCase())) {
-            return false;
+  const [metricsStats, setMetricsStats] = useState<{
+    readyToDrink: number;
+    dominantVarietal: string;
+    dominantVarietalSubtitle: string;
+    avgRating: string | null;
+    ratingSubtitle: string;
+  }>({
+    readyToDrink: 0,
+    dominantVarietal: '—',
+    dominantVarietalSubtitle: 'Sin cepas registradas',
+    avgRating: null,
+    ratingSubtitle: 'Sin calificaciones aún',
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUserMetrics() {
+      try {
+        const [userRes, cellarsRes, triedWines] = await Promise.all([
+          apiClient.get('/users/me').catch(() => ({ data: null })),
+          apiClient.get('/cellars/me').catch(() => ({ data: [] })),
+          getMyUserWinesApi({ tried: true, pageSize: 100 }).catch(() => []),
+        ]);
+
+        if (!isMounted) return;
+
+        // 1. Calificación promedio real del usuario (U13B / U13E)
+        let avgRating: string | null = null;
+        let ratingSubtitle = 'Sin calificaciones aún';
+        if (userRes?.data && userRes.data.averageRating !== null && userRes.data.averageRating !== undefined) {
+          const numericVal = Number(userRes.data.averageRating);
+          if (!isNaN(numericVal) && numericVal > 0) {
+            avgRating = formatRating(numericVal);
+            ratingSubtitle = 'Promedio de tus catas';
+          }
+        } else if (Array.isArray(triedWines) && triedWines.length > 0) {
+          const rated = triedWines.filter((w) => typeof w.userRating === 'number' && w.userRating > 0);
+          if (rated.length > 0) {
+            const sum = rated.reduce((acc, curr) => acc + (curr.userRating ?? 0), 0);
+            avgRating = formatRating(sum / rated.length);
+            ratingSubtitle = `${rated.length} ${rated.length === 1 ? 'vino calificado' : 'vinos calificados'}`;
           }
         }
-      }
 
-      // 4. Chips de filtros rápidos inferiores
+        // 2. Datos de la cava real (listas para descorchar y varietal dominante)
+        let readyToDrink = 0;
+        let dominantVarietal = '—';
+        let dominantVarietalSubtitle = 'Sin cepas registradas';
+
+        const userCellars = cellarsRes.data;
+        if (Array.isArray(userCellars) && userCellars.length > 0) {
+          const itemsRes = await apiClient.get(`/cellars/${userCellars[0].id}/items`).catch(() => ({ data: [] }));
+          if (isMounted && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
+            const items = itemsRes.data;
+            const currentYear = new Date().getFullYear();
+            readyToDrink = items.filter((item: { year?: number }) => item.year && item.year <= currentYear - 3).length;
+
+            const grapeCounts: Record<string, number> = {};
+            items.forEach((item: { grapeName?: string; wineType?: string; quantity?: number }) => {
+              const grape = item.grapeName || item.wineType || 'Otro';
+              grapeCounts[grape] = (grapeCounts[grape] || 0) + (item.quantity || 1);
+            });
+
+            const sortedGrapes = Object.entries(grapeCounts).sort((a, b) => b[1] - a[1]);
+            if (sortedGrapes.length > 0) {
+              const [topGrape, count] = sortedGrapes[0];
+              const totalItemsBottles = items.reduce((acc: number, curr: { quantity?: number }) => acc + (curr.quantity || 1), 0);
+              const pct = totalItemsBottles > 0 ? Math.round((count / totalItemsBottles) * 100) : 100;
+              dominantVarietal = `${topGrape} (${pct}%)`;
+              const uniqueCount = sortedGrapes.length;
+              dominantVarietalSubtitle = `${uniqueCount} ${uniqueCount === 1 ? 'cepa registrada' : 'cepas registradas'}`;
+            }
+          }
+        }
+
+        if (isMounted) {
+          setMetricsStats({
+            readyToDrink,
+            dominantVarietal,
+            dominantVarietalSubtitle,
+            avgRating,
+            ratingSubtitle,
+          });
+        }
+      } catch {
+        // En caso de error, mantener valores limpios
+      }
+    }
+
+    void loadUserMetrics();
+    return () => {
+      isMounted = false;
+    };
+  }, [stockCount, reloadKey]);
+
+
+  // Filtrado reactivo derivado en cliente exclusivamente para chips rápidos
+  const filteredWines = useMemo(() => {
+    return catalogWines.filter((wine) => {
+      // Chips de filtros rápidos inferiores (se conservan intactos)
       if (activeFilter !== 'Todos') {
         if (activeFilter === 'Blancos') {
           const isWhite =
@@ -277,34 +426,61 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [catalogWines, heroFilters, activeFilter]);
+  }, [catalogWines, activeFilter]);
 
   // Agrupamiento dinámico por bodega a partir de los datos reales de la base de datos
   const wineryGroups = useMemo<WineryGroup[]>(() => {
-    const map = new Map<string, { region: string; wines: DashboardWine[] }>();
+    const map = new Map<
+      string,
+      {
+        key: string;
+        wineryId?: number;
+        logoImageId?: string;
+        name: string;
+        region: string;
+        wines: DashboardWine[];
+      }
+    >();
 
     filteredWines.forEach((wine) => {
       const wineryName = wine.winery?.trim() || 'Bodega Colección';
       const region = wine.region?.trim() || 'Mendoza, Argentina';
+      const groupKey =
+        wine.wineryId != null
+          ? `winery-id-${wine.wineryId}`
+          : `winery-text-${wineryName.toLowerCase()}`;
 
-      const existing = map.get(wineryName);
+      const existing = map.get(groupKey);
       if (existing) {
         existing.wines.push(wine);
+        if (!existing.logoImageId && wine.wineryLogoImageId) {
+          existing.logoImageId = wine.wineryLogoImageId;
+        }
       } else {
-        map.set(wineryName, {
+        map.set(groupKey, {
+          key: groupKey,
+          wineryId: wine.wineryId,
+          logoImageId: wine.wineryLogoImageId,
+          name: wineryName,
           region,
           wines: [wine],
         });
       }
     });
 
-    return Array.from(map.entries()).map(([name, data]) => ({
-      name,
+    return Array.from(map.values()).map((data) => ({
+      key: data.key,
+      wineryId: data.wineryId,
+      logoImageId: data.logoImageId,
+      name: data.name,
       region: data.region,
-      initials: getWineryInitials(name),
-      wines: data.wines,
+      initials: getWineryInitials(data.name),
+      wines: data.wines.map((w) => ({
+        ...w,
+        isFavorite: favoriteWineIds.has(Number(w.id)),
+      })),
     }));
-  }, [filteredWines]);
+  }, [filteredWines, favoriteWineIds]);
 
   // Paginación de bodegas: máximo 4 bodegas visibles simultáneamente
   const WINERIES_PER_PAGE = 4;
@@ -341,6 +517,9 @@ export default function DashboardPage() {
       varietal: 'Todos',
       region: 'Todas',
       winery: 'Todas',
+      grapeId: undefined,
+      stateId: undefined,
+      wineryId: undefined,
     });
     setWineryPage(1);
   };
@@ -407,6 +586,7 @@ export default function DashboardPage() {
                 setSearchQuery(filters.query);
                 setWineryPage(1);
               }}
+              onCreateWine={handleCreateWine}
               onRegisterBottle={() =>
                 showNotification('Función de registro rápido abierta. Seleccioná una etiqueta del catálogo.')
               }
@@ -426,9 +606,11 @@ export default function DashboardPage() {
             <Metrics
               customStats={{
                 bottles: stockCount,
-                readyToDrink: 3,
-                dominantVarietal: 'Malbec (58%)',
-                topRated: '4.9 ★',
+                readyToDrink: metricsStats.readyToDrink,
+                dominantVarietal: metricsStats.dominantVarietal,
+                dominantVarietalSubtitle: metricsStats.dominantVarietalSubtitle,
+                topRated: metricsStats.avgRating ? `${metricsStats.avgRating} ★` : null,
+                topRatedSubtitle: metricsStats.ratingSubtitle,
               }}
             />
           </div>
@@ -526,18 +708,16 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-14">
                 {paginatedWineryGroups.map((group) => (
                   <WineryBlock
-                    key={group.name}
+                    key={group.key}
+                    wineryId={group.wineryId}
+                    logoImageId={group.logoImageId}
                     name={group.name}
                     region={group.region}
                     initials={group.initials}
                     total={group.wines.length}
                     wines={group.wines}
                     onAddToCellar={handleAddToCellar}
-                    onToggleFavorite={(wine, isFav) =>
-                      showNotification(
-                        `${wine.name} ${isFav ? 'añadido a tus Deseados' : 'removido de Deseados'}.`
-                      )
-                    }
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
 
@@ -613,6 +793,23 @@ export default function DashboardPage() {
         wine={uncorkingWine}
         onClose={() => setUncorkingWine(null)}
         onSave={handleUncorkSaved}
+      />
+
+      {/* Modal de Alta Rápida e Ingreso a Cava */}
+      <QuickAddBottleModal
+        isOpen={isCreateModalOpen}
+        initialName={createInitialName}
+        initialWine={activeCellarWine}
+        showToast={showNotification}
+        onClose={handleCloseQuickAdd}
+        onAddBottle={async (payload) => {
+          if (refreshStock) {
+            await refreshStock();
+          } else {
+            setStockCount((prev) => prev + payload.units);
+          }
+          setReloadKey((prev) => prev + 1);
+        }}
       />
     </div>
   );

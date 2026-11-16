@@ -24,16 +24,41 @@ public class UserWineRepository(IDbConnectionFactory connectionFactory) : IUserW
         const string sql = """
             SELECT uw.wine_id AS WineId, w.name AS Name, w.wine_type AS WineType,
                    w.winery_id AS WineryId, w.winery_name_text AS WineryNameText,
+                   COALESCE(wy.name, w.winery_name_text) AS WineryName,
+                   latest_vintage.year AS Vintage,
+                   CASE WHEN latest_vintage.image_id IS NOT NULL THEN '/api/images/' || latest_vintage.image_id || '?variant=card' ELSE NULL END AS ImageUrl,
                    w.rating_sum AS RatingSum, w.review_count AS ReviewCount,
                    uw.is_wanted AS IsWanted, uw.is_tried AS IsTried, uw.is_favorite AS IsFavorite,
-                   COALESCE(uw.updated_at, uw.created_at) AS LastChangeAt
+                   COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) AS LastChangeAt,
+                   user_review.rating AS UserRating,
+                   user_review.comment AS UserComment
             FROM user_wines uw
             JOIN wines w ON w.id = uw.wine_id
+            LEFT JOIN wineries wy ON wy.id = w.winery_id
+            LEFT JOIN LATERAL (
+                SELECT wv.year, wv.image_id
+                FROM wine_vintages wv
+                WHERE wv.wine_id = w.id
+                  AND wv.approval_status != 3
+                ORDER BY
+                    CASE WHEN wv.approval_status = 2 THEN 1 ELSE 0 END DESC,
+                    wv.year DESC NULLS LAST,
+                    wv.id DESC
+                LIMIT 1
+            ) latest_vintage ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT r.rating, r.comment, r.created_at AS review_created_at
+                FROM reviews r
+                JOIN wine_vintages wv ON wv.id = r.wine_vintage_id
+                WHERE wv.wine_id = w.id AND r.user_id = @UserId
+                ORDER BY r.created_at DESC
+                LIMIT 1
+            ) user_review ON TRUE
             WHERE uw.user_id = @UserId
               AND (@Wanted IS NULL OR uw.is_wanted = @Wanted)
               AND (@Tried IS NULL OR uw.is_tried = @Tried)
               AND (@Favorite IS NULL OR uw.is_favorite = @Favorite)
-            ORDER BY COALESCE(uw.updated_at, uw.created_at) DESC, uw.wine_id
+            ORDER BY COALESCE(user_review.review_created_at, uw.updated_at, uw.created_at) DESC, uw.wine_id
             OFFSET @Offset LIMIT @PageSize;
             """;
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);

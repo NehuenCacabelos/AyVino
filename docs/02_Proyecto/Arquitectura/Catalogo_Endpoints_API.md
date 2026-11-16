@@ -99,6 +99,7 @@ Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Req
 | | | `FirstVintage` | `[Required]` (valida anidado recursivo) | "La primera cosecha es obligatoria." |
 | | | `WineryId`, `LocationId` | `[Range(1, int.MaxValue)]` (nullable) | "El id de la bodega/ubicación debe ser mayor a 0." |
 | | | `WineryNameText`, `Description` | `[StringLength(150)]`, `[StringLength(1000)]` | "El nombre de la bodega... no puede superar los 150/1000 caracteres." |
+| | | `ConfirmNewLabel` | `bool` (opcional, default `false`) | Si es `true`, permite crear una etiqueta nueva aún cuando coincida el nombre y bodega de un vino existente pero con uva principal distinta. |
 | | `UpdateWineRequestDto` | Igual a `CreateWineRequestDto` sin `FirstVintage`. | | |
 | | `CreateWineVintageRequestDto` / `UpdateWineVintageRequestDto` | `Year` | `[Range(1800, 2100)]` | "El año de la cosecha debe estar entre 1800 y 2100." |
 | | | `AlcoholContent` | `[Range(0.0, 99.99)]` | "El contenido de alcohol debe estar entre 0 y 99.99." |
@@ -173,7 +174,7 @@ Administración de cuentas, perfiles comunitarios y operaciones restringidas a a
 | `POST` | `/api/users` | Público | Registra un nuevo aficionado en la comunidad con rol inmutable `User`. | `RegisterUserRequestDto` | `201 Created` (`UserResponseDto`) |
 | `GET` | `/api/users/{username}` | Público | Obtiene el perfil público de un usuario por su nombre (avatar, bio, estadísticas) sin exponer datos privados. | - | `200 OK` (`PublicUserProfileDto`) |
 | `GET` | `/api/users/{username}/cellar-items` | Público | Lista los vinos en cava de un usuario para visualización pública en modo solo lectura. | Query params: `pageNumber = 1`, `pageSize = 20` | `200 OK` (`IReadOnlyList<PublicCellarItemResponseDto>`) |
-| `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado. | - | `200 OK` (`UserResponseDto`) |
+| `GET` | `/api/users/me` | Autenticado | Obtiene la información del perfil del usuario actualmente autenticado (incluye `averageRating` con el promedio real de sus reseñas o `null`). | - | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me` | Autenticado | Actualiza biografía, foto y nombre de usuario del perfil activo. | `UpdateUserProfileRequestDto` | `200 OK` (`UserResponseDto`) |
 | `PUT` | `/api/users/me/avatar` | Autenticado | Sube una foto de perfil personalizada (JPG, PNG, WEBP, máx 5MB). | `multipart/form-data` (`file`) | `200 OK` (`{ "imageId": "uuid" }`) |
 | `DELETE` | `/api/users/me/avatar` | Autenticado | Elimina la foto de perfil física y restaura el avatar por defecto. | - | `200 OK` (`UserResponseDto`) |
@@ -267,7 +268,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `GET` | `/api/wines/{id}` | Público | Obtiene la ficha técnica completa del vino y su corte de uvas (`Grapes`). | - | `200 OK` (`WineResponseDto`) |
 | `POST` | `/api/wines` | Autenticado (Admin o Dueño si incluye `WineryId`; comunitario: cualquier autenticado) | Crea un vino. Si incluye `WineryId` se categoriza como `Official`; si no, como `Community`. Inicia en `Pending`. | `CreateWineRequestDto` | `201 Created` (`WineResponseDto`) |
 | `PUT` | `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Actualiza los datos de la botella y mantiene consistente `source_type`. Solo Admin cambia de bodega. | `UpdateWineRequestDto` | `200 OK` (`WineResponseDto`) |
-| `DELETE`| `/api/wines/{id}` | Admin (`RequireAdmin`) | Elimina un vino (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. | - | `204 NoContent` / `409 Conflict` |
+| `DELETE`| `/api/wines/{id}` | Autenticado (Admin o Dueño de la bodega) | Elimina un vino y sus cosechas (solo si no tiene historial de usuarios ni duplicados apuntándole). Devuelve 409 con conteos si posee reseñas, marcas, cava o duplicados. Vino comunitario solo Admin. | - | `204 NoContent` / `403 Forbidden` / `409 Conflict` |
 | `GET` | `/api/wines/claim-candidates/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Lista vinos comunitarios cuyo texto de bodega coincide con el nombre de la bodega oficial especificada. | - | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `POST` | `/api/wines/claim/{wineryId}` | Autenticado (Admin o Dueño de bodega aprobada) | Reclama y certifica los vinos comunitarios indicados, asignándoles `WineryId` y pasando a `Official`. | `ClaimWinesRequestDto` | `200 OK` (`IEnumerable<WineResponseDto>`) |
 | `GET` | `/api/wines/search` | Público | Búsqueda difusa y avanzada de vinos por nombre, bodega, año o tipo con trigramas PostgreSQL. | Query params: `pageNumber`, `pageSize`, `name?`, `winery?`, `year?`, `wineType?` | `200 OK` (`IEnumerable<WineSearchResponseDto>`) |
@@ -278,7 +279,7 @@ Núcleo del sistema: administración de etiquetas, mezclas/blends con porcentaje
 | `POST` | `/api/wines/{wineId}/vintages` | Autenticado | Registra una nueva cosecha para la etiqueta especificada (inicia en `Pending`). | `CreateWineVintageRequestDto` | `201 Created` (`WineVintageResponseDto`) |
 | `PUT` | `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin, Dueño de la bodega o Autor mientras sea Pending) | Actualiza los datos de la cosecha y reemplaza su corte de uvas. | `UpdateWineVintageRequestDto` | `200 OK` (`WineVintageResponseDto`) |
 | `PATCH`| `/api/wines/{wineId}/vintages/{vintageId}/status` | Admin (`RequireAdmin`) | Modifica el estado de aprobación de una cosecha (`Pending`, `Approved`, `Rejected`). | `ChangeWineVintageStatusRequestDto` | `200 OK` (`WineVintageResponseDto`) |
-| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Admin (`RequireAdmin`) | Elimina una cosecha específica (solo si no tiene reseñas ni cava). Devuelve 409 si posee historial, sugiriendo rechazarla para preservarlo. | - | `204 NoContent` / `409 Conflict` |
+| `DELETE`| `/api/wines/{wineId}/vintages/{vintageId}` | Autenticado (Admin o Dueño de la bodega) | Elimina una cosecha específica (solo si no tiene reseñas ni cava y no es la única del vino). Devuelve 409 si posee historial o es la única añada. Vino comunitario solo Admin. | - | `204 NoContent` / `403 Forbidden` / `409 Conflict` |
 | `GET` | `/api/wine-vintages` | Admin (`RequireAdmin`) | Bandeja global de cosechas para moderación administrativa. Filtro opcional por estado (`Pending`, `Approved`, `Rejected`). | Query params: `pageNumber = 1`, `pageSize = 10`, `status?` | `200 OK` (`IEnumerable<AdminWineVintageListItemDto>`) |
 
 #### Ejemplo de Respuesta `GET /api/wine-vintages?pageNumber=1&pageSize=10&status=Pending` (200 OK)
@@ -332,7 +333,19 @@ Gestión de reseñas comunitarias y valoraciones (1 a 5 estrellas) por cosecha y
 | `PUT` | `/api/reviews/{id}` | Autenticado (Solo autor) | Actualiza el puntaje o comentario de una reseña propia. | `UpdateReviewRequestDto` | `200 OK` (`ReviewResponseDto`) |
 | `DELETE`| `/api/reviews/{id}` | Autenticado (Solo autor) | Elimina una reseña propia y recalcula agregaciones. | - | `204 NoContent` |
 | `GET` | `/api/wine-vintages/{vintageId}/reviews` | Público | Lista paginada de reseñas de una cosecha específica. | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
+| `GET` | `/api/wine-vintages/{vintageId}/reviews/me` | Autenticado | Obtiene la reseña del usuario autenticado para una cosecha puntual (404 si aún no la calificó). | - | `200 OK` (`ReviewResponseDto`) |
 | `GET` | `/api/wines/{wineId}/reviews` | Público | Feed agregado y paginado de reseñas de una etiqueta (todas sus cosechas). | Query params: `pageNumber`, `pageSize` | `200 OK` (`IEnumerable<ReviewResponseDto>`) |
+
+---
+
+## 10.1 Descorches y Bitácora (`/api/users/me/uncorks`)
+
+Bitácora personal y cronológica de eventos de descorche del usuario. Cada descorche (desde la cava o directo) registra fecha y cava opcional. Si se envía `rating` (1,0 a 5,0 con un decimal), se crea o actualiza en la misma transacción la reseña del usuario para esa cosecha. Si se provee `comment`, actualiza el comentario de la reseña; si se omite, se conserva el comentario previo.
+
+| Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/users/me/uncorks` | Autenticado | Registra un nuevo evento de descorche para una cosecha (sin cava). | `CreateUncorkRequestDto` | `201 Created` (`UncorkResponseDto`) |
+| `GET` | `/api/users/me/uncorks` | Autenticado | Obtiene la bitácora cronológica paginada de descorches del usuario actual (con calificación y comentario actual de la reseña vía LEFT JOIN), con filtro opcional por cosecha. | Query params: `wineVintageId?`, `pageNumber = 1`, `pageSize = 10` | `200 OK` (`IEnumerable<UncorkListItemDto>`) |
 
 ---
 
@@ -387,6 +400,8 @@ Administración de cavas virtuales del usuario (ej. Cava Hogar, Cava Quincho) y 
 | `GET` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Detalle de una cosecha puntual almacenada en la cava. | - | `200 OK` (`CellarItemResponseDto`) |
 | `PUT` | `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Reemplaza cantidad (1-999), fecha de compra y notas de la cosecha en la cava. | `UpdateCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
 | `DELETE`| `/api/cellars/{cellarId}/items/{wineVintageId}` | Autenticado (Solo dueño) | Elimina la cosecha de la cava (vacía el stock de esa añada). | - | `204 NoContent` |
+| `POST` | `/api/cellars/{cellarId}/items/{wineVintageId}/uncork` | Autenticado (Solo dueño) | Descorcha una botella de la cava: descuenta stock, marca el vino como probado y registra una cata privada (y actualiza la calificación de la reseña pública si hubo puntaje). | `UncorkCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
+| `POST` | `/api/cellars/me/items/{wineVintageId}/uncork` | Autenticado | Descorcha una botella de la primera cava activa del usuario. | `UncorkCellarItemRequestDto` | `200 OK` (`CellarItemResponseDto`) |
 | `GET` | `/api/cellars/{cellarId}/care-summary` | Autenticado (Solo dueño) | Resumen de recomendaciones de temperatura, decantado y ventana de consumo de todas las botellas en cava. | - | `200 OK` (`IReadOnlyList<WineCareResponseDto>`) |
 
 ---

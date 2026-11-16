@@ -50,12 +50,12 @@ public static class WineVintageEndpoints
             .WithSummary("Changes a vintage's moderation status (Pending/Approved/Rejected).")
             .WithAudit(AuditAction.VintageStatusChanged, "Vintage", idRouteKey: "vintageId", details: (ctx, res) => ctx.Arguments.OfType<ChangeWineVintageStatusRequestDto>().FirstOrDefault()?.Status);
 
-        group.MapDelete("/{vintageId:int}", async (int wineId, int vintageId, IWineVintageService service, CancellationToken ct) =>
+        group.MapDelete("/{vintageId:int}", async (int wineId, int vintageId, ClaimsPrincipal user, IWineVintageService service, CancellationToken ct) =>
         {
-            await service.DeleteAsync(wineId, vintageId, ct);
+            await service.DeleteAsync(wineId, vintageId, user.GetActor(), ct);
             return Results.NoContent();
         })
-            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .RequireAuthorization()
             .WithName("DeleteWineVintage")
             .WithSummary("Deletes a single vintage.")
             .WithAudit(AuditAction.VintageDeleted, "Vintage", idRouteKey: "vintageId");

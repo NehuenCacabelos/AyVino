@@ -38,7 +38,7 @@ public static class WineVintageMappingExtensions
         vintage.ApprovalStatus.ToString(),
         vintage.UploadedByUserId,
         vintage.RegisterDate,
-        vintage.ReviewCount >= 5 ? Math.Round((decimal)vintage.RatingSum / vintage.ReviewCount, 2) : null,
+        vintage.ReviewCount >= 5 ? Math.Round(vintage.RatingSum / vintage.ReviewCount, 1) : null,
         vintage.ReviewCount,
         grapes.Select(g => new WineGrapeResponseDto(g.GrapeId, g.Percentage)));
 }

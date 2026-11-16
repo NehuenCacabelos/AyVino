@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using AyVino.Api.Common.Extensions;
+
 namespace AyVino.Api.Features.Users.DTOs;
 
 public record UserResponseDto(
@@ -8,5 +11,9 @@ public record UserResponseDto(
     DateTime RegisterDate,
     bool IsActive,
     Guid? AvatarImageId,
-    string? Bio
-);
+    string? Bio,
+    [property: JsonConverter(typeof(NullableDecimalOnePlaceJsonConverter))] decimal? AverageRating = null)
+{
+    public UserResponseDto() : this(default, string.Empty, string.Empty, string.Empty, default, default, null, null, null) { }
+}
+

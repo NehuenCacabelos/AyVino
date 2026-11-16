@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { Star, X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react';
+import { X, Wine as WineIcon, Sparkles, Heart, Minus, Plus } from 'lucide-react';
 import BottleVector from './BottleVector';
+import RatingInput from '../../../components/RatingInput';
+import { formatRating, normalizeRating } from '../../../lib/formatRating';
+import { imageUrl } from '../../../lib/image';
+import { getMyVintageReview, type ReviewResponseDto } from '../../../features/wines';
 import type { DashboardWine, UncorkSubmission } from '../../../types/wine';
 
 interface UncorkDialogProps {
@@ -13,20 +17,58 @@ interface UncorkDialogProps {
  * UncorkDialog Component (Ficha Técnica y Modal de Descorche — Inspiración Imagen 1)
  * Modal estructurado como tarjeta de cata profesional:
  * - Columna Izquierda: Escaparate de botella sobre fondo oscuro con reflejos y badge de stock.
- * - Columna Derecha: Título en Serif, valoración de estrellas, tabla técnica estructurada
+ * - Columna Derecha: Título en Serif, valoración de estrellas decimales, tabla técnica estructurada
  *   (añada, color, varietal, denominación, formato y servicio), selector de cantidad [- 01 +]
  *   y notas de cata con botón de descorche en borgoña.
  */
 export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProps) {
-  const [rating, setRating] = useState(5);
-  const [hover, setHover] = useState(0);
+  const [rating, setRating] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [occasion, setOccasion] = useState('Cena en casa');
   const [tastingNotes, setTastingNotes] = useState('');
+  const [existingReview, setExistingReview] = useState<ReviewResponseDto | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
+  const [failedImageWineKey, setFailedImageWineKey] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const imageKey = wine?.id || wine?.name || null;
+  const hasImageError = Boolean(imageKey && failedImageWineKey === imageKey);
+
+  useEffect(() => {
+    let isMounted = true;
+    const vintageId = wine?.wineVintageId ?? Number(wine?.id ? wine.id.replace('api-item-', '') : NaN);
+
+    if (wine && !isNaN(vintageId) && vintageId > 0 && typeof getMyVintageReview === 'function') {
+      const promise = getMyVintageReview(vintageId);
+      if (promise && typeof promise.then === 'function') {
+        void promise
+          .then((review) => {
+            if (!isMounted) return;
+            if (review) {
+              setExistingReview(review);
+              setRating(review.rating);
+              setTastingNotes(review.comment || '');
+            } else {
+              setExistingReview(null);
+              setRating(null);
+              setTastingNotes('');
+            }
+          })
+          .catch(() => {
+            if (!isMounted) return;
+            setExistingReview(null);
+            setRating(null);
+            setTastingNotes('');
+          });
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [wine]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,7 +93,6 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
 
   if (!wine) return null;
 
-  const currentHoverOrRating = hover || rating;
   const currentUnits = wine.units ?? 1;
 
   const handleSubmit = (e: FormEvent) => {
@@ -60,10 +101,10 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
 
     onSave?.({
       wine,
-      rating,
+      rating: rating !== null ? normalizeRating(rating) : null,
       date,
       occasion,
-      tastingNotes,
+      tastingNotes: rating !== null ? tastingNotes : '',
     });
 
     closeTimerRef.current = setTimeout(() => {
@@ -131,8 +172,18 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
               {/* Halos de luz tenue detrás del vidrio */}
               <div className="absolute inset-0 h-64 w-48 rounded-full bg-wine-800/25 blur-3xl pointer-events-none" />
 
-              <div className="relative z-10">
-                <BottleVector kind={wine.bottle} className="h-64 sm:h-72 w-auto drop-shadow-2xl" alt={wine.name} />
+              <div className="relative z-10 flex items-center justify-center">
+                {!hasImageError && (wine.imageUrl || (wine.imageId ? imageUrl(wine.imageId, 'detail') : null)) ? (
+                  <img
+                    src={wine.imageUrl || (wine.imageId ? imageUrl(wine.imageId, 'detail')! : '')}
+                    alt={wine.name}
+                    onError={() => imageKey && setFailedImageWineKey(imageKey)}
+                    className="h-64 sm:h-72 w-auto object-contain drop-shadow-2xl relative z-10 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                ) : (
+                  <BottleVector kind={wine.bottle} className="h-64 sm:h-72 w-auto drop-shadow-2xl" alt={wine.name} />
+                )}
               </div>
 
               {/* Sombra de apoyo */}
@@ -163,29 +214,17 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
                   {wine.winery}
                 </span>
 
-                {/* Estrellas de Puntuación */}
-                <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      aria-label={`${val} de 5 estrellas`}
-                      onMouseEnter={() => setHover(val)}
-                      onClick={() => setRating(val)}
-                      className="p-0.5 hover:scale-110 transition-transform cursor-pointer"
-                    >
-                      <Star
-                        className={`h-4 w-4 transition-colors ${
-                          val <= currentHoverOrRating
-                            ? 'fill-amber-400 text-amber-400'
-                            : 'text-stone-700'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-1.5 text-xs font-bold text-amber-300 font-mono">
-                    {currentHoverOrRating}.0
-                  </span>
+                {/* Puntuación actual resumida */}
+                <div className="flex items-center gap-1.5 font-mono text-xs" data-testid="uncork-header-rating">
+                  {rating !== null ? (
+                    <span className="text-amber-300 font-bold">
+                      {formatRating(rating)} ★
+                    </span>
+                  ) : (
+                    <span className="text-stone-500 font-normal italic">
+                      Sin calificar
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -301,6 +340,31 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
 
               </div>
 
+              {/* Aviso visible de actualización de reseña previa */}
+              {existingReview && (
+                <div
+                  data-testid="uncork-existing-review-notice"
+                  className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-200"
+                >
+                  <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>Ya tenés una reseña de este vino: se va a actualizar</span>
+                </div>
+              )}
+
+              {/* Puntuación Decimal Compartida */}
+              <div>
+                <RatingInput
+                  id="uncork-rating-input"
+                  value={rating}
+                  onChange={setRating}
+                  allowClear={true}
+                  label="Puntuación de descorche"
+                  helperText="Deslizá con precisión de décimas (1,0 - 5,0)"
+                  ariaLabel="Puntuación de descorche"
+                  compact={true}
+                />
+              </div>
+
               {/* Notas de Cata Sensoriales */}
               <div>
                 <label htmlFor="uncork-notes" className="block text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
@@ -310,9 +374,10 @@ export default function UncorkDialog({ wine, onClose, onSave }: UncorkDialogProp
                   id="uncork-notes"
                   rows={2}
                   value={tastingNotes}
+                  disabled={rating === null}
                   onChange={(e) => setTastingNotes(e.target.value)}
                   placeholder="Aromas predominantes, maridaje elegido, evolución en copa..."
-                  className="w-full resize-none rounded-2xl border border-stone-800 bg-white/[0.04] p-3 text-xs text-stone-200 placeholder:text-stone-500 focus:border-amber-400 focus:outline-none font-sans"
+                  className="w-full resize-none rounded-2xl border border-stone-800 bg-white/[0.04] p-3 text-xs text-stone-200 placeholder:text-stone-500 focus:border-amber-400 focus:outline-none font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 

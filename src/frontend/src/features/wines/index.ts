@@ -37,8 +37,11 @@ export {
   type UseWineCatalogsReturn,
   type UseWineCatalogsOptions,
 } from './hooks/useWineCatalogs';
-export { getWineReviews, createReview } from './api/reviewsApi';
-export type { ReviewResponseDto, CreateReviewRequestDto } from './types/review';
-
-
-
+export { getWineReviews, getMyVintageReview, createReview, updateReview } from './api/reviewsApi';
+export { createUncork, getMyUncorks } from './api/uncorksApi';
+export type { ReviewResponseDto, CreateReviewRequestDto, UpdateReviewRequestDto } from './types/review';
+export type {
+  UncorkResponseDto,
+  CreateUncorkRequestDto,
+  UncorkListItemDto,
+} from './types/uncork';

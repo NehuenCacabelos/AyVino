@@ -168,6 +168,9 @@ public class ImageStorageTests
     [InlineData("avatar")]
     [InlineData("logo")]
     [InlineData("banner")]
+    [InlineData("card")]
+    [InlineData("detail")]
+    [InlineData("thumb")]
     [InlineData("bottle")]
     [InlineData("AVATAR")]
     [InlineData("  logo  ")]
@@ -208,22 +211,40 @@ public class ImageStorageTests
 
     [Theory]
     [InlineData("invalid")]
-    [InlineData("thumb")]
     [InlineData("header")]
-    public async Task GetImageByIdAsync_WithInvalidVariant_ThrowsValidationException(string invalidVariant)
+    [InlineData("desconocida")]
+    public async Task GetImageByIdAsync_WithUnknownVariant_FallsBackToCard(string unknownVariant)
     {
         // Arrange
         var id = Guid.NewGuid();
+        var externalId = $"test/image/{id}";
+        var expectedUrl = $"https://res.cloudinary.com/demo/image/upload/card/{externalId}";
+
         var imageRepo = Substitute.For<IImageRepository>();
+        imageRepo.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns(new Image
+        {
+            Id = id,
+            Provider = "cloudinary",
+            ExternalId = externalId,
+            MimeType = "image/png",
+            SizeBytes = 2048,
+            Width = 200,
+            Height = 200,
+            CreatedAt = DateTime.UtcNow
+        });
+
         var storage = Substitute.For<IImageStorage>();
+        storage.BuildDeliveryUrl(externalId, "card").Returns(expectedUrl);
+
         var httpContext = new DefaultHttpContext();
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(() =>
-            ImageEndpoints.GetImageByIdAsync(id, invalidVariant, imageRepo, storage, httpContext, CancellationToken.None));
+        // Act
+        var result = await ImageEndpoints.GetImageByIdAsync(id, unknownVariant, imageRepo, storage, httpContext, CancellationToken.None);
 
-        Assert.Contains("no válida", ex.Message);
-        Assert.Contains("avatar, logo, banner, bottle", ex.Message);
+        // Assert
+        var redirectResult = Assert.IsType<RedirectHttpResult>(result);
+        Assert.Equal(expectedUrl, redirectResult.Url);
+        storage.Received(1).BuildDeliveryUrl(externalId, "card");
     }
 
     [Fact]

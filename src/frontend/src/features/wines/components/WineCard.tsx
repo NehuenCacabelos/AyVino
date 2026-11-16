@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Star, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { CuratedWine } from '../../../types/wine';
@@ -28,10 +29,9 @@ export interface WineCardProps<T extends CuratedWine | WineCardData = CuratedWin
 
 /**
  * WineCard Component
- * Tarjeta de vino editorial polimórfica y composicional a dos columnas.
- * Soporta variantes:
- * - 'editorial' (por defecto): modo ficha completa con rating de estrellas y reviews (ej. Landing).
- * - 'pairing': modo sommelier para maridajes y etiquetas testigo con badge personalizado y navegación fluida.
+ * Tarjeta de vino editorial polimórfica para escaneo visual rápido en catálogo, landing y maridaje.
+ * Escenario de proporción fija 4:5 con fondo blanco (#fff) para que el lienzo de Cloudinary
+ * se funda sin bordes y la botella destaque con proporciones uniformes.
  */
 export default function WineCard<T extends CuratedWine | WineCardData = CuratedWine | WineCardData>({
   wine,
@@ -41,6 +41,8 @@ export default function WineCard<T extends CuratedWine | WineCardData = CuratedW
   onSelect,
   className = '',
 }: WineCardProps<T>) {
+  const [hasError, setHasError] = useState(false);
+
   const {
     name,
     winery,
@@ -67,25 +69,31 @@ export default function WineCard<T extends CuratedWine | WineCardData = CuratedW
 
   const cardContent = (
     <>
-      {/* Columna Izquierda: Espacio para botella con imagen real o silueta */}
-      <div className="w-full sm:w-36 md:w-40 h-48 sm:h-auto bg-[#0d0d0f] sm:border-r border-b sm:border-b-0 border-white/[0.08] flex items-center justify-center p-4 shrink-0 transition-colors group-hover:bg-[#141417] relative overflow-hidden">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={name}
-            loading="lazy"
-            decoding="async"
-            width={160}
-            height={192}
-            className="max-h-36 sm:max-h-44 w-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <WineBottleSilhouette className="w-12 h-32 sm:w-14 sm:h-36 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />
-        )}
+      {/* Columna Izquierda: Escenario blanco para botella en proporción 4:5 */}
+      <div className="w-full sm:w-44 p-3 shrink-0 flex items-center justify-center">
+        <div
+          data-testid="wine-card-image-container"
+          className="w-full aspect-[4/5] bg-white rounded-lg overflow-hidden flex items-center justify-center relative shadow-inner"
+        >
+          {imageUrl && !hasError ? (
+            <img
+              src={imageUrl}
+              alt={name}
+              loading="lazy"
+              decoding="async"
+              onError={() => setHasError(true)}
+              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div data-testid="wine-card-fallback" className="flex items-center justify-center w-full h-full">
+              <WineBottleSilhouette className="w-14 h-36 sm:w-16 sm:h-40 text-neutral-400 transition-transform duration-300 group-hover:scale-105" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Columna Derecha: Información técnica y tipografía editorial */}
-      <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between min-w-0">
+      <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
         <div>
           {/* Cabecera: Varietal, Añada y Badge */}
           <div className="flex items-center justify-between gap-2 mb-2">
@@ -106,19 +114,19 @@ export default function WineCard<T extends CuratedWine | WineCardData = CuratedW
             </span>
           </div>
 
-          {/* Nombre del vino en tipografía serif */}
-          <h4 className="font-serif text-xl sm:text-2xl text-neutral-100 font-semibold tracking-tight leading-tight group-hover:text-white transition-colors truncate">
+          {/* Nombre del vino con mayor escala y altura mínima para grid uniforme */}
+          <h4 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight leading-tight line-clamp-2 min-h-[3.5rem] group-hover:text-white transition-colors">
             {name}
           </h4>
 
-          {/* Bodega y Región */}
-          <p className="text-xs sm:text-sm text-neutral-300 font-normal leading-relaxed mt-1 truncate">
-            {winery} {region ? <><span className="text-neutral-500">·</span> {region}</> : null}
+          {/* Bodega y Región con mayor jerarquía */}
+          <p className="text-sm text-neutral-300 font-normal leading-relaxed mt-1 truncate">
+            {winery} <span className="text-neutral-500">·</span> {region}
           </p>
         </div>
 
         {/* Pie: Rating (si aplica) y Enlace / Acción "Ver ficha →" */}
-        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-4">
+        <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between gap-4">
           {variant !== 'pairing' && rating !== undefined && rating !== null ? (
             <div className="flex items-center gap-1.5">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
@@ -137,9 +145,9 @@ export default function WineCard<T extends CuratedWine | WineCardData = CuratedW
             </span>
           )}
 
-          <div className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium uppercase tracking-wider text-neutral-200 group-hover:text-white transition-colors py-1 px-1">
+          <div className="inline-flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-neutral-200 group-hover:text-white transition-colors py-1 px-1">
             <span>Ver ficha</span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 text-amber-400" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 text-amber-400" />
           </div>
         </div>
       </div>
@@ -147,7 +155,7 @@ export default function WineCard<T extends CuratedWine | WineCardData = CuratedW
   );
 
   const containerBaseClasses =
-    'group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.16] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden shadow-lg hover:shadow-xl text-left block w-full';
+    'group relative bg-[#141417]/80 rounded-xl border border-white/[0.08] hover:bg-[#1c1c22] hover:border-white/[0.12] transition-all duration-200 flex flex-col sm:flex-row overflow-hidden shadow-lg hover:shadow-xl items-stretch text-left block w-full';
 
   if (to) {
     return (

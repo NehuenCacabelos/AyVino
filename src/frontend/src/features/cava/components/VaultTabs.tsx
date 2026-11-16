@@ -32,7 +32,7 @@ export default function VaultTabs({ totalCount, sortOption, onSortChange }: Vaul
           }`}
         >
           <LayoutGrid className="w-3.5 h-3.5 text-[#fbbf24]" />
-          <span>Todas las botellas</span>
+          <span>Todos los vinos</span>
           <span className="opacity-80 font-mono">({totalCount})</span>
         </button>
 

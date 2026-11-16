@@ -245,9 +245,16 @@ export const initialVaultVitals: CellarVitals = {
   redsCount: 12,
   whitesCount: 4,
   sparklingCount: 2,
+  othersCount: 0,
   optimalCount: 5,
   dominantVarietal: 'Malbec',
   dominantVarietalPercentage: 58,
+  undeclaredGrapeBottles: 0,
+  varietalSegments: [
+    { name: 'Malbec', percentage: 58, bottleCount: 10, wineType: 'Red', color: '#722F37', opacity: 1 },
+    { name: 'Cabernet Sauvignon', percentage: 22, bottleCount: 4, wineType: 'Red', color: '#722F37', opacity: 0.7 },
+    { name: 'Chardonnay', percentage: 20, bottleCount: 4, wineType: 'White', color: '#fbbf24', opacity: 1 },
+  ],
   oldestVintage: 2017,
   oldestVintageAgingYears: 8,
 };
@@ -278,7 +285,7 @@ export const initialTastingLog: TastingLogEntry[] = [
   {
     id: 'log-1',
     wineName: 'Cheval des Andes 2016',
-    criticScore: 'CATA PRIVADA 97 PTS',
+    criticScore: 'TU RESEÑA 4,8 ★',
     uncorkDate: 'DESCORCHADO EL 14 DE MARZO, 2025',
     notes:
       'Nariz con increíble profundidad de violetas, tabaco rubio y sándalo. En boca, la seda del Malbec armoniza a la perfección con la columna vertebral del Cabernet Sauvignon de Las Compuertas. Servido en copas Riedel Burdeos a 17°C tras 1 hora en decantador.',
@@ -289,7 +296,7 @@ export const initialTastingLog: TastingLogEntry[] = [
   {
     id: 'log-2',
     wineName: 'Catena Zapata Adrianna Vineyard River Stones 2018',
-    criticScore: 'CATA PRIVADA 99 PTS',
+    criticScore: 'TU RESEÑA 4,9 ★',
     uncorkDate: 'DESCORCHADO EL 28 DE DICIEMBRE, 2024',
     notes:
       'Mineralidad descarnada, pura tiza y pedernal. Una tensión ácida asombrosa que despierta cada rincón de la boca. Acabado salino interminable.',

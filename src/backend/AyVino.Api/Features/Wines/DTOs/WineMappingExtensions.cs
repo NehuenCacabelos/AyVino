@@ -38,6 +38,6 @@ public static class WineMappingExtensions
         wine.LocationId,
         wine.SourceType.ToString(),
         wine.DuplicateOfWineId,
-        wine.ReviewCount >= 5 ? Math.Round((decimal)wine.RatingSum / wine.ReviewCount, 2) : null,
+        wine.ReviewCount >= 5 ? Math.Round(wine.RatingSum / wine.ReviewCount, 1) : null,
         wine.ReviewCount);
 }

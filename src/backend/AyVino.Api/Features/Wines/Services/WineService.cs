@@ -74,7 +74,7 @@ public class WineService(
         var wineEntity = dto.ToEntity(wineType, sourceType);
         var firstVintageEntity = dto.FirstVintage.ToEntity(actor.UserId, wineId: 0, approvalStatus: approvalStatus);
 
-        var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
+        var wine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, dto.ConfirmNewLabel, ct);
         return wine.ToResponseDto();
     }
 
@@ -108,11 +108,20 @@ public class WineService(
         return await GetByIdAsync(id, actor, ct);
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct = default)
+    public async Task DeleteAsync(int id, Actor actor, CancellationToken ct = default)
     {
-        var exists = await wineRepository.ExistsByIdAsync(id, ct);
-        if (!exists)
-            throw new NotFoundException($"Wine with ID {id} not found.");
+        var existing = await wineRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Wine with ID {id} not found.");
+
+        if (!actor.IsAdmin)
+        {
+            if (existing.WineryId is null)
+                throw new ForbiddenException("No tenés permiso para eliminar este vino.");
+
+            var winery = await wineryRepository.GetByIdAsync(existing.WineryId.Value, ct);
+            if (!WineryAccessRules.IsOwner(winery, actor))
+                throw new ForbiddenException("No tenés permiso para eliminar este vino.");
+        }
 
         var usage = await wineRepository.GetUsageCountsAsync(id, ct);
         if (usage.HasBlockingUsage)
@@ -240,7 +249,7 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
-    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, CancellationToken ct = default)
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default)
     {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
@@ -253,7 +262,7 @@ public class WineService(
             parsedType = parsed;
         }
 
-        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, ct);
+        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, grapeId, stateId, wineryId, ct);
     }
 
     public async Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default)

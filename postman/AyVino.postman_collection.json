@@ -3406,7 +3406,7 @@
                     }
                   ]
                 },
-                "description": "Rese├▒as de la cosecha"
+                "description": "Reseñas de la cosecha"
               },
               "response": [],
               "event": [
@@ -3415,6 +3415,45 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Review by Vintage",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wine-vintages/1/reviews/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wine-vintages",
+                    "1",
+                    "reviews",
+                    "me"
+                  ]
+                },
+                "description": "Obtiene la reseña del propio usuario autenticado para una cosecha puntual (404 si aún no tiene reseña)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 404', function () { pm.expect([200, 404]).to.include(pm.response.code); });"
                     ],
                     "type": "text/javascript"
                   }
@@ -5263,6 +5302,58 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Uncork Cellar Item",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 4.5,\n  \"comment\": \"Excelente descorche en cena.\",\n  \"tastedAt\": \"2026-11-14T12:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/cellars/{{cellarId}}/items/{{vintageId}}/uncork",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "cellars",
+                    "{{cellarId}}",
+                    "items",
+                    "{{vintageId}}",
+                    "uncork"
+                  ],
+                  "query": []
+                },
+                "description": "Descorcha una botella reduciendo el stock e inserta cata unificada en la bitacora."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(json.remainingQuantity).to.be.a(\"number\");"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             }
           ]
         },
@@ -5298,6 +5389,166 @@
                   "script": {
                     "exec": [
                       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Uncorks",
+          "item": [
+            {
+              "name": "Create Uncork (Without Cellar)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"wineVintageId\": 1,\n  \"rating\": 4.5,\n  \"comment\": \"Gran bouquet frutal y persistencia.\",\n  \"uncorkedAt\": \"2026-11-14T12:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/uncorks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "uncorks"
+                  ],
+                  "query": []
+                },
+                "description": "Registra un evento de descorche para el usuario autenticado (actualizando o creando su reseña si se incluye calificación)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(json.id).to.be.a(\"number\");",
+                      "pm.expect(json.rating).to.eql(4.5);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Uncorks",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/uncorks?pageNumber=1&pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "uncorks"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Obtiene la bitácora paginada de eventos de descorche del usuario autenticado con su reseña vigente."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(Array.isArray(json)).to.be.true;"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get My Uncorks Filtered by Vintage",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/uncorks?wineVintageId={{vintageId}}&pageNumber=1&pageSize=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "uncorks"
+                  ],
+                  "query": [
+                    {
+                      "key": "wineVintageId",
+                      "value": "{{vintageId}}"
+                    },
+                    {
+                      "key": "pageNumber",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Filtra los eventos de descorche del usuario por cosecha específica."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                      "var json = pm.response.json();",
+                      "pm.expect(Array.isArray(json)).to.be.true;"
                     ],
                     "type": "text/javascript"
                   }

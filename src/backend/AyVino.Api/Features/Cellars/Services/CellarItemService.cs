@@ -2,6 +2,10 @@ using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Cellars.DTOs;
 using AyVino.Api.Features.Cellars.Models;
 using AyVino.Api.Features.Cellars.Repositories;
+using AyVino.Api.Features.Grapes.Enums;
+using AyVino.Api.Features.Grapes.Repositories;
+using AyVino.Api.Features.Reviews.Validation;
+using AyVino.Api.Features.Uncorks.Services;
 using AyVino.Api.Features.Wines.Enums;
 using AyVino.Api.Features.Wines.Models;
 using AyVino.Api.Features.Wines.Repositories;
@@ -12,7 +16,9 @@ public class CellarItemService(
     ICellarRepository cellarRepository,
     ICellarItemRepository itemRepository,
     IWineVintageRepository wineVintageRepository,
-    IWineRepository? wineRepository = null) : ICellarItemService
+    IWineRepository? wineRepository = null,
+    IGrapeRepository? grapeRepository = null,
+    IUncorkService? uncorkService = null) : ICellarItemService
 {
     private const int MaxQuantity = 999;
     private const int MaxNotesLength = 500;
@@ -83,6 +89,37 @@ public class CellarItemService(
         }
         else
         {
+            if (grapeRepository is null)
+                throw new InvalidOperationException("GrapeRepository is required for QuickAdd creating a new wine.");
+
+            List<WineGrape> grapes = [];
+
+            if (parsedWineType is WineType.Red or WineType.White)
+            {
+                if (!request.MainGrapeId.HasValue)
+                {
+                    throw new ValidationException("La uva principal es obligatoria para vinos tintos y blancos.");
+                }
+            }
+
+            if (request.MainGrapeId.HasValue)
+            {
+                var grape = await grapeRepository.GetByIdAsync(request.MainGrapeId.Value, ct)
+                    ?? throw new ValidationException($"La uva con ID {request.MainGrapeId.Value} no existe.");
+
+                if (parsedWineType == WineType.Red && grape.ColorType != ColorType.Red)
+                {
+                    throw new ValidationException("Los vinos tintos exigen una uva tinta.");
+                }
+
+                if (parsedWineType == WineType.Orange && grape.ColorType != ColorType.White && grape.ColorType != ColorType.Rose)
+                {
+                    throw new ValidationException("Los vinos naranjos solo aceptan uvas blancas o de piel rosada.");
+                }
+
+                grapes.Add(new WineGrape { GrapeId = grape.Id, Percentage = 100 });
+            }
+
             var wineEntity = new Wine
             {
                 Name = request.Name.Trim(),
@@ -100,7 +137,7 @@ public class CellarItemService(
                 RegisterDate = DateTime.UtcNow
             };
 
-            var createdWine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, Enumerable.Empty<WineGrape>(), ct);
+            var createdWine = await wineRepository.CreateWithFirstVintageAsync(wineEntity, firstVintageEntity, grapes, ct);
             var vintages = await wineVintageRepository.GetAllByWineIdAsync(createdWine.Id, ct);
             var createdVintage = vintages.FirstOrDefault()
                 ?? throw new InvalidOperationException("Failed to retrieve created wine vintage.");
@@ -212,6 +249,37 @@ public class CellarItemService(
         var deleted = await itemRepository.DeleteAsync(cellarId, wineVintageId, ct);
         if (!deleted)
             throw new NotFoundException($"La cosecha {wineVintageId} no está en la cava {cellarId}.");
+    }
+
+    public Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, CancellationToken ct = default) =>
+        UncorkAsync(userId, cellarId, wineVintageId, null, ct);
+
+    public async Task<CellarItemResponseDto> UncorkAsync(int userId, int cellarId, int wineVintageId, UncorkCellarItemRequestDto? request, CancellationToken ct = default)
+    {
+        if (uncorkService is not null)
+        {
+            var result = await uncorkService.RecordAsync(userId, wineVintageId, cellarId, request?.Rating, request?.Comment, request?.UncorkedAt, ct);
+            if (result.UpdatedCellarItem is null)
+                throw new ConflictException("No quedan botellas de esta cosecha en la cava o el ítem no existe.");
+
+            return result.UpdatedCellarItem.ToResponseDto();
+        }
+
+        if (request?.Rating.HasValue == true)
+            RatingValidator.Validate(request.Rating.Value);
+
+        if (request?.Comment?.Length > 1000)
+            throw new ValidationException("El comentario no puede superar los 1000 caracteres.");
+
+        await EnsureCellarOwnedAsync(userId, cellarId, ct);
+
+        var row = (request?.Rating.HasValue == true || !string.IsNullOrWhiteSpace(request?.Comment))
+            ? await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, request?.Rating, request?.Comment, ct)
+            : await itemRepository.UncorkAsync(userId, cellarId, wineVintageId, ct);
+        if (row is null)
+            throw new ConflictException("No quedan botellas de esta cosecha en la cava o el ítem no existe.");
+
+        return row.ToResponseDto();
     }
 
     // Si la cava no existe o es de otro usuario: 404, sin revelar cuál de los dos casos es.

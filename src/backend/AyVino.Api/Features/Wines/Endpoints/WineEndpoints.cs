@@ -39,12 +39,12 @@ public static class WineEndpoints
             .WithSummary("Updates a wine label's data (name, type, winery, location, description).")
             .WithAudit(AuditAction.WineUpdatedByAdmin, "Wine", idRouteKey: "id", adminOnly: true, details: (ctx, res) => ctx.Arguments.OfType<UpdateWineRequestDto>().FirstOrDefault()?.Name);
 
-        group.MapDelete("/{id:int}", async (int id, IWineService service, CancellationToken ct) =>
+        group.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
         {
-            await service.DeleteAsync(id, ct);
+            await service.DeleteAsync(id, user.GetActor(), ct);
             return Results.NoContent();
         })
-            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .RequireAuthorization()
             .WithName("DeleteWine")
             .WithSummary("Deletes a wine label and all of its vintages (cascade).")
             .WithAudit(AuditAction.WineDeleted, "Wine", idRouteKey: "id");
@@ -61,8 +61,8 @@ public static class WineEndpoints
             .WithName("ClaimWines")
             .WithSummary("Links unclaimed community wine labels to a registered winery.");
 
-        group.MapGet("/search", async (string? search, string? name, string? winery, int? year, string? wineType, int? pageNumber, int? pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
-            Results.Ok(await service.SearchCatalogAsync(search, name, winery, year, wineType, pageNumber.GetValueOrDefault(1), pageSize.GetValueOrDefault(12), user.GetActorOrNull(), ct)))
+        group.MapGet("/search", async (string? search, string? name, string? winery, int? year, string? wineType, int? grapeId, int? stateId, int? wineryId, int? pageNumber, int? pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchCatalogAsync(search, name, winery, year, wineType, pageNumber.GetValueOrDefault(1), pageSize.GetValueOrDefault(12), user.GetActorOrNull(), grapeId, stateId, wineryId, ct)))
             .WithName("SearchWines")
             .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
 

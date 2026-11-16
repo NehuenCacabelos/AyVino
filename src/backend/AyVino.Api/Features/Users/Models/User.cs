@@ -10,4 +10,5 @@ public record User
     public bool IsActive { get; init; } = true;
     public Guid? AvatarImageId { get; init; }
     public string? Bio { get; init; }
+    public decimal? AverageRating { get; init; }
 }

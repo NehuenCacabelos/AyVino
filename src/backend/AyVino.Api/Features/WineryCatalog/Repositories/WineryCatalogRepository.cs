@@ -148,10 +148,10 @@ public class WineryCatalogRepository(IDbConnectionFactory connectionFactory) : I
     {
         const string sql = """
             SELECT 
-                COUNT(DISTINCT w.id) AS Labels,
-                COUNT(v.id) AS Vintages,
-                COALESCE(SUM(v.rating_sum), 0) AS RatingSum,
-                COALESCE(SUM(v.review_count), 0) AS ReviewCount
+                COUNT(DISTINCT w.id)::int AS Labels,
+                COUNT(v.id)::int AS Vintages,
+                COALESCE(SUM(v.rating_sum), 0.0) AS RatingSum,
+                COALESCE(SUM(v.review_count), 0)::int AS ReviewCount
             FROM wines w
             INNER JOIN wine_vintages v ON v.wine_id = w.id
             WHERE w.winery_id = @WineryId

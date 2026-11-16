@@ -39,7 +39,8 @@ public static class UserMappingExtensions
             RegisterDate: user.RegisterDate,
             IsActive: user.IsActive,
             AvatarImageId: user.AvatarImageId,
-            Bio: user.Bio
+            Bio: user.Bio,
+            AverageRating: user.AverageRating
         );
     }
 
