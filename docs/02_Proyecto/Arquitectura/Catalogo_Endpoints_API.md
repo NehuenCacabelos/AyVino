@@ -511,6 +511,7 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/admin/stats` | Admin (`RequireAdmin`) | Conteos exactos de usuarios, bodegas, ciudades, cosechas, vinos y reseñas. | - | `200 OK` (`AdminStatsDto`) |
 | `GET` | `/api/admin/stats/grapes-distribution` | Admin (`RequireAdmin`) | Distribución de presencia de varietales en cosechas aprobadas de vinos no duplicados. | - | `200 OK` (`GrapesDistributionDto`) |
+| `GET` | `/api/admin/stats/wineries-by-region` | Admin (`RequireAdmin`) | Conteo de bodegas aprobadas por provincia, sin coordenadas y pines geográficos. | - | `200 OK` (`WineriesByRegionDto`) |
 
 ### Estructura del DTO (`AdminStatsDto`)
 - `users`:
@@ -540,6 +541,21 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
   - `grapeId` (`int`): ID de la uva.
   - `name` (`string`): Nombre del varietal.
   - `vintageCount` (`int`): Cantidad de cosechas aprobadas no duplicadas donde aparece la uva.
+
+### Estructura del DTO (`WineriesByRegionDto`)
+- `totalWineries` (`int`): Total de bodegas aprobadas (`status = 2`), tengan o no provincia asignada.
+- `withoutCoordinates` (`int`): Bodegas aprobadas con `latitude IS NULL` o `longitude IS NULL`.
+- `regions` (`RegionWineryCountDto[]`): Bodegas aprobadas agrupadas por provincia (`states`), excluyendo las que no tienen provincia resuelta, ordenadas por `wineryCount` descendente y `stateName` ascendente:
+  - `stateId` (`int`): ID de la provincia.
+  - `stateName` (`string`): Nombre de la provincia.
+  - `wineryCount` (`int`): Cantidad de bodegas aprobadas en esa provincia.
+- `pins` (`WineryPinDto[]`): Bodegas aprobadas con `latitude` y `longitude` no nulas, ordenadas por `name` ascendente:
+  - `id` (`int`): ID de la bodega.
+  - `name` (`string`): Nombre de la bodega.
+  - `latitude` (`decimal`): Latitud.
+  - `longitude` (`decimal`): Longitud.
+  - `stateName` (`string?`): Provincia (nullable si la ubicación no la resuelve).
+  - `cityName` (`string?`): Ciudad (nullable si la ubicación no la resuelve).
 
 ---
 

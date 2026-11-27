@@ -110,4 +110,54 @@ public class AdminStatsServiceTests
 
         await _repository.Received(1).GetGrapesDistributionAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task GetWineriesByRegionAsync_WhenUserIsNotAdmin_ThrowsForbiddenException()
+    {
+        // Arrange
+        var userActor = new Actor(1, AppRoles.User, "regular_user");
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            _service.GetWineriesByRegionAsync(userActor));
+
+        Assert.Contains("Solo un administrador", ex.Message);
+        await _repository.DidNotReceiveWithAnyArgs().GetWineriesByRegionAsync(default);
+    }
+
+    [Fact]
+    public async Task GetWineriesByRegionAsync_WhenAdmin_ReturnsWineriesByRegionFromRepository()
+    {
+        // Arrange
+        var adminActor = new Actor(1, AppRoles.Admin, "admin_user");
+        var expected = new WineriesByRegionDto(
+            TotalWineries: 15,
+            WithoutCoordinates: 2,
+            Regions:
+            [
+                new RegionWineryCountDto(13, "Mendoza", 10),
+                new RegionWineryCountDto(17, "Salta", 3)
+            ],
+            Pins:
+            [
+                new WineryPinDto(1, "Bodega A", -33.0123456m, -68.8765432m, "Mendoza", "Luján de Cuyo"),
+                new WineryPinDto(2, "Bodega B", -26.0712345m, -65.9765432m, null, null)
+            ]);
+
+        _repository.GetWineriesByRegionAsync(Arg.Any<CancellationToken>())
+            .Returns(expected);
+
+        // Act
+        var result = await _service.GetWineriesByRegionAsync(adminActor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(expected, result);
+        Assert.Equal(15, result.TotalWineries);
+        Assert.Equal(2, result.WithoutCoordinates);
+        Assert.Equal(2, result.Regions.Count);
+        Assert.Equal(2, result.Pins.Count);
+
+        await _repository.Received(1).GetWineriesByRegionAsync(Arg.Any<CancellationToken>());
+    }
 }

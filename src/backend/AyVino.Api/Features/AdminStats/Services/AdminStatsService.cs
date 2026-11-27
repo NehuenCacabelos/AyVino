@@ -26,4 +26,14 @@ public class AdminStatsService(IAdminStatsRepository repository) : IAdminStatsSe
 
         return await repository.GetGrapesDistributionAsync(ct);
     }
+
+    public async Task<WineriesByRegionDto> GetWineriesByRegionAsync(Actor actor, CancellationToken ct = default)
+    {
+        if (!actor.IsAdmin)
+        {
+            throw new ForbiddenException("Solo un administrador puede consultar las estadísticas del sistema.");
+        }
+
+        return await repository.GetWineriesByRegionAsync(ct);
+    }
 }

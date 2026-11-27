@@ -29,3 +29,13 @@ public record AdminStatsDto(
 public record GrapePresenceDto(int GrapeId, string Name, int VintageCount);
 
 public record GrapesDistributionDto(int TotalVintages, IReadOnlyList<GrapePresenceDto> Grapes);
+
+public record RegionWineryCountDto(int StateId, string StateName, int WineryCount);
+
+public record WineryPinDto(int Id, string Name, decimal Latitude, decimal Longitude, string? StateName, string? CityName);
+
+public record WineriesByRegionDto(
+    int TotalWineries,
+    int WithoutCoordinates,
+    IReadOnlyList<RegionWineryCountDto> Regions,
+    IReadOnlyList<WineryPinDto> Pins);

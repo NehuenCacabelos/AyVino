@@ -35,6 +35,29 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
         public long VintageCount { get; set; }
     }
 
+    private sealed class RawWineryCountsRow
+    {
+        public long TotalWineries { get; set; }
+        public long WithoutCoordinates { get; set; }
+    }
+
+    private sealed class RawRegionWineryCountRow
+    {
+        public int StateId { get; set; }
+        public string StateName { get; set; } = string.Empty;
+        public long WineryCount { get; set; }
+    }
+
+    private sealed class RawWineryPinRow
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
+        public string? StateName { get; set; }
+        public string? CityName { get; set; }
+    }
+
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken ct = default)
     {
         const string sql = """
@@ -125,5 +148,76 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
             .ToList();
 
         return new GrapesDistributionDto((int)totalVintages, grapes);
+    }
+
+    public async Task<WineriesByRegionDto> GetWineriesByRegionAsync(CancellationToken ct = default)
+    {
+        const string countsSql = """
+            SELECT
+                COUNT(*) AS TotalWineries,
+                COUNT(*) FILTER (WHERE w.latitude IS NULL OR w.longitude IS NULL) AS WithoutCoordinates
+            FROM wineries w
+            WHERE w.status = @ApprovedWinery;
+            """;
+
+        const string regionsSql = """
+            SELECT
+                s.id AS StateId,
+                s.name AS StateName,
+                COUNT(*) AS WineryCount
+            FROM wineries w
+            LEFT JOIN locations l ON l.id = w.location_id
+            LEFT JOIN cities c ON c.id = l.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            WHERE w.status = @ApprovedWinery
+              AND s.id IS NOT NULL
+            GROUP BY s.id, s.name
+            ORDER BY WineryCount DESC, s.name ASC;
+            """;
+
+        const string pinsSql = """
+            SELECT
+                w.id AS Id,
+                w.name AS Name,
+                w.latitude AS Latitude,
+                w.longitude AS Longitude,
+                s.name AS StateName,
+                c.name AS CityName
+            FROM wineries w
+            LEFT JOIN locations l ON l.id = w.location_id
+            LEFT JOIN cities c ON c.id = l.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            WHERE w.status = @ApprovedWinery
+              AND w.latitude IS NOT NULL
+              AND w.longitude IS NOT NULL
+            ORDER BY w.name ASC;
+            """;
+
+        var parameters = new { ApprovedWinery = (short)WineryStatus.Approved };
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+
+        var counts = await connection.QuerySingleAsync<RawWineryCountsRow>(
+            new CommandDefinition(countsSql, parameters, cancellationToken: ct));
+
+        var regionRows = await connection.QueryAsync<RawRegionWineryCountRow>(
+            new CommandDefinition(regionsSql, parameters, cancellationToken: ct));
+
+        var pinRows = await connection.QueryAsync<RawWineryPinRow>(
+            new CommandDefinition(pinsSql, parameters, cancellationToken: ct));
+
+        var regions = regionRows
+            .Select(r => new RegionWineryCountDto(r.StateId, r.StateName, (int)r.WineryCount))
+            .ToList();
+
+        var pins = pinRows
+            .Select(p => new WineryPinDto(p.Id, p.Name, p.Latitude, p.Longitude, p.StateName, p.CityName))
+            .ToList();
+
+        return new WineriesByRegionDto(
+            TotalWineries: (int)counts.TotalWineries,
+            WithoutCoordinates: (int)counts.WithoutCoordinates,
+            Regions: regions,
+            Pins: pins);
     }
 }
