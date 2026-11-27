@@ -45,6 +45,40 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
 
     public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
     {
+        var (whereClause, parameters) = BuildListFilter(status, locationId);
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT {SelectColumns}
+            {whereClause}
+            ORDER BY w.id
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Winery>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountAsync(int? status = null, int? locationId = null, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildListFilter(status, locationId);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM wineries w
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildListFilter(int? status, int? locationId)
+    {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
 
@@ -61,20 +95,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
-        var offset = (pageNumber - 1) * pageSize;
-        parameters.Add("Offset", offset);
-        parameters.Add("PageSize", pageSize);
-
-        var sql = $"""
-            SELECT {SelectColumns}
-            {whereClause}
-            ORDER BY w.id
-            OFFSET @Offset LIMIT @PageSize;
-            """;
-
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<Winery>(
-            new CommandDefinition(sql, parameters, cancellationToken: ct));
+        return (whereClause, parameters);
     }
 
     public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)

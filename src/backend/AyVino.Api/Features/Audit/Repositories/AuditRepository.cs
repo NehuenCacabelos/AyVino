@@ -40,6 +40,59 @@ public class AuditRepository(IDbConnectionFactory connectionFactory) : IAuditRep
         DateTime? to = null,
         CancellationToken ct = default)
     {
+        var (whereClause, parameters) = BuildFilter(action, entityType, userId, from, to);
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT id AS Id,
+                   user_id AS UserId,
+                   username AS Username,
+                   action AS Action,
+                   entity_type AS EntityType,
+                   entity_id AS EntityId,
+                   details AS Details,
+                   created_at AS CreatedAt
+            FROM audit_log
+            {whereClause}
+            ORDER BY created_at DESC, id DESC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<AuditLogEntry>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountAsync(
+        short? action = null,
+        string? entityType = null,
+        int? userId = null,
+        DateTime? from = null,
+        DateTime? to = null,
+        CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildFilter(action, entityType, userId, from, to);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM audit_log
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildFilter(
+        short? action,
+        string? entityType,
+        int? userId,
+        DateTime? from,
+        DateTime? to)
+    {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
 
@@ -74,27 +127,6 @@ public class AuditRepository(IDbConnectionFactory connectionFactory) : IAuditRep
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
-        var offset = (pageNumber - 1) * pageSize;
-        parameters.Add("Offset", offset);
-        parameters.Add("PageSize", pageSize);
-
-        var sql = $"""
-            SELECT id AS Id,
-                   user_id AS UserId,
-                   username AS Username,
-                   action AS Action,
-                   entity_type AS EntityType,
-                   entity_id AS EntityId,
-                   details AS Details,
-                   created_at AS CreatedAt
-            FROM audit_log
-            {whereClause}
-            ORDER BY created_at DESC, id DESC
-            OFFSET @Offset LIMIT @PageSize;
-            """;
-
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<AuditLogEntry>(
-            new CommandDefinition(sql, parameters, cancellationToken: ct));
+        return (whereClause, parameters);
     }
 }

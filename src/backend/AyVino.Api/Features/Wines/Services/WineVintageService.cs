@@ -1,5 +1,6 @@
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Wineries.Enums;
@@ -262,21 +263,35 @@ public class WineVintageService(
 
     public async Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
     {
+        var statusValue = ValidateAndParseAdminFilters(pageNumber, pageSize, status);
+        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        return rows.ToListItemDtoList();
+    }
+
+    public async Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
+    {
+        var statusValue = ValidateAndParseAdminFilters(pageNumber, pageSize, status);
+        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        var totalCount = await vintageRepository.CountForAdminAsync(statusValue, ct);
+        return new PagedResult<AdminWineVintageListItemDto>(rows.ToListItemDtoList(), totalCount);
+    }
+
+    private static int? ValidateAndParseAdminFilters(int pageNumber, int pageSize, string? status)
+    {
         if (pageNumber <= 0)
             throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is < 1 or > 100)
             throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
-        int? statusValue = null;
-        if (!string.IsNullOrWhiteSpace(status))
+        if (string.IsNullOrWhiteSpace(status))
         {
-            if (!Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
-                throw new ValidationException($"Invalid status: '{status}'.");
-            statusValue = (int)parsedStatus;
+            return null;
         }
 
-        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
-        return rows.ToListItemDtoList();
+        if (!Enum.TryParse<ApprovalStatus>(status, ignoreCase: true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+            throw new ValidationException($"Invalid status: '{status}'.");
+
+        return (int)parsedStatus;
     }
 
     // El "ownership check" (wineId de la URL vs. wine_id real del vintage) evita que alguien

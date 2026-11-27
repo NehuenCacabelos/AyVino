@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Features.Locations.DTOs;
 using AyVino.Api.Features.Locations.Enums;
 using AyVino.Api.Features.Locations.Repositories;
@@ -17,22 +18,36 @@ public class CityService(ICityRepository cityRepository, IStateRepository stateR
 
     public async Task<IEnumerable<CityResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? stateId, string? status, CancellationToken ct = default)
     {
+        var statusValue = ValidateAndParseListFilters(pageNumber, pageSize, status);
+        var cities = await cityRepository.GetAllAsync(pageNumber, pageSize, stateId, statusValue, ct);
+        return cities.ToResponseDtoList();
+    }
+
+    public async Task<PagedResult<CityResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, int? stateId, string? status, CancellationToken ct = default)
+    {
+        var statusValue = ValidateAndParseListFilters(pageNumber, pageSize, status);
+        var cities = await cityRepository.GetAllAsync(pageNumber, pageSize, stateId, statusValue, ct);
+        var totalCount = await cityRepository.CountAsync(stateId, statusValue, ct);
+        return new PagedResult<CityResponseDto>(cities.ToResponseDtoList(), totalCount);
+    }
+
+    private static int? ValidateAndParseListFilters(int pageNumber, int pageSize, string? status)
+    {
         if (pageNumber <= 0)
             throw new ValidationException("pageNumber debe ser mayor a 0.");
 
         if (pageSize <= 0 || pageSize > 250)
             throw new ValidationException("pageSize debe estar entre 1 y 250.");
 
-        int? statusValue = null;
-        if (!string.IsNullOrWhiteSpace(status))
+        if (string.IsNullOrWhiteSpace(status))
         {
-            if (!Enum.TryParse<CityStatus>(status, ignoreCase: true, out var parsedStatus))
-                throw new ValidationException($"Invalid status: '{status}'.");
-            statusValue = (int)parsedStatus;
+            return null;
         }
 
-        var cities = await cityRepository.GetAllAsync(pageNumber, pageSize, stateId, statusValue, ct);
-        return cities.ToResponseDtoList();
+        if (!Enum.TryParse<CityStatus>(status, ignoreCase: true, out var parsedStatus))
+            throw new ValidationException($"Invalid status: '{status}'.");
+
+        return (int)parsedStatus;
     }
 
     public async Task<CityResponseDto> GetOrCreateAsync(CreateCityRequestDto dto, CancellationToken ct = default)

@@ -25,4 +25,6 @@ public interface IWineVintageRepository
     Task<WineVintageUsageCounts> GetUsageCountsAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
         Task.FromResult(Enumerable.Empty<AdminWineVintageListRow>());
+    Task<int> CountForAdminAsync(int? status, CancellationToken ct = default) =>
+        Task.FromResult(0);
 }

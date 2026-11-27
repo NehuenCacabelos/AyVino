@@ -6,6 +6,7 @@ public interface IPairingRepository
 {
     Task<Pairing?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<Pairing>> GetAllAsync(int pageNumber, int pageSize, int? category = null, CancellationToken ct = default);
+    Task<int> CountAsync(int? category = null, CancellationToken ct = default) => Task.FromResult(0);
     Task<int> CreateAsync(Pairing pairing, CancellationToken ct = default);
     Task<bool> UpdateAsync(Pairing pairing, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);

@@ -112,6 +112,18 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             }, cancellationToken: ct));
     }
 
+    public async Task<int> CountAsync(CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT COUNT(*)::int
+            FROM users u;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, cancellationToken: ct));
+    }
+
     public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)
     {
         const string sql = """

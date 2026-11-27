@@ -33,6 +33,8 @@ El backend implementa validación nativa de Minimal APIs en .NET 10 (`AddValidat
 
 > **Aclaración sobre parámetros de consulta (Query Params):** Los parámetros de consulta (`pageNumber`, `pageSize`, filtros como `wineType`, `year`, etc.) se validan dentro de la capa de servicios (`Services/`) como parte de las reglas de negocio de cada caso de uso.
 
+> **Header de paginación `X-Total-Count`:** Los listados consumidos por el panel de administración (`GET /api/users`, `GET /api/wineries`, `GET /api/wines`, `GET /api/wines/search`, `GET /api/wine-vintages`, `GET /api/reviews`, `GET /api/cities`, `GET /api/audit-log`, `GET /api/grapes` y `GET /api/pairings`) devuelven en la cabecera HTTP `X-Total-Count` el total de registros coincidentes con los filtros y reglas de visibilidad del actor, manteniendo el cuerpo JSON como array. La política CORS expone explícitamente esta cabecera (`WithExposedHeaders("X-Total-Count")`).
+
 ### Formato de Respuesta 400 de Validación
 
 Todas las respuestas de validación fallidas devuelven código HTTP `400 Bad Request`, `Content-Type: application/problem+json` y el siguiente esquema:

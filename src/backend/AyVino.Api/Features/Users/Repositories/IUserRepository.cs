@@ -11,6 +11,7 @@ public interface IUserRepository
     Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
     Task<PublicUserProfileDto?> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default);
     Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
+    Task<int> CountAsync(CancellationToken ct = default) => Task.FromResult(0);
     Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default);
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);
     Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default);

@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Grapes.Repositories;
 using AyVino.Api.Features.Locations.Repositories;
@@ -31,13 +32,28 @@ public class WineService(
 
     public async Task<IEnumerable<WineResponseDto>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
     {
+        ValidateGetAllParameters(pageNumber, pageSize, yearFrom, yearTo);
+
+        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, actor?.IsAdmin == true, ct);
+        return wines.Select(w => w.ToResponseDto());
+    }
+
+    public async Task<PagedResult<WineResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
+    {
+        ValidateGetAllParameters(pageNumber, pageSize, yearFrom, yearTo);
+
+        var isAdmin = actor?.IsAdmin == true;
+        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
+        var totalCount = await wineRepository.CountAsync(wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
+        return new PagedResult<WineResponseDto>(wines.Select(w => w.ToResponseDto()), totalCount);
+    }
+
+    private static void ValidateGetAllParameters(int pageNumber, int pageSize, int? yearFrom, int? yearTo)
+    {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
         if (yearFrom.HasValue && yearTo.HasValue && yearFrom > yearTo)
             throw new ValidationException("'yearFrom' cannot be greater than 'yearTo'.");
-
-        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, actor?.IsAdmin == true, ct);
-        return wines.Select(w => w.ToResponseDto());
     }
 
     public async Task<WineResponseDto> CreateAsync(CreateWineRequestDto dto, Actor actor, CancellationToken ct = default)
@@ -251,18 +267,32 @@ public class WineService(
 
     public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default)
     {
+        var parsedType = ValidateAndParseCatalogSearch(pageNumber, pageSize, wineType);
+        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, grapeId, stateId, wineryId, ct);
+    }
+
+    public async Task<PagedResult<CatalogWineItemDto>> SearchCatalogPagedAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default)
+    {
+        var parsedType = ValidateAndParseCatalogSearch(pageNumber, pageSize, wineType);
+        var isAdmin = actor?.IsAdmin == true;
+        var items = await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
+        var totalCount = await wineRepository.CountSearchCatalogAsync(search, name, winery, year, parsedType, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
+        return new PagedResult<CatalogWineItemDto>(items, totalCount);
+    }
+
+    private static WineType? ValidateAndParseCatalogSearch(int pageNumber, int pageSize, string? wineType)
+    {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
-        WineType? parsedType = null;
         if (!string.IsNullOrWhiteSpace(wineType) && !string.Equals(wineType, "Todos", StringComparison.OrdinalIgnoreCase))
         {
             if (!Enum.TryParse<WineType>(wineType, ignoreCase: true, out var parsed))
                 throw new ValidationException($"Invalid wine type: '{wineType}'.");
-            parsedType = parsed;
+            return parsed;
         }
 
-        return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, grapeId, stateId, wineryId, ct);
+        return null;
     }
 
     public async Task<WineDuplicateCheckResponseDto> CheckDuplicateAsync(string? name, string? winery, CancellationToken ct = default)

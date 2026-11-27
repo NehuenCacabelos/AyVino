@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Reviews.DTOs;
 
@@ -20,4 +21,12 @@ public interface IReviewService
         int? userId = null,
         decimal? rating = null,
         CancellationToken ct = default);
+    Task<PagedResult<AdminReviewListItemDto>> GetPagedForAdminWithCountAsync(
+        int pageNumber,
+        int pageSize,
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        decimal? rating = null,
+        CancellationToken ct = default) => Task.FromResult(new PagedResult<AdminReviewListItemDto>([], 0));
 }

@@ -1,5 +1,6 @@
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Audit.Services;
@@ -86,13 +87,32 @@ public class ReviewService(
         decimal? rating = null,
         CancellationToken ct = default)
     {
+        ValidateAdminFilters(pageNumber, pageSize, rating);
+        return await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
+    }
+
+    public async Task<PagedResult<AdminReviewListItemDto>> GetPagedForAdminWithCountAsync(
+        int pageNumber,
+        int pageSize,
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        decimal? rating = null,
+        CancellationToken ct = default)
+    {
+        ValidateAdminFilters(pageNumber, pageSize, rating);
+        var items = await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
+        var totalCount = await reviewRepository.CountForAdminAsync(wineId, wineVintageId, userId, rating, ct);
+        return new PagedResult<AdminReviewListItemDto>(items, totalCount);
+    }
+
+    private static void ValidateAdminFilters(int pageNumber, int pageSize, decimal? rating)
+    {
         ValidatePagination(pageNumber, pageSize);
         if (rating.HasValue)
         {
             ValidateRating(rating.Value);
         }
-
-        return await reviewRepository.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
     }
 
     public async Task<ReviewResponseDto?> GetByVintageAndUserAsync(int wineVintageId, int userId, CancellationToken ct = default)

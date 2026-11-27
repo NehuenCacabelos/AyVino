@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Users.DTOs;
@@ -105,6 +106,14 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         ValidatePagination(pageNumber, pageSize);
         var users = await userRepository.GetAllAsync(pageNumber, pageSize, ct);
         return users.ToResponseDtoList();
+    }
+
+    public async Task<PagedResult<UserResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        ValidatePagination(pageNumber, pageSize);
+        var users = await userRepository.GetAllAsync(pageNumber, pageSize, ct);
+        var totalCount = await userRepository.CountAsync(ct);
+        return new PagedResult<UserResponseDto>(users.ToResponseDtoList(), totalCount);
     }
 
     public async Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default)

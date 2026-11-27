@@ -20,16 +20,7 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
 
     public async Task<IEnumerable<Grape>> GetAllAsync(int pageNumber, int pageSize, int? colorType = null, CancellationToken ct = default)
     {
-        var conditions = new List<string>();
-        var parameters = new DynamicParameters();
-
-        if (colorType.HasValue)
-        {
-            conditions.Add("color_type = @ColorType");
-            parameters.Add("ColorType", colorType.Value);
-        }
-
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var (whereClause, parameters) = BuildFilter(colorType);
         var offset = (pageNumber - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
@@ -45,6 +36,36 @@ public class GrapeRepository(IDbConnectionFactory connectionFactory) : IGrapeRep
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Grape>(
             new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountAsync(int? colorType = null, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildFilter(colorType);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM grapes
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildFilter(int? colorType)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (colorType.HasValue)
+        {
+            conditions.Add("color_type = @ColorType");
+            parameters.Add("ColorType", colorType.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        return (whereClause, parameters);
     }
 
     public async Task<int> CreateAsync(Grape grape, CancellationToken ct = default)

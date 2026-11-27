@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
@@ -85,8 +86,11 @@ public static class WineVintageEndpoints
             .WithTags("Admin - Wine Vintages")
             .RequireAuthorization(AppPolicies.RequireAdmin);
 
-        adminGroup.MapGet("/", async (IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null) =>
-            Results.Ok(await service.GetPagedForAdminAsync(pageNumber, pageSize, status, ct)))
+        adminGroup.MapGet("/", async (HttpResponse response, IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null) =>
+        {
+            var result = await service.GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        })
             .WithName("GetWineVintagesForAdmin")
             .WithSummary("Lists all wine vintages with optional moderation status filter for administrative review.");
 

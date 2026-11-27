@@ -256,7 +256,50 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
+    private const string AdminFromClause = """
+        FROM wine_vintages wv
+        JOIN wines w ON w.id = wv.wine_id
+        LEFT JOIN wineries wy ON wy.id = w.winery_id
+        LEFT JOIN users u ON u.id = wv.uploaded_by_user_id
+        """;
+
     public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildAdminFilter(status);
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT wv.id AS VintageId, wv.wine_id AS WineId, w.name AS WineName, w.wine_type AS WineType, w.winery_id AS WineryId,
+                   COALESCE(wy.name, w.winery_name_text) AS WineryName, wv.year AS Year, wv.alcohol_content AS AlcoholContent,
+                   wv.image_id AS ImageId, wv.approval_status AS ApprovalStatus, wv.uploaded_by_user_id AS UploadedByUserId,
+                   u.username AS UploadedByUsername, wv.register_date AS RegisterDate
+            {AdminFromClause}
+            {whereClause}
+            ORDER BY wv.register_date ASC, wv.id ASC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<AdminWineVintageListRow>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountForAdminAsync(int? status, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildAdminFilter(status);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            {AdminFromClause}
+            {whereClause};
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildAdminFilter(int? status)
     {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
@@ -268,25 +311,6 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
-        var offset = (pageNumber - 1) * pageSize;
-        parameters.Add("Offset", offset);
-        parameters.Add("PageSize", pageSize);
-
-        var sql = $"""
-            SELECT wv.id AS VintageId, wv.wine_id AS WineId, w.name AS WineName, w.wine_type AS WineType, w.winery_id AS WineryId,
-                   COALESCE(wy.name, w.winery_name_text) AS WineryName, wv.year AS Year, wv.alcohol_content AS AlcoholContent,
-                   wv.image_id AS ImageId, wv.approval_status AS ApprovalStatus, wv.uploaded_by_user_id AS UploadedByUserId,
-                   u.username AS UploadedByUsername, wv.register_date AS RegisterDate
-            FROM wine_vintages wv
-            JOIN wines w ON w.id = wv.wine_id
-            LEFT JOIN wineries wy ON wy.id = w.winery_id
-            LEFT JOIN users u ON u.id = wv.uploaded_by_user_id
-            {whereClause}
-            ORDER BY wv.register_date ASC, wv.id ASC
-            OFFSET @Offset LIMIT @PageSize;
-            """;
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<AdminWineVintageListRow>(
-            new CommandDefinition(sql, parameters, cancellationToken: ct));
+        return (whereClause, parameters);
     }
 }

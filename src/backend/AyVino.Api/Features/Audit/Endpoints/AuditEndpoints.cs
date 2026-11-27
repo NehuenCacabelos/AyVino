@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Audit.Services;
 
 namespace AyVino.Api.Features.Audit.Endpoints;
@@ -12,6 +13,7 @@ public static class AuditEndpoints
             .RequireAuthorization(AppPolicies.RequireAdmin);
 
         group.MapGet("/", async (
+            HttpResponse response,
             IAuditService service,
             CancellationToken ct,
             int pageNumber = 1,
@@ -22,8 +24,8 @@ public static class AuditEndpoints
             DateTime? from = null,
             DateTime? to = null) =>
         {
-            var result = await service.GetPagedAsync(pageNumber, pageSize, action, entityType, userId, from, to, ct);
-            return Results.Ok(result);
+            var result = await service.GetPagedWithCountAsync(pageNumber, pageSize, action, entityType, userId, from, to, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
         .WithName("GetAuditLogs")
         .WithSummary("Devuelve el registro de auditoría paginado para administradores.");

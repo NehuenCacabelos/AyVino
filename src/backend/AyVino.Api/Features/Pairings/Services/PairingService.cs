@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Pairings.DTOs;
 using AyVino.Api.Features.Pairings.Enums;
@@ -23,19 +24,32 @@ public class PairingService(
 
     public async Task<IEnumerable<PairingResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? category, CancellationToken ct = default)
     {
-        ValidatePagination(pageNumber, pageSize);
-
-        int? categoryValue = null;
-        if (!string.IsNullOrWhiteSpace(category))
-        {
-            if (!Enum.TryParse<PairingCategory>(category, ignoreCase: true, out var parsedCategory))
-                throw new ValidationException($"Invalid category: '{category}'.");
-
-            categoryValue = (int)parsedCategory;
-        }
-
+        var categoryValue = ValidateAndParseListFilters(pageNumber, pageSize, category);
         var pairings = await pairingRepository.GetAllAsync(pageNumber, pageSize, categoryValue, ct);
         return pairings.ToResponseDtoList();
+    }
+
+    public async Task<PagedResult<PairingResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? category, CancellationToken ct = default)
+    {
+        var categoryValue = ValidateAndParseListFilters(pageNumber, pageSize, category);
+        var pairings = await pairingRepository.GetAllAsync(pageNumber, pageSize, categoryValue, ct);
+        var totalCount = await pairingRepository.CountAsync(categoryValue, ct);
+        return new PagedResult<PairingResponseDto>(pairings.ToResponseDtoList(), totalCount);
+    }
+
+    private static int? ValidateAndParseListFilters(int pageNumber, int pageSize, string? category)
+    {
+        ValidatePagination(pageNumber, pageSize);
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<PairingCategory>(category, ignoreCase: true, out var parsedCategory))
+            throw new ValidationException($"Invalid category: '{category}'.");
+
+        return (int)parsedCategory;
     }
 
     public async Task<PairingResponseDto> CreateAsync(CreatePairingRequestDto request, CancellationToken ct = default)

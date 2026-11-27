@@ -18,6 +18,12 @@ public interface IReviewRepository
         int? userId = null,
         decimal? rating = null,
         CancellationToken ct = default);
+    Task<int> CountForAdminAsync(
+        int? wineId = null,
+        int? wineVintageId = null,
+        int? userId = null,
+        decimal? rating = null,
+        CancellationToken ct = default) => Task.FromResult(0);
     Task<bool> ExistsForUserAndVintageAsync(int userId, int wineVintageId, CancellationToken ct = default);
     Task<int> CreateAsync(Review review, CancellationToken ct = default);
     Task<bool> UpdateAsync(Review review, CancellationToken ct = default);
