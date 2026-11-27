@@ -1,0 +1,31 @@
+using AyVino.Api.Features.UserWines.Models;
+
+namespace AyVino.Api.Features.UserWines.DTOs;
+
+public static class UserWineMappingExtensions
+{
+    public static UserWineMarksResponseDto ToMarksDto(this UserWine userWine) =>
+        new(userWine.WineId, userWine.IsWanted, userWine.IsTried, userWine.IsFavorite);
+
+    public static UserWineListItemDto ToListItemDto(this UserWineListRow row) => new(
+        row.WineId,
+        row.Name,
+        row.WineType.ToString(),
+        row.WineryId,
+        row.WineryNameText,
+        // Misma regla que WineResponseDto: el promedio recién se muestra desde 5 reseñas.
+        row.ReviewCount >= 5 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : (row.ReviewCount > 0 ? Math.Round(row.RatingSum / row.ReviewCount, 1) : null),
+        row.ReviewCount,
+        row.IsWanted,
+        row.IsTried,
+        row.IsFavorite,
+        row.LastChangeAt,
+        row.WineryName ?? row.WineryNameText,
+        row.Vintage,
+        row.ImageUrl,
+        row.UserRating,
+        row.UserComment);
+
+    public static IReadOnlyList<UserWineListItemDto> ToListItemDtoList(this IEnumerable<UserWineListRow> rows) =>
+        rows.Select(r => r.ToListItemDto()).ToList();
+}

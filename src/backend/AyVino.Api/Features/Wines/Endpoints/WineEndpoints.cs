@@ -1,0 +1,90 @@
+using System.Security.Claims;
+using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
+using AyVino.Api.Features.Audit.Endpoints;
+using AyVino.Api.Features.Audit.Enums;
+using AyVino.Api.Features.Wines.DTOs;
+using AyVino.Api.Features.Wines.Services;
+
+namespace AyVino.Api.Features.Wines.Endpoints;
+
+public static class WineEndpoints
+{
+    public static IEndpointRouteBuilder MapWineEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/wines").WithTags("Wines");
+
+        group.MapGet("/", async (HttpResponse response, int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, string? origin, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+        {
+            var result = await service.GetAllPagedAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, origin, user.GetActorOrNull(), ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        })
+            .WithName("GetAllWines")
+            .WithSummary("Lists wine labels, paginated. Year/grape filters match against any of the label's vintages.");
+
+        group.MapGet("/{id:int}", async (int id, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetByIdAsync(id, user.GetActorOrNull(), ct)))
+            .WithName("GetWineById")
+            .WithSummary("Gets a wine label with its overall rating. See /vintages for the per-year breakdown.");
+
+        group.MapPost("/", async (CreateWineRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+        {
+            var created = await service.CreateAsync(request, user.GetActor(), ct);
+            return Results.Created($"/api/wines/{created.Id}", created);
+        })
+            .RequireAuthorization()
+            .WithName("CreateWine")
+            .WithSummary("Creates a new wine label together with its first vintage.");
+
+        group.MapPut("/{id:int}", async (int id, UpdateWineRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateAsync(id, request, user.GetActor(), ct)))
+            .RequireAuthorization()
+            .WithName("UpdateWine")
+            .WithSummary("Updates a wine label's data (name, type, winery, location, description).")
+            .WithAudit(AuditAction.WineUpdatedByAdmin, "Wine", idRouteKey: "id", adminOnly: true, details: (ctx, res) => ctx.Arguments.OfType<UpdateWineRequestDto>().FirstOrDefault()?.Name);
+
+        group.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+        {
+            await service.DeleteAsync(id, user.GetActor(), ct);
+            return Results.NoContent();
+        })
+            .RequireAuthorization()
+            .WithName("DeleteWine")
+            .WithSummary("Deletes a wine label and all of its vintages (cascade).")
+            .WithAudit(AuditAction.WineDeleted, "Wine", idRouteKey: "id");
+
+        group.MapGet("/claim-candidates/{wineryId:int}", async (int wineryId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.GetClaimCandidatesAsync(wineryId, user.GetActor(), ct)))
+            .RequireAuthorization()
+            .WithName("GetWineClaimCandidates")
+            .WithSummary("Lists unclaimed community wine labels whose typed winery name matches this winery.");
+
+        group.MapPost("/claim/{wineryId:int}", async (int wineryId, ClaimWinesRequestDto request, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.ClaimWinesAsync(wineryId, request.WineIds, user.GetActor(), ct)))
+            .RequireAuthorization()
+            .WithName("ClaimWines")
+            .WithSummary("Links unclaimed community wine labels to a registered winery.");
+
+        group.MapGet("/search", async (HttpResponse response, string? search, string? name, string? winery, int? year, string? wineType, int? grapeId, int? stateId, int? wineryId, string? origin, int? pageNumber, int? pageSize, ClaimsPrincipal? user, IWineService service, CancellationToken ct) =>
+        {
+            var result = await service.SearchCatalogPagedAsync(search, name, winery, year, wineType, pageNumber.GetValueOrDefault(1), pageSize.GetValueOrDefault(12), user.GetActorOrNull(), grapeId, stateId, wineryId, origin, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        })
+            .WithName("SearchWines")
+            .WithSummary("Busca vinos por nombre, bodega, año y/o tipo — reemplaza el escaneo de etiqueta en la versión web.");
+
+        group.MapGet("/check-duplicate", async (string? name, string? winery, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.CheckDuplicateAsync(name, winery, ct)))
+            .WithName("CheckWineDuplicate")
+            .WithSummary("Busca etiquetas existentes similares por nombre y bodega para evitar duplicados.");
+
+        group.MapPost("/{targetId:int}/merge/{duplicateId:int}", async (int targetId, int duplicateId, ClaimsPrincipal user, IWineService service, CancellationToken ct) =>
+            Results.Ok(await service.MergeWinesAsync(targetId, duplicateId, user.GetActor(), ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .WithName("MergeWines")
+            .WithSummary("Fusiona un vino duplicado dentro del vino principal.")
+            .WithAudit(AuditAction.WineMerged, "Wine", idRouteKey: "targetId", details: (ctx, res) => ctx.HttpContext.Request.RouteValues.TryGetValue("duplicateId", out var dupId) ? dupId?.ToString() : null);
+
+        return app;
+    }
+}

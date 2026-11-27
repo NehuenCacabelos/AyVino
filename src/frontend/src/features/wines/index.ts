@@ -1,0 +1,48 @@
+/**
+ * Feature Module: Wines
+ * Exporta componentes, datos de muestra curada y utilidades de dominio vinícola.
+ */
+export { default as WineCard } from './components/WineCard';
+export { default as WineDetailModal } from './components/WineDetailModal';
+export { default as WineBottleSilhouette } from './components/WineBottleSilhouette';
+export { default as WineBottleMock } from './components/WineBottleMock';
+export { default as WineDetailView } from './components/WineDetailView';
+export { default as RealWineEditView, type RealWineEditViewProps } from './components/RealWineEditView';
+export { mapApiWineToCuratedWine } from './utils/wineMapper';
+export { CURATED_WINES } from './data/curatedWines';
+export {
+  getEditorialWine,
+  normalizeWineSlug,
+  generateEditorialFallback,
+  type EditorialWine,
+  type WineVintageDetail,
+  type WineGrapeRatio,
+  type WineReviewItem,
+  type WinePairingItem,
+  type WineWineryInfo,
+} from './data/editorialWines';
+export { apiWineToEditorial, mapPairingCategoryToIcon } from './adapters/apiWineToEditorial';
+export {
+  REAL_WINE_TYPES,
+  REAL_WINE_TYPE_LABELS,
+  MOCK_WINE_TYPE_LABELS,
+  getRealWineTypeLabel,
+  getMockWineTypeLabel,
+  getWineTypeLabel,
+} from './utils/wineTypeUtils';
+export { useRealWine, type UseRealWineReturn } from './hooks/useRealWine';
+export {
+  useWineCatalogs,
+  fetchAllGrapes,
+  fetchAllPairings,
+  type UseWineCatalogsReturn,
+  type UseWineCatalogsOptions,
+} from './hooks/useWineCatalogs';
+export { getWineReviews, getMyVintageReview, createReview, updateReview } from './api/reviewsApi';
+export { createUncork, getMyUncorks } from './api/uncorksApi';
+export type { ReviewResponseDto, CreateReviewRequestDto, UpdateReviewRequestDto } from './types/review';
+export type {
+  UncorkResponseDto,
+  CreateUncorkRequestDto,
+  UncorkListItemDto,
+} from './types/uncork';

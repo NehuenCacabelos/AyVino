@@ -1,0 +1,2880 @@
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import {
+  MapPin,
+  BookmarkPlus,
+  Share2,
+  Edit3,
+  ShieldCheck,
+  CheckCircle2,
+  Flame,
+  Utensils,
+  Sparkles,
+  Soup,
+  ExternalLink,
+  Send,
+  X,
+  ArrowUpRight,
+  Activity,
+  Plus,
+  Trash2,
+  Camera,
+  Search,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
+import type { EditorialWine, WineReviewItem, WineVintageDetail } from '../data/editorialWines';
+import { useAuth } from '../../auth';
+import type { AppOutletContext } from '../../../components/layout/AppLayout';
+import type { CellarWine } from '../../cava';
+import QuickAddBottleModal from '../../cava/components/QuickAddBottleModal';
+import { useQuickAddToCellar } from '../../dashboard/hooks/useQuickAddToCellar';
+import { useVintageSensory } from '../hooks/useVintageSensory';
+import {
+  buildSensoryAttributes,
+  getTypeSensoryFallback,
+  type SensoryAttribute,
+} from '../utils/sensoryUtils';
+import {
+  previewSensory,
+  updateVintageSensory,
+  type SensoryAxisKey,
+  type VintageSensoryDto,
+} from '../api/sensoryApi';
+import { resolveBottleKind, type DashboardWine } from '../../../types/wine';
+import { imageUrl } from '../../../lib/image';
+import WineBottleSilhouette from './WineBottleSilhouette';
+import { createReview, updateReview, getMyVintageReview } from '../api/reviewsApi';
+import type { ReviewResponseDto } from '../types/review';
+import RatingInput from '../../../components/RatingInput';
+import { formatRating, normalizeRating } from '../../../lib/formatRating';
+import WineEditBar from './WineEditBar';
+import {
+  createWine,
+  updateWine,
+  deleteWine,
+  updateWineVintage,
+  createWineVintage,
+  deleteWineVintage,
+  getWineVintages,
+} from '../../winery/api/wineApi';
+import { ConfirmDialog, getApiErrorMessage } from '../../admin';
+import { uploadVintageImage, deleteVintageImage } from '../../winery/api/imageApi';
+import {
+  addWinePairing,
+  removeWinePairing,
+} from '../../winery/api/wineryWinePairingsApi';
+import { useWineCatalogs } from '../hooks/useWineCatalogs';
+import { getWineTypeLabel, REAL_WINE_TYPES } from '../utils/wineTypeUtils';
+import {
+  createNewBlendRow,
+  calculateTotalPercentage,
+  validateGrapeBlend,
+  type BlendRow,
+} from '../../winery/utils/grapeBlendUtils';
+import {
+  parseAlcohol,
+  parseServingTemperature,
+  parseYear,
+} from '../utils/vintageFormatUtils';
+import type {
+  WineResponseDto,
+  WineVintageResponseDto,
+  WineryWinePairingDto,
+  CreateWineRequestDto,
+  CreateWineVintageRequestDto,
+  GrapeResponseDto,
+  ExistingVintageSummaryDto,
+  WineDuplicateErrorData,
+} from '../../winery/types';
+import VarietalGrapeCombobox from './VarietalGrapeCombobox';
+
+interface ToastState {
+  message: string;
+  actionLabel?: string;
+  actionTo?: string;
+}
+
+function calculateRating(reviews: WineReviewItem[]): string | null {
+  if (!reviews || reviews.length === 0) return null;
+  const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+  return (sum / reviews.length).toFixed(1);
+}
+
+function getPairingIcon(iconName?: string) {
+  switch (iconName) {
+    case 'flame':
+      return <Flame className="w-4 h-4 text-[#ffb2b8]" />;
+    case 'utensils':
+      return <Utensils className="w-4 h-4 text-[#ffb2b8]" />;
+    case 'sparkles':
+      return <Sparkles className="w-4 h-4 text-[#ffb2b8]" />;
+    case 'soup':
+      return <Soup className="w-4 h-4 text-[#ffb2b8]" />;
+    default:
+      return <Utensils className="w-4 h-4 text-[#ffb2b8]" />;
+  }
+}
+
+function WineSensoryRadarChart({ attributes }: { attributes: SensoryAttribute[] }) {
+  const size = 260;
+  const center = size / 2;
+  const maxRadius = 88;
+  const count = attributes.length;
+
+  const rings = [0.2, 0.4, 0.6, 0.8, 1.0];
+
+  const getCoordinates = (index: number, ratio: number) => {
+    const angle = index * (2 * Math.PI / count) - Math.PI / 2;
+    const r = maxRadius * ratio;
+    return {
+      x: center + r * Math.cos(angle),
+      y: center + r * Math.sin(angle),
+    };
+  };
+
+  const dataPolygonPoints = attributes
+    .map((attr, i) => {
+      const ratio = Math.max(0.1, Math.min(1.0, attr.value / 5.0));
+      const { x, y } = getCoordinates(i, ratio);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  return (
+    <div className="relative flex flex-col items-center justify-center">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="w-full max-w-[270px] h-auto drop-shadow-lg"
+        aria-label="Gráfico de telaraña del perfil sensorial del vino"
+      >
+        {rings.map((ringRatio, rIdx) => {
+          const ringPoints = attributes
+            .map((_, i) => {
+              const { x, y } = getCoordinates(i, ringRatio);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            })
+            .join(' ');
+          return (
+            <polygon
+              key={rIdx}
+              points={ringPoints}
+              fill="none"
+              stroke="#26262b"
+              strokeWidth={rIdx === rings.length - 1 ? '1.25' : '0.75'}
+              strokeDasharray={rIdx === rings.length - 1 ? 'none' : '2,2'}
+            />
+          );
+        })}
+
+        {attributes.map((_, i) => {
+          const { x, y } = getCoordinates(i, 1.0);
+          return (
+            <line
+              key={i}
+              x1={center}
+              y1={center}
+              x2={x}
+              y2={y}
+              stroke="#2c2c34"
+              strokeWidth="0.75"
+            />
+          );
+        })}
+
+        <polygon
+          points={dataPolygonPoints}
+          fill="rgba(114, 47, 55, 0.45)"
+          stroke="#ffb2b8"
+          strokeWidth="2"
+          className="transition-all duration-700"
+        />
+
+        {attributes.map((attr, i) => {
+          const ratio = Math.max(0.1, Math.min(1.0, attr.value / 5.0));
+          const { x, y } = getCoordinates(i, ratio);
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="3.5"
+              fill="#fbbf24"
+              stroke="#0a0a0c"
+              strokeWidth="1.5"
+            />
+          );
+        })}
+
+        {attributes.map((attr, i) => {
+          const { x, y } = getCoordinates(i, 1.25);
+          const isTop = y < center - 10;
+          const isBottom = y > center + 10;
+          const isRight = x > center + 10;
+          const isLeft = x < center - 10;
+
+          let textAnchor: 'middle' | 'start' | 'end' = 'middle';
+          if (isRight) textAnchor = 'start';
+          if (isLeft) textAnchor = 'end';
+
+          return (
+            <text
+              key={i}
+              x={x}
+              y={y + (isTop ? -2 : isBottom ? 8 : 4)}
+              textAnchor={textAnchor}
+              className="fill-neutral-400 font-mono text-[9px] uppercase tracking-wider select-none font-medium"
+            >
+              {attr.label}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function getConciseAging(advice: string): string {
+  const match = advice.match(/^(\d+(?:\s*(?:a|-)\s*\d+)?\+?\s*años?)/i);
+  if (match) {
+    return match[1];
+  }
+  return advice.split('.')[0]?.split(' en ')[0]?.trim() || advice;
+}
+
+export interface EditableVintageDraft {
+  id: string; // id o draft-xxx
+  isNew?: boolean;
+  year: number;
+  alcoholContent: string;
+  servingTemperature: string;
+  agingAdvice: string;
+  blend: BlendRow[];
+  imageFile?: File | null;
+  imageRemoved?: boolean;
+  previewUrl?: string | null;
+  sensory?: Partial<Record<SensoryAxisKey, number | null>>;
+  sensoryModified?: boolean;
+}
+
+export interface WineDetailViewProps {
+  wine: EditorialWine;
+  reviews?: WineReviewItem[];
+  ownerMode?: boolean;
+  ownerBackTo?: string;
+  isRealWine?: boolean;
+  isNewMode?: boolean;
+  rawWine?: WineResponseDto | null;
+  rawVintages?: WineVintageResponseDto[];
+  onReload?: () => Promise<void>;
+  onReviewPublished?: () => void | Promise<void>;
+  onPublishNewWine?: (data: {
+    wine: EditorialWine;
+    firstVintage: EditableVintageDraft;
+    pairings: WineryWinePairingDto[];
+  }) => Promise<void>;
+}
+
+export default function WineDetailView({
+  wine,
+  reviews: propReviews,
+  ownerMode = false,
+  ownerBackTo = '/bodega/vinos',
+  isRealWine = false,
+  isNewMode = false,
+  rawWine,
+  rawVintages,
+  onReload,
+  onReviewPublished,
+  onPublishNewWine,
+}: WineDetailViewProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const outletCtx = useOutletContext<AppOutletContext | null>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef<boolean>(false);
+  const [isPublished, setIsPublished] = useState<boolean>(false);
+
+  // Estados de vista
+  const [selectedVintageYear, setSelectedVintageYear] = useState<number>(() => {
+    const cosechaParam = searchParams.get('cosecha');
+    if (cosechaParam) {
+      const parsedYear = Number(cosechaParam);
+      if (Number.isInteger(parsedYear) && wine.vintages.some((v) => v.year === parsedYear)) {
+        return parsedYear;
+      }
+    }
+    return wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020);
+  });
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [starFilter, setStarFilter] = useState<'all' | '5' | '4' | '3'>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isReviewFormOpen, setIsReviewFormOpen] = useState<boolean>(false);
+
+  // Hook para alta rápida en cava (vino real)
+  const {
+    isModalOpen: isCellarModalOpen,
+    activeWine: cellarActiveWine,
+    initialName: cellarInitialName,
+    openQuickAdd,
+    closeQuickAdd,
+  } = useQuickAddToCellar();
+
+  const wineryId = wine.winery?.wineryId ?? wine.wineryId;
+
+  // Formulario de reseña única por cosecha
+  const [existingReview, setExistingReview] = useState<ReviewResponseDto | null>(null);
+  const [newReviewRating, setNewReviewRating] = useState<number>(4.5);
+  const [newReviewComment, setNewReviewComment] = useState<string>('');
+
+  // Reseñas añadidas localmente en modo editorial
+  const [submittedReviews, setSubmittedReviews] = useState<WineReviewItem[]>([]);
+
+  // ==========================================
+  // ESTADOS DEL MODO EDICIÓN (Paso 2 y Paso 3)
+  // ==========================================
+  const [isEditing, setIsEditing] = useState<boolean>(isNewMode);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: boolean;
+    type?: boolean;
+    year?: boolean;
+  }>({});
+  const [confirmAddVintage, setConfirmAddVintage] = useState<{
+    existingWineId: number;
+    name: string;
+    year: number;
+    existingVintages?: ExistingVintageSummaryDto[];
+  } | null>(null);
+  const [isAddingVintage, setIsAddingVintage] = useState<boolean>(false);
+
+  // Campos del vino
+  const [draftName, setDraftName] = useState<string>(wine.name);
+  const [draftType, setDraftType] = useState<EditorialWine['type']>(wine.type);
+  const [draftDescription, setDraftDescription] = useState<string>(wine.description);
+
+  // Maridajes
+  const [draftPairings, setDraftPairings] = useState<WineryWinePairingDto[]>(() =>
+    wine.pairings.map((p) => ({ id: Number(p.id), name: p.name, category: 'Other' }))
+  );
+  const [isPairingPanelOpen, setIsPairingPanelOpen] = useState(false);
+  const [pairingSearch, setPairingSearch] = useState('');
+  const [pairingCategoryFilter, setPairingCategoryFilter] = useState<string>('all');
+
+  // Catálogos maestros (uvas y maridajes) con paginación y reintento
+  const isCatalogsEnabled = isEditing || isNewMode || Boolean(rawWine);
+  const {
+    grapesCatalog,
+    pairingsCatalog,
+    error: catalogsError,
+    retry: retryCatalogs,
+  } = useWineCatalogs({ enabled: isCatalogsEnabled });
+
+  // Buscador de uvas en selector
+  const [grapeSearch, setGrapeSearch] = useState('');
+  const filteredGrapesCatalog = useMemo(() => {
+    if (!grapeSearch.trim()) return grapesCatalog;
+    const query = grapeSearch.toLowerCase().trim();
+    return grapesCatalog.filter((g) => g.name.toLowerCase().includes(query));
+  }, [grapesCatalog, grapeSearch]);
+
+  // Cosechas en borrador (indexadas por id o año)
+  const [vintageDrafts, setVintageDrafts] = useState<Record<string, EditableVintageDraft>>(() => {
+    const initial: Record<string, EditableVintageDraft> = {};
+    if (isNewMode) {
+      initial.new = {
+        id: 'draft-new',
+        isNew: true,
+        year: '' as unknown as number,
+        alcoholContent: '',
+        servingTemperature: '',
+        agingAdvice: '',
+        blend: [],
+      };
+    }
+    return initial;
+  });
+
+  // Inicializar borradores de cosechas a partir de wine.vintages
+  const initVintageDrafts = () => {
+    const drafts: Record<string, EditableVintageDraft> = {};
+    wine.vintages.forEach((v) => {
+      // Buscar uvas desde rawVintages o por coincidencia de nombre
+      const rawV = rawVintages?.find((rv) => String(rv.id) === v.id);
+      let blend: BlendRow[] = [];
+      if (rawV?.grapes && rawV.grapes.length > 0) {
+        blend = rawV.grapes.map((g, idx) => ({
+          id: `blend-${v.id}-${g.grapeId}-${idx}`,
+          grapeId: g.grapeId,
+          percentage: Number(g.percentage ?? 100),
+        }));
+      } else if (v.grapes && v.grapes.length > 0) {
+        blend = v.grapes.map((g, idx) => {
+          const found = grapesCatalog.find((gc) => gc.name.toLowerCase() === g.variety.toLowerCase());
+          return {
+            id: `blend-${v.id}-${idx}`,
+            grapeId: found ? found.id : '',
+            percentage: g.percentage,
+          };
+        });
+      }
+
+      drafts[String(v.year)] = {
+        id: v.id,
+        year: v.year,
+        alcoholContent: v.alcoholContent,
+        servingTemperature: v.servingTemperature,
+        agingAdvice: v.agingAdvice,
+        blend,
+        imageFile: null,
+        imageRemoved: false,
+        previewUrl: v.imageUrl || null,
+      };
+    });
+
+    if (Object.keys(drafts).length === 0) {
+      const defaultYear = isNewMode ? ('' as unknown as number) : 2020;
+      drafts[String(defaultYear || 'new')] = {
+        id: 'draft-0',
+        isNew: true,
+        year: defaultYear,
+        alcoholContent: isNewMode ? '' : '14.0% Vol.',
+        servingTemperature: isNewMode ? '' : '16°C – 18°C',
+        agingAdvice: '',
+        blend: [],
+      };
+    }
+
+    setVintageDrafts(drafts);
+    setDraftName(wine.name);
+    setDraftType(wine.type);
+    setDraftDescription(wine.description);
+    setDraftPairings(
+      wine.pairings.map((p) => ({ id: Number(p.id), name: p.name, category: 'Other' }))
+    );
+  };
+
+  const handleStartEdit = () => {
+    initVintageDrafts();
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setIsPairingPanelOpen(false);
+  };
+
+  // Año de cosecha efectivo: si el seleccionado existe en wine.vintages o en vintageDrafts, usarlo; sino el primero
+  const effectiveSelectedYear = useMemo(() => {
+    if (wine.vintages.some((v) => v.year === selectedVintageYear) || vintageDrafts[String(selectedVintageYear)]) {
+      return selectedVintageYear;
+    }
+    return wine.vintages[0]?.year ?? selectedVintageYear;
+  }, [wine.vintages, selectedVintageYear, vintageDrafts]);
+
+  // Clave del borrador activo
+  const activeVintageDraftKey = useMemo(() => {
+    if (vintageDrafts[String(effectiveSelectedYear)]) {
+      return String(effectiveSelectedYear);
+    }
+    const keys = Object.keys(vintageDrafts);
+    return keys.length > 0 ? keys[0] : 'new';
+  }, [vintageDrafts, effectiveSelectedYear]);
+
+  const activeVintageDraft = vintageDrafts[activeVintageDraftKey] || {
+    id: 'draft-new',
+    isNew: true,
+    year: effectiveSelectedYear,
+    alcoholContent: isNewMode ? '' : '14.0% Vol.',
+    servingTemperature: isNewMode ? '' : '16°C – 18°C',
+    agingAdvice: '',
+    blend: [],
+  };
+
+  // Actualizar un campo de la cosecha activa en edición
+  const updateActiveVintageDraft = (patch: Partial<EditableVintageDraft>) => {
+    setVintageDrafts((prev) => {
+      const current = prev[activeVintageDraftKey] || {
+        id: 'draft-new',
+        isNew: true,
+        year: effectiveSelectedYear,
+        alcoholContent: isNewMode ? '' : '14.0% Vol.',
+        servingTemperature: isNewMode ? '' : '16°C – 18°C',
+        agingAdvice: '',
+        blend: [],
+      };
+      const updated = { ...current, ...patch };
+      // Si cambia el año, reindexar la clave
+      if (patch.year !== undefined && patch.year !== current.year) {
+        const newDrafts = { ...prev };
+        delete newDrafts[activeVintageDraftKey];
+        newDrafts[String(patch.year || 'new')] = updated;
+        setSelectedVintageYear(patch.year);
+        return newDrafts;
+      }
+      return {
+        ...prev,
+        [activeVintageDraftKey]: updated,
+      };
+    });
+  };
+
+  // Cosecha activa seleccionada en modo lectura
+  const activeVintage: WineVintageDetail = useMemo(() => {
+    return wine.vintages.find((v) => v.year === effectiveSelectedYear) || wine.vintages[0] || {
+      id: '0',
+      wineId: wine.id,
+      year: effectiveSelectedYear,
+      alcoholContent: '14.0% Vol.',
+      servingTemperature: '16°C – 18°C',
+      agingAdvice: '',
+      grapes: [],
+    };
+  }, [wine, effectiveSelectedYear]);
+
+  // Detección de cambios sin guardar
+  const hasChanges = useMemo(() => {
+    if (isPublished) return false;
+    if (!isEditing && !isNewMode) return false;
+    if (isNewMode) {
+      return Boolean(
+        draftName.trim() ||
+        draftType ||
+        draftDescription.trim() ||
+        activeVintageDraft.year ||
+        activeVintageDraft.blend.length > 0 ||
+        activeVintageDraft.imageFile ||
+        draftPairings.length > 0
+      );
+    }
+    if (draftName !== wine.name) return true;
+    if (draftType !== wine.type) return true;
+    if (draftDescription !== wine.description) return true;
+    if (draftPairings.length !== wine.pairings.length) return true;
+    return true;
+  }, [isEditing, isNewMode, isPublished, draftName, draftType, draftDescription, activeVintageDraft, draftPairings, wine]);
+
+  // Manejo de Uvas en el Blend
+  const handleAddGrape = () => {
+    const currentBlend = activeVintageDraft.blend;
+    const newRow = createNewBlendRow('', currentBlend.length, `blend-${selectedVintageYear}`);
+    updateActiveVintageDraft({ blend: [...currentBlend, newRow] });
+  };
+
+  const handleUpdateGrape = (rowId: string, patch: Partial<BlendRow>) => {
+    const currentBlend = activeVintageDraft.blend;
+    const updated = currentBlend.map((row) => (row.id === rowId ? { ...row, ...patch } : row));
+    updateActiveVintageDraft({ blend: updated });
+  };
+
+  const handleRemoveGrape = (rowId: string) => {
+    const currentBlend = activeVintageDraft.blend;
+    const updated = currentBlend.filter((row) => row.id !== rowId);
+    updateActiveVintageDraft({ blend: updated });
+  };
+
+  // Seleccionar uva directamente desde el combobox / buscador
+  const handleSelectGrapeFromSearch = (grape: GrapeResponseDto) => {
+    const currentBlend = activeVintageDraft.blend;
+    const alreadyExists = currentBlend.some((row) => row.grapeId === grape.id);
+    if (alreadyExists) {
+      showToast(`La uva "${grape.name}" ya está en la composición varietal.`);
+      setGrapeSearch('');
+      return;
+    }
+
+    const newRow = createNewBlendRow(grape.id, currentBlend.length, `blend-${selectedVintageYear}`);
+    updateActiveVintageDraft({ blend: [...currentBlend, newRow] });
+    setGrapeSearch('');
+  };
+
+  const blendTotal = calculateTotalPercentage(activeVintageDraft.blend);
+  const blendValidation = validateGrapeBlend(activeVintageDraft.blend);
+
+  // Uva principal de la añada en borrador (mayor porcentaje del blend; desempate por menor id)
+  const draftMainGrape = useMemo(() => {
+    const valid = activeVintageDraft.blend.filter(
+      (b): b is { id: string; grapeId: number; percentage: number | '' } =>
+        typeof b.grapeId === 'number'
+    );
+    if (valid.length === 0) return null;
+    const sorted = [...valid].sort((a, b) => {
+      const percA = typeof a.percentage === 'number' ? a.percentage : 0;
+      const percB = typeof b.percentage === 'number' ? b.percentage : 0;
+      if (percB !== percA) {
+        return percB - percA;
+      }
+      return a.grapeId - b.grapeId;
+    });
+    const main = sorted[0];
+    const grapeInfo = grapesCatalog.find((g) => g.id === main.grapeId);
+    return {
+      grapeId: main.grapeId,
+      percentage: typeof main.percentage === 'number' ? main.percentage : null,
+      name: grapeInfo?.name || '',
+    };
+  }, [activeVintageDraft.blend, grapesCatalog]);
+
+  // Si la uva principal del draft es distinta a todas las añadas listadas
+  const isDifferentVariety = useMemo(() => {
+    if (!draftMainGrape || !confirmAddVintage?.existingVintages || confirmAddVintage.existingVintages.length === 0) {
+      return false;
+    }
+    const matchesAny = confirmAddVintage.existingVintages.some(
+      (v) => v.mainGrapeId === draftMainGrape.grapeId
+    );
+    return !matchesAny;
+  }, [draftMainGrape, confirmAddVintage]);
+
+  // Cierre por tecla Escape en el modal de confirmación de cosecha/etiqueta
+  useEffect(() => {
+    if (!confirmAddVintage) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isAddingVintage && !isSaving) {
+        setConfirmAddVintage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmAddVintage, isAddingVintage, isSaving]);
+
+  // Manejo de Imagen de Botella
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      showToast('Formato inválido. Usá PNG, JPEG o WebP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen supera el límite máximo de 5 MB.');
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    updateActiveVintageDraft({
+      imageFile: file,
+      imageRemoved: false,
+      previewUrl: preview,
+    });
+  };
+
+  const handleRemoveImage = () => {
+    updateActiveVintageDraft({
+      imageFile: null,
+      imageRemoved: true,
+      previewUrl: null,
+    });
+  };
+
+  // Manejo de Añadas en Edición (+ Añada)
+  const handleAddVintageChip = () => {
+    const existingYears = Object.values(vintageDrafts).map((d) => d.year);
+    const nextYear = existingYears.length > 0 ? Math.max(...existingYears) + 1 : 2024;
+    const newKey = String(nextYear);
+
+    const newDraft: EditableVintageDraft = {
+      id: `draft-new-${Date.now()}`,
+      isNew: true,
+      year: nextYear,
+      alcoholContent: '14.0% Vol.',
+      servingTemperature: '16°C – 18°C',
+      agingAdvice: '',
+      blend: [],
+    };
+
+    setVintageDrafts((prev) => ({
+      ...prev,
+      [newKey]: newDraft,
+    }));
+    setSelectedVintageYear(nextYear);
+  };
+
+  // Manejo de Maridajes
+  const handleRemovePairing = (pairingId: number) => {
+    setDraftPairings((prev) => prev.filter((p) => p.id !== pairingId));
+  };
+
+  const handleAddPairing = (pairing: WineryWinePairingDto) => {
+    if (draftPairings.some((p) => p.id === pairing.id)) return;
+    setDraftPairings((prev) => [...prev, pairing]);
+  };
+
+  const filteredPairingsCatalog = useMemo(() => {
+    return pairingsCatalog.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(pairingSearch.toLowerCase());
+      const matchesCategory =
+        pairingCategoryFilter === 'all' ||
+        p.category?.toLowerCase() === pairingCategoryFilter.toLowerCase();
+      const notAlreadyAdded = !draftPairings.some((dp) => dp.id === p.id);
+      return matchesSearch && matchesCategory && notAlreadyAdded;
+    });
+  }, [pairingsCatalog, pairingSearch, pairingCategoryFilter, draftPairings]);
+
+  // ==========================================
+  // GUARDAR EDICIÓN (Punto 2.3)
+  // ==========================================
+  const handleSaveEdit = async () => {
+    if (!draftName.trim()) {
+      showToast('El nombre del vino es obligatorio.');
+      return;
+    }
+
+    // Validar blend de la cosecha activa
+    if (activeVintageDraft.blend.length > 0) {
+      if (!blendValidation.isValid) {
+        showToast(blendValidation.errorMessage || 'Verificá el porcentaje de las uvas.');
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    const numericWineId = Number(wine.id);
+    const savedSteps: string[] = [];
+    const failedSteps: string[] = [];
+
+    try {
+      // 1. PUT /api/wines/{id} si cambió algo del vino
+      const wineChanged =
+        draftName !== wine.name ||
+        draftType !== wine.type ||
+        draftDescription !== wine.description;
+
+      if (wineChanged) {
+        try {
+          await updateWine(numericWineId, {
+            name: draftName.trim(),
+            wineType: draftType,
+            description: draftDescription.trim(),
+            locationId: rawWine?.locationId ?? undefined,
+            wineryId: rawWine?.wineryId ?? undefined,
+            ...(rawWine?.wineryNameText ? { wineryNameText: rawWine.wineryNameText } : {}),
+          });
+          savedSteps.push('vino');
+        } catch (err: unknown) {
+          failedSteps.push('vino');
+          throw err;
+        }
+      }
+
+      // 2. PUT /api/wines/{wineId}/vintages/{vintageId} o createWineVintage
+      for (const draft of Object.values(vintageDrafts)) {
+        const grapesPayload = draft.blend
+          .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number')
+          .map((b) => ({
+            grapeId: b.grapeId as number,
+            percentage: b.percentage as number,
+          }));
+
+        const alcoholNum = parseAlcohol(draft.alcoholContent);
+        const tempNum = parseServingTemperature(draft.servingTemperature);
+        const yearNum = parseYear(draft.year) ?? draft.year;
+
+        if (draft.isNew) {
+          try {
+            const createdV = await createWineVintage(numericWineId, {
+              year: yearNum,
+              ...(alcoholNum != null ? { alcoholContent: alcoholNum } : {}),
+              ...(tempNum != null ? { servingTemperature: tempNum } : {}),
+              ...(draft.agingAdvice?.trim() ? { agingAdvice: draft.agingAdvice.trim() } : {}),
+              ...(grapesPayload.length > 0 ? { grapes: grapesPayload } : {}),
+            });
+            savedSteps.push(`cosecha ${yearNum}`);
+
+            // Subir imagen si se seleccionó para la nueva añada
+            if (draft.imageFile) {
+              await uploadVintageImage(numericWineId, createdV.id, draft.imageFile);
+            }
+
+            // Perfil sensorial manual si hay valores
+            if (draft.sensory && Object.values(draft.sensory).some((v) => v != null)) {
+              try {
+                await updateVintageSensory(numericWineId, createdV.id, {
+                  body: draft.sensory.body ?? null,
+                  tannins: draft.sensory.tannins ?? null,
+                  acidity: draft.sensory.acidity ?? null,
+                  fruit: draft.sensory.fruit ?? null,
+                  oak: draft.sensory.oak ?? null,
+                  persistence: draft.sensory.persistence ?? null,
+                });
+                savedSteps.push('perfil sensorial');
+              } catch (err: unknown) {
+                failedSteps.push('perfil sensorial');
+                throw err;
+              }
+            }
+          } catch (err: unknown) {
+            failedSteps.push(`cosecha ${yearNum}`);
+            const maybeAxios = err as {
+              response?: { status?: number; data?: { code?: string; detail?: string } };
+            };
+            if (
+              maybeAxios?.response?.status === 409 ||
+              maybeAxios?.response?.data?.code === 'WINE_VINTAGE_DUPLICATE'
+            ) {
+              showToast(`Ya registraste la cosecha ${yearNum} para esta etiqueta.`);
+              return;
+            }
+            throw err;
+          }
+        } else {
+          // Actualizar cosecha existente
+          const targetVintageId = Number(draft.id);
+          if (targetVintageId > 0) {
+            try {
+              await updateWineVintage(numericWineId, targetVintageId, {
+                year: yearNum,
+                alcoholContent: alcoholNum,
+                servingTemperature: tempNum,
+                agingAdvice: draft.agingAdvice?.trim() || null,
+                grapes: grapesPayload.length > 0 ? grapesPayload : null,
+              });
+              savedSteps.push(`cosecha ${yearNum}`);
+
+              // Imagen: subir, reemplazar o quitar
+              if (draft.imageFile) {
+                await uploadVintageImage(numericWineId, targetVintageId, draft.imageFile);
+              } else if (draft.imageRemoved) {
+                await deleteVintageImage(numericWineId, targetVintageId);
+              }
+
+              // Perfil sensorial si cambió
+              if (draft.sensoryModified) {
+                try {
+                  await updateVintageSensory(numericWineId, targetVintageId, {
+                    body: draft.sensory?.body ?? null,
+                    tannins: draft.sensory?.tannins ?? null,
+                    acidity: draft.sensory?.acidity ?? null,
+                    fruit: draft.sensory?.fruit ?? null,
+                    oak: draft.sensory?.oak ?? null,
+                    persistence: draft.sensory?.persistence ?? null,
+                  });
+                  savedSteps.push('perfil sensorial');
+                } catch (err: unknown) {
+                  failedSteps.push('perfil sensorial');
+                  throw err;
+                }
+              }
+            } catch (err: unknown) {
+              failedSteps.push(`cosecha ${yearNum}`);
+              const maybeAxios = err as {
+                response?: { status?: number; data?: { code?: string; detail?: string } };
+              };
+              if (
+                maybeAxios?.response?.status === 409 ||
+                maybeAxios?.response?.data?.code === 'WINE_VINTAGE_DUPLICATE'
+              ) {
+                showToast(`Ya registraste la cosecha ${yearNum} para esta etiqueta.`);
+                return;
+              }
+              throw err;
+            }
+          }
+        }
+      }
+
+      // 3. Maridajes: addWinePairing y removeWinePairing según diferencia
+      const initialPairingIds = new Set(wine.pairings.map((p) => Number(p.id)));
+      const currentPairingIds = new Set(draftPairings.map((p) => p.id));
+
+      const toAdd = draftPairings.filter((p) => !initialPairingIds.has(p.id));
+      const toRemove = wine.pairings.filter((p) => !currentPairingIds.has(Number(p.id)));
+
+      for (const p of toAdd) {
+        try {
+          await addWinePairing(numericWineId, p.id);
+        } catch {
+          // Ignorar si ya estaba asociado
+        }
+      }
+
+      for (const p of toRemove) {
+        try {
+          await removeWinePairing(numericWineId, Number(p.id));
+        } catch {
+          // Ignorar si ya fue removido
+        }
+      }
+
+      showToast('¡Edición guardada exitosamente!');
+      setIsEditing(false);
+      if (onReload) {
+        await onReload();
+      }
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: { data?: { detail?: string; message?: string } };
+      };
+      const msg =
+        maybeAxios?.response?.data?.detail ||
+        maybeAxios?.response?.data?.message ||
+        'Ocurrió un error al guardar la edición. Verificá los datos e intentá de nuevo.';
+      showToast(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ==========================================
+  // PUBLICAR ETIQUETA NUEVA (Paso 3)
+  // ==========================================
+  const handlePublish = async (options?: { confirmNewLabel?: boolean }) => {
+    if (isSubmittingRef.current || isSaving) return;
+    const confirmNewLabel = options?.confirmNewLabel ?? false;
+
+    // Validación de campos obligatorios
+    const missing: string[] = [];
+    if (!draftName.trim()) missing.push('Nombre del vino');
+    if (!draftType) missing.push('Tipo de vino');
+    const yearNum = parseYear(activeVintageDraft.year) ?? Number(activeVintageDraft.year);
+    if (!yearNum || isNaN(yearNum)) missing.push('Año de la primera cosecha');
+
+    if (missing.length > 0) {
+      setValidationErrors({
+        name: !draftName.trim(),
+        type: !draftType,
+        year: !yearNum || isNaN(yearNum),
+      });
+      showToast(`Completá los campos obligatorios: ${missing.join(', ')}.`);
+      return;
+    }
+
+    setValidationErrors({});
+
+    // Validar blend si tiene uvas cargadas
+    if (activeVintageDraft.blend.length > 0) {
+      if (!blendValidation.isValid) {
+        showToast(blendValidation.errorMessage || 'Verificá el porcentaje de las uvas.');
+        return;
+      }
+    }
+
+    isSubmittingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      const validGrapes = activeVintageDraft.blend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const alcoholNum = parseAlcohol(activeVintageDraft.alcoholContent);
+      const tempNum = parseServingTemperature(activeVintageDraft.servingTemperature);
+      const targetWineryId = rawWine?.wineryId ?? (wine.winery ? Number(wine.winery.id) : user?.id);
+
+      const payload: CreateWineRequestDto = {
+        name: draftName.trim(),
+        wineType: draftType,
+        wineryId: targetWineryId as number,
+        locationId: rawWine?.locationId ?? null,
+        description: draftDescription.trim() || null,
+        confirmNewLabel,
+        firstVintage: {
+          year: yearNum,
+          ...(alcoholNum != null ? { alcoholContent: alcoholNum } : {}),
+          ...(tempNum != null ? { servingTemperature: tempNum } : {}),
+          ...(activeVintageDraft.agingAdvice?.trim() ? { agingAdvice: activeVintageDraft.agingAdvice.trim() } : {}),
+          ...(validGrapes.length > 0 ? { grapes: validGrapes } : {}),
+        },
+      };
+
+      const created = await createWine(payload);
+      setIsPublished(true);
+
+      // 2. Si hay imagen seleccionada: uploadVintageImage
+      let imageFailed = false;
+      if (activeVintageDraft.imageFile) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          const firstV = vintages.find((v) => v.year === yearNum) ?? vintages[0];
+          if (firstV) {
+            await uploadVintageImage(created.id, firstV.id, activeVintageDraft.imageFile);
+          }
+        } catch {
+          imageFailed = true;
+        }
+      }
+
+      // 3. Si hay maridajes seleccionados: addWinePairing por cada uno
+      let pairingFailed = false;
+      for (const p of draftPairings) {
+        try {
+          await addWinePairing(created.id, p.id);
+        } catch {
+          pairingFailed = true;
+        }
+      }
+
+      // 4. Perfil sensorial manual si hay algún valor
+      let sensoryFailed = false;
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          const vintages = await getWineVintages(created.id);
+          const firstV = vintages.find((v) => v.year === yearNum) ?? vintages[0];
+          if (firstV) {
+            await updateVintageSensory(created.id, firstV.id, {
+              body: activeVintageDraft.sensory.body ?? null,
+              tannins: activeVintageDraft.sensory.tannins ?? null,
+              acidity: activeVintageDraft.sensory.acidity ?? null,
+              fruit: activeVintageDraft.sensory.fruit ?? null,
+              oak: activeVintageDraft.sensory.oak ?? null,
+              persistence: activeVintageDraft.sensory.persistence ?? null,
+            });
+          }
+        } catch {
+          sensoryFailed = true;
+        }
+      }
+
+      // 5. Navegar a /bodega/vinos/{id}
+      const failures: string[] = [];
+      if (imageFailed) failures.push('subir la foto');
+      if (pairingFailed) failures.push('asociar maridajes');
+      if (sensoryFailed) failures.push('guardar el perfil sensorial');
+
+      if (failures.length > 0) {
+        if (failures.length === 1 && sensoryFailed) {
+          showToast('Se creó el vino, pero no se pudo guardar el perfil sensorial.');
+        } else if (failures.length === 1 && imageFailed) {
+          showToast('Se creó el vino, pero no se pudo subir la foto.');
+        } else if (failures.length === 1 && pairingFailed) {
+          showToast('Se creó el vino, pero no se pudieron asociar algunos maridajes.');
+        } else {
+          showToast(`Se creó el vino, pero no se pudo ${failures.join(' ni ')}.`);
+        }
+      }
+
+      navigate(`/bodega/vinos/${created.id}`);
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: {
+          status?: number;
+          data?: WineDuplicateErrorData;
+        };
+      };
+      const status = maybeAxios?.response?.status;
+      const data = maybeAxios?.response?.data;
+      const code = data?.code;
+
+      if (status === 409) {
+        if (!confirmNewLabel && code === 'WINE_EXISTS_ADD_VINTAGE' && data?.existingWineId) {
+          setConfirmAddVintage({
+            existingWineId: data.existingWineId,
+            name: draftName.trim(),
+            year: yearNum,
+            existingVintages: Array.isArray(data.existingVintages) ? data.existingVintages : [],
+          });
+          return;
+        }
+
+        if (code === 'WINE_VINTAGE_DUPLICATE') {
+          const existingId = data?.existingWineId;
+          showToast(
+            data?.detail || `Ya registraste este vino con la cosecha ${yearNum}.`,
+            existingId ? 'Ver etiqueta' : undefined,
+            existingId ? `/bodega/vinos/${existingId}` : undefined
+          );
+          return;
+        }
+      }
+
+      const msg = data?.detail || 'No se pudo crear la etiqueta de vino. Verificá los campos ingresados.';
+      showToast(msg);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateNewLabel = async () => {
+    setConfirmAddVintage(null);
+    await handlePublish({ confirmNewLabel: true });
+  };
+
+  const handleConfirmAddVintage = async () => {
+    if (!confirmAddVintage || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsAddingVintage(true);
+
+    try {
+      const validGrapes = activeVintageDraft.blend
+        .filter((b) => typeof b.grapeId === 'number' && typeof b.percentage === 'number' && b.percentage > 0)
+        .map((b) => ({
+          grapeId: b.grapeId as number,
+          percentage: b.percentage as number,
+        }));
+
+      const alcoholNum = parseAlcohol(activeVintageDraft.alcoholContent);
+      const tempNum = parseServingTemperature(activeVintageDraft.servingTemperature);
+
+      const vintagePayload: CreateWineVintageRequestDto = {
+        year: confirmAddVintage.year,
+        alcoholContent: alcoholNum,
+        servingTemperature: tempNum,
+        agingAdvice: activeVintageDraft.agingAdvice?.trim() || null,
+        grapes: validGrapes.length > 0 ? validGrapes : null,
+      };
+
+      const createdVintage = await createWineVintage(confirmAddVintage.existingWineId, vintagePayload);
+      setIsPublished(true);
+
+      // Subir imagen si hay
+      if (activeVintageDraft.imageFile) {
+        try {
+          await uploadVintageImage(confirmAddVintage.existingWineId, createdVintage.id, activeVintageDraft.imageFile);
+        } catch {
+          // No crítico
+        }
+      }
+
+      // Asociar maridajes si hay
+      for (const p of draftPairings) {
+        try {
+          await addWinePairing(confirmAddVintage.existingWineId, p.id);
+        } catch {
+          // No crítico
+        }
+      }
+
+      // Perfil sensorial manual si hay algún valor
+      if (activeVintageDraft.sensory && Object.values(activeVintageDraft.sensory).some((v) => v != null)) {
+        try {
+          await updateVintageSensory(confirmAddVintage.existingWineId, createdVintage.id, {
+            body: activeVintageDraft.sensory.body ?? null,
+            tannins: activeVintageDraft.sensory.tannins ?? null,
+            acidity: activeVintageDraft.sensory.acidity ?? null,
+            fruit: activeVintageDraft.sensory.fruit ?? null,
+            oak: activeVintageDraft.sensory.oak ?? null,
+            persistence: activeVintageDraft.sensory.persistence ?? null,
+          });
+        } catch {
+          showToast('Se agregó la cosecha, pero no se pudo guardar el perfil sensorial.');
+        }
+      }
+
+      setConfirmAddVintage(null);
+      navigate(`/bodega/vinos/${confirmAddVintage.existingWineId}`);
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: { detail?: string } } };
+      showToast(maybeAxios?.response?.data?.detail || 'No se pudo agregar la cosecha a la etiqueta existente.');
+    } finally {
+      isSubmittingRef.current = false;
+      setIsAddingVintage(false);
+    }
+  };
+
+  const reviews = propReviews ?? (submittedReviews.length > 0 ? [...submittedReviews, ...wine.reviews] : wine.reviews);
+  const REVIEWS_PER_PAGE = 3;
+
+  const averageRating = useMemo(() => calculateRating(reviews), [reviews]);
+
+  // Carga de perfil sensorial en vino real
+  const numericWineId = isRealWine && !isNaN(Number(wine.id)) ? Number(wine.id) : undefined;
+  const numericVintageId = isRealWine && !isNaN(Number(activeVintage.id)) ? Number(activeVintage.id) : undefined;
+  const { sensory: serverSensory } = useVintageSensory(numericWineId, numericVintageId);
+
+  // Previsualización de perfil sensorial en vivo calculada desde las uvas del borrador
+  const [previewSensoryData, setPreviewSensoryData] = useState<VintageSensoryDto | null>(null);
+
+  const activeBlendGrapes = useMemo(() => {
+    if (!isEditing && !isNewMode) return [];
+    return activeVintageDraft.blend
+      .filter((b) => typeof b.grapeId === 'number' && b.grapeId > 0)
+      .map((b) => ({
+        grapeId: Number(b.grapeId),
+        percentage: typeof b.percentage === 'number' ? b.percentage : null,
+      }));
+  }, [isEditing, isNewMode, activeVintageDraft.blend]);
+
+  useEffect(() => {
+    if (!isEditing && !isNewMode) return;
+    if (activeBlendGrapes.length === 0) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      previewSensory(activeBlendGrapes, controller.signal)
+        .then((data) => {
+          setPreviewSensoryData(data);
+        })
+        .catch((err: unknown) => {
+          if ((err as { name?: string })?.name === 'CanceledError' || (err as { name?: string })?.name === 'AbortError') {
+            return;
+          }
+          setPreviewSensoryData(null);
+        });
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isEditing, isNewMode, activeBlendGrapes]);
+
+  const effectivePreviewSensory =
+    (isEditing || isNewMode) && activeBlendGrapes.length > 0 ? previewSensoryData : null;
+
+  const handleSensoryChange = (key: SensoryAxisKey, val: number) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    updateActiveVintageDraft({
+      sensory: {
+        ...currentSensory,
+        [key]: val,
+      },
+      sensoryModified: true,
+    });
+  };
+
+  const handleSensoryReset = (key: SensoryAxisKey) => {
+    const currentSensory = activeVintageDraft.sensory || {};
+    const nextSensory = { ...currentSensory };
+    delete nextSensory[key];
+    updateActiveVintageDraft({
+      sensory: nextSensory,
+      sensoryModified: true,
+    });
+  };
+
+  // Perfil sensorial (en vivo con draftType en edición y con prioridad efectiva)
+  const currentEffectiveType = isEditing ? draftType : wine.type;
+  const sensoryAttributes: SensoryAttribute[] = useMemo(() => {
+    if (isRealWine || isEditing || isNewMode) {
+      return buildSensoryAttributes({
+        type: currentEffectiveType,
+        server: serverSensory,
+        manual: activeVintageDraft.sensory,
+        preview: effectivePreviewSensory,
+        isEditingOrNew: isEditing || isNewMode,
+      });
+    }
+
+    return getTypeSensoryFallback(wine.type);
+  }, [
+    isRealWine,
+    isEditing,
+    isNewMode,
+    currentEffectiveType,
+    serverSensory,
+    activeVintageDraft.sensory,
+    effectivePreviewSensory,
+    wine.type,
+  ]);
+
+  const filteredReviews = useMemo(() => {
+    if (starFilter === 'all') return reviews;
+    const targetStar = parseInt(starFilter, 10);
+    return reviews.filter((rev) => Math.floor(rev.rating) === targetStar);
+  }, [reviews, starFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE));
+
+  const displayedReviews = useMemo(() => {
+    const startIndex = (currentPage - 1) * REVIEWS_PER_PAGE;
+    return filteredReviews.slice(startIndex, startIndex + REVIEWS_PER_PAGE);
+  }, [filteredReviews, currentPage]);
+
+  const showToast = (message: string, actionLabel?: string, actionTo?: string) => {
+    setToast({ message, actionLabel, actionTo });
+    setTimeout(() => {
+      setToast(null);
+    }, 4500);
+  };
+
+  // Estados y acciones para eliminación de vino y cosecha (ownerMode)
+  const [isDeleteWineOpen, setIsDeleteWineOpen] = useState(false);
+  const [isDeletingWine, setIsDeletingWine] = useState(false);
+  const [isDeleteVintageOpen, setIsDeleteVintageOpen] = useState(false);
+  const [isDeletingVintage, setIsDeletingVintage] = useState(false);
+
+  const handleConfirmDeleteWine = async () => {
+    const wineIdNum = Number(wine.id);
+    if (isNaN(wineIdNum) || wineIdNum <= 0) return;
+    setIsDeletingWine(true);
+    try {
+      await deleteWine(wineIdNum);
+      showToast('Vino eliminado exitosamente.');
+      setIsDeleteWineOpen(false);
+      navigate(ownerBackTo);
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: { data?: { detail?: string; message?: string; title?: string } };
+      };
+      const errorMsg =
+        maybeAxios?.response?.data?.detail ||
+        maybeAxios?.response?.data?.message ||
+        maybeAxios?.response?.data?.title ||
+        getApiErrorMessage(err);
+      showToast(errorMsg);
+    } finally {
+      setIsDeletingWine(false);
+    }
+  };
+
+  const handleConfirmDeleteVintage = async () => {
+    const wineIdNum = Number(wine.id);
+    const vintageIdNum = Number(activeVintage.id);
+    if (isNaN(wineIdNum) || isNaN(vintageIdNum) || wineIdNum <= 0 || vintageIdNum <= 0) return;
+    setIsDeletingVintage(true);
+    try {
+      await deleteWineVintage(wineIdNum, vintageIdNum);
+      showToast('Añada eliminada exitosamente.');
+      setIsDeleteVintageOpen(false);
+      const remaining = wine.vintages.filter((v) => Number(v.id) !== vintageIdNum);
+      if (remaining.length > 0) {
+        setSelectedVintageYear(remaining[0].year);
+      }
+      if (onReload) {
+        await onReload();
+      }
+    } catch (err: unknown) {
+      const maybeAxios = err as {
+        response?: { data?: { detail?: string; message?: string; title?: string } };
+      };
+      const errorMsg =
+        maybeAxios?.response?.data?.detail ||
+        maybeAxios?.response?.data?.message ||
+        maybeAxios?.response?.data?.title ||
+        getApiErrorMessage(err);
+      showToast(errorMsg);
+    } finally {
+      setIsDeletingVintage(false);
+    }
+  };
+
+  const handleSaveToCellar = () => {
+    if (ownerMode || isNewMode) return;
+
+    if (isRealWine) {
+      const activeGrape = activeVintage?.grapes?.[0]?.variety || (wine.type === 'White' ? 'Blancos' : 'Malbec');
+      const selectedYear = activeVintage?.year || selectedVintageYear || new Date().getFullYear();
+      const cellarWinePayload: DashboardWine = {
+        id: wine.id,
+        wineryId,
+        name: wine.name,
+        winery: wine.winery?.name || wine.wineryNameText,
+        region: wine.winery?.region || 'Mendoza, Argentina',
+        varietal: activeGrape,
+        vintage: selectedYear,
+        rating: averageRating ? parseFloat(averageRating) : 0,
+        bottle: resolveBottleKind(wine.type, activeGrape),
+        imageUrl: (activeVintage?.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage?.imageUrl) || undefined,
+      };
+      openQuickAdd(cellarWinePayload);
+      return;
+    }
+
+    if (outletCtx?.setStockCount) {
+      outletCtx.setStockCount((prev) => prev + 1);
+    }
+
+    try {
+      const storedWinesRaw = localStorage.getItem('ayvino_vault_wines');
+      const existingWines: CellarWine[] = storedWinesRaw ? JSON.parse(storedWinesRaw) : [];
+
+      const newCellarWine: CellarWine = {
+        id: `vault-added-${Date.now()}`,
+        name: `${wine.name} ${activeVintage.year}`,
+        winery: wine.winery?.name || wine.wineryNameText,
+        region: wine.winery?.region || 'Valle de Uco, Mendoza',
+        varietal: activeVintage.grapes[0]?.variety || 'Malbec',
+        vintage: activeVintage.year,
+        rating: Math.round((parseFloat(averageRating || '4.8') / 5) * 100),
+        units: 1,
+        location: 'Cava Principal · Estante de Selección',
+        temperatureConst: '15°C CONSTANTE',
+        terroirNote: wine.description.slice(0, 80) + '...',
+        agingStatus: 'aging',
+        agingStatusLabel: `Guarda recomendada: ${activeVintage.agingAdvice.split('.')[0]}`,
+        isJewel: false,
+        bottle: 'red-black',
+        imageUrl: (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'card') : activeVintage.imageUrl) || undefined,
+        alcoholContent: activeVintage.alcoholContent,
+      };
+
+      const updated = [newCellarWine, ...existingWines];
+      localStorage.setItem('ayvino_vault_wines', JSON.stringify(updated));
+    } catch {
+      // Manejo silencioso de storage
+    }
+
+    showToast(
+      `¡"${wine.name} (${activeVintage.year})" guardado en tu Cava!`,
+      'Ver en mi Cava',
+      '/cava'
+    );
+  };
+
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Enlace de ficha enológica copiado al portapapeles.');
+    } else {
+      showToast('Enlace listo para compartir.');
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isRealWine && !ownerMode && !isNewMode && activeVintage?.id) {
+      const vId = Number(activeVintage.id);
+      if (!isNaN(vId) && vId > 0 && typeof getMyVintageReview === 'function') {
+        const promise = getMyVintageReview(vId);
+        if (promise && typeof promise.then === 'function') {
+          void promise
+            .then((review) => {
+              if (!isMounted) return;
+              setExistingReview(review);
+              if (review) {
+                setNewReviewRating(review.rating);
+                setNewReviewComment(review.comment || '');
+              } else {
+                setNewReviewRating(4.5);
+                setNewReviewComment('');
+              }
+            })
+            .catch(() => {
+              if (!isMounted) return;
+              setExistingReview(null);
+              setNewReviewRating(4.5);
+              setNewReviewComment('');
+            });
+        }
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isRealWine, ownerMode, isNewMode, activeVintage?.id]);
+
+  const handleOpenReviewForm = () => {
+    setIsReviewFormOpen(true);
+    if (existingReview) {
+      setNewReviewRating(existingReview.rating);
+      setNewReviewComment(existingReview.comment || '');
+    }
+    const el = document.getElementById('reviews-editorial-section');
+    if (typeof el?.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReviewComment.trim()) return;
+
+    const normalizedRating = normalizeRating(newReviewRating);
+
+    if (isRealWine) {
+      try {
+        const vintageId = Number(activeVintage.id);
+        let savedReview: ReviewResponseDto;
+        if (existingReview) {
+          savedReview = await updateReview(existingReview.id, {
+            rating: normalizedRating,
+            comment: newReviewComment.trim(),
+          });
+        } else {
+          savedReview = await createReview({
+            wineVintageId: vintageId,
+            rating: normalizedRating,
+            comment: newReviewComment.trim(),
+          });
+        }
+        setExistingReview(savedReview);
+        showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
+        setIsReviewFormOpen(false);
+        if (onReviewPublished) {
+          await onReviewPublished();
+        }
+      } catch (err: unknown) {
+        const maybeAxios = err as { response?: { data?: { detail?: string; message?: string } } };
+        const serverMessage =
+          maybeAxios?.response?.data?.detail ||
+          maybeAxios?.response?.data?.message ||
+          'No se pudo guardar la reseña.';
+        showToast(serverMessage);
+      }
+      return;
+    }
+
+    const authorName = user?.username?.trim() || 'Sommelier Coleccionista';
+    const createdReview: WineReviewItem = {
+      id: `rev-${Date.now()}`,
+      userName: authorName,
+      vintageYear: activeVintage.year,
+      rating: normalizedRating,
+      createdAt: new Date().toISOString().split('T')[0],
+      comment: newReviewComment.trim(),
+    };
+
+    setSubmittedReviews((prev) => [createdReview, ...prev]);
+    setIsReviewFormOpen(false);
+    showToast(`¡Tu reseña (${formatRating(normalizedRating)} ★) fue guardada!`);
+  };
+
+  const [imageError, setImageError] = useState(false);
+
+  // Imagen activa a renderizar en la ficha técnica (variante 'detail' en alta resolución)
+  const displayImageUrl = isEditing
+    ? activeVintageDraft.previewUrl
+    : (activeVintage.imageId ? imageUrl(activeVintage.imageId, 'detail')! : (activeVintage.imageUrl ? activeVintage.imageUrl.replace('variant=bottle', 'variant=detail') : null));
+
+  return (
+    <main className="w-full min-h-screen bg-[#0a0a0c] text-[#e5e1e4] antialiased selection:bg-[#722f37] selection:text-white pt-24 sm:pt-28 pb-20">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        
+        {/* Navegación de Retorno Minimalista */}
+        <div className="mb-8">
+          <Link
+            to={ownerMode ? ownerBackTo : '/dashboard#catalogo'}
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
+          >
+            ← Volver a explorar
+          </Link>
+        </div>
+
+        {/* 1. SECCIÓN PRINCIPAL: Grid de 2 Columnas Balanceado (5 y 7) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          
+          {/* ========================================================= */}
+          {/* COLUMNA IZQUIERDA (lg:col-span-5): Botella, Acciones & Bodega */}
+          {/* ========================================================= */}
+          <aside className="lg:col-span-5 flex flex-col lg:sticky lg:top-28 space-y-6">
+            
+            {/* Contenedor Visual de la Botella (Escenario 4:5 blanco con esquinas redondeadas y overflow-hidden) */}
+            <div
+              data-testid="wine-detail-stage"
+              className="w-full aspect-[4/5] bg-white rounded-2xl overflow-hidden shadow-2xl relative flex items-center justify-center p-3 group border border-neutral-200/20"
+            >
+              {displayImageUrl && !imageError ? (
+                <img
+                  src={displayImageUrl}
+                  alt={`${isEditing ? draftName : wine.name} Cosecha ${isEditing ? activeVintageDraft.year : activeVintage.year}`}
+                  onError={() => setImageError(true)}
+                  className="w-full h-full object-contain transition-transform duration-700 hover:scale-[1.03]"
+                />
+              ) : (
+                <div data-testid="wine-detail-fallback" className="flex flex-col items-center justify-center text-center p-8 max-w-xs">
+                  <WineBottleSilhouette className="w-20 h-52 text-neutral-400 mb-3" />
+                  <span className="font-serif text-base text-neutral-700 font-semibold">Cosecha en Cava Privada</span>
+                  <span className="text-xs text-neutral-500 mt-1 font-mono">
+                    Añada {isEditing ? activeVintageDraft.year : activeVintage.year} certificada
+                  </span>
+                </div>
+              )}
+
+              {/* Controles de Imagen en Modo Edición */}
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity z-20 rounded-2xl">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileChange}
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    aria-label="Subir foto de botella"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-mono uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <Camera className="w-4 h-4 text-rose-300" />
+                    <span>Cambiar foto</span>
+                  </button>
+                  {displayImageUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 font-mono underline"
+                    >
+                      Quitar foto
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Botones de Acción Principales */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveToCellar}
+                  disabled={ownerMode || isNewMode ? true : undefined}
+                  title={ownerMode ? 'No podés guardar tus propios vinos en tu cava personal' : undefined}
+                  className={
+                    ownerMode || isNewMode
+                      ? 'h-10 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm bg-neutral-800/40 border border-neutral-700/40 text-neutral-500 flex items-center justify-center gap-2 w-full cursor-not-allowed opacity-60'
+                      : 'h-10 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50 flex items-center justify-center gap-2 w-full cursor-pointer'
+                  }
+                >
+                  <BookmarkPlus className="w-4 h-4 text-rose-200" />
+                  <span>Guardar en cava</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenReviewForm}
+                  disabled={isNewMode}
+                  className={
+                    isNewMode
+                      ? 'h-10 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm border border-neutral-700/60 bg-transparent hover:bg-neutral-800/40 text-neutral-300 flex items-center justify-center gap-2 w-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'h-10 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm border border-neutral-700/60 bg-transparent hover:bg-neutral-800/40 text-neutral-300 flex items-center justify-center gap-2 w-full cursor-pointer'
+                  }
+                >
+                  <Edit3 className="w-4 h-4 text-neutral-400" />
+                  <span>{existingReview ? 'Editar reseña' : 'Escribir reseña'}</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="h-10 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm border border-neutral-700/60 bg-transparent hover:bg-neutral-800/40 text-neutral-300 flex items-center justify-center gap-2 w-full cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Compartir ficha</span>
+              </button>
+            </div>
+
+            {/* Selector de Añadas Disponibles */}
+            <div className="space-y-2 pt-2">
+              <span className="text-xs tracking-widest text-neutral-400 uppercase font-medium block">
+                Añadas disponibles
+              </span>
+              <div className={`flex flex-wrap gap-2${isEditing ? ' items-center' : ''}`}>
+                {(isEditing ? Object.values(vintageDrafts) : wine.vintages).map((vintage) => {
+                  const isSelected = vintage.year === selectedVintageYear;
+                  return (
+                    <button
+                      key={vintage.id}
+                      type="button"
+                      onClick={() => setSelectedVintageYear(vintage.year)}
+                      className={`rounded-sm px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-neutral-800 border border-neutral-600 text-white'
+                          : 'border border-neutral-800 hover:border-neutral-700 text-neutral-400'
+                      }`}
+                    >
+                      <span>{vintage.year ? vintage.year : 'Sin año'}</span>
+                    </button>
+                  );
+                })}
+
+                {/* Chip "+ Añada" en modo edición */}
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleAddVintageChip}
+                    className="rounded-sm px-3 py-1.5 text-xs font-mono border border-dashed border-rose-500/60 text-rose-300 hover:bg-rose-950/40 transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Añada</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Botón para eliminar la añada activa en ownerMode */}
+              {ownerMode && isRealWine && !isNewMode && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteVintageOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 text-xs font-mono transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar añada</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Bloque Espacioso de Bodega & Terruño */}
+            <div
+              {...(wineryId
+                ? {
+                    onClick: (e: React.MouseEvent) => {
+                      if ((e.target as HTMLElement).closest('a')) return;
+                      navigate(`/bodegas/${wineryId}`);
+                    },
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4 cursor-pointer hover:border-neutral-700/80 transition-colors',
+                  }
+                : {
+                    className:
+                      'rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-6 space-y-4',
+                  })}
+            >
+              <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 block font-medium">
+                Bodega Elaboradora
+              </span>
+
+              {wine.winery ? (
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-serif text-2xl text-neutral-100 font-semibold tracking-tight hover:text-amber-200 transition-colors cursor-pointer flex items-center justify-between group/winery">
+                      {wineryId ? (
+                        <Link
+                          to={`/bodegas/${wineryId}`}
+                          className="hover:underline flex items-center justify-between w-full"
+                        >
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </Link>
+                      ) : (
+                        <>
+                          <span>{wine.winery.name}</span>
+                          <ArrowUpRight className="w-4 h-4 text-neutral-500 group-hover/winery:text-amber-200 transition-transform group-hover/winery:translate-x-0.5 group-hover/winery:-translate-y-0.5" />
+                        </>
+                      )}
+                    </h3>
+                    <p className="text-xs text-neutral-400 flex items-center gap-1.5 font-sans mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-rose-300" />
+                      <span>{wine.winery.region}</span>
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-neutral-800/80 flex flex-col gap-2 text-xs font-mono text-neutral-400">
+                    <div className="flex items-center justify-between">
+                      <span>Fundación histórica:</span>
+                      <strong className="text-neutral-200 font-normal">{wine.winery.foundedYear}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 text-amber-300/90 text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      <span>Trazabilidad de origen verificada</span>
+                    </div>
+                  </div>
+
+                  {wine.winery.websiteUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={wine.winery.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-rose-300 hover:text-white transition-colors font-mono tracking-wider"
+                      >
+                        <span>Sitio web oficial</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 text-xs text-neutral-400">
+                  <p className="font-serif text-xl text-neutral-200">{wine.wineryNameText}</p>
+                  <p className="text-neutral-500 text-[11px] font-sans">
+                    Productor artesanal independiente registrado en AyVino.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Sello de trazabilidad al pie */}
+            <p className="text-[11px] text-neutral-500 font-mono text-center flex items-center justify-center gap-1.5 pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Trazabilidad y estiba enológica garantizada por AyVino</span>
+            </p>
+          </aside>
+
+          {/* ========================================================= */}
+          {/* COLUMNA DERECHA (lg:col-span-7): Header, Specs & Varietal */}
+          {/* ========================================================= */}
+          <section className="lg:col-span-7 flex flex-col space-y-6">
+            {/* Aviso de error en carga de catálogos */}
+            {catalogsError && (isEditing || isNewMode || isRealWine) && (
+              <div
+                role="alert"
+                className="bg-rose-950/40 border border-rose-800/80 rounded-lg p-3 text-xs text-rose-200 flex items-center justify-between font-mono animate-in fade-in"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{catalogsError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void retryCatalogs()}
+                  className="px-3 py-1 bg-rose-900/80 hover:bg-rose-800 rounded text-white font-sans font-medium transition-colors cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+            
+            {/* Header del Vino */}
+            <header className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-rose-300 uppercase font-semibold">
+                {isEditing ? (
+                  <select
+                    value={draftType}
+                    onChange={(e) => {
+                      setDraftType(e.target.value as EditorialWine['type']);
+                      if (validationErrors.type) {
+                        setValidationErrors((prev) => ({ ...prev, type: false }));
+                      }
+                    }}
+                    className={`bg-[#121015] border ${
+                      validationErrors.type ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                    } text-rose-300 text-xs font-mono uppercase tracking-widest px-2 py-1 rounded focus:border-rose-500 focus:outline-none cursor-pointer`}
+                    aria-label="Seleccionar tipo de vino"
+                  >
+                    <option value="">Elegí un tipo</option>
+                    {REAL_WINE_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{getWineTypeLabel(wine.type || 'Red', isRealWine)}</span>
+                )}
+                <span className="text-neutral-600" aria-hidden="true">·</span>
+                {isEditing ? (
+                  <span className="text-neutral-400 font-normal flex items-center gap-1.5">
+                    <span>Cosecha</span>
+                    <input
+                      type="number"
+                      value={activeVintageDraft.year ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? ('' as unknown as number) : Number(e.target.value);
+                        updateActiveVintageDraft({ year: val });
+                        if (validationErrors.year) {
+                          setValidationErrors((prev) => ({ ...prev, year: false }));
+                        }
+                      }}
+                      placeholder="Ej.: 2020"
+                      className={`w-28 bg-[#121015] border ${
+                        validationErrors.year ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                      } text-neutral-200 text-xs font-mono px-2 py-0.5 rounded focus:border-rose-500 focus:outline-none placeholder:text-neutral-600`}
+                      aria-label="Año de cosecha"
+                    />
+                  </span>
+                ) : (
+                  <span className="text-neutral-400 font-normal">
+                    Cosecha {activeVintage.year}
+                  </span>
+                )}
+              </div>
+
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={draftName}
+                  onChange={(e) => {
+                    setDraftName(e.target.value);
+                    if (validationErrors.name) {
+                      setValidationErrors((prev) => ({ ...prev, name: false }));
+                    }
+                  }}
+                  placeholder="Ej.: Gran Reserva Malbec"
+                  className={`w-full text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight bg-neutral-900/60 border ${
+                    validationErrors.name ? 'border-rose-500 ring-1 ring-rose-500' : 'border-neutral-700'
+                  } rounded p-2 focus:border-rose-500 focus:outline-none placeholder:text-neutral-600`}
+                  aria-label="Nombre del vino"
+                />
+              ) : (
+                <h1 className="text-3xl lg:text-4xl font-serif font-bold tracking-tight text-neutral-100 leading-tight">
+                  {wine.name}
+                </h1>
+              )}
+
+              <p className="text-sm text-neutral-400 font-sans">
+                Elaborado por {wineryId ? (
+                  <Link
+                    to={`/bodegas/${wineryId}`}
+                    className="text-neutral-200 font-medium hover:underline cursor-pointer"
+                  >
+                    {wine.winery?.name || wine.wineryNameText}
+                  </Link>
+                ) : <span className="text-neutral-200 font-medium">{wine.winery?.name || wine.wineryNameText}</span>}
+              </p>
+            </header>
+
+            {/* Tira de Especificaciones Técnicas */}
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4 py-3 border-y border-neutral-800/80">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
+                  Calificación
+                </span>
+                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  {averageRating ? (
+                    <>
+                      <span className="text-sm font-medium text-neutral-200 font-mono">
+                        {formatRating(parseFloat(averageRating))}
+                      </span>
+                      <span className="text-amber-400 text-xs">★</span>
+                      <span className="text-[11px] font-mono text-neutral-500">
+                        ({reviews.length})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-mono text-neutral-500">Sin calificar</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Graduación */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
+                  Graduación
+                </span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={activeVintageDraft.alcoholContent}
+                    onChange={(e) => updateActiveVintageDraft({ alcoholContent: e.target.value })}
+                    placeholder="14.5% Vol."
+                    className="w-28 text-sm font-medium text-neutral-200 font-mono bg-neutral-900/60 border border-neutral-700 rounded px-2 py-0.5 focus:border-rose-500 focus:outline-none"
+                    aria-label="Graduación alcohólica"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
+                    {activeVintage.alcoholContent}
+                  </span>
+                )}
+              </div>
+
+              {/* Servicio */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
+                  Servicio
+                </span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={activeVintageDraft.servingTemperature}
+                    onChange={(e) => updateActiveVintageDraft({ servingTemperature: e.target.value })}
+                    placeholder="16°C – 18°C"
+                    className="w-28 text-sm font-medium text-neutral-200 font-mono bg-neutral-900/60 border border-neutral-700 rounded px-2 py-0.5 focus:border-rose-500 focus:outline-none"
+                    aria-label="Temperatura de servicio"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
+                    {activeVintage.servingTemperature}
+                  </span>
+                )}
+              </div>
+
+              {/* Guarda */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] uppercase tracking-widest text-neutral-400 font-mono">
+                  Guarda
+                </span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={activeVintageDraft.agingAdvice}
+                    onChange={(e) => updateActiveVintageDraft({ agingAdvice: e.target.value })}
+                    placeholder="10 a 15 años."
+                    className="w-36 text-sm font-medium text-neutral-200 font-mono bg-neutral-900/60 border border-neutral-700 rounded px-2 py-0.5 focus:border-rose-500 focus:outline-none"
+                    aria-label="Consejo de guarda"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-neutral-200 font-mono whitespace-nowrap">
+                    {getConciseAging(activeVintage.agingAdvice)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Composición Varietal */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium tracking-wider uppercase text-neutral-400 font-mono">
+                  Composición Varietal
+                </h2>
+                <span className="text-xs font-mono text-neutral-500">
+                  Añada {isEditing ? activeVintageDraft.year : activeVintage.year}
+                </span>
+              </div>
+
+              {isEditing ? (
+                /* Editor de Blend en Modo Edición */
+                <div className="space-y-3 bg-neutral-900/40 border border-neutral-800/80 p-4 rounded-lg">
+                  <div className="space-y-2">
+                    {/* Buscador de uvas (Combobox con listbox y selección directa) */}
+                    <VarietalGrapeCombobox
+                      grapes={filteredGrapesCatalog}
+                      searchQuery={grapeSearch}
+                      onSearchChange={setGrapeSearch}
+                      onSelectGrape={handleSelectGrapeFromSearch}
+                      selectedGrapeIds={activeVintageDraft.blend.map((r) => r.grapeId)}
+                    />
+
+                    {activeVintageDraft.blend.length === 0 && (
+                      <p className="text-xs text-neutral-500 font-mono py-1">
+                        Agregá la primera uva
+                      </p>
+                    )}
+                    {activeVintageDraft.blend.map((row) => (
+                      <div key={row.id} className="flex items-center gap-3">
+                        <select
+                          value={row.grapeId}
+                          onChange={(e) =>
+                            handleUpdateGrape(row.id, {
+                              grapeId: e.target.value === '' ? '' : Number(e.target.value),
+                            })
+                          }
+                          className="flex-1 bg-[#121015] border border-neutral-700 rounded px-3 py-1.5 text-xs font-mono text-neutral-200 focus:border-rose-500 focus:outline-none"
+                          aria-label="Seleccionar uva"
+                        >
+                          <option value="">Elegí una cepa...</option>
+                          {row.grapeId && !filteredGrapesCatalog.some((g) => g.id === row.grapeId) && (
+                            (() => {
+                              const selectedGrape = grapesCatalog.find((g) => g.id === row.grapeId);
+                              return selectedGrape ? (
+                                <option key={selectedGrape.id} value={selectedGrape.id}>
+                                  {selectedGrape.name} ({selectedGrape.colorType})
+                                </option>
+                              ) : null;
+                            })()
+                          )}
+                          {filteredGrapesCatalog.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name} ({g.colorType})
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="flex items-center gap-1 w-24">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={row.percentage}
+                            onChange={(e) =>
+                              handleUpdateGrape(row.id, {
+                                percentage: e.target.value === '' ? '' : Number(e.target.value),
+                              })
+                            }
+                            className="w-full bg-[#121015] border border-neutral-700 rounded px-2 py-1.5 text-xs font-mono text-white text-right focus:border-rose-500 focus:outline-none"
+                            aria-label="Porcentaje de uva"
+                          />
+                          <span className="text-xs font-mono text-neutral-400">%</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGrape(row.id)}
+                          className="p-1.5 text-neutral-500 hover:text-rose-400 transition-colors rounded"
+                          aria-label="Quitar uva"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-800/60">
+                    <button
+                      type="button"
+                      onClick={handleAddGrape}
+                      className="inline-flex items-center gap-1.5 text-xs font-mono text-rose-300 hover:text-white transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Agregar uva</span>
+                    </button>
+
+                    <div className="text-xs font-mono">
+                      <span>Total: </span>
+                      <strong
+                        className={
+                          Math.abs(blendTotal - 100) < 0.001
+                            ? 'text-emerald-400 font-bold'
+                            : 'text-amber-400 font-bold'
+                        }
+                      >
+                        {blendTotal}%
+                      </strong>
+                    </div>
+                  </div>
+
+                  {!blendValidation.isValid && activeVintageDraft.blend.length > 0 && (
+                    <p className="text-[11px] text-amber-400 font-mono">
+                      {blendValidation.errorMessage}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Barra Visual Estándar en Modo Lectura */
+                <>
+                  <div className="w-full h-2 rounded-full overflow-hidden flex bg-neutral-900 border border-neutral-800/60">
+                    {activeVintage.grapes.map((grape, i) => {
+                      const colors = ['bg-[#722f37]', 'bg-[#b43747]', 'bg-[#e3aa00]', 'bg-[#d8c1c2]'];
+                      return (
+                        <div
+                          key={grape.variety}
+                          style={{ width: `${grape.percentage}%` }}
+                          className={`${colors[i % colors.length]} h-full transition-all duration-500`}
+                          title={`${grape.variety}: ${grape.percentage}%`}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-6 pt-1 text-xs">
+                    {activeVintage.grapes.map((grape, i) => {
+                      const dotColors = ['text-rose-300', 'text-amber-400', 'text-rose-200'];
+                      return (
+                        <div key={grape.variety} className="flex items-center gap-2">
+                          <span className={dotColors[i % dotColors.length]} aria-hidden="true">●</span>
+                          <span className="text-neutral-200 font-medium">{grape.variety}</span>
+                          <span className="font-mono text-neutral-400">{grape.percentage}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Descripción & Terruño */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-medium tracking-wider uppercase text-neutral-400 font-mono">
+                Descripción & Terruño
+              </h2>
+              {isEditing ? (
+                <textarea
+                  rows={4}
+                  value={draftDescription}
+                  onChange={(e) => setDraftDescription(e.target.value)}
+                  placeholder="Describí las características de la etiqueta, su elaboración y terruño..."
+                  className="w-full text-base text-neutral-300 leading-relaxed font-sans font-light bg-neutral-900/60 border border-neutral-700 rounded p-3 focus:border-rose-500 focus:outline-none"
+                  aria-label="Descripción del vino"
+                />
+              ) : (
+                <p className="text-base text-neutral-300 leading-relaxed font-sans font-light">
+                  {wine.description}
+                </p>
+              )}
+            </div>
+
+            {/* Maridajes Sugeridos */}
+            <div className={`space-y-3 pt-2${isEditing ? ' relative' : ''}`}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium tracking-wider uppercase text-neutral-400 font-mono">
+                  Maridajes Sugeridos
+                </h2>
+                <span className="text-[11px] font-mono text-neutral-500 uppercase">Armonías recomendadas</span>
+              </div>
+
+              {isEditing ? (
+                /* Chips de Maridajes en Modo Edición con Panel Flotante Absoluto */
+                <div className="space-y-3">
+                  <div className={`flex flex-wrap gap-2${isEditing ? ' items-center' : ''}`}>
+                    {draftPairings.map((p) => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-700 text-xs font-mono text-neutral-200"
+                      >
+                        <span>{p.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePairing(p.id)}
+                          className="text-neutral-500 hover:text-rose-400 transition-colors"
+                          aria-label={`Quitar maridaje ${p.name}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => setIsPairingPanelOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-rose-500/60 text-xs font-mono text-rose-300 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Agregar</span>
+                    </button>
+                  </div>
+
+                  {/* Panel Flotante de Catálogo de Maridajes (Posición absoluta para no empujar contenido) */}
+                  {isPairingPanelOpen && (
+                    <div className="absolute left-0 top-full mt-2 z-40 w-full sm:w-96 bg-[#121015] border border-neutral-700 rounded-lg p-4 shadow-2xl space-y-3 animate-in fade-in zoom-in-95">
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                        <span className="text-xs font-mono uppercase tracking-wider text-neutral-300 font-semibold">
+                          Catálogo de Maridajes
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsPairingPanelOpen(false)}
+                          className="text-neutral-500 hover:text-white"
+                          aria-label="Cerrar catálogo"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-2.5 top-2.5" />
+                          <input
+                            type="text"
+                            value={pairingSearch}
+                            onChange={(e) => setPairingSearch(e.target.value)}
+                            placeholder="Buscar plato o ingrediente..."
+                            className="w-full bg-neutral-900 border border-neutral-700 rounded pl-8 pr-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500"
+                          />
+                        </div>
+
+                        <select
+                          value={pairingCategoryFilter}
+                          onChange={(e) => setPairingCategoryFilter(e.target.value)}
+                          className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-rose-500 cursor-pointer"
+                        >
+                          <option value="all">Todas</option>
+                          <option value="Meat">Carnes</option>
+                          <option value="Fish">Pescados</option>
+                          <option value="Cheese">Quesos</option>
+                          <option value="Pasta">Pastas</option>
+                          <option value="Vegetarian">Vegetarianos</option>
+                          <option value="Dessert">Postres</option>
+                        </select>
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                        {filteredPairingsCatalog.length > 0 ? (
+                          filteredPairingsCatalog.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => handleAddPairing(p)}
+                              className="w-full text-left px-3 py-2 rounded bg-neutral-900/60 hover:bg-rose-950/40 border border-neutral-800/80 hover:border-rose-800/60 text-xs font-mono text-neutral-200 flex items-center justify-between group transition-colors"
+                            >
+                              <span>{p.name}</span>
+                              <Plus className="w-3.5 h-3.5 text-neutral-500 group-hover:text-rose-300" />
+                            </button>
+                          ))
+                        ) : (
+                          <p className="text-center py-4 text-xs font-mono text-neutral-500">
+                            No se encontraron maridajes en el catálogo.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Grilla Estándar en Modo Lectura */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {wine.pairings.map((p, idx) => (
+                    <div
+                      key={p.id}
+                      className="group rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-3.5 space-y-2 hover:border-rose-900/60 hover:bg-neutral-900/70 transition-all cursor-default"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-sm bg-neutral-800/80 border border-neutral-700/60 flex items-center justify-center group-hover:border-rose-300/40 transition-colors">
+                          {getPairingIcon(p.icon)}
+                        </div>
+                        <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
+                          Armonía 0{idx + 1}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="font-serif text-base text-neutral-100 font-semibold tracking-tight group-hover:text-amber-200 transition-colors">
+                          {p.name}
+                        </h4>
+                        <p className="text-xs text-neutral-400 font-sans mt-0.5 leading-relaxed">
+                          Afinidad enológica perfecta con la acidez y estructura tánica de esta añada.
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Barra de Acciones en el flujo del formulario (debajo de Maridajes sugeridos) */}
+            {((ownerMode && isRealWine) || isNewMode) && (
+              <div className="space-y-3">
+                <WineEditBar
+                  isEditing={isEditing}
+                  isSaving={isSaving}
+                  hasChanges={hasChanges}
+                  onStartEdit={handleStartEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  isNewMode={isNewMode}
+                  onPublish={() => {
+                    if (onPublishNewWine) {
+                      return onPublishNewWine({
+                        wine: {
+                          ...wine,
+                          name: draftName,
+                          type: draftType,
+                          description: draftDescription,
+                        },
+                        firstVintage: activeVintageDraft,
+                        pairings: draftPairings,
+                      });
+                    }
+                    return handlePublish();
+                  }}
+                />
+
+                {ownerMode && isRealWine && !isNewMode && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsDeleteWineOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-900/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar vino</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </section>
+        </div>
+
+        {/* 2. SECCIÓN: Reseñas de la Comunidad (lg:col-span-7) + Perfil Sensorial (lg:col-span-5) */}
+        <section id="reviews-editorial-section" className="border-t border-neutral-800/80 pt-12 mt-12">
+          <div className="grid grid-cols-12 gap-10 items-start">
+            
+            {/* col-span-12 lg:col-span-7: Bitácora & Reseñas de la Comunidad */}
+            <div className="col-span-12 lg:col-span-7 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-serif text-neutral-100 font-semibold tracking-tight">
+                    Catas & Bitácora de la Comunidad
+                  </h2>
+                  <p className="text-xs text-neutral-400 mt-1 font-mono">
+                    {reviews.length} anotaciones enológicas verificadas
+                  </p>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReviewFormOpen((prev) => {
+                      const next = !prev;
+                      if (next && existingReview) {
+                        setNewReviewRating(existingReview.rating);
+                        setNewReviewComment(existingReview.comment || '');
+                      }
+                      return next;
+                    });
+                  }}
+                  disabled={isNewMode}
+                  className={
+                    isNewMode
+                      ? 'rounded-sm border border-rose-800/60 bg-rose-950/30 text-rose-200 hover:bg-rose-900/40 text-xs uppercase tracking-wider px-3.5 py-2 font-medium flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'rounded-sm border border-rose-800/60 bg-rose-950/30 text-rose-200 hover:bg-rose-900/40 text-xs uppercase tracking-wider px-3.5 py-2 font-medium flex items-center gap-2 cursor-pointer transition-colors'
+                  }
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>{isReviewFormOpen ? 'Cerrar formulario' : (existingReview ? 'Editar mi reseña' : '+ Dejar mi reseña')}</span>
+                </button>
+              </div>
+
+              {/* Formulario Interactivo */}
+              {isReviewFormOpen && (
+                <form
+                  onSubmit={handleSubmitReview}
+                  className="bg-neutral-900/60 border border-neutral-800 p-6 rounded-lg space-y-5 animate-in fade-in duration-300 shadow-xl"
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-rose-900/80 border border-rose-700/60 text-rose-100 flex items-center justify-center text-xs font-serif font-bold">
+                        {(user?.username || 'S').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="text-xs">
+                        <span className="text-neutral-200 font-medium block">
+                          {user?.username || 'Miembro Sommelier'}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
+                          {existingReview
+                            ? `Editando tu reseña · Cosecha ${activeVintage.year}`
+                            : `Tu reseña · Cosecha ${activeVintage.year}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsReviewFormOpen(false)}
+                      className="text-neutral-500 hover:text-neutral-300 p-1 rounded-sm cursor-pointer"
+                      aria-label="Cerrar formulario"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Puntuación Decimal Flotante Compartida */}
+                  <RatingInput
+                    id="wine-review-rating-input"
+                    value={newReviewRating}
+                    onChange={(val) => setNewReviewRating(val ?? 4.5)}
+                    allowClear={false}
+                    label="Calificación organoléptica"
+                    helperText="Deslizá con precisión de décimas (1,0 - 5,0)"
+                    ariaLabel="Seleccionar puntuación decimal"
+                  />
+
+                  <div>
+                    <label htmlFor="review-comment" className="block text-xs font-mono text-neutral-400 mb-1.5">
+                      Nota de Cata & Sensaciones en boca
+                    </label>
+                    <textarea
+                      id="review-comment"
+                      required
+                      rows={3}
+                      value={newReviewComment}
+                      onChange={(e) => setNewReviewComment(e.target.value)}
+                      placeholder="Describí aromas primarios, textura en el paladar, estructura de taninos y guarda..."
+                      className="w-full bg-[#0a0a0c] border border-neutral-800 text-neutral-200 text-xs p-3.5 rounded-sm focus:border-rose-700 focus:outline-none font-sans leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsReviewFormOpen(false)}
+                      className="text-xs font-mono text-neutral-400 hover:text-white px-3 py-1.5 transition-colors rounded-sm cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="h-9 px-4 text-xs font-medium uppercase tracking-wider transition-colors rounded-sm bg-rose-900/40 border border-rose-700/60 text-rose-100 hover:bg-rose-800/50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{existingReview ? 'Guardar cambios' : 'Publicar Reseña'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Filtro minimalista por estrellas */}
+              <div className="flex items-center justify-between py-2 border-b border-neutral-900 text-xs font-mono text-neutral-400">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] uppercase tracking-wider text-neutral-500">Filtrar:</span>
+                  {(
+                    [
+                      { id: 'all', label: 'Todas' },
+                      { id: '5', label: '5 ★' },
+                      { id: '4', label: '4 ★' },
+                      { id: '3', label: '3 ★' },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setStarFilter(tab.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`py-1 px-2.5 transition-colors cursor-pointer ${
+                        starFilter === tab.id
+                          ? 'border-b-2 border-rose-400 text-white font-medium'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[11px]">
+                  Mostrando {displayedReviews.length} de {filteredReviews.length}
+                </span>
+              </div>
+
+              {/* Feed de reseñas en tarjetas individuales limpias */}
+              <div className="space-y-3">
+                {displayedReviews.length > 0 ? (
+                  displayedReviews.map((rev) => (
+                    <article
+                      key={rev.id}
+                      className="bg-neutral-900/40 border border-neutral-800/80 rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-serif text-neutral-300 flex items-center justify-center font-semibold shrink-0">
+                            {rev.userName.charAt(0)}
+                          </span>
+                          <div>
+                            <span className="text-sm font-medium text-neutral-200 block">
+                              {rev.userName}
+                            </span>
+                            <span className="text-xs text-neutral-500 font-mono">
+                              {rev.createdAt} · Cosecha {rev.vintageYear}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-amber-400 text-xs whitespace-nowrap">
+                          <div className="flex items-center">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <span
+                                key={i}
+                                className={i < Math.floor(rev.rating) ? 'text-amber-400' : 'text-neutral-700'}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                          <span className="font-mono text-neutral-200 text-xs font-semibold">
+                            {rev.rating.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-neutral-300 leading-relaxed font-normal">
+                        {rev.comment}
+                      </p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="py-10 text-center text-xs font-mono text-neutral-500 bg-neutral-900/20 border border-neutral-800/40 rounded-lg">
+                    No hay reseñas registradas para el filtro seleccionado.
+                  </div>
+                )}
+              </div>
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-neutral-900 text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`transition-colors cursor-pointer ${
+                      currentPage === 1
+                        ? 'text-neutral-700 cursor-not-allowed'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    ← Anterior
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: totalPages }, (_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentPage(idx + 1)}
+                        className={`w-7 h-7 flex items-center justify-center transition-colors cursor-pointer rounded-sm ${
+                          currentPage === idx + 1
+                            ? 'bg-rose-900/60 border border-rose-700/60 text-white font-bold'
+                            : 'text-neutral-500 hover:text-white'
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className={`transition-colors cursor-pointer rounded-sm px-2 py-1 ${
+                      currentPage === totalPages
+                        ? 'text-neutral-700 cursor-not-allowed'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* col-span-12 lg:col-span-5: Perfil Sensorial Enológico (Radar Chart) */}
+            <aside className="col-span-12 lg:col-span-5 rounded-lg bg-neutral-900/40 border border-neutral-800/80 p-5 space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-rose-300" />
+                  <h3 className="font-mono text-xs uppercase tracking-wider text-neutral-300 font-semibold">
+                    Perfil Sensorial
+                  </h3>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500 uppercase">
+                  Escala 1 a 5
+                </span>
+              </div>
+
+              {/* Gráfico Radar SVG */}
+              <WineSensoryRadarChart attributes={sensoryAttributes} />
+
+              {/* Desglose de Atributos */}
+              <div className="space-y-2.5 pt-2 border-t border-neutral-800/80">
+                {sensoryAttributes.map((attr) => {
+                  const isEditingMode = isEditing || isNewMode;
+                  if (!isEditingMode) {
+                    return (
+                      <div key={attr.key} className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <span>{attr.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const hasManual = activeVintageDraft.sensory?.[attr.key as SensoryAxisKey] != null;
+                  const showCalculated =
+                    (attr.key === 'body' || attr.key === 'tannins' || attr.key === 'acidity') &&
+                    attr.calculatedValue != null;
+
+                  return (
+                    <div key={attr.key} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-mono text-neutral-300">
+                        <div className="flex items-center gap-2">
+                          <span>{attr.label}</span>
+                          {hasManual && (
+                            <button
+                              type="button"
+                              onClick={() => handleSensoryReset(attr.key as SensoryAxisKey)}
+                              className="text-[10px] text-neutral-400 hover:text-rose-400 underline cursor-pointer"
+                            >
+                              Restablecer
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1 rounded-full bg-neutral-800 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-rose-900 to-rose-400 rounded-full"
+                              style={{ width: `${(attr.value / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-neutral-200 font-semibold w-7 text-right">
+                            {attr.value.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-0.5">
+                        <input
+                          type="range"
+                          min="1.0"
+                          max="5.0"
+                          step="0.1"
+                          value={attr.value || 1.0}
+                          onChange={(e) =>
+                            handleSensoryChange(attr.key as SensoryAxisKey, parseFloat(e.target.value))
+                          }
+                          aria-label={`Ajustar ${attr.label}`}
+                          className="w-full h-1 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                        />
+                      </div>
+
+                      {showCalculated && (
+                        <span className="text-[10px] text-neutral-400 font-mono block">
+                          Calculado desde las uvas: {attr.calculatedValue!.toFixed(1).replace('.', ',')}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Dictamen Enológico al pie del gráfico */}
+              <div className="bg-[#0a0a0c]/80 border border-neutral-800/60 p-3 rounded-lg text-center">
+                <span className="text-[11px] font-serif italic text-neutral-300 block">
+                  "Expresión de gran tensión y concentración con nervio mineral característico."
+                </span>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        {/* Modal de resolución de etiqueta existente o nueva variedad */}
+        {confirmAddVintage && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-add-vintage-title"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+          >
+            <div className="relative w-full max-w-2xl rounded-2xl border border-neutral-800 bg-[#121216] p-6 sm:p-7 shadow-2xl shadow-black/90 animate-in zoom-in-95 duration-150 text-neutral-200">
+              <button
+                type="button"
+                onClick={() => setConfirmAddVintage(null)}
+                disabled={isAddingVintage || isSaving}
+                className="absolute top-5 right-5 text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
+                aria-label="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-rose-800/50 bg-rose-950/40 text-rose-300">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+
+                <div className="flex-1 min-w-0 pr-6">
+                  <h2
+                    id="confirm-add-vintage-title"
+                    className="text-xl font-serif font-semibold text-zinc-100 tracking-tight"
+                  >
+                    Etiqueta existente
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-400 font-sans leading-relaxed">
+                    Ya tenés «{confirmAddVintage.name}» en tu catálogo. ¿Querés agregar la cosecha {confirmAddVintage.year} a ese vino?
+                  </p>
+
+                  {/* Listado de cosechas existentes */}
+                  {confirmAddVintage.existingVintages && confirmAddVintage.existingVintages.length > 0 && (
+                    <div className="mt-4 rounded-xl border border-neutral-800 bg-[#0e0e11] p-3.5">
+                      <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2">
+                        Cosechas registradas en tu bodega:
+                      </span>
+                      <ul className="space-y-1.5 text-xs font-mono text-neutral-300">
+                        {confirmAddVintage.existingVintages.map((v, i) => (
+                          <li
+                            key={`${v.year ?? 'sa'}-${v.mainGrapeId ?? i}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-400/80" />
+                            <span>
+                              {v.year != null ? v.year : 'S/A'} · {v.mainGrapeName || 'Variedad no especificada'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Sugerencia según variedad */}
+                  {isDifferentVariety && (
+                    <div className="mt-3 flex items-center gap-2 text-xs font-mono text-rose-200 bg-rose-950/30 border border-rose-800/40 rounded-lg px-3 py-2">
+                      <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
+                      <span>Parece una variedad distinta</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botones de acción del mismo tamaño con la estética de la ficha de vino */}
+              <div className="mt-6 pt-5 border-t border-neutral-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmAddVintage(null)}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800/80 text-neutral-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmAddVintage()}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl border border-dashed border-rose-500/60 text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 bg-rose-950/20 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 text-center"
+                >
+                  {isAddingVintage ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-rose-300" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 text-rose-300" />
+                  )}
+                  <span>Agregar cosecha</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateNewLabel()}
+                  disabled={isAddingVintage || isSaving}
+                  className="h-11 px-4 rounded-xl bg-[#6e1a24] hover:bg-[#85222e] text-white text-xs font-semibold uppercase tracking-wider shadow-lg shadow-black/40 border border-rose-500/30 hover:scale-[1.01] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-center"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                  )}
+                  <span>Crear etiqueta nueva</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Cava para Vino Real */}
+        {isRealWine && (
+          <QuickAddBottleModal
+            isOpen={isCellarModalOpen}
+            initialName={cellarInitialName}
+            initialWine={cellarActiveWine}
+            showToast={(msg) => showToast(msg)}
+            onClose={closeQuickAdd}
+            onAddBottle={async (payload) => {
+              if (outletCtx?.refreshStock) {
+                await outletCtx.refreshStock();
+              } else if (outletCtx?.setStockCount) {
+                outletCtx.setStockCount((prev) => prev + payload.units);
+              }
+              showToast(
+                `¡"${payload.name} (${payload.vintage})" guardado en tu Cava!`,
+                'Ver en mi Cava',
+                '/cava'
+              );
+            }}
+          />
+        )}
+
+        {/* Modales de Confirmación de Eliminación (ownerMode) */}
+        {ownerMode && isRealWine && !isNewMode && (
+          <>
+            <ConfirmDialog
+              open={isDeleteWineOpen}
+              title="¿Eliminar vino?"
+              message={`¿Estás seguro de que deseás eliminar el vino "${wine.name}"? Esta acción borrará la etiqueta y todas sus añadas asociadas. Si tiene reseñas, marcas o cava no se podrá eliminar.`}
+              confirmLabel="Eliminar"
+              tone="danger"
+              isLoading={isDeletingWine}
+              onConfirm={() => void handleConfirmDeleteWine()}
+              onCancel={() => {
+                if (!isDeletingWine) setIsDeleteWineOpen(false);
+              }}
+            />
+
+            <ConfirmDialog
+              open={isDeleteVintageOpen}
+              title="¿Eliminar añada?"
+              message={`¿Estás seguro de que deseás eliminar la añada ${activeVintage.year} de "${wine.name}"? Si tiene reseñas o está guardada en cavas no se podrá eliminar.`}
+              confirmLabel="Eliminar"
+              tone="danger"
+              isLoading={isDeletingVintage}
+              onConfirm={() => void handleConfirmDeleteVintage()}
+              onCancel={() => {
+                if (!isDeletingVintage) setIsDeleteVintageOpen(false);
+              }}
+            />
+          </>
+        )}
+
+        {/* Notificación Toast Flotante */}
+        {toast && (
+          <aside
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-6 right-6 z-50 bg-neutral-900/90 backdrop-blur-md border border-neutral-800 text-white text-xs px-5 py-3.5 shadow-2xl flex items-center gap-3 font-mono rounded-sm animate-in slide-in-from-bottom-5 duration-200"
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toast.message}</span>
+            {toast.actionLabel && toast.actionTo && (
+              <Link
+                to={toast.actionTo}
+                className="ml-2 text-[#ffb2b8] hover:text-white underline font-semibold transition-colors"
+              >
+                {toast.actionLabel} &rarr;
+              </Link>
+            )}
+          </aside>
+        )}
+      </div>
+    </main>
+  );
+}

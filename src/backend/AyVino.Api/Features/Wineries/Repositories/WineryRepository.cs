@@ -1,0 +1,279 @@
+using System.Data;
+using AyVino.Api.Common.Data;
+using AyVino.Api.Features.Wineries.DTOs;
+using AyVino.Api.Features.Wineries.Models;
+using AyVino.Api.Features.Wines;
+using Dapper;
+
+namespace AyVino.Api.Features.Wineries.Repositories;
+
+public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryRepository
+{
+    private const string SelectColumns = """
+        w.id, w.name, w.description, w.location_id, w.foundation_year, w.website,
+        w.user_id, w.status, w.register_date, w.latitude, w.longitude,
+        w.logo_image_id AS LogoImageId, w.banner_image_id AS BannerImageId,
+        w.name_key AS NameKey,
+        s.name AS StateName, c.name AS RegionName
+        FROM wineries w
+        LEFT JOIN locations l ON l.id = w.location_id
+        LEFT JOIN cities c ON c.id = l.city_id
+        LEFT JOIN states s ON s.id = c.state_id
+        """;
+
+    public async Task<Winery?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var sql = $"""
+            SELECT {SelectColumns}
+            WHERE w.id = @Id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Winery>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<Winery?> GetByUserIdAsync(int userId, CancellationToken ct = default)
+    {
+        var sql = $"""
+            SELECT {SelectColumns}
+            WHERE w.user_id = @UserId;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QuerySingleOrDefaultAsync<Winery>(
+            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
+    }
+
+    public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, status, locationId, null, ct);
+
+    public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status, int? locationId, string? search, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildListFilter(status, locationId, search);
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT {SelectColumns}
+            {whereClause}
+            ORDER BY w.id
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<Winery>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public Task<int> CountAsync(int? status = null, int? locationId = null, CancellationToken ct = default) =>
+        CountAsync(status, locationId, null, ct);
+
+    public async Task<int> CountAsync(int? status, int? locationId, string? search, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildListFilter(status, locationId, search);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM wineries w
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildListFilter(int? status, int? locationId, string? search)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (status.HasValue)
+        {
+            conditions.Add("w.status = @Status");
+            parameters.Add("Status", status.Value);
+        }
+
+        if (locationId.HasValue)
+        {
+            conditions.Add("w.location_id = @LocationId");
+            parameters.Add("LocationId", locationId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            conditions.Add("w.name ILIKE @Search");
+            parameters.Add("Search", $"%{search.Trim()}%");
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        return (whereClause, parameters);
+    }
+
+    public async Task<Winery> CreateAsync(Winery winery, CancellationToken ct = default)
+    {
+        var nameKey = WineLabelNormalizer.ComputeWineryKey(winery.Name);
+        const string sql = """
+            INSERT INTO wineries (name, description, location_id, foundation_year, website, user_id, status, register_date, latitude, longitude, logo_image_id, banner_image_id, name_key)
+            VALUES (@Name, @Description, @LocationId, @FoundationYear, @Website, @UserId, @Status, @RegisterDate, @Latitude, @Longitude, @LogoImageId, @BannerImageId, @NameKey)
+            RETURNING id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+
+        var id = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new
+            {
+                winery.Name,
+                winery.Description,
+                winery.LocationId,
+                winery.FoundationYear,
+                winery.Website,
+                winery.UserId,
+                Status = (int)winery.Status,
+                winery.RegisterDate,
+                winery.Latitude,
+                winery.Longitude,
+                winery.LogoImageId,
+                winery.BannerImageId,
+                NameKey = nameKey
+            }, cancellationToken: ct));
+
+        return winery with { Id = id, NameKey = nameKey };
+    }
+
+    public async Task<bool> UpdateAsync(Winery winery, CancellationToken ct = default)
+    {
+        var nameKey = WineLabelNormalizer.ComputeWineryKey(winery.Name);
+        const string sql = """
+            UPDATE wineries
+            SET name = @Name,
+                description = @Description,
+                location_id = @LocationId,
+                foundation_year = @FoundationYear,
+                website = @Website,
+                latitude = @Latitude,
+                longitude = @Longitude,
+                name_key = @NameKey
+            WHERE id = @Id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new
+            {
+                winery.Id,
+                winery.Name,
+                winery.Description,
+                winery.LocationId,
+                winery.FoundationYear,
+                winery.Website,
+                winery.Latitude,
+                winery.Longitude,
+                NameKey = nameKey
+            }, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateLogoImageIdAsync(int wineryId, Guid? logoImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE wineries
+            SET logo_image_id = @LogoImageId
+            WHERE id = @WineryId;
+            """;
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { WineryId = wineryId, LogoImageId = logoImageId }, transaction: transaction, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateLogoImageIdAsync(int wineryId, Guid? logoImageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await UpdateLogoImageIdAsync(wineryId, logoImageId, connection, null, ct);
+    }
+
+    public async Task<bool> UpdateBannerImageIdAsync(int wineryId, Guid? bannerImageId, IDbConnection connection, IDbTransaction? transaction = null, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE wineries
+            SET banner_image_id = @BannerImageId
+            WHERE id = @WineryId;
+            """;
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { WineryId = wineryId, BannerImageId = bannerImageId }, transaction: transaction, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateBannerImageIdAsync(int wineryId, Guid? bannerImageId, CancellationToken ct = default)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await UpdateBannerImageIdAsync(wineryId, bannerImageId, connection, null, ct);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = "DELETE FROM wineries WHERE id = @Id;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateStatusAsync(int id, int status, CancellationToken ct = default)
+    {
+        const string sql = """
+            UPDATE wineries
+            SET status = @Status
+            WHERE id = @Id;
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = id, Status = status }, cancellationToken: ct));
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
+    {
+        const string sql = "SELECT 1 FROM wineries WHERE id = @Id LIMIT 1;";
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<WinerySuggestItemDto>> SuggestAsync(string searchKey, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT
+                wy.id AS Id,
+                wy.name AS Name
+            FROM wineries wy
+            WHERE wy.status = 2
+              AND (
+                  wy.name_key LIKE @KeyPattern
+                  OR similarity(wy.name_key, @SearchKey) > @Threshold
+              )
+            ORDER BY
+                CASE
+                    WHEN wy.name_key = @SearchKey THEN 4
+                    WHEN wy.name_key LIKE @KeyPrefix THEN 3
+                    WHEN wy.name_key LIKE @KeyPattern THEN 2
+                    WHEN similarity(wy.name_key, @SearchKey) > @Threshold THEN 1
+                    ELSE 0
+                END DESC,
+                similarity(wy.name_key, @SearchKey) DESC,
+                wy.name ASC
+            LIMIT 5;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        var rows = await connection.QueryAsync<WinerySuggestItemDto>(
+            new CommandDefinition(sql, new
+            {
+                SearchKey = searchKey,
+                KeyPrefix = $"{searchKey}%",
+                KeyPattern = $"%{searchKey}%",
+                Threshold = 0.3
+            }, cancellationToken: ct));
+
+        return rows.ToList();
+    }
+}
