@@ -127,6 +127,17 @@ describe('AdminDashboardPage Component', () => {
         longitude: -68.8,
         stateName: 'Mendoza',
         cityName: 'Luján de Cuyo',
+        stateId: 13,
+      },
+    ],
+    wineries: [
+      {
+        id: 1,
+        name: 'Bodega Andina',
+        stateId: 13,
+        cityName: 'Luján de Cuyo',
+        foundationYear: 2001,
+        hasCoordinates: true,
       },
     ],
   };

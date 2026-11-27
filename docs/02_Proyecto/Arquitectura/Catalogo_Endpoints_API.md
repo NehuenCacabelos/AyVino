@@ -556,6 +556,14 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
   - `longitude` (`decimal`): Longitud.
   - `stateName` (`string?`): Provincia (nullable si la ubicación no la resuelve).
   - `cityName` (`string?`): Ciudad (nullable si la ubicación no la resuelve).
+  - `stateId` (`int?`): ID de la provincia asociada (nullable si la ubicación no la resuelve).
+- `wineries` (`RegionWineryItemDto[]`): Bodegas aprobadas con provincia resuelta (`s.id IS NOT NULL`), ordenadas por `name` ascendente:
+  - `id` (`int`): ID de la bodega.
+  - `name` (`string`): Nombre de la bodega.
+  - `stateId` (`int`): ID de la provincia.
+  - `cityName` (`string?`): Ciudad (nullable).
+  - `foundationYear` (`int?`): Año de fundación (nullable).
+  - `hasCoordinates` (`bool`): Indica si la bodega posee latitud y longitud cargadas.
 
 ---
 

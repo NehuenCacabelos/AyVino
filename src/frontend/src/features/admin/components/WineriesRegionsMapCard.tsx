@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Map as MapIcon } from 'lucide-react';
+import { ChevronDown, ExternalLink, Map as MapIcon, MapPin } from 'lucide-react';
 import { getWineriesByRegion } from '../api/adminStatsApi';
 import type { WineriesByRegion, WineryPin } from '../types/adminStats';
 import { buildRegionRows } from '../utils/dashboardCharts';
@@ -87,6 +88,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     error: null,
   });
   const [fetchKey, setFetchKey] = useState(0);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
 
   const barrelIcon = useMemo(() => createBarrelIcon(), []);
 
@@ -111,8 +113,17 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
   }, [fetchKey]);
 
   const handleRetry = useCallback(() => {
+    setSelectedStateId(null);
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     setFetchKey((prev) => prev + 1);
+  }, []);
+
+  const handleToggleRegion = useCallback((stateId: number) => {
+    setSelectedStateId((prev) => (prev === stateId ? null : stateId));
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedStateId(null);
   }, []);
 
   const regionRowsResult = useMemo(
@@ -123,9 +134,41 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     [state.data],
   );
 
+  const selectedRegion = useMemo(
+    () =>
+      selectedStateId === null
+        ? null
+        : regionRowsResult.rows.find((row) => row.stateId === selectedStateId) ?? null,
+    [regionRowsResult.rows, selectedStateId],
+  );
+
+  const filteredPins = useMemo(() => {
+    if (!state.data) {
+      return [];
+    }
+    if (selectedRegion === null) {
+      return state.data.pins;
+    }
+
+    return state.data.pins.filter((pin) =>
+      pin.stateId !== undefined && pin.stateId !== null
+        ? pin.stateId === selectedRegion.stateId
+        : pin.stateName === selectedRegion.stateName,
+    );
+  }, [state.data, selectedRegion]);
+
+  const selectedWineries = useMemo(() => {
+    if (!state.data?.wineries || selectedRegion === null) {
+      return [];
+    }
+
+    return state.data.wineries.filter((winery) => winery.stateId === selectedRegion.stateId);
+  }, [state.data, selectedRegion]);
+
   const data = state.data;
   const hasApprovedWineries = Boolean(data && data.totalWineries > 0);
   const leadRegion = regionRowsResult.rows[0] ?? null;
+  const overlayRegion = selectedRegion ?? leadRegion;
 
   return (
     <section
@@ -173,7 +216,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
 
       {!state.isLoading && !state.error && data && hasApprovedWineries && (
         <div className="space-y-4">
-          {data.pins.length > 0 && (
+          {filteredPins.length > 0 && (
             <div
               data-testid="wineries-regions-map-wrapper"
               className="relative rounded-xl overflow-hidden border border-white/10 bg-[#0d0c10]"
@@ -189,8 +232,8 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <FitBoundsToPins pins={data.pins} />
-                {data.pins.map((pin) => {
+                <FitBoundsToPins pins={filteredPins} />
+                {filteredPins.map((pin) => {
                   const locationLabel = formatPinLocation(pin.cityName, pin.stateName);
 
                   return (
@@ -224,26 +267,42 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                 })}
               </MapContainer>
 
-              {leadRegion && (
+              {overlayRegion && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[400] bg-gradient-to-t from-[#121015] via-[#121015]/85 to-transparent px-4 pt-8 pb-3 flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] uppercase tracking-wider text-emerald-400/90">
-                      Epicentro vitivinícola
+                      {selectedRegion ? 'Provincia seleccionada' : 'Epicentro vitivinícola'}
                     </p>
                     <p className="mt-0.5 text-base font-serif font-semibold text-zinc-100 truncate">
-                      {leadRegion.stateName}
+                      {overlayRegion.stateName}
                     </p>
                   </div>
                   <div className="shrink-0 rounded-lg border border-white/10 bg-black/65 backdrop-blur-sm px-2.5 py-1.5 text-right">
                     <p className="text-sm font-serif font-semibold text-zinc-100 leading-none tabular-nums">
-                      {leadRegion.wineryCount}
+                      {overlayRegion.wineryCount}
                     </p>
                     <p className="mt-0.5 font-mono text-[10px] text-zinc-400">
-                      {leadRegion.wineryCount === 1 ? 'Bodega' : 'Bodegas'}
+                      {overlayRegion.wineryCount === 1 ? 'Bodega' : 'Bodegas'}
                     </p>
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedRegion && filteredPins.length === 0 && (
+            <div className="rounded-xl border border-white/10 bg-[#0d0c10] px-4 py-6 text-center space-y-2">
+              <MapPin className="w-5 h-5 text-zinc-500 mx-auto" aria-hidden="true" />
+              <p className="text-xs text-zinc-300">
+                Las bodegas de {selectedRegion.stateName} no tienen coordenadas cargadas para mostrar en el mapa.
+              </p>
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Mostrar todas las bodegas
+              </button>
             </div>
           )}
 
@@ -255,36 +314,109 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
 
           {regionRowsResult.rows.length > 0 && (
             <div className="space-y-3">
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {regionRowsResult.rows.map((row, index) => {
                   const barColor = REGION_BAR_COLORS[index % REGION_BAR_COLORS.length];
+                  const isSelected = selectedStateId === row.stateId;
 
                   return (
-                    <li key={row.stateId} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
-                        <span className="flex items-center gap-2 min-w-0">
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: barColor }}
-                            aria-hidden="true"
-                          />
-                          <span className="text-zinc-200 font-medium truncate">
-                            {row.stateName}
-                          </span>
-                        </span>
-                        <span className="font-mono text-xs text-zinc-400 shrink-0 tabular-nums">
-                          {formatWineryCountLabel(row.wineryCount)} / {row.percent}% del total
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
+                    <li key={row.stateId}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleRegion(row.stateId)}
+                        aria-expanded={isSelected}
+                        className={cn(
+                          'w-full text-left rounded-xl px-2.5 py-2 transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60',
+                          isSelected
+                            ? 'border-white/15 bg-white/[0.05]'
+                            : 'border-transparent hover:bg-white/[0.03]',
+                        )}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: barColor }}
+                                aria-hidden="true"
+                              />
+                              <span className="text-zinc-200 font-medium truncate">
+                                {row.stateName}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono text-xs text-zinc-400 tabular-nums">
+                                {formatWineryCountLabel(row.wineryCount)} / {row.percent}% del total
+                              </span>
+                              <ChevronDown
+                                className={cn(
+                                  'w-3.5 h-3.5 text-zinc-500 transition-transform duration-150',
+                                  isSelected && 'rotate-180 text-zinc-200',
+                                )}
+                                aria-hidden="true"
+                              />
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, row.percent))}%`,
+                                backgroundColor: barColor,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+
+                      {isSelected && (
                         <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${Math.min(100, Math.max(0, row.percent))}%`,
-                            backgroundColor: barColor,
-                          }}
-                        />
-                      </div>
+                          data-testid={`region-dropdown-${row.stateId}`}
+                          className="mt-1.5 ml-2 rounded-xl border border-white/10 bg-[#0d0c10]/90 px-3 py-2.5"
+                        >
+                          {selectedWineries.length === 0 ? (
+                            <p className="text-xs text-zinc-500">
+                              No hay detalle de bodegas disponible para esta provincia.
+                            </p>
+                          ) : (
+                            <ul className="divide-y divide-white/[0.06]">
+                              {selectedWineries.map((winery) => (
+                                <li
+                                  key={winery.id}
+                                  className="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-3"
+                                >
+                                  <div className="min-w-0">
+                                    <Link
+                                      to={`/bodegas/${winery.id}`}
+                                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-100 hover:text-rose-300 transition-colors"
+                                    >
+                                      <span className="truncate">{winery.name}</span>
+                                      <ExternalLink
+                                        className="w-3 h-3 text-zinc-500 shrink-0"
+                                        aria-hidden="true"
+                                      />
+                                    </Link>
+                                    <p className="text-[11px] text-zinc-400 truncate">
+                                      {winery.cityName ?? 'Ciudad sin especificar'}
+                                      {winery.foundationYear ? ` · Est. ${winery.foundationYear}` : ''}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={cn(
+                                      'shrink-0 rounded-md border px-2 py-0.5 font-mono text-[10px]',
+                                      winery.hasCoordinates
+                                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                                        : 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                                    )}
+                                  >
+                                    {winery.hasCoordinates ? 'En mapa' : 'Sin mapa'}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </li>
                   );
                 })}

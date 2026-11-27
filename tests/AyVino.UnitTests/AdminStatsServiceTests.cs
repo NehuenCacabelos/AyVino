@@ -140,8 +140,12 @@ public class AdminStatsServiceTests
             ],
             Pins:
             [
-                new WineryPinDto(1, "Bodega A", -33.0123456m, -68.8765432m, "Mendoza", "Luján de Cuyo"),
-                new WineryPinDto(2, "Bodega B", -26.0712345m, -65.9765432m, null, null)
+                new WineryPinDto(1, "Bodega A", -33.0123456m, -68.8765432m, "Mendoza", "Luján de Cuyo", 13),
+                new WineryPinDto(2, "Bodega B", -26.0712345m, -65.9765432m, null, null, null)
+            ],
+            Wineries:
+            [
+                new RegionWineryItemDto(1, "Bodega A", 13, "Luján de Cuyo", 1995, true)
             ]);
 
         _repository.GetWineriesByRegionAsync(Arg.Any<CancellationToken>())

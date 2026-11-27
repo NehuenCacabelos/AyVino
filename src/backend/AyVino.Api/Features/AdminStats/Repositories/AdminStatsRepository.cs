@@ -56,6 +56,17 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
         public decimal Longitude { get; set; }
         public string? StateName { get; set; }
         public string? CityName { get; set; }
+        public int? StateId { get; set; }
+    }
+
+    private sealed class RawRegionWineryItemRow
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int StateId { get; set; }
+        public string? CityName { get; set; }
+        public int? FoundationYear { get; set; }
+        public bool HasCoordinates { get; set; }
     }
 
     public async Task<AdminStatsDto> GetStatsAsync(CancellationToken ct = default)
@@ -182,7 +193,8 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
                 w.latitude AS Latitude,
                 w.longitude AS Longitude,
                 s.name AS StateName,
-                c.name AS CityName
+                c.name AS CityName,
+                s.id AS StateId
             FROM wineries w
             LEFT JOIN locations l ON l.id = w.location_id
             LEFT JOIN cities c ON c.id = l.city_id
@@ -190,6 +202,23 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
             WHERE w.status = @ApprovedWinery
               AND w.latitude IS NOT NULL
               AND w.longitude IS NOT NULL
+            ORDER BY w.name ASC;
+            """;
+
+        const string wineriesSql = """
+            SELECT
+                w.id AS Id,
+                w.name AS Name,
+                s.id AS StateId,
+                c.name AS CityName,
+                w.foundation_year AS FoundationYear,
+                (w.latitude IS NOT NULL AND w.longitude IS NOT NULL) AS HasCoordinates
+            FROM wineries w
+            LEFT JOIN locations l ON l.id = w.location_id
+            LEFT JOIN cities c ON c.id = l.city_id
+            LEFT JOIN states s ON s.id = c.state_id
+            WHERE w.status = @ApprovedWinery
+              AND s.id IS NOT NULL
             ORDER BY w.name ASC;
             """;
 
@@ -206,18 +235,26 @@ public class AdminStatsRepository(IDbConnectionFactory connectionFactory) : IAdm
         var pinRows = await connection.QueryAsync<RawWineryPinRow>(
             new CommandDefinition(pinsSql, parameters, cancellationToken: ct));
 
+        var wineryRows = await connection.QueryAsync<RawRegionWineryItemRow>(
+            new CommandDefinition(wineriesSql, parameters, cancellationToken: ct));
+
         var regions = regionRows
             .Select(r => new RegionWineryCountDto(r.StateId, r.StateName, (int)r.WineryCount))
             .ToList();
 
         var pins = pinRows
-            .Select(p => new WineryPinDto(p.Id, p.Name, p.Latitude, p.Longitude, p.StateName, p.CityName))
+            .Select(p => new WineryPinDto(p.Id, p.Name, p.Latitude, p.Longitude, p.StateName, p.CityName, p.StateId))
+            .ToList();
+
+        var wineries = wineryRows
+            .Select(w => new RegionWineryItemDto(w.Id, w.Name, w.StateId, w.CityName, w.FoundationYear, w.HasCoordinates))
             .ToList();
 
         return new WineriesByRegionDto(
             TotalWineries: (int)counts.TotalWineries,
             WithoutCoordinates: (int)counts.WithoutCoordinates,
             Regions: regions,
-            Pins: pins);
+            Pins: pins,
+            Wineries: wineries);
     }
 }

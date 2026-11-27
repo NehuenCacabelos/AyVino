@@ -63,6 +63,16 @@ export interface WineryPin {
   longitude: number;
   stateName: string | null;
   cityName: string | null;
+  stateId?: number | null;
+}
+
+export interface RegionWineryItem {
+  id: number;
+  name: string;
+  stateId: number;
+  cityName: string | null;
+  foundationYear: number | null;
+  hasCoordinates: boolean;
 }
 
 export interface WineriesByRegion {
@@ -70,4 +80,5 @@ export interface WineriesByRegion {
   withoutCoordinates: number;
   regions: RegionWineryCount[];
   pins: WineryPin[];
+  wineries?: RegionWineryItem[];
 }
