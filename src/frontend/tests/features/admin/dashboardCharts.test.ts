@@ -90,7 +90,7 @@ describe('dashboardCharts - buildRegionRows', () => {
     { stateId: 7, stateName: 'Tucumán', wineryCount: 1 },
   ];
 
-  it('con menos de 5 provincias retorna todas y restCount = 0', () => {
+  it('con menos de 4 provincias retorna todas y restCount = 0', () => {
     const result = buildRegionRows(sampleRegions.slice(0, 3), 20);
 
     expect(result.restCount).toBe(0);
@@ -101,19 +101,23 @@ describe('dashboardCharts - buildRegionRows', () => {
     ]);
   });
 
-  it('con exactamente 5 provincias retorna las 5 y restCount = 0', () => {
-    const result = buildRegionRows(sampleRegions.slice(0, 5), 20);
+  it('con exactamente 4 provincias retorna las 4 y restCount = 0', () => {
+    const result = buildRegionRows(sampleRegions.slice(0, 4), 20);
 
-    expect(result.rows).toHaveLength(5);
+    expect(result.rows).toHaveLength(4);
     expect(result.restCount).toBe(0);
   });
 
-  it('con más de 5 provincias limita a 5 y calcula restCount', () => {
+  it('con más de 4 provincias limita a 4 por defecto y permite ampliar con limit', () => {
     const result = buildRegionRows(sampleRegions, 22);
 
-    expect(result.rows).toHaveLength(5);
-    expect(result.restCount).toBe(2);
+    expect(result.rows).toHaveLength(4);
+    expect(result.restCount).toBe(3);
     expect(result.rows[0].percent).toBe(45);
+
+    const expanded = buildRegionRows(sampleRegions, 22, sampleRegions.length);
+    expect(expanded.rows).toHaveLength(7);
+    expect(expanded.restCount).toBe(0);
   });
 
   it('si totalWineries es 0, calcula percent = 0 sin dividir por cero', () => {

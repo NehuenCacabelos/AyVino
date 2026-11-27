@@ -15,6 +15,12 @@ import type {
 } from '@/features/admin/types/adminStats';
 import type { AuditLogEntryDto } from '@/features/admin/types/adminAudit';
 
+const mockDashboardMapInstance = {
+  fitBounds: vi.fn(),
+  flyTo: vi.fn(),
+  getZoom: () => 8,
+};
+
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-map-container">{children}</div>
@@ -29,11 +35,7 @@ vi.mock('react-leaflet', () => ({
   Popup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-popup">{children}</div>
   ),
-  useMap: () => ({
-    fitBounds: vi.fn(),
-    flyTo: vi.fn(),
-    getZoom: () => 8,
-  }),
+  useMap: () => mockDashboardMapInstance,
 }));
 
 vi.mock('leaflet', () => ({

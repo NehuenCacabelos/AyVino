@@ -37,7 +37,7 @@ const GRAPE_SLICE_COLORS = [
   '#4ade80',
 ] as const;
 
-const MAX_TOP_REGIONS = 5;
+const MAX_TOP_REGIONS = 4;
 
 function distributeRoundedPercents(counts: readonly number[], total: number): number[] {
   const base = counts.map((count) => {
@@ -88,9 +88,11 @@ export function buildGrapeSlices(distribution: GrapesDistribution): GrapeSlice[]
 export function buildRegionRows(
   regions: readonly RegionWineryCount[],
   totalWineries: number,
+  limit = MAX_TOP_REGIONS,
 ): RegionRowsResult {
-  const topRegions = regions.slice(0, MAX_TOP_REGIONS);
-  const restCount = Math.max(0, regions.length - MAX_TOP_REGIONS);
+  const safeLimit = Math.max(0, limit);
+  const topRegions = regions.slice(0, safeLimit);
+  const restCount = Math.max(0, regions.length - safeLimit);
 
   const rows: RegionRow[] = topRegions.map((region) => ({
     stateId: region.stateId,

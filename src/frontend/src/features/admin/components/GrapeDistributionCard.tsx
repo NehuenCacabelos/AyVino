@@ -109,7 +109,7 @@ export default function GrapeDistributionCard({ className }: { className?: strin
   return (
     <section
       className={cn(
-        'rounded-2xl border border-white/10 bg-[#121015] p-5 flex flex-col justify-between gap-4',
+        'rounded-2xl border border-white/10 bg-[#121015] p-5 flex flex-col gap-4',
         className,
       )}
     >
@@ -310,7 +310,7 @@ export default function GrapeDistributionCard({ className }: { className?: strin
             </div>
           </div>
 
-          <p className="text-[11px] text-zinc-500 pt-2 border-t border-white/5">
+          <p className="mt-auto text-[11px] text-zinc-500 pt-2 border-t border-white/5">
             Una cosecha puede tener más de una uva.
           </p>
         </>

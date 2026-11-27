@@ -6,6 +6,11 @@ import { getWineriesByRegion } from '@/features/admin/api/adminStatsApi';
 
 const mockFitBounds = vi.fn();
 const mockFlyTo = vi.fn();
+const mockMapInstance = {
+  fitBounds: mockFitBounds,
+  flyTo: mockFlyTo,
+  getZoom: () => 8,
+};
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({
@@ -48,11 +53,7 @@ vi.mock('react-leaflet', () => ({
   Popup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-popup">{children}</div>
   ),
-  useMap: () => ({
-    fitBounds: mockFitBounds,
-    flyTo: mockFlyTo,
-    getZoom: () => 8,
-  }),
+  useMap: () => mockMapInstance,
 }));
 
 vi.mock('leaflet', () => ({
@@ -150,7 +151,7 @@ describe('WineriesRegionsMapCard', () => {
     expect(getWineriesByRegion).toHaveBeenCalledTimes(2);
   });
 
-  it('muestra marcadores con tooltip hover, popup, epicentro y barras por provincia', async () => {
+  it('muestra marcadores con tooltip hover, popup, epicentro, top 4 provincias y botón Ver más', async () => {
     vi.mocked(getWineriesByRegion).mockResolvedValueOnce({
       totalWineries: 20,
       withoutCoordinates: 0,
@@ -196,10 +197,21 @@ describe('WineriesRegionsMapCard', () => {
     expect(screen.getByText('10 bodegas / 50% del total')).toBeInTheDocument();
     expect(screen.getByText('4 bodegas / 20% del total')).toBeInTheDocument();
     expect(screen.getByText('2 bodegas / 10% del total')).toBeInTheDocument();
-    expect(screen.getAllByText('1 bodega / 5% del total')).toHaveLength(2);
-    expect(screen.getByText('y 2 provincias más')).toBeInTheDocument();
+    expect(screen.getByText('1 bodega / 5% del total')).toBeInTheDocument();
+    expect(screen.queryByText('Río Negro')).not.toBeInTheDocument();
     expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
     expect(screen.queryByText(/no tiene.? coordenadas/i)).not.toBeInTheDocument();
+
+    const showMoreBtn = screen.getByRole('button', { name: /Ver 3 más/i });
+    fireEvent.click(showMoreBtn);
+
+    expect(screen.getByText('Río Negro')).toBeInTheDocument();
+    expect(screen.getByText('Córdoba')).toBeInTheDocument();
+    expect(screen.getByText('Tucumán')).toBeInTheDocument();
+    expect(screen.getAllByText('1 bodega / 5% del total')).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ver menos/i }));
+    expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
 
     expect(screen.getByTestId('mock-map-container')).toHaveAttribute(
       'data-attribution-control',

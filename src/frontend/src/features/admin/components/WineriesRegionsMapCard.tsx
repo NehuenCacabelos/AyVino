@@ -19,6 +19,7 @@ interface FetchState {
 
 const DEFAULT_CENTER: [number, number] = [-34.6, -64.0];
 const DEFAULT_ZOOM = 4;
+const INITIAL_VISIBLE_REGIONS = 4;
 const REGION_BAR_COLORS = ['#fb7185', '#fbbf24', '#34d399', '#f97316', '#38bdf8'] as const;
 
 function buildBarrelHtml(highlighted: boolean): string {
@@ -180,6 +181,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
   const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
   const [hoveredWineryId, setHoveredWineryId] = useState<number | null>(null);
   const [focusedWineryId, setFocusedWineryId] = useState<number | null>(null);
+  const [showAllRegions, setShowAllRegions] = useState(false);
 
   const barrelIcon = useMemo(() => createBarrelIcon(false), []);
   const highlightedBarrelIcon = useMemo(() => createBarrelIcon(true), []);
@@ -208,6 +210,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     setSelectedStateId(null);
     setHoveredWineryId(null);
     setFocusedWineryId(null);
+    setShowAllRegions(false);
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     setFetchKey((prev) => prev + 1);
   }, []);
@@ -231,20 +234,31 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     setFocusedWineryId((prev) => (prev === wineryId ? null : wineryId));
   }, []);
 
-  const regionRowsResult = useMemo(
+  const handleToggleShowAllRegions = useCallback(() => {
+    setShowAllRegions((prev) => !prev);
+  }, []);
+
+  const allRegionRows = useMemo(
     () =>
       state.data
-        ? buildRegionRows(state.data.regions, state.data.totalWineries)
-        : { rows: [], restCount: 0 },
+        ? buildRegionRows(state.data.regions, state.data.totalWineries, state.data.regions.length).rows
+        : [],
     [state.data],
   );
+
+  const visibleRegionRows = useMemo(
+    () => (showAllRegions ? allRegionRows : allRegionRows.slice(0, INITIAL_VISIBLE_REGIONS)),
+    [allRegionRows, showAllRegions],
+  );
+
+  const hiddenRegionsCount = Math.max(0, allRegionRows.length - INITIAL_VISIBLE_REGIONS);
 
   const selectedRegion = useMemo(
     () =>
       selectedStateId === null
         ? null
-        : regionRowsResult.rows.find((row) => row.stateId === selectedStateId) ?? null,
-    [regionRowsResult.rows, selectedStateId],
+        : allRegionRows.find((row) => row.stateId === selectedStateId) ?? null,
+    [allRegionRows, selectedStateId],
   );
 
   const filteredPins = useMemo(() => {
@@ -282,13 +296,13 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
 
   const data = state.data;
   const hasApprovedWineries = Boolean(data && data.totalWineries > 0);
-  const leadRegion = regionRowsResult.rows[0] ?? null;
+  const leadRegion = allRegionRows[0] ?? null;
   const overlayRegion = selectedRegion ?? leadRegion;
 
   return (
     <section
       className={cn(
-        'rounded-2xl border border-white/10 bg-[#121015] p-5 flex flex-col justify-between gap-4',
+        'rounded-2xl border border-white/10 bg-[#121015] p-5 flex flex-col gap-4',
         className,
       )}
     >
@@ -310,7 +324,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
           aria-busy="true"
           className="space-y-4 animate-pulse"
         >
-          <div className="h-56 w-full rounded-xl bg-white/10" />
+          <div className="h-72 w-full rounded-xl bg-white/10" />
           <div className="space-y-2.5">
             <div className="h-3.5 rounded bg-white/10 w-3/4" />
             <div className="h-3.5 rounded bg-white/10 w-2/3" />
@@ -341,7 +355,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                 zoom={DEFAULT_ZOOM}
                 scrollWheelZoom={false}
                 attributionControl={true}
-                className="w-full h-56 z-0 [&_.leaflet-tile-pane]:brightness-[0.82] [&_.leaflet-tile-pane]:contrast-[1.08] [&_.leaflet-tile-pane]:saturate-[0.75] [&_.leaflet-bottom.leaflet-right]:bottom-auto [&_.leaflet-bottom.leaflet-right]:top-0 [&_.leaflet-control-attribution]:!bg-black/65 [&_.leaflet-control-attribution]:!text-zinc-400 [&_.leaflet-control-attribution_a]:!text-zinc-300 [&_.ayvino-barrel-marker:hover_.ayvino-barrel-pin]:scale-125 [&_.leaflet-tooltip]:!bg-[#121015]/95 [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-white/15 [&_.leaflet-tooltip]:!text-zinc-100 [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!px-3 [&_.leaflet-tooltip]:!py-2 [&_.leaflet-tooltip]:!shadow-xl [&_.leaflet-tooltip]:!backdrop-blur-md [&_.leaflet-tooltip-top::before]:!border-t-[#121015]/95"
+                className="w-full h-72 z-0 [&_.leaflet-tile-pane]:brightness-[0.82] [&_.leaflet-tile-pane]:contrast-[1.08] [&_.leaflet-tile-pane]:saturate-[0.75] [&_.leaflet-bottom.leaflet-right]:bottom-auto [&_.leaflet-bottom.leaflet-right]:top-0 [&_.leaflet-control-attribution]:!bg-black/65 [&_.leaflet-control-attribution]:!text-zinc-400 [&_.leaflet-control-attribution_a]:!text-zinc-300 [&_.ayvino-barrel-marker:hover_.ayvino-barrel-pin]:scale-125 [&_.leaflet-tooltip]:!bg-[#121015]/95 [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-white/15 [&_.leaflet-tooltip]:!text-zinc-100 [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!px-3 [&_.leaflet-tooltip]:!py-2 [&_.leaflet-tooltip]:!shadow-xl [&_.leaflet-tooltip]:!backdrop-blur-md [&_.leaflet-tooltip-top::before]:!border-t-[#121015]/95"
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -404,10 +418,10 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
             </p>
           )}
 
-          {regionRowsResult.rows.length > 0 && (
+          {allRegionRows.length > 0 && (
             <div className="space-y-3">
               <ul className="space-y-2">
-                {regionRowsResult.rows.map((row, index) => {
+                {visibleRegionRows.map((row, index) => {
                   const barColor = REGION_BAR_COLORS[index % REGION_BAR_COLORS.length];
                   const isSelected = selectedStateId === row.stateId;
 
@@ -548,10 +562,23 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                 })}
               </ul>
 
-              {regionRowsResult.restCount > 0 && (
-                <p className="text-xs text-zinc-500">
-                  y {regionRowsResult.restCount} provincias más
-                </p>
+              {hiddenRegionsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleToggleShowAllRegions}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-emerald-400/90 hover:text-emerald-300 transition-colors cursor-pointer"
+                >
+                  <span>
+                    {showAllRegions ? 'Ver menos' : `Ver ${hiddenRegionsCount} más`}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'w-3.5 h-3.5 transition-transform duration-150',
+                      showAllRegions && 'rotate-180',
+                    )}
+                    aria-hidden="true"
+                  />
+                </button>
               )}
             </div>
           )}
