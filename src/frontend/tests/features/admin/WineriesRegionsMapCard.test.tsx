@@ -63,7 +63,7 @@ describe('WineriesRegionsMapCard', () => {
     render(<WineriesRegionsMapCard />);
 
     expect(screen.getByText('Geografía enológica')).toBeInTheDocument();
-    expect(screen.getByText('Regiones y mapa')).toBeInTheDocument();
+    expect(screen.getByText('Regiones y Terruños')).toBeInTheDocument();
     expect(screen.getByTestId('wineries-regions-loading')).toBeInTheDocument();
   });
 
@@ -110,13 +110,13 @@ describe('WineriesRegionsMapCard', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Mendoza')).toBeInTheDocument();
+      expect(screen.getAllByText('Mendoza').length).toBeGreaterThan(0);
     });
 
     expect(getWineriesByRegion).toHaveBeenCalledTimes(2);
   });
 
-  it('muestra filas por provincia con cantidad y porcentaje y "y N provincias más" cuando supera 5', async () => {
+  it('muestra epicentro, filas por provincia con formato enriquecido y "y N provincias más" cuando supera 5', async () => {
     vi.mocked(getWineriesByRegion).mockResolvedValueOnce({
       totalWineries: 20,
       withoutCoordinates: 0,
@@ -152,12 +152,14 @@ describe('WineriesRegionsMapCard', () => {
     render(<WineriesRegionsMapCard />);
 
     await waitFor(() => {
-      expect(screen.getByText('Mendoza')).toBeInTheDocument();
+      expect(screen.getByText('Epicentro vitivinícola')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('10 (50%)')).toBeInTheDocument();
-    expect(screen.getByText('4 (20%)')).toBeInTheDocument();
-    expect(screen.getByText('2 (10%)')).toBeInTheDocument();
+    expect(screen.getAllByText('Mendoza').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('10 bodegas / 50% del total')).toBeInTheDocument();
+    expect(screen.getByText('4 bodegas / 20% del total')).toBeInTheDocument();
+    expect(screen.getByText('2 bodegas / 10% del total')).toBeInTheDocument();
+    expect(screen.getAllByText('1 bodega / 5% del total')).toHaveLength(2);
     expect(screen.getByText('y 2 provincias más')).toBeInTheDocument();
     expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
     expect(screen.queryByText(/no tiene.? coordenadas/i)).not.toBeInTheDocument();
@@ -246,6 +248,6 @@ describe('WineriesRegionsMapCard', () => {
 
     expect(screen.queryByTestId('mock-map-container')).not.toBeInTheDocument();
     expect(screen.getByText('Mendoza')).toBeInTheDocument();
-    expect(screen.getByText('4 (100%)')).toBeInTheDocument();
+    expect(screen.getByText('4 bodegas / 100% del total')).toBeInTheDocument();
   });
 });

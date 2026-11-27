@@ -18,11 +18,11 @@ describe('GrapeDistributionCard', () => {
     render(<GrapeDistributionCard />);
 
     expect(screen.getByText('Desglose de cepa')).toBeInTheDocument();
-    expect(screen.getByText('Distribución por varietales')).toBeInTheDocument();
+    expect(screen.getByText('Distribución por Varietales')).toBeInTheDocument();
     expect(screen.getByTestId('grape-distribution-loading')).toBeInTheDocument();
   });
 
-  it('muestra el total en el centro, la dona accesible y la leyenda con "% (cantidad)"', async () => {
+  it('muestra el total en el centro, subtítulo, dona accesible y leyenda con "% (cantidad)"', async () => {
     vi.mocked(getGrapesDistribution).mockResolvedValueOnce({
       totalVintages: 12,
       grapes: [
@@ -38,16 +38,19 @@ describe('GrapeDistributionCard', () => {
     });
 
     expect(screen.getByText('cosechas')).toBeInTheDocument();
+    expect(
+      screen.getByText('Participación enológica de las 12 cosechas aprobadas.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Malbec')).toBeInTheDocument();
     expect(screen.getByText('75% (9)')).toBeInTheDocument();
     expect(screen.getByText('Cabernet Sauvignon')).toBeInTheDocument();
     expect(screen.getByText('25% (3)')).toBeInTheDocument();
     expect(screen.getByText('Una cosecha puede tener más de una uva.')).toBeInTheDocument();
 
-    const chart = screen.getByRole('img', { name: /Distribución por varietales/i });
+    const chart = screen.getByRole('img', { name: /Distribución por Varietales/i });
     expect(chart).toHaveAttribute(
       'aria-label',
-      'Distribución por varietales: Malbec 75% (9), Cabernet Sauvignon 25% (3)',
+      'Distribución por Varietales: Malbec 75% (9), Cabernet Sauvignon 25% (3)',
     );
   });
 

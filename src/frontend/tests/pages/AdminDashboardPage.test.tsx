@@ -109,11 +109,11 @@ describe('AdminDashboardPage Component', () => {
   };
 
   const mockWineriesByRegion: WineriesByRegion = {
-    totalWineries: 5,
+    totalWineries: 19,
     withoutCoordinates: 1,
     regions: [
-      { stateId: 13, stateName: 'Mendoza', wineryCount: 4 },
-      { stateId: 17, stateName: 'Salta', wineryCount: 1 },
+      { stateId: 13, stateName: 'Mendoza', wineryCount: 14 },
+      { stateId: 17, stateName: 'Salta', wineryCount: 5 },
     ],
     pins: [
       {
@@ -318,9 +318,9 @@ describe('AdminDashboardPage Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Regiones y mapa')).toBeInTheDocument();
-      expect(screen.getByText('Distribución por varietales')).toBeInTheDocument();
-      expect(screen.getByText('Mendoza')).toBeInTheDocument();
+      expect(screen.getByText('Regiones y Terruños')).toBeInTheDocument();
+      expect(screen.getByText('Distribución por Varietales')).toBeInTheDocument();
+      expect(screen.getAllByText('Mendoza').length).toBeGreaterThan(0);
       expect(screen.getByText('Malbec')).toBeInTheDocument();
       expect(screen.getByText('70% (7)')).toBeInTheDocument();
     });
@@ -347,8 +347,8 @@ describe('AdminDashboardPage Component', () => {
       // Tarjeta fallida muestra su error y reintento sin romper el resto
       expect(screen.getByText('Error en distribución de uvas.')).toBeInTheDocument();
       // La otra tarjeta gráfica y el dashboard siguen funcionando
-      expect(screen.getByText('Regiones y mapa')).toBeInTheDocument();
-      expect(screen.getByText('Mendoza')).toBeInTheDocument();
+      expect(screen.getByText('Regiones y Terruños')).toBeInTheDocument();
+      expect(screen.getAllByText('Mendoza').length).toBeGreaterThan(0);
       expect(screen.getByText('150')).toBeInTheDocument();
       expect(screen.getByText('Fusión de vinos')).toBeInTheDocument();
     });

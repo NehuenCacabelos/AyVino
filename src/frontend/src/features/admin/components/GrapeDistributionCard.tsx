@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PieChart } from 'lucide-react';
 import { getGrapesDistribution } from '../api/adminStatsApi';
 import type { GrapesDistribution } from '../types/adminStats';
 import { buildGrapeSlices } from '../utils/dashboardCharts';
@@ -12,11 +13,17 @@ interface FetchState {
   error: string | null;
 }
 
-const DONUT_SIZE = 160;
+const DONUT_SIZE = 176;
 const DONUT_CENTER = DONUT_SIZE / 2;
-const DONUT_RADIUS = 56;
+const DONUT_RADIUS = 64;
 const DONUT_STROKE_WIDTH = 22;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+
+function formatSubtitle(totalVintages: number): string {
+  return totalVintages === 1
+    ? 'Participación enológica de 1 cosecha aprobada.'
+    : `Participación enológica de las ${totalVintages} cosechas aprobadas.`;
+}
 
 export default function GrapeDistributionCard({ className }: { className?: string }) {
   const [state, setState] = useState<FetchState>({
@@ -58,12 +65,12 @@ export default function GrapeDistributionCard({ className }: { className?: strin
 
   const donutAriaLabel = useMemo(() => {
     if (slices.length === 0) {
-      return 'Distribución por varietales sin datos';
+      return 'Distribución por Varietales sin datos';
     }
     const summary = slices
       .map((slice) => `${slice.label} ${slice.percent}% (${slice.count})`)
       .join(', ');
-    return `Distribución por varietales: ${summary}`;
+    return `Distribución por Varietales: ${summary}`;
   }, [slices]);
 
   return (
@@ -73,22 +80,33 @@ export default function GrapeDistributionCard({ className }: { className?: strin
         className,
       )}
     >
-      <div>
-        <p className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
-          Desglose de cepa
-        </p>
-        <h2 className="mt-1 text-lg font-serif font-semibold text-zinc-100">
-          Distribución por varietales
-        </h2>
+      <div className="space-y-1.5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-wider text-amber-400/90">
+              Desglose de cepa
+            </p>
+            <h2 className="mt-1 text-lg font-serif font-semibold text-zinc-100">
+              Distribución por Varietales
+            </h2>
+          </div>
+          <PieChart className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" aria-hidden="true" />
+        </div>
+
+        {!state.isLoading && !state.error && state.data && slices.length > 0 && (
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            {formatSubtitle(state.data.totalVintages)}
+          </p>
+        )}
       </div>
 
       {state.isLoading && (
         <div
           data-testid="grape-distribution-loading"
           aria-busy="true"
-          className="flex flex-col sm:flex-row items-center gap-6 py-4 animate-pulse"
+          className="flex flex-col items-center gap-6 py-4 animate-pulse"
         >
-          <div className="w-40 h-40 rounded-full border-[22px] border-white/10 shrink-0" />
+          <div className="w-44 h-44 rounded-full border-[22px] border-white/10 shrink-0" />
           <div className="w-full space-y-2.5">
             <div className="h-3.5 rounded bg-white/10 w-3/4" />
             <div className="h-3.5 rounded bg-white/10 w-2/3" />
@@ -102,7 +120,7 @@ export default function GrapeDistributionCard({ className }: { className?: strin
       )}
 
       {!state.isLoading && !state.error && slices.length === 0 && (
-        <div className="py-8 text-center">
+        <div className="py-8 text-center my-auto">
           <p className="text-sm text-zinc-400">
             Todavía no hay cosechas aprobadas con uvas cargadas.
           </p>
@@ -111,8 +129,8 @@ export default function GrapeDistributionCard({ className }: { className?: strin
 
       {!state.isLoading && !state.error && state.data && slices.length > 0 && (
         <>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-5 my-auto">
+            <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
               <svg
                 viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
                 className="w-full h-full -rotate-90"
@@ -151,10 +169,10 @@ export default function GrapeDistributionCard({ className }: { className?: strin
               </svg>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-2xl font-serif font-semibold text-zinc-100 leading-none tabular-nums">
+                <span className="text-3xl font-serif font-bold text-zinc-100 leading-none tabular-nums">
                   {state.data.totalVintages}
                 </span>
-                <span className="mt-1 font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+                <span className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-400">
                   cosechas
                 </span>
               </div>
@@ -174,7 +192,10 @@ export default function GrapeDistributionCard({ className }: { className?: strin
                     />
                     <span className="text-zinc-200 truncate">{slice.label}</span>
                   </span>
-                  <span className="font-mono text-xs text-zinc-400 shrink-0 tabular-nums">
+                  <span
+                    className="font-mono text-xs font-medium shrink-0 tabular-nums"
+                    style={{ color: slice.color }}
+                  >
                     {slice.percent}% ({slice.count})
                   </span>
                 </li>
@@ -182,7 +203,7 @@ export default function GrapeDistributionCard({ className }: { className?: strin
             </ul>
           </div>
 
-          <p className="text-xs text-zinc-500">
+          <p className="text-[11px] text-zinc-500 pt-2 border-t border-white/5">
             Una cosecha puede tener más de una uva.
           </p>
         </>
