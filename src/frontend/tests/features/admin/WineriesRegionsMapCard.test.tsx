@@ -202,6 +202,9 @@ describe('WineriesRegionsMapCard', () => {
     expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
     expect(screen.queryByText(/no tiene.? coordenadas/i)).not.toBeInTheDocument();
 
+    const regionsList = screen.getByTestId('regions-list');
+    expect(regionsList.className).not.toContain('overflow-y-auto');
+
     const showMoreBtn = screen.getByRole('button', { name: /Ver 3 más/i });
     fireEvent.click(showMoreBtn);
 
@@ -209,9 +212,11 @@ describe('WineriesRegionsMapCard', () => {
     expect(screen.getByText('Córdoba')).toBeInTheDocument();
     expect(screen.getByText('Tucumán')).toBeInTheDocument();
     expect(screen.getAllByText('1 bodega / 5% del total')).toHaveLength(4);
+    expect(regionsList.className).toContain('overflow-y-auto');
 
     fireEvent.click(screen.getByRole('button', { name: /Ver menos/i }));
     expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
+    expect(regionsList.className).not.toContain('overflow-y-auto');
 
     expect(screen.getByTestId('mock-map-container')).toHaveAttribute(
       'data-attribution-control',

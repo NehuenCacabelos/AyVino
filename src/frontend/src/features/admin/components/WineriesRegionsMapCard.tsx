@@ -420,7 +420,14 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
 
           {allRegionRows.length > 0 && (
             <div className="space-y-3">
-              <ul className="space-y-2">
+              <ul
+                data-testid="regions-list"
+                className={cn(
+                  'space-y-2',
+                  (showAllRegions || selectedStateId !== null) &&
+                    'max-h-72 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
+                )}
+              >
                 {visibleRegionRows.map((row, index) => {
                   const barColor = REGION_BAR_COLORS[index % REGION_BAR_COLORS.length];
                   const isSelected = selectedStateId === row.stateId;

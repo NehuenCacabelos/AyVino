@@ -19,7 +19,7 @@ const DONUT_RADIUS = 82;
 const DONUT_STROKE_WIDTH = 28;
 const DONUT_ACTIVE_STROKE_WIDTH = 34;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
-const INITIAL_VISIBLE_GRAPES = 10;
+const INITIAL_VISIBLE_GRAPES = 6;
 
 function formatSubtitle(totalVintages: number): string {
   return totalVintages === 1
@@ -247,7 +247,14 @@ export default function GrapeDistributionCard({ className }: { className?: strin
             </div>
 
             <div className="w-full space-y-2">
-              <ul className="w-full space-y-1">
+              <ul
+                data-testid="grapes-legend-list"
+                className={cn(
+                  'w-full space-y-1',
+                  showAll &&
+                    'max-h-60 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
+                )}
+              >
                 {visibleSlices.map((slice) => {
                   const isActive = activeSlice?.label === slice.label;
                   const isDimmed = activeSlice !== null && !isActive;
