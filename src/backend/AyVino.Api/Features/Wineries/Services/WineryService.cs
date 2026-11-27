@@ -56,11 +56,19 @@ public class WineryService(
         return wineries.ToResponseDtoList();
     }
 
-    public async Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default)
+    public Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, status, locationId, null, actor, ct);
+
+    public async Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status, int? locationId, string? search, Actor? actor = null, CancellationToken ct = default)
     {
         var statusValue = ValidateAndResolveListFilters(pageNumber, pageSize, status, actor);
-        var wineries = await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
-        var totalCount = await wineryRepository.CountAsync(statusValue, locationId, ct);
+        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        var wineries = normalizedSearch is not null
+            ? await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, normalizedSearch, ct)
+            : await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
+        var totalCount = normalizedSearch is not null
+            ? await wineryRepository.CountAsync(statusValue, locationId, normalizedSearch, ct)
+            : await wineryRepository.CountAsync(statusValue, locationId, ct);
         return new PagedResult<WineryResponseDto>(wineries.ToResponseDtoList(), totalCount);
     }
 

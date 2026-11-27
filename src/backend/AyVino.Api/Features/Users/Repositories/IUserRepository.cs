@@ -11,7 +11,11 @@ public interface IUserRepository
     Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
     Task<PublicUserProfileDto?> GetPublicProfileByUsernameAsync(string username, CancellationToken ct = default);
     Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
+    Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, string? search, string? role, bool? isActive, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, ct);
     Task<int> CountAsync(CancellationToken ct = default) => Task.FromResult(0);
+    Task<int> CountAsync(string? search, string? role, bool? isActive, CancellationToken ct = default) =>
+        CountAsync(ct);
     Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default);
     Task<int> CreateUserWithCredentialsAsync(User user, UserCredential credential, CancellationToken ct = default);
     Task<bool> UpdateProfileAsync(int id, string username, string? bio, CancellationToken ct = default);

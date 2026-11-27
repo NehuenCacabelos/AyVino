@@ -105,9 +105,9 @@ public static class UserEndpoints
         .WithName("AdminUpdateUserProfile")
         .WithSummary("Actualiza el perfil de cualquier usuario");
 
-        adminGroup.MapGet("/", async (HttpResponse response, IUserService userService, CancellationToken ct, int pageNumber = 1, int pageSize = 10) =>
+        adminGroup.MapGet("/", async (HttpResponse response, IUserService userService, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? search = null, string? role = null, string? status = null) =>
         {
-            var result = await userService.GetAllPagedAsync(pageNumber, pageSize, ct);
+            var result = await userService.GetAllPagedAsync(pageNumber, pageSize, search, role, status, ct);
             return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
         .WithName("GetAllUsers")

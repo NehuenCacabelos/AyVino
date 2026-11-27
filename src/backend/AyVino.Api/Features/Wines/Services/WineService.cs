@@ -38,13 +38,21 @@ public class WineService(
         return wines.Select(w => w.ToResponseDto());
     }
 
-    public async Task<PagedResult<WineResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default)
+    public Task<PagedResult<WineResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, Actor? actor = null, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, null, actor, ct);
+
+    public async Task<PagedResult<WineResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, string? origin, Actor? actor = null, CancellationToken ct = default)
     {
         ValidateGetAllParameters(pageNumber, pageSize, yearFrom, yearTo);
+        var parsedOrigin = ParseOrigin(origin);
 
         var isAdmin = actor?.IsAdmin == true;
-        var wines = await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
-        var totalCount = await wineRepository.CountAsync(wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
+        var wines = parsedOrigin.HasValue
+            ? await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, parsedOrigin, ct)
+            : await wineRepository.GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
+        var totalCount = parsedOrigin.HasValue
+            ? await wineRepository.CountAsync(wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, parsedOrigin, ct)
+            : await wineRepository.CountAsync(wineryId, grapeId, yearFrom, yearTo, actor?.UserId, isAdmin, ct);
         return new PagedResult<WineResponseDto>(wines.Select(w => w.ToResponseDto()), totalCount);
     }
 
@@ -271,13 +279,36 @@ public class WineService(
         return await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, actor?.IsAdmin == true, grapeId, stateId, wineryId, ct);
     }
 
-    public async Task<PagedResult<CatalogWineItemDto>> SearchCatalogPagedAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default)
+    public Task<PagedResult<CatalogWineItemDto>> SearchCatalogPagedAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor = null, int? grapeId = null, int? stateId = null, int? wineryId = null, CancellationToken ct = default) =>
+        SearchCatalogPagedAsync(search, name, winery, year, wineType, pageNumber, pageSize, actor, grapeId, stateId, wineryId, null, ct);
+
+    public async Task<PagedResult<CatalogWineItemDto>> SearchCatalogPagedAsync(string? search, string? name, string? winery, int? year, string? wineType, int pageNumber, int pageSize, Actor? actor, int? grapeId, int? stateId, int? wineryId, string? origin, CancellationToken ct = default)
     {
         var parsedType = ValidateAndParseCatalogSearch(pageNumber, pageSize, wineType);
+        var parsedOrigin = ParseOrigin(origin);
         var isAdmin = actor?.IsAdmin == true;
-        var items = await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
-        var totalCount = await wineRepository.CountSearchCatalogAsync(search, name, winery, year, parsedType, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
+        var items = parsedOrigin.HasValue
+            ? await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, isAdmin, grapeId, stateId, wineryId, parsedOrigin, ct)
+            : await wineRepository.SearchCatalogAsync(search, name, winery, year, parsedType, pageNumber, pageSize, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
+        var totalCount = parsedOrigin.HasValue
+            ? await wineRepository.CountSearchCatalogAsync(search, name, winery, year, parsedType, actor?.UserId, isAdmin, grapeId, stateId, wineryId, parsedOrigin, ct)
+            : await wineRepository.CountSearchCatalogAsync(search, name, winery, year, parsedType, actor?.UserId, isAdmin, grapeId, stateId, wineryId, ct);
         return new PagedResult<CatalogWineItemDto>(items, totalCount);
+    }
+
+    private static SourceType? ParseOrigin(string? origin)
+    {
+        if (string.IsNullOrWhiteSpace(origin))
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<SourceType>(origin.Trim(), ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+        {
+            throw new ValidationException($"Origen inválido: '{origin}'. Valores permitidos: Community, Official.");
+        }
+
+        return parsed;
     }
 
     private static WineType? ValidateAndParseCatalogSearch(int pageNumber, int pageSize, string? wineType)

@@ -300,21 +300,21 @@ public class AdminTotalCountTests
     public async Task AllAdminListEndpoints_WriteXTotalCountHeader_AndPreserveArrayBody()
     {
         var userService = Substitute.For<IUserService>();
-        userService.GetAllPagedAsync(1, 10, Arg.Any<CancellationToken>())
+        userService.GetAllPagedAsync(1, 10, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new PagedResult<UserResponseDto>([new UserResponseDto(1, "admin", "a@a.com", "Admin", DateTime.UtcNow, true, null, null)], 11));
 
         var wineryService = Substitute.For<IWineryService>();
-        wineryService.GetAllPagedAsync(1, 10, null, null, Arg.Any<Actor?>(), Arg.Any<CancellationToken>())
+        wineryService.GetAllPagedAsync(1, 10, null, null, null, Arg.Any<Actor?>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<WineryResponseDto>([], 22));
 
         var wineService = Substitute.For<IWineService>();
-        wineService.GetAllPagedAsync(1, 10, null, null, null, null, Arg.Any<Actor?>(), Arg.Any<CancellationToken>())
+        wineService.GetAllPagedAsync(1, 10, null, null, null, null, null, Arg.Any<Actor?>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<WineResponseDto>([], 33));
-        wineService.SearchCatalogPagedAsync(null, "malbec", null, null, null, 1, 10, Arg.Any<Actor?>(), null, null, null, Arg.Any<CancellationToken>())
+        wineService.SearchCatalogPagedAsync(null, "malbec", null, null, null, 1, 10, Arg.Any<Actor?>(), null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new PagedResult<CatalogWineItemDto>([], 44));
 
         var vintageService = Substitute.For<IWineVintageService>();
-        vintageService.GetPagedForAdminWithCountAsync(1, 10, null, Arg.Any<CancellationToken>())
+        vintageService.GetPagedForAdminWithCountAsync(1, 10, null, null, Arg.Any<CancellationToken>())
             .Returns(new PagedResult<AdminWineVintageListItemDto>([], 55));
 
         var reviewService = Substitute.For<IReviewService>();

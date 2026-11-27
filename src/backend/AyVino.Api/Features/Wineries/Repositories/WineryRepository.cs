@@ -43,9 +43,12 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             new CommandDefinition(sql, new { UserId = userId }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default)
+    public Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status = null, int? locationId = null, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, status, locationId, null, ct);
+
+    public async Task<IEnumerable<Winery>> GetAllAsync(int pageNumber, int pageSize, int? status, int? locationId, string? search, CancellationToken ct = default)
     {
-        var (whereClause, parameters) = BuildListFilter(status, locationId);
+        var (whereClause, parameters) = BuildListFilter(status, locationId, search);
         var offset = (pageNumber - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
@@ -62,9 +65,12 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
-    public async Task<int> CountAsync(int? status = null, int? locationId = null, CancellationToken ct = default)
+    public Task<int> CountAsync(int? status = null, int? locationId = null, CancellationToken ct = default) =>
+        CountAsync(status, locationId, null, ct);
+
+    public async Task<int> CountAsync(int? status, int? locationId, string? search, CancellationToken ct = default)
     {
-        var (whereClause, parameters) = BuildListFilter(status, locationId);
+        var (whereClause, parameters) = BuildListFilter(status, locationId, search);
 
         var sql = $"""
             SELECT COUNT(*)::int
@@ -77,7 +83,7 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
-    private static (string WhereClause, DynamicParameters Parameters) BuildListFilter(int? status, int? locationId)
+    private static (string WhereClause, DynamicParameters Parameters) BuildListFilter(int? status, int? locationId, string? search)
     {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
@@ -92,6 +98,12 @@ public class WineryRepository(IDbConnectionFactory connectionFactory) : IWineryR
         {
             conditions.Add("w.location_id = @LocationId");
             parameters.Add("LocationId", locationId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            conditions.Add("w.name ILIKE @Search");
+            parameters.Add("Search", $"%{search.Trim()}%");
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;

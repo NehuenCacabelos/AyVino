@@ -86,9 +86,9 @@ public static class WineVintageEndpoints
             .WithTags("Admin - Wine Vintages")
             .RequireAuthorization(AppPolicies.RequireAdmin);
 
-        adminGroup.MapGet("/", async (HttpResponse response, IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null) =>
+        adminGroup.MapGet("/", async (HttpResponse response, IWineVintageService service, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? status = null, string? search = null) =>
         {
-            var result = await service.GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, ct);
+            var result = await service.GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, search, ct);
             return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
             .WithName("GetWineVintagesForAdmin")

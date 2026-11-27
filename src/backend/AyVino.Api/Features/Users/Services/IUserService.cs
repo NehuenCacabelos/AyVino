@@ -12,6 +12,8 @@ public interface IUserService
     Task<IEnumerable<UserResponseDto>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default);
     Task<PagedResult<UserResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, CancellationToken ct = default) =>
         Task.FromResult(new PagedResult<UserResponseDto>([], 0));
+    Task<PagedResult<UserResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? search, string? role, string? status, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, ct);
     Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default);
     Task ChangeStatusAsync(int id, bool isActive, CancellationToken ct = default);
     Task ChangeRoleAsync(int actorId, int targetId, string role, CancellationToken ct = default) => Task.CompletedTask;

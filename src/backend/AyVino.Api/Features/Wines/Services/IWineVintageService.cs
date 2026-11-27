@@ -15,4 +15,6 @@ public interface IWineVintageService
     Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default);
     Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default) =>
         Task.FromResult(new PagedResult<AdminWineVintageListItemDto>([], 0));
+    Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, string? search, CancellationToken ct = default) =>
+        GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, ct);
 }

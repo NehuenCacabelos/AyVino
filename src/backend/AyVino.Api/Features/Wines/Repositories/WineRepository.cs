@@ -63,6 +63,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         FROM wines w
         LEFT JOIN wineries wy ON wy.id = w.winery_id
         WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
+          AND (@SourceType IS NULL OR w.source_type = @SourceType)
           AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
           AND (
             @IsAdmin = TRUE
@@ -94,7 +95,10 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
               )
         """;
 
-    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
+    public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, currentUserId, isAdmin, null, ct);
+
+    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, SourceType? origin, CancellationToken ct = default)
     {
         const string sql = $"""
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
@@ -109,6 +113,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new
             {
                 WineryId = wineryId,
+                SourceType = origin.HasValue ? (int)origin.Value : (int?)null,
                 GrapeId = grapeId,
                 YearFrom = yearFrom,
                 YearTo = yearTo,
@@ -119,7 +124,10 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             }, cancellationToken: ct));
     }
 
-    public async Task<int> CountAsync(int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
+    public Task<int> CountAsync(int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+        CountAsync(wineryId, grapeId, yearFrom, yearTo, currentUserId, isAdmin, null, ct);
+
+    public async Task<int> CountAsync(int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, SourceType? origin, CancellationToken ct = default)
     {
         const string sql = $"""
             SELECT COUNT(*)::int
@@ -130,6 +138,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new
             {
                 WineryId = wineryId,
+                SourceType = origin.HasValue ? (int)origin.Value : (int?)null,
                 GrapeId = grapeId,
                 YearFrom = yearFrom,
                 YearTo = yearTo,
@@ -657,6 +666,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             ))
         AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
         AND (@WineryId IS NULL OR w.winery_id = @WineryId)
+        AND (@SourceType IS NULL OR w.source_type = @SourceType)
         AND (@Year IS NULL OR EXISTS (
                 SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
                 AND (@IsAdmin = TRUE
@@ -677,6 +687,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         int? grapeId,
         int? stateId,
         int? wineryId,
+        SourceType? origin,
         out bool hasOtherSearchTerms)
     {
         string? searchKey = null;
@@ -709,6 +720,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         parameters.Add("GrapeId", grapeId);
         parameters.Add("StateId", stateId);
         parameters.Add("WineryId", wineryId);
+        parameters.Add("SourceType", origin.HasValue ? (int)origin.Value : (int?)null);
         parameters.Add("CurrentUserId", currentUserId);
         parameters.Add("IsAdmin", isAdmin);
         parameters.Add("HasSearchTerm", hasSearchTerm);
@@ -716,7 +728,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         return parameters;
     }
 
-    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
+    public Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
         string? search,
         string? name,
         string? winery,
@@ -729,10 +741,27 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         int? grapeId = null,
         int? stateId = null,
         int? wineryId = null,
+        CancellationToken ct = default) =>
+        SearchCatalogAsync(search, name, winery, year, wineType, pageNumber, pageSize, currentUserId, isAdmin, grapeId, stateId, wineryId, null, ct);
+
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int pageNumber,
+        int pageSize,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        SourceType? origin,
         CancellationToken ct = default)
     {
         var parameters = BuildCatalogSearchParameters(
-            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, out _);
+            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, origin, out _);
         if (parameters is null)
         {
             return [];
@@ -863,7 +892,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
-    public async Task<int> CountSearchCatalogAsync(
+    public Task<int> CountSearchCatalogAsync(
         string? search,
         string? name,
         string? winery,
@@ -874,10 +903,25 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         int? grapeId = null,
         int? stateId = null,
         int? wineryId = null,
+        CancellationToken ct = default) =>
+        CountSearchCatalogAsync(search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, null, ct);
+
+    public async Task<int> CountSearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        SourceType? origin,
         CancellationToken ct = default)
     {
         var parameters = BuildCatalogSearchParameters(
-            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, out _);
+            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, origin, out _);
         if (parameters is null)
         {
             return 0;

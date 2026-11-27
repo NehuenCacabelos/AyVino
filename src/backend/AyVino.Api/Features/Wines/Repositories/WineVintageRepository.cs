@@ -263,9 +263,12 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         LEFT JOIN users u ON u.id = wv.uploaded_by_user_id
         """;
 
-    public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default)
+    public Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, CancellationToken ct = default) =>
+        GetPagedForAdminAsync(pageNumber, pageSize, status, null, ct);
+
+    public async Task<IEnumerable<AdminWineVintageListRow>> GetPagedForAdminAsync(int pageNumber, int pageSize, int? status, string? search, CancellationToken ct = default)
     {
-        var (whereClause, parameters) = BuildAdminFilter(status);
+        var (whereClause, parameters) = BuildAdminFilter(status, search);
         var offset = (pageNumber - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
@@ -285,9 +288,12 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
-    public async Task<int> CountForAdminAsync(int? status, CancellationToken ct = default)
+    public Task<int> CountForAdminAsync(int? status, CancellationToken ct = default) =>
+        CountForAdminAsync(status, null, ct);
+
+    public async Task<int> CountForAdminAsync(int? status, string? search, CancellationToken ct = default)
     {
-        var (whereClause, parameters) = BuildAdminFilter(status);
+        var (whereClause, parameters) = BuildAdminFilter(status, search);
 
         var sql = $"""
             SELECT COUNT(*)::int
@@ -299,7 +305,7 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
             new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
-    private static (string WhereClause, DynamicParameters Parameters) BuildAdminFilter(int? status)
+    private static (string WhereClause, DynamicParameters Parameters) BuildAdminFilter(int? status, string? search)
     {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
@@ -308,6 +314,12 @@ public class WineVintageRepository(IDbConnectionFactory connectionFactory) : IWi
         {
             conditions.Add("wv.approval_status = @Status");
             parameters.Add("Status", status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            conditions.Add("(w.name ILIKE @Search OR wy.name ILIKE @Search OR w.winery_name_text ILIKE @Search)");
+            parameters.Add("Search", $"%{search.Trim()}%");
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;

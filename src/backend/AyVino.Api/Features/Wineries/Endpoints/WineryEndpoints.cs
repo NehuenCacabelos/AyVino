@@ -19,9 +19,9 @@ public static class WineryEndpoints
     {
         var group = app.MapGroup("/api/wineries").WithTags("Wineries");
 
-        group.MapGet("/", async (HttpResponse response, int pageNumber, int pageSize, string? status, int? locationId, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
+        group.MapGet("/", async (HttpResponse response, int pageNumber, int pageSize, string? status, int? locationId, string? search, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
         {
-            var result = await service.GetAllPagedAsync(pageNumber, pageSize, status, locationId, user.GetActorOrNull(), ct);
+            var result = await service.GetAllPagedAsync(pageNumber, pageSize, status, locationId, search, user.GetActorOrNull(), ct);
             return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
             .WithName("GetAllWineries")

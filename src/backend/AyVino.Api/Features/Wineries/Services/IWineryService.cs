@@ -11,6 +11,8 @@ public interface IWineryService
     Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default);
     Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default) =>
         Task.FromResult(new PagedResult<WineryResponseDto>([], 0));
+    Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status, int? locationId, string? search, Actor? actor = null, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, status, locationId, actor, ct);
     Task<WineryResponseDto> CreateAsync(CreateWineryRequestDto dto, CancellationToken ct = default);
     Task<WineryResponseDto> UpdateAsync(int id, UpdateWineryRequestDto dto, Actor actor, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);

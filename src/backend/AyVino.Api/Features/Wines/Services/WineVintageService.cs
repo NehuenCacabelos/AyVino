@@ -268,11 +268,19 @@ public class WineVintageService(
         return rows.ToListItemDtoList();
     }
 
-    public async Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default)
+    public Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default) =>
+        GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, null, ct);
+
+    public async Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, string? search, CancellationToken ct = default)
     {
         var statusValue = ValidateAndParseAdminFilters(pageNumber, pageSize, status);
-        var rows = await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
-        var totalCount = await vintageRepository.CountForAdminAsync(statusValue, ct);
+        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        var rows = normalizedSearch is not null
+            ? await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, normalizedSearch, ct)
+            : await vintageRepository.GetPagedForAdminAsync(pageNumber, pageSize, statusValue, ct);
+        var totalCount = normalizedSearch is not null
+            ? await vintageRepository.CountForAdminAsync(statusValue, normalizedSearch, ct)
+            : await vintageRepository.CountForAdminAsync(statusValue, ct);
         return new PagedResult<AdminWineVintageListItemDto>(rows.ToListItemDtoList(), totalCount);
     }
 
