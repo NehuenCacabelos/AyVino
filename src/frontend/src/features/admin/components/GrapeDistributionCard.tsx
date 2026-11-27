@@ -252,7 +252,7 @@ export default function GrapeDistributionCard({ className }: { className?: strin
                 className={cn(
                   'w-full space-y-1',
                   showAll &&
-                    'max-h-60 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
+                    'max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
                 )}
               >
                 {visibleSlices.map((slice) => {

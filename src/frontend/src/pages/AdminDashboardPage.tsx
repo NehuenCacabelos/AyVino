@@ -389,9 +389,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Gráficos de distribución geográfica y varietales */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <WineriesRegionsMapCard className="lg:col-span-7" />
-        <GrapeDistributionCard className="lg:col-span-5" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <WineriesRegionsMapCard className="lg:col-span-7 h-full" />
+        <GrapeDistributionCard className="lg:col-span-5 h-full" />
       </div>
 
       {/* Widget: Actividad reciente (Últimas 5 de Auditoría) */}

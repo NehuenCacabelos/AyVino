@@ -425,7 +425,7 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                 className={cn(
                   'space-y-2',
                   (showAllRegions || selectedStateId !== null) &&
-                    'max-h-72 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
+                    'max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
                 )}
               >
                 {visibleRegionRows.map((row, index) => {
