@@ -86,7 +86,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('las filas con rol Admin tienen Bloquear y Eliminar deshabilitados con tooltip de protección', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/usuarios']}>
@@ -131,7 +134,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('bloquear llama changeUserStatus(id, false) tras confirmar en el diálogo con mensaje adecuado', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
     vi.mocked(adminUsersApi.changeUserStatus).mockResolvedValue(undefined);
 
     render(
@@ -170,7 +176,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('desbloquear llama changeUserStatus(id, true) directamente sin modal', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
     vi.mocked(adminUsersApi.changeUserStatus).mockResolvedValue(undefined);
 
     render(
@@ -195,7 +204,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('el buscador filtra en tiempo real solo los datos de la página cargada', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/usuarios']}>
@@ -220,7 +232,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('"Hacer administrador" llama changeUserRole(id, "Admin") tras confirmar en el diálogo', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
     vi.mocked(adminUsersApi.changeUserRole).mockResolvedValue(undefined);
 
     render(
@@ -262,7 +277,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('"Quitar administrador" llama changeUserRole(id, "User") tras confirmar en el diálogo', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
     vi.mocked(adminUsersApi.changeUserRole).mockResolvedValue(undefined);
 
     render(
@@ -301,7 +319,10 @@ describe('AdminUsersPage Component', () => {
   });
 
   it('un error 409 muestra el mensaje del servidor en el toast de error', async () => {
-    vi.mocked(adminUsersApi.getUsers).mockResolvedValue(mockUsers);
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: mockUsers.length,
+    });
     vi.mocked(adminUsersApi.changeUserRole).mockRejectedValue({
       isAxiosError: true,
       response: {

@@ -73,6 +73,7 @@ export default function AdminReviewsPage() {
 
   const {
     items: reviews,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -330,6 +331,7 @@ export default function AdminReviewsPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={reviews.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />

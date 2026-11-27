@@ -44,7 +44,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('la carga inicial pide reseñas y las renderiza en la tabla', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -72,7 +75,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('el filtro de puntaje envía rating al hacer clic en un chip', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -101,7 +107,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('los inputs de ID envían wineId y userId en la petición', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -133,7 +142,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog y llama a deleteReviewByAdmin', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
     vi.mocked(adminReviewsApi.deleteReviewByAdmin).mockResolvedValue(undefined);
 
     render(

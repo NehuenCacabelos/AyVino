@@ -2,16 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminGrapesPage from '@/pages/AdminGrapesPage';
-import * as grapeApi from '@/features/winery/api/grapeApi';
 import * as adminGrapesApi from '@/features/admin/api/adminGrapesApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { GrapeResponseDto } from '@/features/winery/types/grape';
 
-vi.mock('@/features/winery/api/grapeApi', () => ({
-  getGrapes: vi.fn(),
-}));
-
 vi.mock('@/features/admin/api/adminGrapesApi', () => ({
+  getAdminGrapes: vi.fn(),
   createGrape: vi.fn(),
   updateGrape: vi.fn(),
   deleteGrape: vi.fn(),
@@ -35,7 +31,7 @@ describe('AdminGrapesPage Component', () => {
   });
 
   it('el formulario no envía con nombre vacío y muestra error de validación', async () => {
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue(mockGrapes);
+    vi.mocked(adminGrapesApi.getAdminGrapes).mockResolvedValue({ items: mockGrapes, totalCount: 1 });
 
     render(
       <MemoryRouter initialEntries={['/admin/uvas']}>
@@ -64,7 +60,7 @@ describe('AdminGrapesPage Component', () => {
   });
 
   it('crear envía los strings de enum correctos al backend', async () => {
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue(mockGrapes);
+    vi.mocked(adminGrapesApi.getAdminGrapes).mockResolvedValue({ items: mockGrapes, totalCount: 1 });
     vi.mocked(adminGrapesApi.createGrape).mockResolvedValue({
       id: 2,
       name: 'Bonarda',
@@ -121,12 +117,12 @@ describe('AdminGrapesPage Component', () => {
         typicalAcidity: 'MediumHigh',
         description: 'Tradicional',
       });
-      expect(grapeApi.getGrapes).toHaveBeenCalledTimes(2);
+      expect(adminGrapesApi.getAdminGrapes).toHaveBeenCalledTimes(2);
     });
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteGrape', async () => {
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue(mockGrapes);
+    vi.mocked(adminGrapesApi.getAdminGrapes).mockResolvedValue({ items: mockGrapes, totalCount: 1 });
     vi.mocked(adminGrapesApi.deleteGrape).mockResolvedValue(undefined);
 
     render(
@@ -157,7 +153,7 @@ describe('AdminGrapesPage Component', () => {
 
     await waitFor(() => {
       expect(adminGrapesApi.deleteGrape).toHaveBeenCalledWith(1);
-      expect(grapeApi.getGrapes).toHaveBeenCalledTimes(2);
+      expect(adminGrapesApi.getAdminGrapes).toHaveBeenCalledTimes(2);
     });
   });
 });

@@ -123,6 +123,7 @@ export default function AdminVintagesPage() {
 
   const {
     items: vintages,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -434,6 +435,7 @@ export default function AdminVintagesPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={vintages.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />

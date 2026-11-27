@@ -41,6 +41,7 @@ export default function AdminAuditPage() {
 
   const {
     items: logs,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -268,6 +269,7 @@ export default function AdminAuditPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={logs.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />

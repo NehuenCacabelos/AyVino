@@ -11,10 +11,10 @@ import {
   Building2,
   User,
 } from 'lucide-react';
-import { getWineries } from '../features/winery/api/wineryApi';
 import type { WineryResponseDto, WineryStatus } from '../features/winery/types/winery';
 import WineryLogo from '../features/winery/components/WineryLogo';
 import {
+  getAdminWineries,
   changeWineryStatus,
   deleteWinery,
 } from '../features/admin/api/adminWineriesApi';
@@ -78,7 +78,7 @@ export default function AdminWineriesPage() {
   // Hook paginado
   const fetcher = useCallback(
     (page: number, pageSize: number) => {
-      return getWineries({
+      return getAdminWineries({
         pageNumber: page,
         pageSize,
         status: statusParam,
@@ -89,6 +89,7 @@ export default function AdminWineriesPage() {
 
   const {
     items: wineries,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -351,6 +352,7 @@ export default function AdminWineriesPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={wineries.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

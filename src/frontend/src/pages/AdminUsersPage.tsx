@@ -69,6 +69,7 @@ export default function AdminUsersPage() {
 
   const {
     items: users,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -453,6 +454,7 @@ export default function AdminUsersPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={users.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

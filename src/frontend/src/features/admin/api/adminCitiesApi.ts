@@ -1,5 +1,7 @@
 import apiClient from '../../../services/apiClient';
 import type { CityResponseDto, CityStatus } from '../../winery/types/location';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
 
 export interface GetCitiesParams {
   pageNumber?: number;
@@ -12,7 +14,9 @@ export interface GetCitiesParams {
  * Lista ciudades con paginación y filtros opcionales.
  * GET /api/cities
  */
-export async function getCities(params?: GetCitiesParams): Promise<CityResponseDto[]> {
+export async function getCities(
+  params?: GetCitiesParams
+): Promise<PagedResponse<CityResponseDto>> {
   const response = await apiClient.get<CityResponseDto[]>('/cities', {
     params: {
       pageNumber: params?.pageNumber ?? 1,
@@ -21,7 +25,10 @@ export async function getCities(params?: GetCitiesParams): Promise<CityResponseD
       status: params?.status,
     },
   });
-  return response.data;
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
 }
 
 /**

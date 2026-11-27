@@ -38,7 +38,7 @@ describe('AdminAuditPage Component', () => {
   });
 
   it('la carga inicial pide registros de auditoría y los muestra en la tabla formateados', async () => {
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockLogs);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockLogs, totalCount: 2 });
 
     render(
       <MemoryRouter initialEntries={['/admin/auditoria']}>
@@ -66,7 +66,7 @@ describe('AdminAuditPage Component', () => {
   });
 
   it('los filtros envían action, entityType, from y to en la petición', async () => {
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockLogs);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockLogs, totalCount: 2 });
 
     render(
       <MemoryRouter initialEntries={['/admin/auditoria']}>
@@ -103,7 +103,7 @@ describe('AdminAuditPage Component', () => {
   });
 
   it('el botón "Limpiar filtros" resetea los filtros y recarga la lista', async () => {
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockLogs);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockLogs, totalCount: 2 });
 
     render(
       <MemoryRouter initialEntries={['/admin/auditoria']}>

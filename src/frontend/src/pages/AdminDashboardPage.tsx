@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     let isMounted = true;
     getAuditLogs({ pageNumber: 1, pageSize: 5 })
-      .then((items) => {
+      .then(({ items }) => {
         if (isMounted) setAuditState({ items, isLoading: false, error: null });
       })
       .catch((err: unknown) => {

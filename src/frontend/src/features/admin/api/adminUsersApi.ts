@@ -1,9 +1,14 @@
 import apiClient from '../../../services/apiClient';
 import type { AdminUserListItemDto } from '../types/adminUsers';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
 
 export interface GetUsersParams {
   pageNumber?: number;
   pageSize?: number;
+  search?: string;
+  role?: string;
+  status?: string;
 }
 
 /**
@@ -12,14 +17,20 @@ export interface GetUsersParams {
  */
 export async function getUsers(
   params?: GetUsersParams
-): Promise<AdminUserListItemDto[]> {
+): Promise<PagedResponse<AdminUserListItemDto>> {
   const response = await apiClient.get<AdminUserListItemDto[]>('/users', {
     params: {
       pageNumber: params?.pageNumber ?? 1,
       pageSize: params?.pageSize ?? 10,
+      search: params?.search?.trim() || undefined,
+      role: params?.role || undefined,
+      status: params?.status || undefined,
     },
   });
-  return response.data;
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
 }
 
 /**

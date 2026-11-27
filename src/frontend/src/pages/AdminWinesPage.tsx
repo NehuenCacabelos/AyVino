@@ -77,6 +77,7 @@ export default function AdminWinesPage() {
 
   const {
     items: wines,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -230,7 +231,7 @@ export default function AdminWinesPage() {
     setIsSearchingMerge(true);
     setMergeError(null);
     try {
-      const results = await getAdminWines({
+      const { items: results } = await getAdminWines({
         name: mergeSearchQuery.trim(),
         pageSize: 20,
       });
@@ -486,6 +487,7 @@ export default function AdminWinesPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={wines.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />

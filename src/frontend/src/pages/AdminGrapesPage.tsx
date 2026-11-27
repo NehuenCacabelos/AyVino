@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, type FormEvent } from 'react';
 import { Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
-import { getGrapes } from '../features/winery/api/grapeApi';
 import type { GrapeResponseDto } from '../features/winery/types/grape';
 import {
+  getAdminGrapes,
   createGrape,
   updateGrape,
   deleteGrape,
@@ -80,13 +80,14 @@ export default function AdminGrapesPage() {
   const colorParam = selectedColor === 'ALL' ? undefined : selectedColor;
   const fetcher = useCallback(
     (page: number, pageSize: number) => {
-      return getGrapes({ pageNumber: page, pageSize, colorType: colorParam });
+      return getAdminGrapes({ pageNumber: page, pageSize, colorType: colorParam });
     },
     [colorParam]
   );
 
   const {
     items: grapes,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -359,6 +360,7 @@ export default function AdminGrapesPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={grapes.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

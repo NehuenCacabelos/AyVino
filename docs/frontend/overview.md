@@ -95,12 +95,14 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 - **`AdminLayout.tsx`**: Layout maestro protegido (`ProtectedRoute allowedRoles={['Admin']}`). Incluye sidebar con navegación activa, cabecera con avatar y badge de rol "Admin", menú colapsable para dispositivos móviles, y enlaces rápidos de pie ("Volver al sitio" y "Cerrar sesión"). Aloja el `AdminToastProvider`.
 - **`PageHeader.tsx`**: Título editorial, descripción explicativa de sección y slots para acciones primarias.
 - **`DataTable.tsx`**: Tabla genérica tipada `<T>` con estados de carga animados (5 skeletons), mensaje vacío personalizado y scroll horizontal contenido sin romper el viewport general.
-- **`PaginationControls.tsx`**: Paginación Anterior/Siguiente adaptada a colecciones sin conteo total de registros, indicador de página y selector de tamaño (10, 25, 50).
+- **`PaginationControls.tsx`**: Controles de paginación con soporte opcional para `totalCount` mediante header `X-Total-Count` (muestra `"Página X de Y · N resultados"` junto a botones Primera/Anterior/Siguiente/Última cuando está disponible, conservando el modo clásico sin conteo si `totalCount` es `null`) y selector de tamaño (10, 25, 50).
+- **`AdminFilterBar.tsx`**: Barra reutilizable de filtros para el panel con chips de estado (con contadores opcionales), buscador de texto con debounce de 300ms, selects configurables y botón "Limpiar filtros".
 - **`StatusBadge.tsx` y `ActiveBadge.tsx`**: Badges visuales para estados de moderación (`Pending` en ámbar, `Approved` en verde, `Rejected` en rojo) y actividad de usuarios (`Activo` en verde, `Inactivo` en gris).
 - **`ConfirmDialog.tsx`**: Diálogo modal accesible (`role="dialog"`, aria-modal, trampa de foco y cierre con Escape) con soporte para variantes neutras y críticas (`danger`) con feedback de procesamiento.
 - **`AdminToast.tsx` / `useAdminToast`**: Notificaciones flotantes no invasivas para confirmaciones de éxito y captura de errores.
 - **`ErrorBanner.tsx`**: Alertas visuales con botón de reintento ante fallos de red o de API.
-- **`usePagedList.ts`**: Hook reutilizable de paginación que aísla respuestas obsoletas asíncronas y reinicia a la página inicial ante cambios en dependencias o filtros.
+- **`usePagedList.ts`**: Hook reutilizable de paginación que consume respuestas `{ items, totalCount }` (`PagedResponse<T>`), expone `totalCount` y `totalPages`, aísla respuestas obsoletas asíncronas y reinicia a la página inicial ante cambios en dependencias o filtros.
+- **`useAdminFilters.ts`**: Hook reutilizable para sincronizar los filtros estándar (`status`, `search`, `page`, `role`, `origin`, `type`) con los query params de la URL, reseteando `page` a 1 ante cambios de filtros y limpiando parámetros vacíos.
 - **`getApiErrorMessage.ts`**: Extractor tipado de errores RFC 7807 (Problem Details) priorizando `detail` > `title`.
 
 ### 4.2 Vistas del Panel de Administración
@@ -132,11 +134,11 @@ src/frontend/src/
 ├── features/                  # Arquitectura orientada a características
 │   ├── admin/                 # Módulo del Panel de Administración (Rol Admin)
 │   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi, adminReviewsApi, adminWinesApi, adminStatsApi
-│   │   ├── components/        # AdminLayout, DataTable, PaginationControls, StatusBadge,
+│   │   ├── components/        # AdminLayout, AdminFilterBar, DataTable, PaginationControls, StatusBadge,
 │   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
-│   │   ├── hooks/             # usePagedList
-│   │   ├── types/             # adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines, adminStats
-│   │   └── utils/             # getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels
+│   │   ├── hooks/             # usePagedList, useAdminFilters
+│   │   ├── types/             # pagedResult, adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines, adminStats
+│   │   └── utils/             # totalCount, getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels
 │   ├── auth/                  # Módulo de Autenticación (AuthContext, ProtectedRoute, useAuth)
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)

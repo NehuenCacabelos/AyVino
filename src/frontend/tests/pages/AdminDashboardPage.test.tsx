@@ -76,7 +76,7 @@ describe('AdminDashboardPage Component', () => {
 
   it('muestra los conteos exactos de los 3 KPIs (sin Ciudades pendientes) y las métricas completas del ecosistema', async () => {
     vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockAuditLogs);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockAuditLogs, totalCount: 2 });
 
     render(
       <MemoryRouter>
@@ -107,7 +107,7 @@ describe('AdminDashboardPage Component', () => {
 
   it('cuando hay usuarios bloqueados (> 0) muestra alerta de cuentas suspendidas', async () => {
     vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue([]);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: [], totalCount: 0 });
 
     render(
       <MemoryRouter>
@@ -124,7 +124,7 @@ describe('AdminDashboardPage Component', () => {
     vi.mocked(adminStatsApi.getAdminStats).mockRejectedValueOnce(
       new Error('No se pudo conectar con el servidor.')
     );
-    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockAuditLogs);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockAuditLogs, totalCount: 2 });
 
     render(
       <MemoryRouter>

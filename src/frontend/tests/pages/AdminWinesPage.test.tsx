@@ -64,7 +64,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('la carga inicial pide vinos y los renderiza con sus badges', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -94,7 +97,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('los filtros envían name, winery y wineType a getAdminWines', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -129,7 +135,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('editar abre modal y envía el cuerpo correcto a updateWine', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     vi.mocked(adminWinesApi.updateWine).mockResolvedValue({
       ...mockWines[0],
       name: 'Gran Malbec Reserva Editado',
@@ -172,7 +181,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog y llama a deleteWine', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     vi.mocked(adminWinesApi.deleteWine).mockResolvedValue(undefined);
 
     render(
@@ -203,7 +215,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('eliminar vino con conflicto 409 muestra el mensaje retornado por el servidor', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     const serverMessage = 'No se puede eliminar el vino porque tiene historial de usuarios (reseñas: 3, marcas: 5, cava: 1). Si es un duplicado, usá la fusión.';
     const conflictError = {
       isAxiosError: true,
@@ -242,7 +257,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('ver detalle llama a getWineVintages y muestra el modal con cosechas', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     vi.mocked(wineApi.getWineVintages).mockResolvedValue([
       {
         id: 101,
@@ -276,7 +294,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('un vino duplicado no muestra el botón de fusionar', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -299,49 +320,52 @@ describe('AdminWinesPage Component', () => {
   it('flujo de fusión modal: paso 1 busca candidato (sin sí mismo ni duplicados), paso 2 exige checkbox y llama a mergeWines en orden correcto', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
       if (params?.name === 'Cabernet') {
-        return [
-          {
-            id: 10, // Mismo vino a fusionar
-            name: 'Gran Malbec Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 0,
-            wineryId: 1,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-          {
-            id: 20, // Ya es un duplicado
-            name: 'Torrontés Riojano',
-            wineType: 'White',
-            duplicateOfWineId: 12,
-            sourceType: 'Community',
-            reviewCount: 0,
-            wineryId: null,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-          {
-            id: 30, // Candidato canónico válido
-            name: 'Cabernet Sauvignon Gran Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 5,
-            wineryId: 1,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: 4.5,
-          },
-        ];
+        return {
+          items: [
+            {
+              id: 10, // Mismo vino a fusionar
+              name: 'Gran Malbec Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 0,
+              wineryId: 1,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+            {
+              id: 20, // Ya es un duplicado
+              name: 'Torrontés Riojano',
+              wineType: 'White',
+              duplicateOfWineId: 12,
+              sourceType: 'Community',
+              reviewCount: 0,
+              wineryId: null,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+            {
+              id: 30, // Candidato canónico válido
+              name: 'Cabernet Sauvignon Gran Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 5,
+              wineryId: 1,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: 4.5,
+            },
+          ],
+          totalCount: 3,
+        };
       }
-      return mockWines;
+      return { items: mockWines, totalCount: mockWines.length };
     });
 
     vi.mocked(adminWinesApi.mergeWines).mockResolvedValue({
@@ -434,23 +458,26 @@ describe('AdminWinesPage Component', () => {
   it('muestra mensaje de error del servidor en el modal si la fusión falla (400/404/409)', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
       if (params?.name === 'Cabernet') {
-        return [
-          {
-            id: 30,
-            name: 'Cabernet Sauvignon Gran Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 0,
-            wineryId: null,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-        ];
+        return {
+          items: [
+            {
+              id: 30,
+              name: 'Cabernet Sauvignon Gran Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 0,
+              wineryId: null,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+          ],
+          totalCount: 1,
+        };
       }
-      return mockWines;
+      return { items: mockWines, totalCount: mockWines.length };
     });
 
     vi.mocked(adminWinesApi.mergeWines).mockRejectedValue({

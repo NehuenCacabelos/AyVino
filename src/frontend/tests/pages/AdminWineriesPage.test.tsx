@@ -2,16 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminWineriesPage from '@/pages/AdminWineriesPage';
-import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { WineryResponseDto } from '@/features/winery/types';
 
-vi.mock('@/features/winery/api/wineryApi', () => ({
-  getWineries: vi.fn(),
-}));
-
 vi.mock('@/features/admin/api/adminWineriesApi', () => ({
+  getAdminWineries: vi.fn(),
   changeWineryStatus: vi.fn(),
   deleteWinery: vi.fn(),
 }));
@@ -58,7 +54,10 @@ describe('AdminWineriesPage Component', () => {
   });
 
   it('la carga inicial pide status Pending por defecto', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/bodegas']}>
@@ -69,7 +68,7 @@ describe('AdminWineriesPage Component', () => {
     );
 
     await waitFor(() => {
-      expect(wineryApi.getWineries).toHaveBeenCalledWith({
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
         status: 'Pending',
@@ -80,7 +79,10 @@ describe('AdminWineriesPage Component', () => {
   });
 
   it('aprobar llama changeWineryStatus con Approved y recarga la lista', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
     vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
 
     render(
@@ -100,12 +102,15 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(101, 'Approved');
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2); // Inicial + recarga
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2); // Inicial + recarga
     });
   });
 
   it('para una bodega Approved la acción se llama Suspender con confirmación específica', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockApprovedWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockApprovedWineries,
+      totalCount: mockApprovedWineries.length,
+    });
     vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
 
     render(
@@ -140,12 +145,15 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(102, 'Rejected');
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2);
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2);
     });
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteWinery', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
     vi.mocked(adminWineriesApi.deleteWinery).mockResolvedValue(undefined);
 
     render(
@@ -175,7 +183,7 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.deleteWinery).toHaveBeenCalledWith(101);
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2);
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2);
     });
   });
 });

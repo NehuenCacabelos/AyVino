@@ -4,6 +4,8 @@ import type {
   CreatePairingRequestDto,
   UpdatePairingRequestDto,
 } from '../types/adminPairings';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
 
 export interface GetPairingsParams {
   pageNumber: number;
@@ -18,7 +20,7 @@ export interface GetPairingsParams {
  */
 export async function getPairings(
   params: GetPairingsParams
-): Promise<PairingResponseDto[]> {
+): Promise<PagedResponse<PairingResponseDto>> {
   const response = await apiClient.get<PairingResponseDto[]>('/pairings', {
     params: {
       pageNumber: params.pageNumber,
@@ -26,7 +28,10 @@ export async function getPairings(
       category: params.category,
     },
   });
-  return response.data;
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
 }
 
 /**

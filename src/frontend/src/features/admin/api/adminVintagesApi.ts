@@ -1,8 +1,12 @@
 import apiClient from '../../../services/apiClient';
 import type { ApprovalStatus, WineVintageResponseDto } from '../../winery/types/wine';
 import type { AdminWineVintageListItem, GetAdminVintagesParams } from '../types/adminVintages';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
 
-export const getAdminVintages = async (params: GetAdminVintagesParams): Promise<AdminWineVintageListItem[]> => {
+export const getAdminVintages = async (
+  params: GetAdminVintagesParams & { search?: string }
+): Promise<PagedResponse<AdminWineVintageListItem>> => {
   const queryParams: Record<string, string | number> = {
     pageNumber: params.pageNumber,
     pageSize: params.pageSize,
@@ -12,10 +16,17 @@ export const getAdminVintages = async (params: GetAdminVintagesParams): Promise<
     queryParams.status = params.status;
   }
 
+  if (params.search?.trim()) {
+    queryParams.search = params.search.trim();
+  }
+
   const response = await apiClient.get<AdminWineVintageListItem[]>('/wine-vintages', {
     params: queryParams,
   });
-  return response.data;
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
 };
 
 export const changeVintageStatus = async (

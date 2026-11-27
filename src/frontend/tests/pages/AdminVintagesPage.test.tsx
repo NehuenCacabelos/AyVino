@@ -73,7 +73,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('la carga inicial pide status Pending por defecto y renderiza las cosechas', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
 
     render(
       <MemoryRouter>
@@ -97,7 +100,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('Aprobar llama changeVintageStatus(wineId, vintageId, "Approved") usando el wineId de la fila', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     vi.mocked(adminVintagesApi.changeVintageStatus).mockResolvedValue(undefined);
 
     render(
@@ -120,7 +126,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteVintage', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     vi.mocked(adminVintagesApi.deleteVintage).mockResolvedValue(undefined);
 
     render(
@@ -152,7 +161,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('eliminar cosecha con conflicto 409 muestra el mensaje retornado por el servidor en toast', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     const serverMessage = 'No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: 2, cava: 1). Podés rechazarla en lugar de eliminarla para preservar el historial.';
     const conflictError = {
       isAxiosError: true,
