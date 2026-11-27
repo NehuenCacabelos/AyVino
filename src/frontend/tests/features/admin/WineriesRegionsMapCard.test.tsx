@@ -151,7 +151,7 @@ describe('WineriesRegionsMapCard', () => {
     expect(getWineriesByRegion).toHaveBeenCalledTimes(2);
   });
 
-  it('muestra marcadores con tooltip hover, popup, epicentro, top 4 provincias y botón Ver más', async () => {
+  it('muestra marcadores con tooltip hover, popup, epicentro y todas las provincias en lista deslizable', async () => {
     vi.mocked(getWineriesByRegion).mockResolvedValueOnce({
       totalWineries: 20,
       withoutCoordinates: 0,
@@ -197,26 +197,16 @@ describe('WineriesRegionsMapCard', () => {
     expect(screen.getByText('10 bodegas / 50% del total')).toBeInTheDocument();
     expect(screen.getByText('4 bodegas / 20% del total')).toBeInTheDocument();
     expect(screen.getByText('2 bodegas / 10% del total')).toBeInTheDocument();
-    expect(screen.getByText('1 bodega / 5% del total')).toBeInTheDocument();
-    expect(screen.queryByText('Río Negro')).not.toBeInTheDocument();
-    expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
-    expect(screen.queryByText(/no tiene.? coordenadas/i)).not.toBeInTheDocument();
-
-    const regionsList = screen.getByTestId('regions-list');
-    expect(regionsList.className).not.toContain('overflow-y-auto');
-
-    const showMoreBtn = screen.getByRole('button', { name: /Ver 3 más/i });
-    fireEvent.click(showMoreBtn);
-
     expect(screen.getByText('Río Negro')).toBeInTheDocument();
     expect(screen.getByText('Córdoba')).toBeInTheDocument();
     expect(screen.getByText('Tucumán')).toBeInTheDocument();
     expect(screen.getAllByText('1 bodega / 5% del total')).toHaveLength(4);
-    expect(regionsList.className).toContain('overflow-y-auto');
+    expect(screen.queryByRole('button', { name: /Ver .* más/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no tiene.? coordenadas/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ver menos/i }));
-    expect(screen.queryByText('Córdoba')).not.toBeInTheDocument();
-    expect(regionsList.className).not.toContain('overflow-y-auto');
+    const regionsList = screen.getByTestId('regions-list');
+    expect(regionsList.className).toContain('max-h-56');
+    expect(regionsList.className).toContain('overflow-y-auto');
 
     expect(screen.getByTestId('mock-map-container')).toHaveAttribute(
       'data-attribution-control',

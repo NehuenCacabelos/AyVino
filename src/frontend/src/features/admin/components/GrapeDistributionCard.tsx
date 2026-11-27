@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, PieChart } from 'lucide-react';
+import { PieChart } from 'lucide-react';
 import { getGrapesDistribution } from '../api/adminStatsApi';
 import type { GrapesDistribution } from '../types/adminStats';
 import { buildGrapeSlices } from '../utils/dashboardCharts';
@@ -19,7 +19,6 @@ const DONUT_RADIUS = 82;
 const DONUT_STROKE_WIDTH = 28;
 const DONUT_ACTIVE_STROKE_WIDTH = 34;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
-const INITIAL_VISIBLE_GRAPES = 6;
 
 function formatSubtitle(totalVintages: number): string {
   return totalVintages === 1
@@ -40,7 +39,6 @@ export default function GrapeDistributionCard({ className }: { className?: strin
   const [fetchKey, setFetchKey] = useState(0);
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
   const [pinnedLabel, setPinnedLabel] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,7 +63,6 @@ export default function GrapeDistributionCard({ className }: { className?: strin
   const handleRetry = useCallback(() => {
     setHoveredLabel(null);
     setPinnedLabel(null);
-    setShowAll(false);
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     setFetchKey((prev) => prev + 1);
   }, []);
@@ -74,21 +71,10 @@ export default function GrapeDistributionCard({ className }: { className?: strin
     setPinnedLabel((prev) => (prev === label ? null : label));
   }, []);
 
-  const handleToggleShowAll = useCallback(() => {
-    setShowAll((prev) => !prev);
-  }, []);
-
   const slices = useMemo(
     () => (state.data ? buildGrapeSlices(state.data) : []),
     [state.data],
   );
-
-  const visibleSlices = useMemo(
-    () => (showAll ? slices : slices.slice(0, INITIAL_VISIBLE_GRAPES)),
-    [slices, showAll],
-  );
-
-  const hiddenCount = Math.max(0, slices.length - INITIAL_VISIBLE_GRAPES);
 
   const activeLabel = hoveredLabel ?? pinnedLabel;
   const activeSlice = useMemo(
@@ -246,16 +232,12 @@ export default function GrapeDistributionCard({ className }: { className?: strin
               </div>
             </div>
 
-            <div className="w-full space-y-2">
+            <div className="w-full">
               <ul
                 data-testid="grapes-legend-list"
-                className={cn(
-                  'w-full space-y-1',
-                  showAll &&
-                    'max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
-                )}
+                className="w-full space-y-1 max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]"
               >
-                {visibleSlices.map((slice) => {
+                {slices.map((slice) => {
                   const isActive = activeSlice?.label === slice.label;
                   const isDimmed = activeSlice !== null && !isActive;
 
@@ -297,23 +279,6 @@ export default function GrapeDistributionCard({ className }: { className?: strin
                   );
                 })}
               </ul>
-
-              {hiddenCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleToggleShowAll}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-amber-400/90 hover:text-amber-300 transition-colors cursor-pointer"
-                >
-                  <span>{showAll ? 'Ver menos' : `Ver ${hiddenCount} más`}</span>
-                  <ChevronDown
-                    className={cn(
-                      'w-3.5 h-3.5 transition-transform duration-150',
-                      showAll && 'rotate-180',
-                    )}
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
             </div>
           </div>
 

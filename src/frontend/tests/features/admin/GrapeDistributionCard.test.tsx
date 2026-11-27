@@ -54,7 +54,7 @@ describe('GrapeDistributionCard', () => {
     );
   });
 
-  it('muestra inicialmente hasta 6 varietales y despliega el resto en lista deslizable con "Ver N más"', async () => {
+  it('renderiza todos los varietales en una lista deslizable sin botón Ver más', async () => {
     const grapes = Array.from({ length: 10 }, (_, index) => ({
       grapeId: index + 1,
       name: `Uva ${index + 1}`,
@@ -73,23 +73,12 @@ describe('GrapeDistributionCard', () => {
     });
 
     expect(screen.getByText('Uva 6')).toBeInTheDocument();
-    expect(screen.queryByText('Uva 7')).not.toBeInTheDocument();
+    expect(screen.getByText('Uva 10')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver .* más/i })).not.toBeInTheDocument();
 
     const list = screen.getByTestId('grapes-legend-list');
-    expect(list.className).not.toContain('overflow-y-auto');
-
-    const showMoreBtn = screen.getByRole('button', { name: /Ver 4 más/i });
-    fireEvent.click(showMoreBtn);
-
-    expect(screen.getByText('Uva 7')).toBeInTheDocument();
-    expect(screen.getByText('Uva 10')).toBeInTheDocument();
+    expect(list.className).toContain('max-h-56');
     expect(list.className).toContain('overflow-y-auto');
-
-    const showLessBtn = screen.getByRole('button', { name: /Ver menos/i });
-    fireEvent.click(showLessBtn);
-
-    expect(screen.queryByText('Uva 7')).not.toBeInTheDocument();
-    expect(list.className).not.toContain('overflow-y-auto');
   });
 
   it('permite interactuar por hover y click actualizando el centro de la dona', async () => {

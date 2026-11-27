@@ -19,7 +19,6 @@ interface FetchState {
 
 const DEFAULT_CENTER: [number, number] = [-34.6, -64.0];
 const DEFAULT_ZOOM = 4;
-const INITIAL_VISIBLE_REGIONS = 4;
 const REGION_BAR_COLORS = ['#fb7185', '#fbbf24', '#34d399', '#f97316', '#38bdf8'] as const;
 
 function buildBarrelHtml(highlighted: boolean): string {
@@ -181,7 +180,6 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
   const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
   const [hoveredWineryId, setHoveredWineryId] = useState<number | null>(null);
   const [focusedWineryId, setFocusedWineryId] = useState<number | null>(null);
-  const [showAllRegions, setShowAllRegions] = useState(false);
 
   const barrelIcon = useMemo(() => createBarrelIcon(false), []);
   const highlightedBarrelIcon = useMemo(() => createBarrelIcon(true), []);
@@ -210,7 +208,6 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     setSelectedStateId(null);
     setHoveredWineryId(null);
     setFocusedWineryId(null);
-    setShowAllRegions(false);
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     setFetchKey((prev) => prev + 1);
   }, []);
@@ -234,10 +231,6 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
     setFocusedWineryId((prev) => (prev === wineryId ? null : wineryId));
   }, []);
 
-  const handleToggleShowAllRegions = useCallback(() => {
-    setShowAllRegions((prev) => !prev);
-  }, []);
-
   const allRegionRows = useMemo(
     () =>
       state.data
@@ -245,13 +238,6 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
         : [],
     [state.data],
   );
-
-  const visibleRegionRows = useMemo(
-    () => (showAllRegions ? allRegionRows : allRegionRows.slice(0, INITIAL_VISIBLE_REGIONS)),
-    [allRegionRows, showAllRegions],
-  );
-
-  const hiddenRegionsCount = Math.max(0, allRegionRows.length - INITIAL_VISIBLE_REGIONS);
 
   const selectedRegion = useMemo(
     () =>
@@ -419,16 +405,12 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
           )}
 
           {allRegionRows.length > 0 && (
-            <div className="space-y-3">
+            <div>
               <ul
                 data-testid="regions-list"
-                className={cn(
-                  'space-y-2',
-                  (showAllRegions || selectedStateId !== null) &&
-                    'max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]',
-                )}
+                className="space-y-2 max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]"
               >
-                {visibleRegionRows.map((row, index) => {
+                {allRegionRows.map((row, index) => {
                   const barColor = REGION_BAR_COLORS[index % REGION_BAR_COLORS.length];
                   const isSelected = selectedStateId === row.stateId;
 
@@ -568,25 +550,6 @@ export default function WineriesRegionsMapCard({ className }: { className?: stri
                   );
                 })}
               </ul>
-
-              {hiddenRegionsCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleToggleShowAllRegions}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-emerald-400/90 hover:text-emerald-300 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {showAllRegions ? 'Ver menos' : `Ver ${hiddenRegionsCount} más`}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'w-3.5 h-3.5 transition-transform duration-150',
-                      showAllRegions && 'rotate-180',
-                    )}
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
             </div>
           )}
         </div>
