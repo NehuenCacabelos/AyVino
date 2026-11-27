@@ -510,6 +510,7 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/admin/stats` | Admin (`RequireAdmin`) | Conteos exactos de usuarios, bodegas, ciudades, cosechas, vinos y reseñas. | - | `200 OK` (`AdminStatsDto`) |
+| `GET` | `/api/admin/stats/grapes-distribution` | Admin (`RequireAdmin`) | Distribución de presencia de varietales en cosechas aprobadas de vinos no duplicados. | - | `200 OK` (`GrapesDistributionDto`) |
 
 ### Estructura del DTO (`AdminStatsDto`)
 - `users`:
@@ -532,6 +533,13 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
   - `official` (`int`): Vinos oficiales sin duplicados (`source_type = 2`).
 - `reviews`:
   - `total` (`int`): Total de reseñas en el sistema.
+
+### Estructura del DTO (`GrapesDistributionDto`)
+- `totalVintages` (`int`): Cantidad de cosechas aprobadas de vinos no duplicados (`approval_status = 2` y `duplicate_of_wine_id IS NULL`) que poseen al menos una uva cargada en `wine_grapes`.
+- `grapes` (`GrapePresenceDto[]`): Todas las uvas con al menos una presencia en esas cosechas, ordenadas por `vintageCount` descendente y `name` ascendente:
+  - `grapeId` (`int`): ID de la uva.
+  - `name` (`string`): Nombre del varietal.
+  - `vintageCount` (`int`): Cantidad de cosechas aprobadas no duplicadas donde aparece la uva.
 
 ---
 

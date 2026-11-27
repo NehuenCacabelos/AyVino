@@ -16,4 +16,14 @@ public class AdminStatsService(IAdminStatsRepository repository) : IAdminStatsSe
 
         return await repository.GetStatsAsync(ct);
     }
+
+    public async Task<GrapesDistributionDto> GetGrapesDistributionAsync(Actor actor, CancellationToken ct = default)
+    {
+        if (!actor.IsAdmin)
+        {
+            throw new ForbiddenException("Solo un administrador puede consultar las estadísticas del sistema.");
+        }
+
+        return await repository.GetGrapesDistributionAsync(ct);
+    }
 }

@@ -16,6 +16,12 @@ public static class AdminStatsEndpoints
             .WithName("GetAdminStats")
             .WithSummary("Retorna métricas y conteos exactos de moderación y catálogos para el dashboard de administración.");
 
+        group.MapGet("/grapes-distribution", async (ClaimsPrincipal user, IAdminStatsService service, CancellationToken ct) =>
+            Results.Ok(await service.GetGrapesDistributionAsync(user.GetActor(), ct)))
+            .RequireAuthorization(AppPolicies.RequireAdmin)
+            .WithName("GetAdminGrapesDistribution")
+            .WithSummary("Retorna la distribución de presencia de varietales en cosechas aprobadas de vinos no duplicados.");
+
         return app;
     }
 }

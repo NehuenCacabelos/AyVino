@@ -67,4 +67,47 @@ public class AdminStatsServiceTests
 
         await _repository.Received(1).GetStatsAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task GetGrapesDistributionAsync_WhenUserIsNotAdmin_ThrowsForbiddenException()
+    {
+        // Arrange
+        var userActor = new Actor(1, AppRoles.User, "regular_user");
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            _service.GetGrapesDistributionAsync(userActor));
+
+        Assert.Contains("Solo un administrador", ex.Message);
+        await _repository.DidNotReceiveWithAnyArgs().GetGrapesDistributionAsync(default);
+    }
+
+    [Fact]
+    public async Task GetGrapesDistributionAsync_WhenAdmin_ReturnsDistributionFromRepository()
+    {
+        // Arrange
+        var adminActor = new Actor(1, AppRoles.Admin, "admin_user");
+        var expected = new GrapesDistributionDto(
+            TotalVintages: 12,
+            Grapes:
+            [
+                new GrapePresenceDto(1, "Malbec", 9),
+                new GrapePresenceDto(2, "Cabernet Sauvignon", 5)
+            ]);
+
+        _repository.GetGrapesDistributionAsync(Arg.Any<CancellationToken>())
+            .Returns(expected);
+
+        // Act
+        var result = await _service.GetGrapesDistributionAsync(adminActor);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(expected, result);
+        Assert.Equal(12, result.TotalVintages);
+        Assert.Equal(2, result.Grapes.Count);
+        Assert.Equal("Malbec", result.Grapes[0].Name);
+
+        await _repository.Received(1).GetGrapesDistributionAsync(Arg.Any<CancellationToken>());
+    }
 }

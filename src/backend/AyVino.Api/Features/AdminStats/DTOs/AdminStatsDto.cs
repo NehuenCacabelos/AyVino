@@ -25,3 +25,7 @@ public record AdminStatsDto(
     VintageStatsDto Vintages,
     WineStatsDto Wines,
     ReviewStatsDto Reviews);
+
+public record GrapePresenceDto(int GrapeId, string Name, int VintageCount);
+
+public record GrapesDistributionDto(int TotalVintages, IReadOnlyList<GrapePresenceDto> Grapes);

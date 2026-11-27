@@ -6,4 +6,5 @@ namespace AyVino.Api.Features.AdminStats.Services;
 public interface IAdminStatsService
 {
     Task<AdminStatsDto> GetStatsAsync(Actor actor, CancellationToken ct = default);
+    Task<GrapesDistributionDto> GetGrapesDistributionAsync(Actor actor, CancellationToken ct = default);
 }
