@@ -16,7 +16,7 @@ import authVineyardImg from '../assets/auth-vineyard.webp';
 // Resolución de ruta de inicio garantizando que Bodegas y Administradores vayan a su panel operativo
 function resolveTargetRoute(role?: string, customRedirectPath?: string | null): string {
   if (role === 'Admin') {
-    return customRedirectPath && customRedirectPath !== '/dashboard' && customRedirectPath !== '/'
+    return customRedirectPath && customRedirectPath.startsWith('/admin')
       ? customRedirectPath
       : '/admin';
   }

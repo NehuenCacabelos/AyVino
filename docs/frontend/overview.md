@@ -105,7 +105,7 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 
 ### 4.2 Vistas del Panel de Administración
 - **Inicio y Métricas (`AdminDashboardPage.tsx` en `/admin`)**: Saludo editorial al administrador conectado y panel consolidado impulsado por el endpoint especializado `GET /api/admin/stats` y `GET /api/admin/audit-logs`:
-  - *Cuatro tarjetas KPI con conteos exactos*: Bodegas pendientes (`/admin/bodegas?status=Pending`), Cosechas pendientes (`/admin/cosechas?status=Pending`), Ciudades pendientes (`/admin/ciudades?status=Pending`) y Usuarios bloqueados (`/admin/usuarios`). Indicadores visuales en ámbar ante elementos pendientes y alerta destacada ante cuentas suspendidas.
+  - *Tres tarjetas KPI con conteos exactos*: Bodegas pendientes (`/admin/bodegas?status=Pending`), Cosechas pendientes (`/admin/cosechas?status=Pending`) y Usuarios bloqueados (`/admin/usuarios`). Indicadores visuales en ámbar ante elementos pendientes y alerta destacada ante cuentas suspendidas.
   - *Métricas del Ecosistema*: Panel resumen con total de usuarios registrados, bodegas aprobadas, catálogo de vinos (con desglose dinámico de oficiales vs. comunitarios) y total de reseñas comunitarias.
   - *Widget de Actividad Reciente*: Carga de las últimas 5 operaciones del registro de auditoría (`getAuditLogs({ pageNumber: 1, pageSize: 5 })`) con nombre de administrador, acción formateada en español, tipo/identificador de entidad, timestamp `es-AR` y enlace directo *"Ver todo"* a `/admin/auditoria`.
   - *Resiliencia desacoplada*: Manejo independiente de fallos de red y botones de reintento dedicados para estadísticas y auditoría sin degradación mutua ni bloqueos de interfaz.

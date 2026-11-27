@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
-  MapPin,
   Wine,
   UserX,
   Users,
@@ -104,8 +103,8 @@ export default function AdminDashboardPage() {
         description={`Hola, ${user?.username || 'Administrador'}. Revisá las solicitudes pendientes y gestioná el ecosistema vitivinícola.`}
       />
 
-      {/* 4 Tarjetas KPI con conteo exacto */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* 3 Tarjetas KPI con conteo exacto */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* KPI 1: Bodegas pendientes de moderación */}
         <div
           className={cn(
@@ -230,69 +229,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* KPI 3: Ciudades pendientes de moderación */}
-        <div
-          className={cn(
-            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
-            statsState.error
-              ? 'border-rose-900/60 bg-rose-950/20'
-              : stats && stats.cities.pending > 0
-                ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
-                : 'border-white/10 bg-[#121015] hover:border-white/20'
-          )}
-        >
-          {statsState.isLoading ? (
-            <div className="py-6 flex items-center justify-center text-neutral-400">
-              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-            </div>
-          ) : statsState.error ? (
-            <div className="py-2 space-y-3">
-              <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
-              <button
-                type="button"
-                onClick={retryStats}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reintentar</span>
-              </button>
-            </div>
-          ) : (
-            <Link to="/admin/ciudades?status=Pending" className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                  Ciudades pendientes
-                </span>
-                <div
-                  className={cn(
-                    'p-2 rounded-xl border',
-                    (stats?.cities.pending ?? 0) > 0
-                      ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
-                      : 'border-white/10 bg-white/5 text-neutral-400'
-                  )}
-                >
-                  <MapPin className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
-                  {stats?.cities.pending ?? 0}
-                </span>
-                <div className="mt-1 flex items-center gap-1.5 text-xs">
-                  {(stats?.cities.pending ?? 0) === 0 ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
-                    </span>
-                  ) : (
-                    <span className="text-amber-300 font-medium">Requieren moderación</span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {/* KPI 4: Usuarios bloqueados (tono alerta si > 0) */}
+        {/* KPI 3: Usuarios bloqueados (tono alerta si > 0) */}
         <div
           className={cn(
             'rounded-2xl border p-5 transition-all flex flex-col justify-between',

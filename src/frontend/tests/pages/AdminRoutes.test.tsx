@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from '@/features/auth/components/ProtectedRoute';
 import AdminLayout from '@/features/admin/components/AdminLayout';
@@ -24,7 +24,7 @@ describe('AdminRoutes & AdminLayout access control', () => {
     vi.clearAllMocks();
   });
 
-  it('permite el acceso a un usuario con rol Admin y muestra los 7 enlaces de navegación', () => {
+  it('permite el acceso a un usuario con rol Admin, muestra los 10 enlaces en orden y sin badge Admin en el logo', () => {
     mockUseAuth.mockReturnValue({
       user: {
         id: 1,
@@ -58,13 +58,26 @@ describe('AdminRoutes & AdminLayout access control', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: /inicio/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /bodegas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /ciudades/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /cosechas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /uvas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /maridajes/i })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: /navegación del panel de administración/i });
+    const navLinks = within(nav).getAllByRole('link');
+    expect(navLinks).toHaveLength(10);
+    expect(navLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Inicio',
+      'Bodegas',
+      'Cosechas',
+      'Vinos',
+      'Reseñas',
+      'Usuarios',
+      'Uvas',
+      'Maridajes',
+      'Ciudades',
+      'Auditoría',
+    ]);
+
+    const logoLink = screen.getByRole('link', { name: /ayvino/i });
+    expect(logoLink).toHaveAttribute('href', '/admin');
+    expect(within(logoLink).queryByText('Admin')).not.toBeInTheDocument();
+
     expect(screen.getByRole('link', { name: /volver al sitio/i })).toBeInTheDocument();
     expect(screen.getByText('superadmin')).toBeInTheDocument();
     expect(screen.getByText('Panel de Inicio Admin')).toBeInTheDocument();

@@ -123,7 +123,7 @@ describe('WineryLayout Component', () => {
     ).toBeInTheDocument();
   });
 
-  it('muestra tarjeta de Administrador con enlaces de gestión cuando el usuario tiene rol Admin y no tiene bodega', () => {
+  it('redirige a /admin cuando el usuario tiene rol Admin y no tiene bodega', () => {
     mockRole = 'Admin';
     vi.spyOn(useMyWineryHook, 'useMyWinery').mockReturnValue({
       winery: null,
@@ -134,21 +134,16 @@ describe('WineryLayout Component', () => {
     });
 
     render(
-      <MemoryRouter>
-        <WineryLayout />
+      <MemoryRouter initialEntries={['/bodega/dashboard']}>
+        <Routes>
+          <Route path="/bodega/dashboard" element={<WineryLayout />} />
+          <Route path="/admin" element={<h1>Panel Admin Destino</h1>} />
+        </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/rol administrador/i)).toBeInTheDocument();
-    expect(screen.getByText(/gestión y supervisión del ecosistema/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /gestionar bodegas/i })).toHaveAttribute(
-      'href',
-      '/admin/bodegas'
-    );
-    expect(screen.getByRole('link', { name: /panel global/i })).toHaveAttribute(
-      'href',
-      '/admin'
-    );
+    expect(screen.getByText('Panel Admin Destino')).toBeInTheDocument();
+    expect(screen.queryByText(/gestión y supervisión del ecosistema/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /registrar mi bodega/i })).not.toBeInTheDocument();
   });
 });

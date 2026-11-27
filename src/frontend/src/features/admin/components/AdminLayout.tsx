@@ -24,13 +24,13 @@ import { AdminToastProvider } from './AdminToast';
 const adminNavLinks = [
   { label: 'Inicio', to: '/admin', end: true, icon: LayoutDashboard },
   { label: 'Bodegas', to: '/admin/bodegas', end: false, icon: Building2 },
-  { label: 'Ciudades', to: '/admin/ciudades', end: false, icon: MapPin },
-  { label: 'Vinos', to: '/admin/vinos', end: false, icon: Wine },
   { label: 'Cosechas', to: '/admin/cosechas', end: false, icon: CalendarDays },
+  { label: 'Vinos', to: '/admin/vinos', end: false, icon: Wine },
+  { label: 'Reseñas', to: '/admin/resenas', end: false, icon: MessageSquare },
   { label: 'Usuarios', to: '/admin/usuarios', end: false, icon: Users },
   { label: 'Uvas', to: '/admin/uvas', end: false, icon: Grape },
   { label: 'Maridajes', to: '/admin/maridajes', end: false, icon: UtensilsCrossed },
-  { label: 'Reseñas', to: '/admin/resenas', end: false, icon: MessageSquare },
+  { label: 'Ciudades', to: '/admin/ciudades', end: false, icon: MapPin },
   { label: 'Auditoría', to: '/admin/auditoria', end: false, icon: History },
 ];
 
@@ -55,7 +55,7 @@ export default function AdminLayout() {
 
   const sidebarContent = (
     <div className="flex flex-col h-full justify-between bg-[#121015] border-r border-white/10 text-neutral-200">
-      {/* Cabecera Sidebar: Marca e insignia */}
+      {/* Cabecera Sidebar: Marca */}
       <div>
         <div className="h-16 px-6 flex items-center justify-between border-b border-white/[0.08]">
           <Link
@@ -65,9 +65,6 @@ export default function AdminLayout() {
           >
             <span>AyVino</span>
             <span className="text-rose-500 font-serif">.</span>
-            <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-[#6b1d28]/40 border border-rose-900/60 text-rose-300 font-semibold">
-              Admin
-            </span>
           </Link>
           <button
             type="button"

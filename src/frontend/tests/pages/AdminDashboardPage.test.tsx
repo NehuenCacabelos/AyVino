@@ -74,7 +74,7 @@ describe('AdminDashboardPage Component', () => {
     });
   });
 
-  it('muestra los conteos exactos de los 4 KPIs y las métricas completas del ecosistema', async () => {
+  it('muestra los conteos exactos de los 3 KPIs (sin Ciudades pendientes) y las métricas completas del ecosistema', async () => {
     vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
     vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue(mockAuditLogs);
 
@@ -85,10 +85,10 @@ describe('AdminDashboardPage Component', () => {
     );
 
     await waitFor(() => {
-      // 4 KPIs principales con conteos exactos (sin "+")
+      // 3 KPIs principales con conteos exactos (sin "+")
       expect(screen.getByText('4')).toBeInTheDocument(); // Bodegas pendientes
       expect(screen.getByText('8')).toBeInTheDocument(); // Cosechas pendientes
-      expect(screen.getByText('5')).toBeInTheDocument(); // Ciudades pendientes
+      expect(screen.queryByText(/ciudades pendientes/i)).not.toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument(); // Usuarios bloqueados
 
       // Resumen del ecosistema
