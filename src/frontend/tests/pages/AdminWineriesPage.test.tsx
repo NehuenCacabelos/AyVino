@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminWineriesPage from '@/pages/AdminWineriesPage';
 import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { WineryResponseDto } from '@/features/winery/types';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminWineriesApi', () => ({
   getAdminWineries: vi.fn(),
@@ -53,7 +58,7 @@ describe('AdminWineriesPage Component', () => {
     vi.clearAllMocks();
   });
 
-  it('la carga inicial pide status Pending por defecto', async () => {
+  it('la carga inicial abre en Todas sin filtro de status por defecto', async () => {
     vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
       items: mockPendingWineries,
       totalCount: mockPendingWineries.length,
@@ -63,6 +68,32 @@ describe('AdminWineriesPage Component', () => {
       <MemoryRouter initialEntries={['/admin/bodegas']}>
         <AdminToastProvider>
           <AdminWineriesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
+      expect(screen.getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
+    });
+  });
+
+  it('entrar con URL filtrada (?status=Pending&search=catena) activa filtros y envía params al backend', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas?status=Pending&search=catena']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+          <LocationProbe />
         </AdminToastProvider>
       </MemoryRouter>
     );
@@ -72,9 +103,64 @@ describe('AdminWineriesPage Component', () => {
         pageNumber: 1,
         pageSize: 10,
         status: 'Pending',
+        search: 'catena',
       });
-      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
-      expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
+    expect((screen.getByLabelText('Buscar bodega') as HTMLInputElement).value).toBe('catena');
+  });
+
+  it('aplicar filtros (chip y búsqueda) actualiza la URL y limpiar filtros los elimina', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobadas' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Approved');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Approved',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText('Buscar bodega'), { target: { value: 'Zuccardi' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Approved&search=Zuccardi');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Approved',
+        search: 'Zuccardi',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
     });
   });
 

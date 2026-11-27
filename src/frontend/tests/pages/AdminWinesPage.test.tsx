@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminWinesPage from '@/pages/AdminWinesPage';
 import * as adminWinesApi from '@/features/admin/api/adminWinesApi';
 import * as wineApi from '@/features/winery/api/wineApi';
@@ -9,6 +9,11 @@ import { AdminToastProvider } from '@/features/admin';
 import type { WineResponseDto } from '@/features/admin/types/adminWines';
 import type { WineryResponseDto } from '@/features/winery/types/winery';
 import type { WineVintageResponseDto } from '@/features/winery/types/wine';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminWinesApi', () => ({
   getAdminWines: vi.fn(),
@@ -85,12 +90,13 @@ describe('AdminWinesPage Component', () => {
         winery: undefined,
         wineType: undefined,
       });
-      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Catena Zapata')).toBeInTheDocument();
-      expect(screen.getByText('Oficial')).toBeInTheDocument();
-      expect(screen.getByText('Torrontés Riojano')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Artesanal Don Carlos')).toBeInTheDocument();
-      expect(screen.getByText('Comunitario')).toBeInTheDocument();
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Gran Malbec Reserva')).toBeInTheDocument();
+      expect(within(table).getByText('Bodega Catena Zapata')).toBeInTheDocument();
+      expect(within(table).getByText('Oficial')).toBeInTheDocument();
+      expect(within(table).getByText('Torrontés Riojano')).toBeInTheDocument();
+      expect(within(table).getByText('Bodega Artesanal Don Carlos')).toBeInTheDocument();
+      expect(within(table).getByText('Comunitario')).toBeInTheDocument();
       expect(screen.getByText('Duplicado de #12')).toBeInTheDocument();
       expect(screen.getByText('Sin reseñas')).toBeInTheDocument();
     });
@@ -514,10 +520,83 @@ describe('AdminWinesPage Component', () => {
     fireEvent.click(within(dialog).getByLabelText(/entiendo que no se puede deshacer/i));
     fireEvent.click(within(dialog).getByRole('button', { name: /^fusionar$/i }));
 
-    await waitFor(() => {
+      await waitFor(() => {
       expect(within(dialog).getByText('El vino origen ya fue fusionado anteriormente.')).toBeInTheDocument();
       // El modal permanece abierto para que el admin pueda leer el error o corregir
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('sincroniza search, type y origin con la URL, carga URL prefiltrada y limpia filtros', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/admin/vinos?search=malbec&type=Red&origin=official']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWinesApi.getAdminWines).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: 'malbec',
+        winery: undefined,
+        wineType: 'Red',
+        origin: 'official',
+      });
+    });
+
+    expect((screen.getByLabelText(/buscar por nombre/i) as HTMLInputElement).value).toBe('malbec');
+    expect((screen.getByLabelText(/filtrar por tipo/i) as HTMLSelectElement).value).toBe('Red');
+    expect((screen.getByLabelText(/filtrar por origen/i) as HTMLSelectElement).value).toBe('official');
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminWinesApi.getAdminWines).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: undefined,
+        winery: undefined,
+        wineType: undefined,
+      });
+    });
+
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/filtrar por origen/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/filtrar por origen/i), { target: { value: 'community' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?origin=community');
+      expect(adminWinesApi.getAdminWines).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: undefined,
+        winery: undefined,
+        wineType: undefined,
+        origin: 'community',
+      });
     });
   });
 });

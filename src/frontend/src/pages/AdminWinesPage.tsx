@@ -13,16 +13,18 @@ import type { WineVintageResponseDto } from '../features/winery/types/wine';
 import type { WineryResponseDto } from '../features/winery/types/winery';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
   StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
+import type { Column, FilterSelectConfig } from '../features/admin';
 import { getWineTypeLabel } from '../features/admin/utils/wineTypeLabels';
 import { cn } from '../lib/utils';
 
@@ -34,13 +36,21 @@ const WINE_TYPES = [
   { value: 'Orange', label: 'Naranjo' },
 ];
 
+const WINE_ORIGINS = [
+  { value: 'community', label: 'Comunitario' },
+  { value: 'official', label: 'Oficial' },
+];
+
 export default function AdminWinesPage() {
   const toast = useAdminToast();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Filtros de búsqueda
-  const [searchName, setSearchName] = useState('');
+  // Bodega permanece en estado local (no integra el contrato URL de Bloque 0)
   const [searchWinery, setSearchWinery] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+
+  const searchName = filters.search?.trim() || undefined;
+  const selectedType = filters.type || undefined;
+  const selectedOrigin = filters.origin || undefined;
 
   // Bodegas aprobadas para el selector de edición
   const [approvedWineries, setApprovedWineries] = useState<WineryResponseDto[]>([]);
@@ -67,12 +77,13 @@ export default function AdminWinesPage() {
       return getAdminWines({
         pageNumber: page,
         pageSize,
-        name: searchName || undefined,
-        winery: searchWinery || undefined,
-        wineType: selectedType || undefined,
+        name: searchName,
+        winery: searchWinery.trim() || undefined,
+        wineType: selectedType,
+        ...(selectedOrigin ? { origin: selectedOrigin } : {}),
       });
     },
-    [searchName, searchWinery, selectedType]
+    [searchName, searchWinery, selectedType, selectedOrigin]
   );
 
   const {
@@ -85,11 +96,52 @@ export default function AdminWinesPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<WineResponseDto>(fetcher, [
-    searchName,
-    searchWinery,
-    selectedType,
-  ]);
+  } = usePagedList<WineResponseDto>(
+    fetcher,
+    [searchName, searchWinery, selectedType, selectedOrigin],
+    {
+      page: filters.page,
+      onPageChange: setUrlPage,
+    }
+  );
+
+  const handleSearchNameChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
+
+  const handleClearAllFilters = useCallback(() => {
+    setSearchWinery('');
+    clearFilters();
+  }, [clearFilters]);
+
+  const wineSelects = useMemo<FilterSelectConfig[]>(
+    () => [
+      {
+        id: 'wine-type-filter',
+        label: 'Tipo de vino',
+        ariaLabel: 'Filtrar por tipo',
+        value: selectedType ?? '',
+        placeholder: 'Todos los tipos',
+        options: WINE_TYPES,
+        onChange: (value) => setFilter('type', value || undefined),
+      },
+      {
+        id: 'wine-origin-filter',
+        label: 'Origen',
+        ariaLabel: 'Filtrar por origen',
+        value: selectedOrigin ?? '',
+        placeholder: 'Todos los orígenes',
+        options: WINE_ORIGINS,
+        onChange: (value) => setFilter('origin', value || undefined),
+      },
+    ],
+    [selectedType, selectedOrigin, setFilter]
+  );
+
+  const hasActiveFilters = Boolean(searchName || selectedType || selectedOrigin || searchWinery.trim());
 
   // Modal de Detalle (Cosechas)
   const [detailWine, setDetailWine] = useState<WineResponseDto | null>(null);
@@ -406,69 +458,34 @@ export default function AdminWinesPage() {
       />
 
       {/* Barra de Filtros */}
-      <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex flex-wrap gap-3">
-        {/* Nombre */}
-        <div className="flex-1 min-w-[180px] space-y-1">
-          <label
-            htmlFor="wine-name-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Buscar por nombre
-          </label>
-          <input
-            id="wine-name-filter"
-            aria-label="Buscar por nombre"
-            type="text"
-            placeholder="Ej: Malbec Reserva..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          />
-        </div>
-
-        {/* Tipo */}
-        <div className="w-40 space-y-1">
-          <label
-            htmlFor="wine-type-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Tipo de vino
-          </label>
-          <select
-            id="wine-type-filter"
-            aria-label="Filtrar por tipo"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          >
-            <option value="">Todos los tipos</option>
-            {WINE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Bodega */}
-        <div className="flex-1 min-w-[180px] space-y-1">
-          <label
-            htmlFor="wine-winery-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Bodega
-          </label>
-          <input
-            id="wine-winery-filter"
-            aria-label="Filtrar por bodega"
-            type="text"
-            placeholder="Ej: Catena Zapata..."
-            value={searchWinery}
-            onChange={(e) => setSearchWinery(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          />
-        </div>
-      </div>
+      <AdminFilterBar
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchNameChange}
+        searchLabel="Buscar por nombre"
+        searchPlaceholder="Ej: Malbec Reserva..."
+        selects={wineSelects}
+        extraControls={
+          <div className="flex-1 min-w-[180px] space-y-1">
+            <label
+              htmlFor="wine-winery-filter"
+              className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
+            >
+              Bodega
+            </label>
+            <input
+              id="wine-winery-filter"
+              aria-label="Filtrar por bodega"
+              type="text"
+              placeholder="Ej: Catena Zapata..."
+              value={searchWinery}
+              onChange={(e) => setSearchWinery(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
+            />
+          </div>
+        }
+        onClearFilters={handleClearAllFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Error con reintento */}
       {error && <ErrorBanner message={error} onRetry={reload} />}

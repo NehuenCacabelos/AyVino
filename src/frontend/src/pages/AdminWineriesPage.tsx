@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Eye,
   Check,
@@ -20,39 +20,39 @@ import {
 } from '../features/admin/api/adminWineriesApi';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
   StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
 import type { Column } from '../features/admin';
-import { cn } from '../lib/utils';
 
-type StatusFilter = 'Pending' | 'Approved' | 'Rejected' | 'All';
+type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
 const STATUS_CHIPS: { label: string; value: StatusFilter }[] = [
+  { label: 'Todas', value: 'All' },
   { label: 'Pendientes', value: 'Pending' },
   { label: 'Aprobadas', value: 'Approved' },
   { label: 'Rechazadas', value: 'Rejected' },
-  { label: 'Todas', value: 'All' },
 ];
 
 export default function AdminWineriesPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useAdminToast();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Estado de filtros
-  const rawStatus = searchParams.get('status');
   const currentStatus: StatusFilter =
-    rawStatus === 'Approved' || rawStatus === 'Rejected' || rawStatus === 'All'
-      ? rawStatus
-      : 'Pending';
+    filters.status === 'Pending' || filters.status === 'Approved' || filters.status === 'Rejected'
+      ? filters.status
+      : 'All';
 
   const statusParam = currentStatus === 'All' ? undefined : currentStatus;
+  const searchParam = filters.search?.trim() || undefined;
 
   // Estado de modales y operaciones en curso
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -81,10 +81,11 @@ export default function AdminWineriesPage() {
       return getAdminWineries({
         pageNumber: page,
         pageSize,
-        status: statusParam,
+        ...(statusParam ? { status: statusParam } : {}),
+        ...(searchParam ? { search: searchParam } : {}),
       });
     },
-    [statusParam]
+    [statusParam, searchParam]
   );
 
   const {
@@ -97,13 +98,26 @@ export default function AdminWineriesPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<WineryResponseDto>(fetcher, [statusParam]);
+  } = usePagedList<WineryResponseDto>(fetcher, [statusParam, searchParam], {
+    page: filters.page,
+    onPageChange: setUrlPage,
+  });
 
-  const handleChipClick = (status: StatusFilter) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('status', status);
-    setSearchParams(next);
-  };
+  const handleChipClick = useCallback(
+    (status: string) => {
+      setFilter('status', status === 'All' ? undefined : status);
+    },
+    [setFilter]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
+
+  const hasActiveFilters = Boolean(statusParam || searchParam);
 
   // Acciones
   const handleApprove = async (id: number) => {
@@ -315,24 +329,18 @@ export default function AdminWineriesPage() {
         description="Revisá y aprobá las bodegas registradas"
       />
 
-      {/* Chips de filtro por estado */}
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_CHIPS.map((chip) => (
-          <button
-            key={chip.value}
-            type="button"
-            onClick={() => handleChipClick(chip.value)}
-            className={cn(
-              'px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer border',
-              currentStatus === chip.value
-                ? 'bg-[#6b1d28] border-rose-700/60 text-white shadow-sm'
-                : 'bg-[#141416] border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.04]'
-            )}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
+      {/* Barra de filtros */}
+      <AdminFilterBar
+        chips={STATUS_CHIPS}
+        activeChip={currentStatus}
+        onChipChange={handleChipClick}
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchChange}
+        searchLabel="Buscar bodega"
+        searchPlaceholder="Buscar por nombre de bodega..."
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Mensaje de error general si falla la lista */}
       {error && <ErrorBanner message={error} onRetry={() => void reload()} />}

@@ -16,6 +16,7 @@ export interface FilterSelectOption {
 export interface FilterSelectConfig {
   id?: string;
   label: string;
+  ariaLabel?: string;
   value: string;
   options: FilterSelectOption[];
   onChange: (value: string) => void;
@@ -32,6 +33,7 @@ export interface AdminFilterBarProps {
   searchLabel?: string;
   searchDebounceMs?: number;
   selects?: FilterSelectConfig[];
+  extraControls?: React.ReactNode;
   onClearFilters?: () => void;
   hasActiveFilters?: boolean;
   clearLabel?: string;
@@ -52,6 +54,7 @@ export default function AdminFilterBar({
   searchLabel = 'Buscar',
   searchDebounceMs = 300,
   selects,
+  extraControls,
   onClearFilters,
   hasActiveFilters = true,
   clearLabel = 'Limpiar filtros',
@@ -83,7 +86,12 @@ export default function AdminFilterBar({
     onClearFilters?.();
   };
 
-  const hasControlsRow = Boolean(onSearchChange || (selects && selects.length > 0) || (onClearFilters && hasActiveFilters));
+  const hasControlsRow = Boolean(
+    onSearchChange ||
+      (selects && selects.length > 0) ||
+      extraControls ||
+      (onClearFilters && hasActiveFilters)
+  );
 
   return (
     <div className="space-y-3">
@@ -160,7 +168,7 @@ export default function AdminFilterBar({
                 </label>
                 <select
                   id={selectId}
-                  aria-label={sel.label}
+                  aria-label={sel.ariaLabel ?? sel.label}
                   value={sel.value}
                   onChange={(e) => sel.onChange(e.target.value)}
                   className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60 cursor-pointer"
@@ -177,6 +185,8 @@ export default function AdminFilterBar({
               </div>
             );
           })}
+
+          {extraControls}
 
           {onClearFilters && hasActiveFilters && (
             <button

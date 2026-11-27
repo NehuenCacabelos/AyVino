@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   Eye,
   Check,
@@ -25,40 +24,40 @@ import { getGrapes } from '../features/winery/api/grapeApi';
 import { getWineTypeLabel } from '../features/admin/utils/wineTypeLabels';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
   StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
 import type { Column } from '../features/admin';
-import { cn } from '../lib/utils';
 import { imageUrl } from '../lib/image';
 
-type StatusFilter = 'Pending' | 'Approved' | 'Rejected' | 'All';
+type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
 const STATUS_CHIPS: { label: string; value: StatusFilter }[] = [
+  { label: 'Todas', value: 'All' },
   { label: 'Pendientes', value: 'Pending' },
   { label: 'Aprobadas', value: 'Approved' },
   { label: 'Rechazadas', value: 'Rejected' },
-  { label: 'Todas', value: 'All' },
 ];
 
 export default function AdminVintagesPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useAdminToast();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Estado de filtros
-  const rawStatus = searchParams.get('status');
   const currentStatus: StatusFilter =
-    rawStatus === 'Approved' || rawStatus === 'Rejected' || rawStatus === 'All'
-      ? rawStatus
-      : 'Pending';
+    filters.status === 'Pending' || filters.status === 'Approved' || filters.status === 'Rejected'
+      ? filters.status
+      : 'All';
 
   const statusParam = currentStatus === 'All' ? undefined : (currentStatus as ApprovalStatus);
+  const searchParam = filters.search?.trim() || undefined;
 
   // Estados de operaciones y modales
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -115,10 +114,11 @@ export default function AdminVintagesPage() {
       return getAdminVintages({
         pageNumber: page,
         pageSize,
-        status: statusParam,
+        ...(statusParam ? { status: statusParam } : {}),
+        ...(searchParam ? { search: searchParam } : {}),
       });
     },
-    [statusParam]
+    [statusParam, searchParam]
   );
 
   const {
@@ -131,13 +131,26 @@ export default function AdminVintagesPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<AdminWineVintageListItem>(fetcher, [statusParam]);
+  } = usePagedList<AdminWineVintageListItem>(fetcher, [statusParam, searchParam], {
+    page: filters.page,
+    onPageChange: setUrlPage,
+  });
 
-  const handleChipClick = (status: StatusFilter) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('status', status);
-    setSearchParams(next);
-  };
+  const handleChipClick = useCallback(
+    (status: string) => {
+      setFilter('status', status === 'All' ? undefined : status);
+    },
+    [setFilter]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
+
+  const hasActiveFilters = Boolean(statusParam || searchParam);
 
   // Acciones sobre la cosecha
   const handleApprove = async (item: AdminWineVintageListItem) => {
@@ -396,27 +409,18 @@ export default function AdminVintagesPage() {
         description="Revisá y aprobá las cosechas cargadas por usuarios y bodegas"
       />
 
-      {/* Filtros por estado */}
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_CHIPS.map((chip) => {
-          const isActive = currentStatus === chip.value;
-          return (
-            <button
-              key={chip.value}
-              type="button"
-              onClick={() => handleChipClick(chip.value)}
-              className={cn(
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer border',
-                isActive
-                  ? 'bg-[#6b1d28] text-white border-rose-700/60 shadow-sm shadow-rose-950/50'
-                  : 'bg-[#121015] text-neutral-400 hover:text-neutral-200 border-white/10 hover:border-white/20'
-              )}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Filtros por estado y búsqueda */}
+      <AdminFilterBar
+        chips={STATUS_CHIPS}
+        activeChip={currentStatus}
+        onChipChange={handleChipClick}
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchChange}
+        searchLabel="Buscar cosecha"
+        searchPlaceholder="Buscar por vino o bodega..."
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Banner de Error */}
       {error && <ErrorBanner message={error} onRetry={() => void reload()} />}

@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminVintagesPage from '@/pages/AdminVintagesPage';
 import * as adminVintagesApi from '@/features/admin/api/adminVintagesApi';
 import * as grapeApi from '@/features/winery/api/grapeApi';
 import type { AdminWineVintageListItem } from '@/features/admin/types/adminVintages';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminVintagesApi', () => ({
   getAdminVintages: vi.fn(),
@@ -72,14 +77,41 @@ describe('AdminVintagesPage Component', () => {
     ]);
   });
 
-  it('la carga inicial pide status Pending por defecto y renderiza las cosechas', async () => {
+  it('la carga inicial abre en Todas sin filtro de status por defecto y renderiza las cosechas', async () => {
     vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
       items: mockVintages,
       totalCount: mockVintages.length,
     });
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
+      expect(screen.getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Malbec Reserva')).toBeInTheDocument();
+      expect(screen.getByText('Chardonnay Estate')).toBeInTheDocument();
+      expect(screen.getByText('Bodega del Fin del Mundo')).toBeInTheDocument();
+      expect(screen.getByText('2022')).toBeInTheDocument();
+      expect(screen.getByText('Tinto')).toBeInTheDocument();
+      expect(screen.getByText('Blanco')).toBeInTheDocument();
+    });
+  });
+
+  it('entrar con URL filtrada (?status=Pending&search=malbec) activa filtros y envía params', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas?status=Pending&search=malbec']}>
         <AdminVintagesPage />
       </MemoryRouter>
     );
@@ -89,13 +121,62 @@ describe('AdminVintagesPage Component', () => {
         pageNumber: 1,
         pageSize: 10,
         status: 'Pending',
+        search: 'malbec',
       });
-      expect(screen.getByText('Malbec Reserva')).toBeInTheDocument();
-      expect(screen.getByText('Chardonnay Estate')).toBeInTheDocument();
-      expect(screen.getByText('Bodega del Fin del Mundo')).toBeInTheDocument();
-      expect(screen.getByText('2022')).toBeInTheDocument();
-      expect(screen.getByText('Tinto')).toBeInTheDocument();
-      expect(screen.getByText('Blanco')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
+    expect((screen.getByLabelText('Buscar cosecha') as HTMLInputElement).value).toBe('malbec');
+  });
+
+  it('aplicar filtros en cosechas actualiza la URL y limpiar filtros los restablece', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+        <LocationProbe />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rechazadas' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Rejected');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Rejected',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText('Buscar cosecha'), { target: { value: 'Rutini' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Rejected&search=Rutini');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Rejected',
+        search: 'Rutini',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
     });
   });
 

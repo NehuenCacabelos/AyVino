@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminUsersPage from '@/pages/AdminUsersPage';
 import * as adminUsersApi from '@/features/admin/api/adminUsersApi';
 import * as authModule from '@/features/auth';
 import { AdminToastProvider } from '@/features/admin';
 import type { AdminUserListItemDto } from '@/features/admin/types/adminUsers';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminUsersApi', () => ({
   getUsers: vi.fn(),
@@ -203,7 +208,7 @@ describe('AdminUsersPage Component', () => {
     });
   });
 
-  it('el buscador filtra en tiempo real solo los datos de la página cargada', async () => {
+  it('los filtros (búsqueda, rol y estado) sincronizan la URL y consultan al backend sin filtrado client-side', async () => {
     vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
       items: mockUsers,
       totalCount: mockUsers.length,
@@ -213,22 +218,94 @@ describe('AdminUsersPage Component', () => {
       <MemoryRouter initialEntries={['/admin/usuarios']}>
         <AdminToastProvider>
           <AdminUsersPage />
+          <LocationProbe />
         </AdminToastProvider>
       </MemoryRouter>
     );
 
     await waitFor(() => {
+      expect(adminUsersApi.getUsers).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
       expect(screen.getByText('superadmin')).toBeInTheDocument();
-      expect(screen.getByText('juanperez')).toBeInTheDocument();
-      expect(screen.getByText('bodegabianchi')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/filtrar por rol/i), { target: { value: 'Winery' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?role=Winery');
+      expect(adminUsersApi.getUsers).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        role: 'Winery',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText(/filtrar por estado/i), { target: { value: 'Blocked' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?role=Winery&status=Blocked');
+      expect(adminUsersApi.getUsers).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        role: 'Winery',
+        status: 'Blocked',
+      });
     });
 
     const searchInput = screen.getByPlaceholderText(/buscar por usuario o email/i);
     fireEvent.change(searchInput, { target: { value: 'bianchi' } });
 
-    expect(screen.getByText('bodegabianchi')).toBeInTheDocument();
-    expect(screen.queryByText('juanperez')).not.toBeInTheDocument();
-    expect(screen.queryByText('superadmin')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?role=Winery&status=Blocked&search=bianchi');
+      expect(adminUsersApi.getUsers).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        search: 'bianchi',
+        role: 'Winery',
+        status: 'Blocked',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminUsersApi.getUsers).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
+    });
+  });
+
+  it('entrar con URL prefiltrada (?search=juan&role=User&status=Active&page=2) carga con esos filtros activos', async () => {
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: mockUsers,
+      totalCount: 25,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/usuarios?search=juan&role=User&status=Active&page=2']}>
+        <AdminToastProvider>
+          <AdminUsersPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminUsersApi.getUsers).toHaveBeenCalledWith({
+        pageNumber: 2,
+        pageSize: 10,
+        search: 'juan',
+        role: 'User',
+        status: 'Active',
+      });
+    });
+
+    expect((screen.getByPlaceholderText(/buscar por usuario o email/i) as HTMLInputElement).value).toBe('juan');
+    expect((screen.getByLabelText(/filtrar por rol/i) as HTMLSelectElement).value).toBe('User');
+    expect((screen.getByLabelText(/filtrar por estado/i) as HTMLSelectElement).value).toBe('Active');
   });
 
   it('"Hacer administrador" llama changeUserRole(id, "Admin") tras confirmar en el diálogo', async () => {
