@@ -24,6 +24,8 @@ import { getAuditLogs } from '../features/admin/api/adminAuditApi';
 import type { AuditLogEntryDto } from '../features/admin/types/adminAudit';
 import { getAuditActionLabel } from '../features/admin/utils/auditLabels';
 import { PageHeader, getApiErrorMessage } from '../features/admin';
+import GrapeDistributionCard from '../features/admin/components/GrapeDistributionCard';
+import WineriesRegionsMapCard from '../features/admin/components/WineriesRegionsMapCard';
 import { cn } from '../lib/utils';
 
 export default function AdminDashboardPage() {
@@ -384,6 +386,12 @@ export default function AdminDashboardPage() {
             </div>
           </Link>
         </div>
+      </div>
+
+      {/* Gráficos de distribución geográfica y varietales */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <WineriesRegionsMapCard className="lg:col-span-7 h-full" />
+        <GrapeDistributionCard className="lg:col-span-5 h-full" />
       </div>
 
       {/* Widget: Actividad reciente (Últimas 5 de Auditoría) */}

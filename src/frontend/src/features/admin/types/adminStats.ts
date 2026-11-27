@@ -38,3 +38,47 @@ export interface AdminStatsDto {
   wines: WineStats;
   reviews: ReviewStats;
 }
+
+export interface GrapePresence {
+  grapeId: number;
+  name: string;
+  vintageCount: number;
+}
+
+export interface GrapesDistribution {
+  totalVintages: number;
+  grapes: GrapePresence[];
+}
+
+export interface RegionWineryCount {
+  stateId: number;
+  stateName: string;
+  wineryCount: number;
+}
+
+export interface WineryPin {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  stateName: string | null;
+  cityName: string | null;
+  stateId?: number | null;
+}
+
+export interface RegionWineryItem {
+  id: number;
+  name: string;
+  stateId: number;
+  cityName: string | null;
+  foundationYear: number | null;
+  hasCoordinates: boolean;
+}
+
+export interface WineriesByRegion {
+  totalWineries: number;
+  withoutCoordinates: number;
+  regions: RegionWineryCount[];
+  pins: WineryPin[];
+  wineries?: RegionWineryItem[];
+}

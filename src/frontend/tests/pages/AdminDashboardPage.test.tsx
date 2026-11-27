@@ -8,11 +8,47 @@ import * as adminAuditApi from '@/features/admin/api/adminAuditApi';
 import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import * as authModule from '@/features/auth';
 import { AdminToastProvider } from '@/features/admin';
-import type { AdminStatsDto } from '@/features/admin/types/adminStats';
+import type {
+  AdminStatsDto,
+  GrapesDistribution,
+  WineriesByRegion,
+} from '@/features/admin/types/adminStats';
 import type { AuditLogEntryDto } from '@/features/admin/types/adminAudit';
+
+const mockDashboardMapInstance = {
+  fitBounds: vi.fn(),
+  flyTo: vi.fn(),
+  getZoom: () => 8,
+};
+
+vi.mock('react-leaflet', () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-map-container">{children}</div>
+  ),
+  TileLayer: () => <div data-testid="mock-tile-layer" />,
+  Marker: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-barrel-marker">{children}</div>
+  ),
+  Tooltip: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-tooltip">{children}</div>
+  ),
+  Popup: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-popup">{children}</div>
+  ),
+  useMap: () => mockDashboardMapInstance,
+}));
+
+vi.mock('leaflet', () => ({
+  default: {
+    latLngBounds: vi.fn((coords: [number, number][]) => coords),
+    divIcon: vi.fn((options: { html?: string }) => options),
+  },
+}));
 
 vi.mock('@/features/admin/api/adminStatsApi', () => ({
   getAdminStats: vi.fn(),
+  getGrapesDistribution: vi.fn(),
+  getWineriesByRegion: vi.fn(),
 }));
 
 vi.mock('@/features/admin/api/adminAuditApi', () => ({
@@ -72,8 +108,48 @@ describe('AdminDashboardPage Component', () => {
     },
   ];
 
+  const mockGrapesDistribution: GrapesDistribution = {
+    totalVintages: 10,
+    grapes: [
+      { grapeId: 1, name: 'Malbec', vintageCount: 7 },
+      { grapeId: 2, name: 'Cabernet Sauvignon', vintageCount: 3 },
+    ],
+  };
+
+  const mockWineriesByRegion: WineriesByRegion = {
+    totalWineries: 19,
+    withoutCoordinates: 1,
+    regions: [
+      { stateId: 13, stateName: 'Mendoza', wineryCount: 14 },
+      { stateId: 17, stateName: 'Salta', wineryCount: 5 },
+    ],
+    pins: [
+      {
+        id: 1,
+        name: 'Bodega Andina',
+        latitude: -33.0,
+        longitude: -68.8,
+        stateName: 'Mendoza',
+        cityName: 'Luján de Cuyo',
+        stateId: 13,
+      },
+    ],
+    wineries: [
+      {
+        id: 1,
+        name: 'Bodega Andina',
+        stateId: 13,
+        cityName: 'Luján de Cuyo',
+        foundationYear: 2001,
+        hasCoordinates: true,
+      },
+    ],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(adminStatsApi.getGrapesDistribution).mockResolvedValue(mockGrapesDistribution);
+    vi.mocked(adminStatsApi.getWineriesByRegion).mockResolvedValue(mockWineriesByRegion);
     mockUseAuth.mockReturnValue({
       user: {
         id: 99,
@@ -247,6 +323,53 @@ describe('AdminDashboardPage Component', () => {
         status: 'Pending',
       });
       expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
+  it('renderiza ambos widgets de gráficos y si falla uno el otro y el resto del dashboard siguen funcionando', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: mockAuditLogs, totalCount: 2 });
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Regiones y Terruños')).toBeInTheDocument();
+      expect(screen.getByText('Distribución por Varietales')).toBeInTheDocument();
+      expect(screen.getAllByText('Mendoza').length).toBeGreaterThan(0);
+      expect(screen.getByText('Malbec')).toBeInTheDocument();
+      expect(screen.getByText('70% (7)')).toBeInTheDocument();
+    });
+
+    unmount();
+
+    vi.mocked(adminStatsApi.getGrapesDistribution).mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail: 'Error en distribución de uvas.',
+        },
+      },
+    });
+    vi.mocked(adminStatsApi.getWineriesByRegion).mockResolvedValueOnce(mockWineriesByRegion);
+
+    render(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // Tarjeta fallida muestra su error y reintento sin romper el resto
+      expect(screen.getByText('Error en distribución de uvas.')).toBeInTheDocument();
+      // La otra tarjeta gráfica y el dashboard siguen funcionando
+      expect(screen.getByText('Regiones y Terruños')).toBeInTheDocument();
+      expect(screen.getAllByText('Mendoza').length).toBeGreaterThan(0);
+      expect(screen.getByText('150')).toBeInTheDocument();
+      expect(screen.getByText('Fusión de vinos')).toBeInTheDocument();
     });
   });
 });

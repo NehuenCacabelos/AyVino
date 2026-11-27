@@ -510,6 +510,8 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
 | Método | Ruta | Acceso | Descripción | DTO Entrada | DTO Salida |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/admin/stats` | Admin (`RequireAdmin`) | Conteos exactos de usuarios, bodegas, ciudades, cosechas, vinos y reseñas. | - | `200 OK` (`AdminStatsDto`) |
+| `GET` | `/api/admin/stats/grapes-distribution` | Admin (`RequireAdmin`) | Distribución de presencia de varietales en cosechas aprobadas de vinos no duplicados. | - | `200 OK` (`GrapesDistributionDto`) |
+| `GET` | `/api/admin/stats/wineries-by-region` | Admin (`RequireAdmin`) | Conteo de bodegas aprobadas por provincia, sin coordenadas y pines geográficos. | - | `200 OK` (`WineriesByRegionDto`) |
 
 ### Estructura del DTO (`AdminStatsDto`)
 - `users`:
@@ -532,6 +534,36 @@ Proporciona métricas consolidadas y conteos exactos de moderación y catálogos
   - `official` (`int`): Vinos oficiales sin duplicados (`source_type = 2`).
 - `reviews`:
   - `total` (`int`): Total de reseñas en el sistema.
+
+### Estructura del DTO (`GrapesDistributionDto`)
+- `totalVintages` (`int`): Cantidad de cosechas aprobadas de vinos no duplicados (`approval_status = 2` y `duplicate_of_wine_id IS NULL`) que poseen al menos una uva cargada en `wine_grapes`.
+- `grapes` (`GrapePresenceDto[]`): Todas las uvas con al menos una presencia en esas cosechas, ordenadas por `vintageCount` descendente y `name` ascendente:
+  - `grapeId` (`int`): ID de la uva.
+  - `name` (`string`): Nombre del varietal.
+  - `vintageCount` (`int`): Cantidad de cosechas aprobadas no duplicadas donde aparece la uva.
+
+### Estructura del DTO (`WineriesByRegionDto`)
+- `totalWineries` (`int`): Total de bodegas aprobadas (`status = 2`), tengan o no provincia asignada.
+- `withoutCoordinates` (`int`): Bodegas aprobadas con `latitude IS NULL` o `longitude IS NULL`.
+- `regions` (`RegionWineryCountDto[]`): Bodegas aprobadas agrupadas por provincia (`states`), excluyendo las que no tienen provincia resuelta, ordenadas por `wineryCount` descendente y `stateName` ascendente:
+  - `stateId` (`int`): ID de la provincia.
+  - `stateName` (`string`): Nombre de la provincia.
+  - `wineryCount` (`int`): Cantidad de bodegas aprobadas en esa provincia.
+- `pins` (`WineryPinDto[]`): Bodegas aprobadas con `latitude` y `longitude` no nulas, ordenadas por `name` ascendente:
+  - `id` (`int`): ID de la bodega.
+  - `name` (`string`): Nombre de la bodega.
+  - `latitude` (`decimal`): Latitud.
+  - `longitude` (`decimal`): Longitud.
+  - `stateName` (`string?`): Provincia (nullable si la ubicación no la resuelve).
+  - `cityName` (`string?`): Ciudad (nullable si la ubicación no la resuelve).
+  - `stateId` (`int?`): ID de la provincia asociada (nullable si la ubicación no la resuelve).
+- `wineries` (`RegionWineryItemDto[]`): Bodegas aprobadas con provincia resuelta (`s.id IS NOT NULL`), ordenadas por `name` ascendente:
+  - `id` (`int`): ID de la bodega.
+  - `name` (`string`): Nombre de la bodega.
+  - `stateId` (`int`): ID de la provincia.
+  - `cityName` (`string?`): Ciudad (nullable).
+  - `foundationYear` (`int?`): Año de fundación (nullable).
+  - `hasCoordinates` (`bool`): Indica si la bodega posee latitud y longitud cargadas.
 
 ---
 
