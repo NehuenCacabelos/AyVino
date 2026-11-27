@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import WineriesRegionsMapCard from '@/features/admin/components/WineriesRegionsMapCard';
 import { getWineriesByRegion } from '@/features/admin/api/adminStatsApi';
 
@@ -23,16 +23,19 @@ vi.mock('react-leaflet', () => ({
   TileLayer: ({ attribution }: { attribution?: string }) => (
     <div data-testid="mock-tile-layer" data-attribution={attribution ?? ''} />
   ),
-  CircleMarker: ({
+  Marker: ({
     children,
-    center,
+    position,
   }: {
     children: React.ReactNode;
-    center: [number, number];
+    position: [number, number];
   }) => (
-    <div data-testid="mock-circle-marker" data-center={center.join(',')}>
+    <div data-testid="mock-barrel-marker" data-position={position.join(',')}>
       {children}
     </div>
+  ),
+  Tooltip: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-tooltip">{children}</div>
   ),
   Popup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-popup">{children}</div>
@@ -45,6 +48,7 @@ vi.mock('react-leaflet', () => ({
 vi.mock('leaflet', () => ({
   default: {
     latLngBounds: vi.fn((coords: [number, number][]) => coords),
+    divIcon: vi.fn((options: { html?: string }) => options),
   },
 }));
 
@@ -116,7 +120,7 @@ describe('WineriesRegionsMapCard', () => {
     expect(getWineriesByRegion).toHaveBeenCalledTimes(2);
   });
 
-  it('muestra epicentro, filas por provincia con formato enriquecido y "y N provincias más" cuando supera 5', async () => {
+  it('muestra marcadores con tooltip hover, popup, epicentro y barras por provincia', async () => {
     vi.mocked(getWineriesByRegion).mockResolvedValueOnce({
       totalWineries: 20,
       withoutCoordinates: 0,
@@ -172,10 +176,16 @@ describe('WineriesRegionsMapCard', () => {
       'data-attribution',
       expect.stringContaining('OpenStreetMap'),
     );
-    expect(screen.getAllByTestId('mock-circle-marker')).toHaveLength(2);
-    expect(screen.getByText('Bodega Catena')).toBeInTheDocument();
-    expect(screen.getByText('Agrelo, Mendoza')).toBeInTheDocument();
-    expect(screen.getByText('Bodega Sin Ciudad')).toBeInTheDocument();
+    expect(screen.getAllByTestId('mock-barrel-marker')).toHaveLength(2);
+
+    const tooltips = screen.getAllByTestId('mock-tooltip');
+    expect(within(tooltips[0]).getByText('Bodega Catena')).toBeInTheDocument();
+    expect(within(tooltips[0]).getByText('Agrelo, Mendoza')).toBeInTheDocument();
+    expect(within(tooltips[1]).getByText('Bodega Sin Ciudad')).toBeInTheDocument();
+    expect(within(tooltips[1]).getByText('Salta')).toBeInTheDocument();
+
+    const popups = screen.getAllByTestId('mock-popup');
+    expect(within(popups[0]).getByText('Bodega Catena')).toBeInTheDocument();
     expect(mockFitBounds).toHaveBeenCalledTimes(1);
   });
 

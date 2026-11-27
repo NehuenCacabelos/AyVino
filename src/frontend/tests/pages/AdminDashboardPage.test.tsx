@@ -20,8 +20,11 @@ vi.mock('react-leaflet', () => ({
     <div data-testid="mock-map-container">{children}</div>
   ),
   TileLayer: () => <div data-testid="mock-tile-layer" />,
-  CircleMarker: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="mock-circle-marker">{children}</div>
+  Marker: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-barrel-marker">{children}</div>
+  ),
+  Tooltip: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="mock-tooltip">{children}</div>
   ),
   Popup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-popup">{children}</div>
@@ -34,6 +37,7 @@ vi.mock('react-leaflet', () => ({
 vi.mock('leaflet', () => ({
   default: {
     latLngBounds: vi.fn((coords: [number, number][]) => coords),
+    divIcon: vi.fn((options: { html?: string }) => options),
   },
 }));
 
