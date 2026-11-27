@@ -8,7 +8,6 @@ import * as wineryApi from '@/features/winery/api/wineryApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { WineResponseDto } from '@/features/admin/types/adminWines';
 import type { WineryResponseDto } from '@/features/winery/types/winery';
-import type { WineVintageResponseDto } from '@/features/winery/types/wine';
 
 function LocationProbe() {
   const location = useLocation();
@@ -262,20 +261,11 @@ describe('AdminWinesPage Component', () => {
     });
   });
 
-  it('ver detalle llama a getWineVintages y muestra el modal con cosechas', async () => {
+  it('ver detalle navega a /vinos/:id sin llamar a getWineVintages ni abrir modal', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
       items: mockWines,
       totalCount: mockWines.length,
     });
-    vi.mocked(wineApi.getWineVintages).mockResolvedValue([
-      {
-        id: 101,
-        wineId: 10,
-        year: 2020,
-        alcoholContent: 14.5,
-        approvalStatus: 'Approved',
-      } as unknown as WineVintageResponseDto,
-    ]);
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -289,14 +279,10 @@ describe('AdminWinesPage Component', () => {
       expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
     });
 
-    const detailBtns = screen.getAllByTitle(/ver detalle y cosechas/i);
-    fireEvent.click(detailBtns[0]);
-
-    await waitFor(() => {
-      expect(wineApi.getWineVintages).toHaveBeenCalledWith(10);
-      expect(screen.getByText('Año: 2020')).toBeInTheDocument();
-      expect(screen.getByText('Graduación: 14.5%')).toBeInTheDocument();
-    });
+    const detailLinks = screen.getAllByRole('link', { name: 'Ver detalle' });
+    expect(detailLinks[0]).toHaveAttribute('href', '/vinos/10');
+    expect(detailLinks[1]).toHaveAttribute('href', '/vinos/20');
+    expect(wineApi.getWineVintages).not.toHaveBeenCalled();
   });
 
   it('un vino duplicado no muestra el botón de fusionar', async () => {

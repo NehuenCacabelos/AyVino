@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminVintagesPage from '@/pages/AdminVintagesPage';
 import * as adminVintagesApi from '@/features/admin/api/adminVintagesApi';
-import * as grapeApi from '@/features/winery/api/grapeApi';
 import type { AdminWineVintageListItem } from '@/features/admin/types/adminVintages';
 
 function LocationProbe() {
@@ -15,11 +14,6 @@ vi.mock('@/features/admin/api/adminVintagesApi', () => ({
   getAdminVintages: vi.fn(),
   changeVintageStatus: vi.fn(),
   deleteVintage: vi.fn(),
-  getVintageDetail: vi.fn(),
-}));
-
-vi.mock('@/features/winery/api/grapeApi', () => ({
-  getGrapes: vi.fn(),
 }));
 
 const mockToast = {
@@ -71,10 +65,6 @@ describe('AdminVintagesPage Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue([
-      { id: 1, name: 'Malbec', colorType: 'Red' },
-      { id: 2, name: 'Chardonnay', colorType: 'White' },
-    ]);
   });
 
   it('la carga inicial abre en Todas sin filtro de status por defecto y renderiza las cosechas', async () => {
@@ -279,5 +269,45 @@ describe('AdminVintagesPage Component', () => {
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalledWith(serverMessage);
     });
+  });
+
+  it('"Ver detalle" navega a /vinos/:wineId?cosecha=:year y omite parámetro si year es null', async () => {
+    const rowsWithNullYear: AdminWineVintageListItem[] = [
+      ...mockVintages,
+      {
+        vintageId: 103,
+        wineId: 77,
+        wineName: 'Espumante NV',
+        wineType: 'Sparkling',
+        wineryId: null,
+        wineryName: null,
+        year: null,
+        alcoholContent: 12.0,
+        approvalStatus: 'Approved',
+        uploadedByUserId: 5,
+        uploadedByUsername: 'ana',
+        registerDate: '2026-01-21T12:00:00Z',
+      },
+    ];
+
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: rowsWithNullYear,
+      totalCount: rowsWithNullYear.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Espumante NV')).toBeInTheDocument();
+    });
+
+    const detailLinks = screen.getAllByRole('link', { name: 'Ver detalle' });
+    expect(detailLinks[0]).toHaveAttribute('href', '/vinos/42?cosecha=2022');
+    expect(detailLinks[1]).toHaveAttribute('href', '/vinos/43?cosecha=2023');
+    expect(detailLinks[2]).toHaveAttribute('href', '/vinos/77');
   });
 });

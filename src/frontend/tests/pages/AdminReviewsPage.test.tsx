@@ -174,4 +174,28 @@ describe('AdminReviewsPage Component', () => {
       expect(adminReviewsApi.deleteReviewByAdmin).toHaveBeenCalledWith(101);
     });
   });
+
+  it('"Ver vino" enlaza a /vinos/:wineId?cosecha=:year y omite cosecha si year es null', async () => {
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/resenas']}>
+        <AdminToastProvider>
+          <AdminReviewsPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Reserva Malbec')).toBeInTheDocument();
+    });
+
+    const wineLinks = screen.getAllByRole('link', { name: 'Ver vino' });
+    expect(wineLinks).toHaveLength(2);
+    expect(wineLinks[0]).toHaveAttribute('href', '/vinos/10?cosecha=2021');
+    expect(wineLinks[1]).toHaveAttribute('href', '/vinos/12');
+  });
 });

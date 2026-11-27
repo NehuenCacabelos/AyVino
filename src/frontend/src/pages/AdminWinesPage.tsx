@@ -1,22 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Eye, Pen, Trash2, X, AlertTriangle, Wine, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, Pen, Trash2, X, AlertTriangle, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   getAdminWines,
   updateWine,
   deleteWine,
   mergeWines,
 } from '../features/admin/api/adminWinesApi';
-import { getWineVintages } from '../features/winery/api/wineApi';
 import { getWineries } from '../features/winery/api/wineryApi';
 import type { WineResponseDto } from '../features/admin/types/adminWines';
-import type { WineVintageResponseDto } from '../features/winery/types/wine';
 import type { WineryResponseDto } from '../features/winery/types/winery';
 import {
   PageHeader,
   AdminFilterBar,
   DataTable,
   PaginationControls,
-  StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
@@ -142,25 +140,6 @@ export default function AdminWinesPage() {
   );
 
   const hasActiveFilters = Boolean(searchName || selectedType || selectedOrigin || searchWinery.trim());
-
-  // Modal de Detalle (Cosechas)
-  const [detailWine, setDetailWine] = useState<WineResponseDto | null>(null);
-  const [detailVintages, setDetailVintages] = useState<WineVintageResponseDto[]>([]);
-  const [isLoadingVintages, setIsLoadingVintages] = useState(false);
-
-  const handleOpenDetail = async (wine: WineResponseDto) => {
-    setDetailWine(wine);
-    setIsLoadingVintages(true);
-    try {
-      const vintages = await getWineVintages(wine.id);
-      setDetailVintages(vintages);
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err));
-      setDetailVintages([]);
-    } finally {
-      setIsLoadingVintages(false);
-    }
-  };
 
   // Modal de Edición
   const [editingWine, setEditingWine] = useState<WineResponseDto | null>(null);
@@ -396,14 +375,14 @@ export default function AdminWinesPage() {
           return (
             <div className="flex items-center justify-end gap-1.5">
               {/* Detalle */}
-              <button
-                type="button"
-                title="Ver detalle y cosechas"
-                onClick={() => void handleOpenDetail(row)}
-                className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors cursor-pointer"
+              <Link
+                to={`/vinos/${row.id}`}
+                title="Ver detalle"
+                aria-label="Ver detalle"
+                className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors inline-flex items-center justify-center"
               >
                 <Eye className="w-4 h-4" />
-              </button>
+              </Link>
 
               {/* Editar (oculto si ya es duplicado) */}
               {!isDuplicate && (
@@ -446,7 +425,6 @@ export default function AdminWinesPage() {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [wineriesMap]
   );
 
@@ -508,85 +486,6 @@ export default function AdminWinesPage() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
-
-      {/* Modal de Detalle (Solo Lectura) */}
-      {detailWine && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="detail-modal-title"
-            className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl space-y-4"
-          >
-            <div className="flex items-start justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 id="detail-modal-title" className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-                  <Wine className="w-5 h-5 text-rose-400" />
-                  <span>{detailWine.name}</span>
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Tipo: {getWineTypeLabel(detailWine.wineType)} · Origen: {detailWine.sourceType}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDetailWine(null)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                aria-label="Cerrar modal de detalle"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {detailWine.description && (
-              <p className="text-xs text-neutral-300 leading-relaxed bg-zinc-950 p-3 rounded-lg border border-white/5">
-                {detailWine.description}
-              </p>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-neutral-400">
-                Cosechas registradas ({detailVintages.length})
-              </h4>
-              {isLoadingVintages ? (
-                <div className="py-6 text-center text-xs text-neutral-500 animate-pulse">
-                  Cargando cosechas...
-                </div>
-              ) : detailVintages.length === 0 ? (
-                <div className="py-4 text-center text-xs text-neutral-500 italic">
-                  Este vino no tiene cosechas registradas.
-                </div>
-              ) : (
-                <div className="max-h-52 overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-lg bg-zinc-950">
-                  {detailVintages.map((v) => (
-                    <div key={v.id} className="p-3 flex items-center justify-between text-xs">
-                      <div className="space-y-0.5">
-                        <span className="font-semibold text-zinc-200">
-                          Año: {v.year ?? 'S/A'}
-                        </span>
-                        <div className="text-[11px] text-neutral-400">
-                          Graduación: {v.alcoholContent ? `${v.alcoholContent}%` : '—'}
-                        </div>
-                      </div>
-                      <StatusBadge status={v.approvalStatus} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setDetailWine(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-200 hover:text-white transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Edición */}
       {editingWine && (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   MapPin,
   BookmarkPlus,
@@ -288,15 +288,23 @@ export default function WineDetailView({
 }: WineDetailViewProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const outletCtx = useOutletContext<AppOutletContext | null>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef<boolean>(false);
   const [isPublished, setIsPublished] = useState<boolean>(false);
 
   // Estados de vista
-  const [selectedVintageYear, setSelectedVintageYear] = useState<number>(
-    () => wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020)
-  );
+  const [selectedVintageYear, setSelectedVintageYear] = useState<number>(() => {
+    const cosechaParam = searchParams.get('cosecha');
+    if (cosechaParam) {
+      const parsedYear = Number(cosechaParam);
+      if (Number.isInteger(parsedYear) && wine.vintages.some((v) => v.year === parsedYear)) {
+        return parsedYear;
+      }
+    }
+    return wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020);
+  });
   const [toast, setToast] = useState<ToastState | null>(null);
   const [starFilter, setStarFilter] = useState<'all' | '5' | '4' | '3'>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);

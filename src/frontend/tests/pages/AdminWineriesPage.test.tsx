@@ -272,4 +272,26 @@ describe('AdminWineriesPage Component', () => {
       expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('"Ver detalle" navega a /bodegas/:id sin abrir modal', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
+    });
+
+    const detailLink = screen.getByRole('link', { name: 'Ver detalle' });
+    expect(detailLink).toHaveAttribute('href', '/bodegas/101');
+  });
 });

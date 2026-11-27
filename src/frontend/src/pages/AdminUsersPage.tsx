@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
+  Eye,
   UserX,
   UserCheck,
   Trash2,
@@ -377,6 +379,28 @@ export default function AdminUsersPage() {
 
           return (
             <div className="flex items-center justify-end gap-1.5">
+              {/* Ver perfil */}
+              {row.username?.trim() ? (
+                <Link
+                  to={`/perfil/${encodeURIComponent(row.username)}`}
+                  title="Ver perfil"
+                  aria-label="Ver perfil"
+                  className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-colors inline-flex items-center justify-center"
+                >
+                  <Eye className="w-4 h-4" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Usuario sin nombre de perfil"
+                  aria-label="Ver perfil"
+                  className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-neutral-500 opacity-40 cursor-not-allowed inline-flex items-center justify-center"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              )}
+
               {/* Cambiar rol */}
               <button
                 type="button"

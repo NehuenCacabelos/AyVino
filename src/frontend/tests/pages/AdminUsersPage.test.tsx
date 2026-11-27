@@ -437,4 +437,42 @@ describe('AdminUsersPage Component', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('"Ver perfil" enlaza a /perfil/:username y se deshabilita si no hay username', async () => {
+    const rowsWithMissingUsername: AdminUserListItemDto[] = [
+      mockUsers[1],
+      {
+        id: 99,
+        username: '',
+        email: 'sin_nombre@example.com',
+        role: 'User',
+        isActive: true,
+        avatarUrl: null,
+        registerDate: '2026-02-01T10:00:00Z',
+      },
+    ];
+
+    vi.mocked(adminUsersApi.getUsers).mockResolvedValue({
+      items: rowsWithMissingUsername,
+      totalCount: rowsWithMissingUsername.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/usuarios']}>
+        <AdminToastProvider>
+          <AdminUsersPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('juanperez')).toBeInTheDocument();
+    });
+
+    const profileLink = screen.getByRole('link', { name: 'Ver perfil' });
+    expect(profileLink).toHaveAttribute('href', '/perfil/juanperez');
+
+    const disabledProfileBtn = screen.getByRole('button', { name: 'Ver perfil' });
+    expect(disabledProfileBtn).toBeDisabled();
+  });
 });
