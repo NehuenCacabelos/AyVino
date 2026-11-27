@@ -1,3 +1,4 @@
+using System.Data;
 using AyVino.Api.Common.Data;
 using AyVino.Api.Common.Exceptions;
 using AyVino.Api.Features.Wines.DTOs;
@@ -676,7 +677,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             ))
         """;
 
-    private static DynamicParameters? BuildCatalogSearchParameters(
+    internal static DynamicParameters? BuildCatalogSearchParameters(
         string? search,
         string? name,
         string? winery,
@@ -707,24 +708,24 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         var hasSearchTerm = searchKey is not null || hasOtherSearchTerms;
 
         var parameters = new DynamicParameters();
-        parameters.Add("SearchKey", searchKey);
-        parameters.Add("SearchKeyPrefix", searchKey is null ? null : $"{searchKey}%");
-        parameters.Add("SearchKeyPattern", searchKey is null ? null : $"%{searchKey}%");
-        parameters.Add("Threshold", SearchSimilarityThreshold);
-        parameters.Add("Name", cleanName);
-        parameters.Add("NamePattern", cleanName is null ? null : $"%{cleanName}%");
-        parameters.Add("Winery", cleanWinery);
-        parameters.Add("WineryPattern", cleanWinery is null ? null : $"%{cleanWinery}%");
-        parameters.Add("WineType", wineType.HasValue ? (int)wineType.Value : (int?)null);
-        parameters.Add("Year", year);
-        parameters.Add("GrapeId", grapeId);
-        parameters.Add("StateId", stateId);
-        parameters.Add("WineryId", wineryId);
-        parameters.Add("SourceType", origin.HasValue ? (int)origin.Value : (int?)null);
-        parameters.Add("CurrentUserId", currentUserId);
-        parameters.Add("IsAdmin", isAdmin);
-        parameters.Add("HasSearchTerm", hasSearchTerm);
-        parameters.Add("HasOtherSearchTerms", hasOtherSearchTerms);
+        parameters.Add("SearchKey", searchKey, DbType.String);
+        parameters.Add("SearchKeyPrefix", searchKey is null ? null : $"{searchKey}%", DbType.String);
+        parameters.Add("SearchKeyPattern", searchKey is null ? null : $"%{searchKey}%", DbType.String);
+        parameters.Add("Threshold", SearchSimilarityThreshold, DbType.Double);
+        parameters.Add("Name", cleanName, DbType.String);
+        parameters.Add("NamePattern", cleanName is null ? null : $"%{cleanName}%", DbType.String);
+        parameters.Add("Winery", cleanWinery, DbType.String);
+        parameters.Add("WineryPattern", cleanWinery is null ? null : $"%{cleanWinery}%", DbType.String);
+        parameters.Add("WineType", wineType.HasValue ? (int)wineType.Value : null, DbType.Int32);
+        parameters.Add("Year", year, DbType.Int32);
+        parameters.Add("GrapeId", grapeId, DbType.Int32);
+        parameters.Add("StateId", stateId, DbType.Int32);
+        parameters.Add("WineryId", wineryId, DbType.Int32);
+        parameters.Add("SourceType", origin.HasValue ? (int)origin.Value : null, DbType.Int32);
+        parameters.Add("CurrentUserId", currentUserId, DbType.Int32);
+        parameters.Add("IsAdmin", isAdmin, DbType.Boolean);
+        parameters.Add("HasSearchTerm", hasSearchTerm, DbType.Boolean);
+        parameters.Add("HasOtherSearchTerms", hasOtherSearchTerms, DbType.Boolean);
         return parameters;
     }
 

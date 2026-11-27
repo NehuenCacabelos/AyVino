@@ -30,6 +30,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="AyVino.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Features\Locations\Data\departamentos_georef.json" />
   </ItemGroup>
 
