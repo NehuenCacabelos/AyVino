@@ -5,6 +5,7 @@ import WineriesRegionsMapCard from '@/features/admin/components/WineriesRegionsM
 import { getWineriesByRegion } from '@/features/admin/api/adminStatsApi';
 
 const mockFitBounds = vi.fn();
+const mockFlyTo = vi.fn();
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({
@@ -27,11 +28,17 @@ vi.mock('react-leaflet', () => ({
   Marker: ({
     children,
     position,
+    zIndexOffset,
   }: {
     children: React.ReactNode;
     position: [number, number];
+    zIndexOffset?: number;
   }) => (
-    <div data-testid="mock-barrel-marker" data-position={position.join(',')}>
+    <div
+      data-testid="mock-barrel-marker"
+      data-position={position.join(',')}
+      data-highlighted={String((zIndexOffset ?? 0) > 0)}
+    >
       {children}
     </div>
   ),
@@ -43,6 +50,8 @@ vi.mock('react-leaflet', () => ({
   ),
   useMap: () => ({
     fitBounds: mockFitBounds,
+    flyTo: mockFlyTo,
+    getZoom: () => 8,
   }),
 }));
 
@@ -345,6 +354,86 @@ describe('WineriesRegionsMapCard', () => {
     expect(screen.getByText('Epicentro vitivinícola')).toBeInTheDocument();
     expect(screen.getAllByTestId('mock-barrel-marker')).toHaveLength(3);
     expect(mockFitBounds).toHaveBeenCalledTimes(4);
+  });
+
+  it('hover sobre fila de bodega resalta el barril y click en zona vacía centra el mapa sin navegar', async () => {
+    vi.mocked(getWineriesByRegion).mockResolvedValueOnce({
+      totalWineries: 2,
+      withoutCoordinates: 0,
+      regions: [{ stateId: 13, stateName: 'Mendoza', wineryCount: 2 }],
+      pins: [
+        {
+          id: 10,
+          name: 'Trapiche',
+          latitude: -33.0,
+          longitude: -68.8,
+          stateName: 'Mendoza',
+          cityName: 'Maipú',
+          stateId: 13,
+        },
+        {
+          id: 11,
+          name: 'Catena Zapata',
+          latitude: -33.1,
+          longitude: -68.9,
+          stateName: 'Mendoza',
+          cityName: 'Luján de Cuyo',
+          stateId: 13,
+        },
+      ],
+      wineries: [
+        {
+          id: 10,
+          name: 'Trapiche',
+          stateId: 13,
+          cityName: 'Maipú',
+          foundationYear: 1883,
+          hasCoordinates: true,
+        },
+        {
+          id: 11,
+          name: 'Catena Zapata',
+          stateId: 13,
+          cityName: 'Luján de Cuyo',
+          foundationYear: 1902,
+          hasCoordinates: true,
+        },
+      ],
+    });
+
+    renderCard();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('mock-barrel-marker')).toHaveLength(2);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Mendoza/i }));
+
+    const trapicheRow = screen.getByTestId('winery-row-10');
+    fireEvent.mouseEnter(trapicheRow);
+
+    const markersOnHover = screen.getAllByTestId('mock-barrel-marker');
+    expect(markersOnHover[0]).toHaveAttribute('data-highlighted', 'true');
+    expect(markersOnHover[1]).toHaveAttribute('data-highlighted', 'false');
+
+    fireEvent.mouseLeave(trapicheRow);
+    expect(screen.getAllByTestId('mock-barrel-marker')[0]).toHaveAttribute(
+      'data-highlighted',
+      'false',
+    );
+
+    // Click en el área de la fila enfoca el mapa en Trapiche
+    fireEvent.click(trapicheRow);
+    expect(mockFlyTo).toHaveBeenCalledWith([-33.0, -68.8], 12, { duration: 0.45 });
+    expect(screen.getAllByTestId('mock-barrel-marker')[0]).toHaveAttribute(
+      'data-highlighted',
+      'true',
+    );
+    expect(within(trapicheRow).getByText('Enfocada')).toBeInTheDocument();
+
+    // Segundo click vuelve al encuadre general de la provincia
+    fireEvent.click(trapicheRow);
+    expect(within(trapicheRow).getByText('En mapa')).toBeInTheDocument();
   });
 
   it('muestra aviso en lugar del mapa si la provincia seleccionada no tiene pines con coordenadas', async () => {

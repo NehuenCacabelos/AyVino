@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import GrapeDistributionCard from '@/features/admin/components/GrapeDistributionCard';
 import { getGrapesDistribution } from '@/features/admin/api/adminStatsApi';
 
@@ -52,6 +52,79 @@ describe('GrapeDistributionCard', () => {
       'aria-label',
       'Distribución por Varietales: Malbec 75% (9), Cabernet Sauvignon 25% (3)',
     );
+  });
+
+  it('muestra inicialmente hasta 10 varietales y despliega el resto con "Ver N más"', async () => {
+    const grapes = Array.from({ length: 13 }, (_, index) => ({
+      grapeId: index + 1,
+      name: `Uva ${index + 1}`,
+      vintageCount: 20 - index,
+    }));
+
+    vi.mocked(getGrapesDistribution).mockResolvedValueOnce({
+      totalVintages: 80,
+      grapes,
+    });
+
+    render(<GrapeDistributionCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Uva 1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Uva 10')).toBeInTheDocument();
+    expect(screen.queryByText('Uva 11')).not.toBeInTheDocument();
+
+    const showMoreBtn = screen.getByRole('button', { name: /Ver 3 más/i });
+    fireEvent.click(showMoreBtn);
+
+    expect(screen.getByText('Uva 11')).toBeInTheDocument();
+    expect(screen.getByText('Uva 13')).toBeInTheDocument();
+
+    const showLessBtn = screen.getByRole('button', { name: /Ver menos/i });
+    fireEvent.click(showLessBtn);
+
+    expect(screen.queryByText('Uva 11')).not.toBeInTheDocument();
+  });
+
+  it('permite interactuar por hover y click actualizando el centro de la dona', async () => {
+    vi.mocked(getGrapesDistribution).mockResolvedValueOnce({
+      totalVintages: 10,
+      grapes: [
+        { grapeId: 1, name: 'Malbec', vintageCount: 7 },
+        { grapeId: 2, name: 'Torrontés', vintageCount: 3 },
+      ],
+    });
+
+    render(<GrapeDistributionCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('10')).toBeInTheDocument();
+    });
+
+    const center = screen.getByTestId('grape-donut-center');
+    const malbecBtn = screen.getByRole('button', { name: /Malbec/i });
+    const torrontesSlice = screen.getByTestId('grape-slice-Torrontés');
+
+    // Hover sobre la leyenda actualiza el centro
+    fireEvent.mouseEnter(malbecBtn);
+    expect(within(center).getByText('70%')).toBeInTheDocument();
+    expect(within(center).getByText('Malbec')).toBeInTheDocument();
+    expect(within(center).getByText('7 cosechas')).toBeInTheDocument();
+
+    // Al salir del hover vuelve al total
+    fireEvent.mouseLeave(malbecBtn);
+    expect(within(center).getByText('10')).toBeInTheDocument();
+
+    // Click en un segmento de la dona lo fija
+    fireEvent.click(torrontesSlice);
+    expect(within(center).getByText('30%')).toBeInTheDocument();
+    expect(within(center).getByText('Torrontés')).toBeInTheDocument();
+    expect(within(center).getByText('3 cosechas')).toBeInTheDocument();
+
+    // Click de nuevo lo desfija
+    fireEvent.click(torrontesSlice);
+    expect(within(center).getByText('10')).toBeInTheDocument();
   });
 
   it('muestra el estado vacío cuando no hay cosechas con uvas cargadas', async () => {

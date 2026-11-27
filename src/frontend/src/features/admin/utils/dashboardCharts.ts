@@ -22,9 +22,21 @@ export interface RegionRowsResult {
   restCount: number;
 }
 
-const GRAPE_SLICE_COLORS = ['#fb7185', '#fbbf24', '#34d399', '#f97316'] as const;
-const OTHER_SLICE_COLOR = '#71717a';
-const MAX_TOP_GRAPES = 4;
+const GRAPE_SLICE_COLORS = [
+  '#fb7185',
+  '#fbbf24',
+  '#34d399',
+  '#f97316',
+  '#38bdf8',
+  '#a78bfa',
+  '#f472b6',
+  '#2dd4bf',
+  '#facc15',
+  '#818cf8',
+  '#fb923c',
+  '#4ade80',
+] as const;
+
 const MAX_TOP_REGIONS = 5;
 
 function distributeRoundedPercents(counts: readonly number[], total: number): number[] {
@@ -60,36 +72,16 @@ export function buildGrapeSlices(distribution: GrapesDistribution): GrapeSlice[]
     return [];
   }
 
-  const topGrapes = grapes.slice(0, MAX_TOP_GRAPES);
-  const restGrapes = grapes.slice(MAX_TOP_GRAPES);
-
-  const rawSlices = [
-    ...topGrapes.map((grape, index) => ({
-      label: grape.name,
-      count: grape.vintageCount,
-      color: GRAPE_SLICE_COLORS[index],
-    })),
-    ...(restGrapes.length > 0
-      ? [
-          {
-            label: 'Otras',
-            count: restGrapes.reduce((acc, item) => acc + item.vintageCount, 0),
-            color: OTHER_SLICE_COLOR,
-          },
-        ]
-      : []),
-  ];
-
   const percents = distributeRoundedPercents(
-    rawSlices.map((slice) => slice.count),
+    grapes.map((grape) => grape.vintageCount),
     totalPresence,
   );
 
-  return rawSlices.map((slice, index) => ({
-    label: slice.label,
-    count: slice.count,
+  return grapes.map((grape, index) => ({
+    label: grape.name,
+    count: grape.vintageCount,
     percent: percents[index],
-    color: slice.color,
+    color: GRAPE_SLICE_COLORS[index % GRAPE_SLICE_COLORS.length],
   }));
 }
 

@@ -31,6 +31,8 @@ vi.mock('react-leaflet', () => ({
   ),
   useMap: () => ({
     fitBounds: vi.fn(),
+    flyTo: vi.fn(),
+    getZoom: () => 8,
   }),
 }));
 

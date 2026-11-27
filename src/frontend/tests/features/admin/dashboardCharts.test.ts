@@ -13,7 +13,7 @@ describe('dashboardCharts - buildGrapeSlices', () => {
     ).toEqual([]);
   });
 
-  it('con menos de 4 uvas no agrega porción "Otras" y asigna colores en orden', () => {
+  it('con menos de 4 uvas calcula porcentajes y asigna colores en orden', () => {
     const distribution: GrapesDistribution = {
       totalVintages: 8,
       grapes: [
@@ -30,25 +30,7 @@ describe('dashboardCharts - buildGrapeSlices', () => {
     ]);
   });
 
-  it('con exactamente 4 uvas no agrega porción "Otras"', () => {
-    const distribution: GrapesDistribution = {
-      totalVintages: 10,
-      grapes: [
-        { grapeId: 1, name: 'Malbec', vintageCount: 4 },
-        { grapeId: 2, name: 'Cabernet', vintageCount: 3 },
-        { grapeId: 3, name: 'Syrah', vintageCount: 2 },
-        { grapeId: 4, name: 'Merlot', vintageCount: 1 },
-      ],
-    };
-
-    const slices = buildGrapeSlices(distribution);
-
-    expect(slices).toHaveLength(4);
-    expect(slices.map((s) => s.color)).toEqual(['#fb7185', '#fbbf24', '#34d399', '#f97316']);
-    expect(slices.some((s) => s.label === 'Otras')).toBe(false);
-  });
-
-  it('con más de 4 uvas agrupa el resto en "Otras" con color #71717a', () => {
+  it('incluye todas las uvas cuando hay más de 4 sin agrupar en "Otras" y suma 100%', () => {
     const distribution: GrapesDistribution = {
       totalVintages: 15,
       grapes: [
@@ -63,12 +45,19 @@ describe('dashboardCharts - buildGrapeSlices', () => {
 
     const slices = buildGrapeSlices(distribution);
 
-    expect(slices).toHaveLength(5);
+    expect(slices).toHaveLength(6);
+    expect(slices.some((s) => s.label === 'Otras')).toBe(false);
     expect(slices[4]).toEqual({
-      label: 'Otras',
-      count: 2,
-      percent: 10,
-      color: '#71717a',
+      label: 'Syrah',
+      count: 1,
+      percent: 5,
+      color: '#38bdf8',
+    });
+    expect(slices[5]).toEqual({
+      label: 'Pinot Noir',
+      count: 1,
+      percent: 5,
+      color: '#a78bfa',
     });
     expect(slices.reduce((sum, s) => sum + s.percent, 0)).toBe(100);
   });
