@@ -1,0 +1,138 @@
+import { describe, it, expect } from 'vitest';
+import { buildGrapeSlices, buildRegionRows } from '@/features/admin/utils/dashboardCharts';
+import type { GrapesDistribution, RegionWineryCount } from '@/features/admin/types/adminStats';
+
+describe('dashboardCharts - buildGrapeSlices', () => {
+  it('devuelve lista vacía si no hay uvas o la suma de presencias es 0', () => {
+    expect(buildGrapeSlices({ totalVintages: 0, grapes: [] })).toEqual([]);
+    expect(
+      buildGrapeSlices({
+        totalVintages: 0,
+        grapes: [{ grapeId: 1, name: 'Malbec', vintageCount: 0 }],
+      }),
+    ).toEqual([]);
+  });
+
+  it('con menos de 4 uvas no agrega porción "Otras" y asigna colores en orden', () => {
+    const distribution: GrapesDistribution = {
+      totalVintages: 8,
+      grapes: [
+        { grapeId: 1, name: 'Malbec', vintageCount: 6 },
+        { grapeId: 2, name: 'Cabernet Sauvignon', vintageCount: 4 },
+      ],
+    };
+
+    const slices = buildGrapeSlices(distribution);
+
+    expect(slices).toEqual([
+      { label: 'Malbec', count: 6, percent: 60, color: '#fb7185' },
+      { label: 'Cabernet Sauvignon', count: 4, percent: 40, color: '#fbbf24' },
+    ]);
+  });
+
+  it('con exactamente 4 uvas no agrega porción "Otras"', () => {
+    const distribution: GrapesDistribution = {
+      totalVintages: 10,
+      grapes: [
+        { grapeId: 1, name: 'Malbec', vintageCount: 4 },
+        { grapeId: 2, name: 'Cabernet', vintageCount: 3 },
+        { grapeId: 3, name: 'Syrah', vintageCount: 2 },
+        { grapeId: 4, name: 'Merlot', vintageCount: 1 },
+      ],
+    };
+
+    const slices = buildGrapeSlices(distribution);
+
+    expect(slices).toHaveLength(4);
+    expect(slices.map((s) => s.color)).toEqual(['#fb7185', '#fbbf24', '#34d399', '#f97316']);
+    expect(slices.some((s) => s.label === 'Otras')).toBe(false);
+  });
+
+  it('con más de 4 uvas agrupa el resto en "Otras" con color #71717a', () => {
+    const distribution: GrapesDistribution = {
+      totalVintages: 15,
+      grapes: [
+        { grapeId: 1, name: 'Malbec', vintageCount: 10 },
+        { grapeId: 2, name: 'Cabernet', vintageCount: 4 },
+        { grapeId: 3, name: 'Bonarda', vintageCount: 2 },
+        { grapeId: 4, name: 'Torrontés', vintageCount: 2 },
+        { grapeId: 5, name: 'Syrah', vintageCount: 1 },
+        { grapeId: 6, name: 'Pinot Noir', vintageCount: 1 },
+      ],
+    };
+
+    const slices = buildGrapeSlices(distribution);
+
+    expect(slices).toHaveLength(5);
+    expect(slices[4]).toEqual({
+      label: 'Otras',
+      count: 2,
+      percent: 10,
+      color: '#71717a',
+    });
+    expect(slices.reduce((sum, s) => sum + s.percent, 0)).toBe(100);
+  });
+
+  it('garantiza que los porcentajes sumen exactamente 100 usando resto mayor (tres partes iguales)', () => {
+    const distribution: GrapesDistribution = {
+      totalVintages: 3,
+      grapes: [
+        { grapeId: 1, name: 'Malbec', vintageCount: 1 },
+        { grapeId: 2, name: 'Syrah', vintageCount: 1 },
+        { grapeId: 3, name: 'Merlot', vintageCount: 1 },
+      ],
+    };
+
+    const slices = buildGrapeSlices(distribution);
+
+    expect(slices.map((s) => s.percent)).toEqual([34, 33, 33]);
+    expect(slices.reduce((sum, s) => sum + s.percent, 0)).toBe(100);
+  });
+});
+
+describe('dashboardCharts - buildRegionRows', () => {
+  const sampleRegions: RegionWineryCount[] = [
+    { stateId: 1, stateName: 'Mendoza', wineryCount: 10 },
+    { stateId: 2, stateName: 'Salta', wineryCount: 4 },
+    { stateId: 3, stateName: 'San Juan', wineryCount: 3 },
+    { stateId: 4, stateName: 'Neuquén', wineryCount: 2 },
+    { stateId: 5, stateName: 'Río Negro', wineryCount: 1 },
+    { stateId: 6, stateName: 'Córdoba', wineryCount: 1 },
+    { stateId: 7, stateName: 'Tucumán', wineryCount: 1 },
+  ];
+
+  it('con menos de 5 provincias retorna todas y restCount = 0', () => {
+    const result = buildRegionRows(sampleRegions.slice(0, 3), 20);
+
+    expect(result.restCount).toBe(0);
+    expect(result.rows).toEqual([
+      { stateId: 1, stateName: 'Mendoza', wineryCount: 10, percent: 50 },
+      { stateId: 2, stateName: 'Salta', wineryCount: 4, percent: 20 },
+      { stateId: 3, stateName: 'San Juan', wineryCount: 3, percent: 15 },
+    ]);
+  });
+
+  it('con exactamente 5 provincias retorna las 5 y restCount = 0', () => {
+    const result = buildRegionRows(sampleRegions.slice(0, 5), 20);
+
+    expect(result.rows).toHaveLength(5);
+    expect(result.restCount).toBe(0);
+  });
+
+  it('con más de 5 provincias limita a 5 y calcula restCount', () => {
+    const result = buildRegionRows(sampleRegions, 22);
+
+    expect(result.rows).toHaveLength(5);
+    expect(result.restCount).toBe(2);
+    expect(result.rows[0].percent).toBe(45);
+  });
+
+  it('si totalWineries es 0, calcula percent = 0 sin dividir por cero', () => {
+    const result = buildRegionRows(sampleRegions.slice(0, 2), 0);
+
+    expect(result.rows).toEqual([
+      { stateId: 1, stateName: 'Mendoza', wineryCount: 10, percent: 0 },
+      { stateId: 2, stateName: 'Salta', wineryCount: 4, percent: 0 },
+    ]);
+  });
+});
