@@ -139,14 +139,10 @@ describe('AdminWinesPage Component', () => {
     });
   });
 
-  it('editar abre modal y envía el cuerpo correcto a updateWine', async () => {
+  it('editar navega a /admin/vinos/:id sin abrir modal ni llamar a updateWine', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
       items: mockWines,
       totalCount: mockWines.length,
-    });
-    vi.mocked(adminWinesApi.updateWine).mockResolvedValue({
-      ...mockWines[0],
-      name: 'Gran Malbec Reserva Editado',
     });
 
     render(
@@ -161,28 +157,10 @@ describe('AdminWinesPage Component', () => {
       expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
     });
 
-    const editBtns = screen.getAllByTitle(/editar vino/i);
-    fireEvent.click(editBtns[0]);
-
-    // Modal abierto
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(/editar vino #10/i)).toBeInTheDocument();
-
-    const nameField = screen.getByLabelText(/nombre del vino \*/i);
-    fireEvent.change(nameField, { target: { value: 'Gran Malbec Reserva Editado' } });
-
-    const saveBtn = screen.getByRole('button', { name: /guardar cambios/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(adminWinesApi.updateWine).toHaveBeenCalledWith(10, {
-        name: 'Gran Malbec Reserva Editado',
-        wineType: 'Red',
-        description: 'Notas a ciruela y roble francés',
-        wineryId: 1,
-        wineryNameText: null,
-      });
-    });
+    const editLinks = screen.getAllByRole('link', { name: 'Editar vino' });
+    expect(editLinks).toHaveLength(1); // El vino #20 duplicado oculta la acción editar
+    expect(editLinks[0]).toHaveAttribute('href', '/admin/vinos/10');
+    expect(adminWinesApi.updateWine).not.toHaveBeenCalled();
   });
 
   it('eliminar exige confirmación en ConfirmDialog y llama a deleteWine', async () => {

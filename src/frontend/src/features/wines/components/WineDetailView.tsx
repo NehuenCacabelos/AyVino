@@ -261,6 +261,7 @@ export interface WineDetailViewProps {
   wine: EditorialWine;
   reviews?: WineReviewItem[];
   ownerMode?: boolean;
+  ownerBackTo?: string;
   isRealWine?: boolean;
   isNewMode?: boolean;
   rawWine?: WineResponseDto | null;
@@ -278,6 +279,7 @@ export default function WineDetailView({
   wine,
   reviews: propReviews,
   ownerMode = false,
+  ownerBackTo = '/bodega/vinos',
   isRealWine = false,
   isNewMode = false,
   rawWine,
@@ -748,6 +750,7 @@ export default function WineDetailView({
             description: draftDescription.trim(),
             locationId: rawWine?.locationId ?? undefined,
             wineryId: rawWine?.wineryId ?? undefined,
+            ...(rawWine?.wineryNameText ? { wineryNameText: rawWine.wineryNameText } : {}),
           });
           savedSteps.push('vino');
         } catch (err: unknown) {
@@ -1294,7 +1297,7 @@ export default function WineDetailView({
       await deleteWine(wineIdNum);
       showToast('Vino eliminado exitosamente.');
       setIsDeleteWineOpen(false);
-      navigate('/bodega/vinos');
+      navigate(ownerBackTo);
     } catch (err: unknown) {
       const maybeAxios = err as {
         response?: { data?: { detail?: string; message?: string; title?: string } };
@@ -1527,7 +1530,7 @@ export default function WineDetailView({
         {/* Navegación de Retorno Minimalista */}
         <div className="mb-8">
           <Link
-            to={ownerMode ? '/bodega/vinos' : '/dashboard#catalogo'}
+            to={ownerMode ? ownerBackTo : '/dashboard#catalogo'}
             className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
           >
             ← Volver a explorar

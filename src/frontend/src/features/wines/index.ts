@@ -7,6 +7,7 @@ export { default as WineDetailModal } from './components/WineDetailModal';
 export { default as WineBottleSilhouette } from './components/WineBottleSilhouette';
 export { default as WineBottleMock } from './components/WineBottleMock';
 export { default as WineDetailView } from './components/WineDetailView';
+export { default as RealWineEditView, type RealWineEditViewProps } from './components/RealWineEditView';
 export { mapApiWineToCuratedWine } from './utils/wineMapper';
 export { CURATED_WINES } from './data/curatedWines';
 export {

@@ -119,7 +119,7 @@ El panel de administración es una herramienta interna, sobria y funcional dise�
 - **Catálogo de Maridajes (`AdminPairingsPage.tsx` en `/admin/maridajes`)**: ABM completo de sugerencias gastronómicas categorizadas (Carnes, Pescados, Quesos, Pastas, etc.), modal de creación/edición y eliminación con confirmación.
 - **Registro de Auditoría (`AdminAuditPage.tsx` en `/admin/auditoria`)**: Historial inmutable de acciones realizadas por administradores. Filtros combinados por acción, tipo de entidad y rango de fechas (desde/hasta), reseteo dinámico de filtros, tabla con fecha formateada en `es-AR`, enlaces directos a las secciones del panel para cada entidad auditada y detalle con truncado contextual.
 - **Moderación de Reseñas (`AdminReviewsPage.tsx` en `/admin/resenas`)**: Bandeja de moderación comunitaria con filtros combinados por rating (chips Todos, 1 a 5 estrellas), ID de vino e ID de usuario iniciados opcionalmente desde query params, tabla con visualización de estrellas dinámicas, acceso directo `"Ver vino"` hacia `/vinos/:wineId?cosecha=:year`, modal accesible para lectura de comentarios extensos y eliminación definitiva con diálogo de confirmación 'danger' y recálculo transaccional de puntajes.
-- **Gestión y Moderación de Vinos (`AdminWinesPage.tsx` en `/admin/vinos`)**: Catálogo maestro de etiquetas con `AdminFilterBar` para búsqueda por nombre, tipo de vino, origen (`community` / `official`) sincronizados en URL (`search`, `type`, `origin`, `page`) y filtro local por bodega. Tabla detallada con badges de origen ('Comunitario' / 'Oficial'), cálculo de reseñas, badge de botella duplicada ('Duplicado de #id'), enlace `"Ver detalle"` hacia `/vinos/:id`, modal de edición integral con precarga de bodegas oficiales aprobadas, eliminación física con confirmación 'danger', y acción de **fusión de etiquetas duplicadas** mediante un modal de dos pasos. La vista pública `WineDetailView` admite `?cosecha=:year` para seleccionar inicialmente una añada existente.
+- **Gestión y Moderación de Vinos (`AdminWinesPage.tsx` en `/admin/vinos` y `AdminWineEditPage.tsx` en `/admin/vinos/:wineId`)**: Catálogo maestro de etiquetas con `AdminFilterBar` para búsqueda por nombre, tipo de vino, origen (`community` / `official`) sincronizados en URL (`search`, `type`, `origin`, `page`) y filtro local por bodega. Tabla detallada con badges de origen ('Comunitario' / 'Oficial'), cálculo de reseñas, badge de botella duplicada ('Duplicado de #id'), enlace `"Ver detalle"` hacia `/vinos/:id`, enlace `"Editar vino"` hacia la vista completa de edición `/admin/vinos/:wineId` (`AdminWineEditPage`, basada en el componente compartido `RealWineEditView` junto a `WineryWineDetailPage`, sin guarda de bodega y con retorno a `/admin/vinos`), eliminación física con confirmación 'danger', y acción de **fusión de etiquetas duplicadas** mediante un modal de dos pasos. La vista pública `WineDetailView` admite `?cosecha=:year` para seleccionar inicialmente una añada existente.
 
 ---
 
@@ -144,7 +144,7 @@ src/frontend/src/
 │   ├── dashboard/             # Módulo de Dashboard y Cava de Usuario
 │   ├── users/                 # Módulo de APIs de Usuario (getCurrentUserApi, changePasswordApi)
 │   ├── pairings/              # Módulo de Maridajes Enogastronómicos
-│   ├── wines/                 # Módulo de Vinos de Usuario
+│   ├── wines/                 # Módulo de Vinos de Usuario (WineDetailView, RealWineEditView, useRealWine)
 │   └── winery/                # Módulo Institucional de Bodegas (100% Desacoplado)
 │       ├── api/               # wineryApi, wineApi, locationApi, grapeApi, imageApi
 │       ├── components/        # WineryNavbar, WineryTopBar, WineryLayout, WineryPublicLayout,
@@ -164,6 +164,7 @@ src/frontend/src/
 │   │   AdminAuditPage.tsx     # Registro de auditoría (/admin/auditoria)
 │   │   AdminReviewsPage.tsx   # Moderación de reseñas (/admin/resenas)
 │   │   AdminWinesPage.tsx     # Gestión de vinos (/admin/vinos)
+│   │   AdminWineEditPage.tsx  # Edición completa de vino por admin (/admin/vinos/:wineId)
 │   ├── AdminUsersPage.tsx     # Gestión de usuarios (/admin/usuarios)
 │   ├── AdminVintagesPage.tsx  # Moderación de cosechas (/admin/cosechas)
 │   ├── AdminWineriesPage.tsx  # Moderación de bodegas (/admin/bodegas)
