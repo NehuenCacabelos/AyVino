@@ -94,22 +94,71 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             new CommandDefinition(sql, new { Username = username }, cancellationToken: ct));
     }
 
-    public async Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
+    public Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, null, null, null, ct);
+
+    public async Task<IEnumerable<User>> GetAllAsync(int pageNumber, int pageSize, string? search, string? role, bool? isActive, CancellationToken ct = default)
     {
-        const string sql = $"""
+        var (whereClause, parameters) = BuildListFilter(search, role, isActive);
+        parameters.Add("Offset", (pageNumber - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
             SELECT {SelectUserColumns}
             FROM users u
+            {whereClause}
             ORDER BY u.id ASC
             OFFSET @Offset LIMIT @PageSize;
             """;
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<User>(
-            new CommandDefinition(sql, new
-            {
-                Offset = (pageNumber - 1) * pageSize,
-                PageSize = pageSize
-            }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public Task<int> CountAsync(CancellationToken ct = default) =>
+        CountAsync(null, null, null, ct);
+
+    public async Task<int> CountAsync(string? search, string? role, bool? isActive, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildListFilter(search, role, isActive);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM users u
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildListFilter(string? search, string? role, bool? isActive)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            conditions.Add("(u.username ILIKE @Search OR u.email ILIKE @Search)");
+            parameters.Add("Search", $"%{search.Trim()}%");
+        }
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            conditions.Add("LOWER(u.role) = LOWER(@Role)");
+            parameters.Add("Role", role.Trim());
+        }
+
+        if (isActive.HasValue)
+        {
+            conditions.Add("u.is_active = @IsActive");
+            parameters.Add("IsActive", isActive.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        return (whereClause, parameters);
     }
 
     public async Task<(User? User, UserCredential? Credential)> GetUserWithCredentialsByEmailAsync(string email, CancellationToken ct = default)

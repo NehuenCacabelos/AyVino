@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   MapPin,
   BookmarkPlus,
@@ -261,6 +261,7 @@ export interface WineDetailViewProps {
   wine: EditorialWine;
   reviews?: WineReviewItem[];
   ownerMode?: boolean;
+  ownerBackTo?: string;
   isRealWine?: boolean;
   isNewMode?: boolean;
   rawWine?: WineResponseDto | null;
@@ -278,6 +279,7 @@ export default function WineDetailView({
   wine,
   reviews: propReviews,
   ownerMode = false,
+  ownerBackTo = '/bodega/vinos',
   isRealWine = false,
   isNewMode = false,
   rawWine,
@@ -288,15 +290,23 @@ export default function WineDetailView({
 }: WineDetailViewProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const outletCtx = useOutletContext<AppOutletContext | null>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef<boolean>(false);
   const [isPublished, setIsPublished] = useState<boolean>(false);
 
   // Estados de vista
-  const [selectedVintageYear, setSelectedVintageYear] = useState<number>(
-    () => wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020)
-  );
+  const [selectedVintageYear, setSelectedVintageYear] = useState<number>(() => {
+    const cosechaParam = searchParams.get('cosecha');
+    if (cosechaParam) {
+      const parsedYear = Number(cosechaParam);
+      if (Number.isInteger(parsedYear) && wine.vintages.some((v) => v.year === parsedYear)) {
+        return parsedYear;
+      }
+    }
+    return wine.vintages[0]?.year ?? (isNewMode ? ('' as unknown as number) : 2020);
+  });
   const [toast, setToast] = useState<ToastState | null>(null);
   const [starFilter, setStarFilter] = useState<'all' | '5' | '4' | '3'>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -740,6 +750,7 @@ export default function WineDetailView({
             description: draftDescription.trim(),
             locationId: rawWine?.locationId ?? undefined,
             wineryId: rawWine?.wineryId ?? undefined,
+            ...(rawWine?.wineryNameText ? { wineryNameText: rawWine.wineryNameText } : {}),
           });
           savedSteps.push('vino');
         } catch (err: unknown) {
@@ -1286,7 +1297,7 @@ export default function WineDetailView({
       await deleteWine(wineIdNum);
       showToast('Vino eliminado exitosamente.');
       setIsDeleteWineOpen(false);
-      navigate('/bodega/vinos');
+      navigate(ownerBackTo);
     } catch (err: unknown) {
       const maybeAxios = err as {
         response?: { data?: { detail?: string; message?: string; title?: string } };
@@ -1519,7 +1530,7 @@ export default function WineDetailView({
         {/* Navegación de Retorno Minimalista */}
         <div className="mb-8">
           <Link
-            to={ownerMode ? '/bodega/vinos' : '/dashboard#catalogo'}
+            to={ownerMode ? ownerBackTo : '/dashboard#catalogo'}
             className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
           >
             ← Volver a explorar

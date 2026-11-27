@@ -5,16 +5,18 @@ import type {
   UpdateWineAdminRequest,
   MergeWinesResultDto,
 } from '../types/adminWines';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
 
 /**
- * Lista vinos paginados. Si se especifican criterios de búsqueda (nombre, bodega o tipo),
+ * Lista vinos paginados. Si se especifican criterios de búsqueda (nombre, bodega, tipo u origen),
  * utiliza /wines/search; de lo contrario utiliza /wines.
  */
 export async function getAdminWines(
-  params?: GetAdminWinesParams
-): Promise<WineResponseDto[]> {
+  params?: GetAdminWinesParams & { origin?: string }
+): Promise<PagedResponse<WineResponseDto>> {
   const hasFilter = Boolean(
-    params?.name?.trim() || params?.winery?.trim() || params?.wineType
+    params?.name?.trim() || params?.winery?.trim() || params?.wineType || params?.origin
   );
 
   if (hasFilter) {
@@ -25,9 +27,13 @@ export async function getAdminWines(
         name: params?.name?.trim() || undefined,
         winery: params?.winery?.trim() || undefined,
         wineType: params?.wineType || undefined,
+        origin: params?.origin || undefined,
       },
     });
-    return response.data;
+    return {
+      items: response.data,
+      totalCount: parseTotalCountHeader(response.headers),
+    };
   }
 
   const response = await apiClient.get<WineResponseDto[]>('/wines', {
@@ -36,7 +42,10 @@ export async function getAdminWines(
       pageSize: params?.pageSize ?? 10,
     },
   });
-  return response.data;
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
 }
 
 /**

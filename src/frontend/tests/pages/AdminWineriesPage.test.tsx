@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminWineriesPage from '@/pages/AdminWineriesPage';
-import * as wineryApi from '@/features/winery/api/wineryApi';
 import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { WineryResponseDto } from '@/features/winery/types';
 
-vi.mock('@/features/winery/api/wineryApi', () => ({
-  getWineries: vi.fn(),
-}));
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminWineriesApi', () => ({
+  getAdminWineries: vi.fn(),
   changeWineryStatus: vi.fn(),
   deleteWinery: vi.fn(),
 }));
@@ -57,30 +58,117 @@ describe('AdminWineriesPage Component', () => {
     vi.clearAllMocks();
   });
 
-  it('la carga inicial pide status Pending por defecto', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+  it('la carga inicial abre en Todas sin filtro de status por defecto', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/bodegas']}>
         <AdminToastProvider>
           <AdminWineriesPage />
+          <LocationProbe />
         </AdminToastProvider>
       </MemoryRouter>
     );
 
     await waitFor(() => {
-      expect(wineryApi.getWineries).toHaveBeenCalledWith({
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
+      expect(screen.getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
+    });
+  });
+
+  it('entrar con URL filtrada (?status=Pending&search=catena) activa filtros y envía params al backend', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas?status=Pending&search=catena']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
         status: 'Pending',
+        search: 'catena',
       });
-      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
-      expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
+    expect((screen.getByLabelText('Buscar bodega') as HTMLInputElement).value).toBe('catena');
+  });
+
+  it('aplicar filtros (chip y búsqueda) actualiza la URL y limpiar filtros los elimina', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobadas' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Approved');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Approved',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText('Buscar bodega'), { target: { value: 'Zuccardi' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Approved&search=Zuccardi');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Approved',
+        search: 'Zuccardi',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
     });
   });
 
   it('aprobar llama changeWineryStatus con Approved y recarga la lista', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
     vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
 
     render(
@@ -100,12 +188,15 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(101, 'Approved');
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2); // Inicial + recarga
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2); // Inicial + recarga
     });
   });
 
   it('para una bodega Approved la acción se llama Suspender con confirmación específica', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockApprovedWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockApprovedWineries,
+      totalCount: mockApprovedWineries.length,
+    });
     vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
 
     render(
@@ -140,12 +231,15 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(102, 'Rejected');
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2);
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2);
     });
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteWinery', async () => {
-    vi.mocked(wineryApi.getWineries).mockResolvedValue(mockPendingWineries);
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
     vi.mocked(adminWineriesApi.deleteWinery).mockResolvedValue(undefined);
 
     render(
@@ -175,7 +269,29 @@ describe('AdminWineriesPage Component', () => {
 
     await waitFor(() => {
       expect(adminWineriesApi.deleteWinery).toHaveBeenCalledWith(101);
-      expect(wineryApi.getWineries).toHaveBeenCalledTimes(2);
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('"Ver detalle" navega a /bodegas/:id sin abrir modal', async () => {
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({
+      items: mockPendingWineries,
+      totalCount: mockPendingWineries.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/bodegas']}>
+        <AdminToastProvider>
+          <AdminWineriesPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega Trapiche')).toBeInTheDocument();
+    });
+
+    const detailLink = screen.getByRole('link', { name: 'Ver detalle' });
+    expect(detailLink).toHaveAttribute('href', '/bodegas/101');
   });
 });

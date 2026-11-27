@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Cellars.Services;
@@ -104,10 +105,10 @@ public static class UserEndpoints
         .WithName("AdminUpdateUserProfile")
         .WithSummary("Actualiza el perfil de cualquier usuario");
 
-        adminGroup.MapGet("/", async (IUserService userService, CancellationToken ct, int pageNumber = 1, int pageSize = 10) =>
+        adminGroup.MapGet("/", async (HttpResponse response, IUserService userService, CancellationToken ct, int pageNumber = 1, int pageSize = 10, string? search = null, string? role = null, string? status = null) =>
         {
-            var users = await userService.GetAllAsync(pageNumber, pageSize, ct);
-            return Results.Ok(users);
+            var result = await userService.GetAllPagedAsync(pageNumber, pageSize, search, role, status, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
         .WithName("GetAllUsers")
         .WithSummary("Obtiene la lista de todos los usuarios");

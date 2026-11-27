@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Locations.Repositories;
@@ -50,29 +51,48 @@ public class WineryService(
 
     public async Task<IEnumerable<WineryResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default)
     {
+        var statusValue = ValidateAndResolveListFilters(pageNumber, pageSize, status, actor);
+        var wineries = await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
+        return wineries.ToResponseDtoList();
+    }
+
+    public Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status = null, int? locationId = null, Actor? actor = null, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, status, locationId, null, actor, ct);
+
+    public async Task<PagedResult<WineryResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? status, int? locationId, string? search, Actor? actor = null, CancellationToken ct = default)
+    {
+        var statusValue = ValidateAndResolveListFilters(pageNumber, pageSize, status, actor);
+        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        var wineries = normalizedSearch is not null
+            ? await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, normalizedSearch, ct)
+            : await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
+        var totalCount = normalizedSearch is not null
+            ? await wineryRepository.CountAsync(statusValue, locationId, normalizedSearch, ct)
+            : await wineryRepository.CountAsync(statusValue, locationId, ct);
+        return new PagedResult<WineryResponseDto>(wineries.ToResponseDtoList(), totalCount);
+    }
+
+    private static int? ValidateAndResolveListFilters(int pageNumber, int pageSize, string? status, Actor? actor)
+    {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
-        int? statusValue = null;
         var isAdmin = actor?.IsAdmin == true;
-
-        if (isAdmin)
-        {
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                if (!Enum.TryParse<WineryStatus>(status, ignoreCase: true, out var parsedStatus))
-                    throw new ValidationException($"Invalid status: '{status}'.");
-                statusValue = (int)parsedStatus;
-            }
-        }
-        else
+        if (!isAdmin)
         {
             // quien no es admin siempre recibe solo Approved, sin importar el status que mande (ignoralo)
-            statusValue = (int)WineryStatus.Approved;
+            return (int)WineryStatus.Approved;
         }
 
-        var wineries = await wineryRepository.GetAllAsync(pageNumber, pageSize, statusValue, locationId, ct);
-        return wineries.ToResponseDtoList();
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<WineryStatus>(status, ignoreCase: true, out var parsedStatus))
+            throw new ValidationException($"Invalid status: '{status}'.");
+
+        return (int)parsedStatus;
     }
 
     public async Task<WineryResponseDto> CreateAsync(CreateWineryRequestDto dto, CancellationToken ct = default)

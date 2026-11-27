@@ -87,4 +87,32 @@ describe('LoginPage (/login)', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
   });
+
+  it.each([
+    { from: '/bodega/dashboard', expected: '/admin', label: 'con from="/bodega/dashboard" va a "/admin"' },
+    { from: '/admin/vinos', expected: '/admin/vinos', label: 'con from="/admin/vinos" va a "/admin/vinos"' },
+    { from: undefined, expected: '/admin', label: 'sin from va a "/admin"' },
+  ])('admin $label', async ({ from, expected }) => {
+    mockLogin.mockResolvedValueOnce({ id: 99, role: 'Admin' });
+    render(
+      <MemoryRouter
+        initialEntries={[from ? { pathname: '/login', state: { from } } : '/login']}
+      >
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Correo electrónico/i), {
+      target: { value: 'admin@ayvino.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: 'Admin123!' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(expected, { replace: true });
+    });
+  });
 });

@@ -102,6 +102,7 @@ export default function AdminCitiesPage() {
 
   const {
     items: cities,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -295,6 +296,7 @@ export default function AdminCitiesPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={cities.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

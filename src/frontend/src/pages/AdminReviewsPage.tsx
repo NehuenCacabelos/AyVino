@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Star, Trash2, X, MessageSquare } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Eye, Star, Trash2, X, MessageSquare } from 'lucide-react';
 import {
   getAdminReviews,
   deleteReviewByAdmin,
@@ -73,6 +73,7 @@ export default function AdminReviewsPage() {
 
   const {
     items: reviews,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -219,7 +220,19 @@ export default function AdminReviewsPage() {
         header: 'Acciones',
         className: 'text-right',
         render: (row) => (
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-1.5">
+            <Link
+              to={
+                row.year != null
+                  ? `/vinos/${row.wineId}?cosecha=${row.year}`
+                  : `/vinos/${row.wineId}`
+              }
+              title="Ver vino"
+              aria-label="Ver vino"
+              className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors inline-flex items-center justify-center"
+            >
+              <Eye className="w-4 h-4" />
+            </Link>
             <button
               type="button"
               title="Eliminar reseña"
@@ -330,6 +343,7 @@ export default function AdminReviewsPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={reviews.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />

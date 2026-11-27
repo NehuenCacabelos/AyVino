@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Grapes.DTOs;
@@ -23,10 +24,10 @@ public static class GrapeEndpoints
         .WithSummary("Creates a new grape.")
         .WithAudit(AuditAction.GrapeCreated, "Grape", entityIdResolver: (ctx, res) => (res as Created<GrapeResponseDto>)?.Value?.Id, details: (ctx, res) => ctx.Arguments.OfType<CreateGrapeRequestDto>().FirstOrDefault()?.Name);
 
-        group.MapGet("/", async (IGrapeService service, int pageNumber = 1, int pageSize = 10, string? colorType = null, CancellationToken ct = default) =>
+        group.MapGet("/", async (HttpResponse response, IGrapeService service, int pageNumber = 1, int pageSize = 10, string? colorType = null, CancellationToken ct = default) =>
         {
-            var grapes = await service.GetAllAsync(pageNumber, pageSize, colorType, ct);
-            return Results.Ok(grapes);
+            var result = await service.GetAllPagedAsync(pageNumber, pageSize, colorType, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
         }).WithName("GetGrapes").WithSummary("Lists paginated grapes, with optional filter by color type.");
 
         group.MapGet("/{id:int}", async (int id, IGrapeService service, CancellationToken ct) =>

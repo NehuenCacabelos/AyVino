@@ -20,16 +20,7 @@ public class PairingRepository(IDbConnectionFactory connectionFactory) : IPairin
 
     public async Task<IEnumerable<Pairing>> GetAllAsync(int pageNumber, int pageSize, int? category = null, CancellationToken ct = default)
     {
-        var conditions = new List<string>();
-        var parameters = new DynamicParameters();
-
-        if (category.HasValue)
-        {
-            conditions.Add("category = @Category");
-            parameters.Add("Category", category.Value);
-        }
-
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var (whereClause, parameters) = BuildFilter(category);
         var offset = (pageNumber - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
@@ -45,6 +36,36 @@ public class PairingRepository(IDbConnectionFactory connectionFactory) : IPairin
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<Pairing>(
             new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountAsync(int? category = null, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildFilter(category);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM pairings
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildFilter(int? category)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (category.HasValue)
+        {
+            conditions.Add("category = @Category");
+            parameters.Add("Category", category.Value);
+        }
+
+        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        return (whereClause, parameters);
     }
 
     public async Task<int> CreateAsync(Pairing pairing, CancellationToken ct = default)

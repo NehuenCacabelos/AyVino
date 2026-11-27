@@ -1,20 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminVintagesPage from '@/pages/AdminVintagesPage';
 import * as adminVintagesApi from '@/features/admin/api/adminVintagesApi';
-import * as grapeApi from '@/features/winery/api/grapeApi';
 import type { AdminWineVintageListItem } from '@/features/admin/types/adminVintages';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminVintagesApi', () => ({
   getAdminVintages: vi.fn(),
   changeVintageStatus: vi.fn(),
   deleteVintage: vi.fn(),
-  getVintageDetail: vi.fn(),
-}));
-
-vi.mock('@/features/winery/api/grapeApi', () => ({
-  getGrapes: vi.fn(),
 }));
 
 const mockToast = {
@@ -66,17 +65,16 @@ describe('AdminVintagesPage Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(grapeApi.getGrapes).mockResolvedValue([
-      { id: 1, name: 'Malbec', colorType: 'Red' },
-      { id: 2, name: 'Chardonnay', colorType: 'White' },
-    ]);
   });
 
-  it('la carga inicial pide status Pending por defecto y renderiza las cosechas', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+  it('la carga inicial abre en Todas sin filtro de status por defecto y renderiza las cosechas', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
         <AdminVintagesPage />
       </MemoryRouter>
     );
@@ -85,8 +83,8 @@ describe('AdminVintagesPage Component', () => {
       expect(adminVintagesApi.getAdminVintages).toHaveBeenCalledWith({
         pageNumber: 1,
         pageSize: 10,
-        status: 'Pending',
       });
+      expect(screen.getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByText('Malbec Reserva')).toBeInTheDocument();
       expect(screen.getByText('Chardonnay Estate')).toBeInTheDocument();
       expect(screen.getByText('Bodega del Fin del Mundo')).toBeInTheDocument();
@@ -96,8 +94,87 @@ describe('AdminVintagesPage Component', () => {
     });
   });
 
+  it('entrar con URL filtrada (?status=Pending&search=malbec) activa filtros y envía params', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas?status=Pending&search=malbec']}>
+        <AdminVintagesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Pending',
+        search: 'malbec',
+      });
+    });
+
+    expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
+    expect((screen.getByLabelText('Buscar cosecha') as HTMLInputElement).value).toBe('malbec');
+  });
+
+  it('aplicar filtros en cosechas actualiza la URL y limpiar filtros los restablece', async () => {
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+        <LocationProbe />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rechazadas' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Rejected');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Rejected',
+      });
+    });
+
+    fireEvent.change(screen.getByLabelText('Buscar cosecha'), { target: { value: 'Rutini' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?status=Rejected&search=Rutini');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Rejected',
+        search: 'Rutini',
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminVintagesApi.getAdminVintages).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+      });
+    });
+  });
+
   it('Aprobar llama changeVintageStatus(wineId, vintageId, "Approved") usando el wineId de la fila', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     vi.mocked(adminVintagesApi.changeVintageStatus).mockResolvedValue(undefined);
 
     render(
@@ -120,7 +197,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deleteVintage', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     vi.mocked(adminVintagesApi.deleteVintage).mockResolvedValue(undefined);
 
     render(
@@ -152,7 +232,10 @@ describe('AdminVintagesPage Component', () => {
   });
 
   it('eliminar cosecha con conflicto 409 muestra el mensaje retornado por el servidor en toast', async () => {
-    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue(mockVintages);
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: mockVintages,
+      totalCount: mockVintages.length,
+    });
     const serverMessage = 'No se puede eliminar la cosecha porque tiene historial de usuarios (reseñas: 2, cava: 1). Podés rechazarla en lugar de eliminarla para preservar el historial.';
     const conflictError = {
       isAxiosError: true,
@@ -186,5 +269,45 @@ describe('AdminVintagesPage Component', () => {
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalledWith(serverMessage);
     });
+  });
+
+  it('"Ver detalle" navega a /vinos/:wineId?cosecha=:year y omite parámetro si year es null', async () => {
+    const rowsWithNullYear: AdminWineVintageListItem[] = [
+      ...mockVintages,
+      {
+        vintageId: 103,
+        wineId: 77,
+        wineName: 'Espumante NV',
+        wineType: 'Sparkling',
+        wineryId: null,
+        wineryName: null,
+        year: null,
+        alcoholContent: 12.0,
+        approvalStatus: 'Approved',
+        uploadedByUserId: 5,
+        uploadedByUsername: 'ana',
+        registerDate: '2026-01-21T12:00:00Z',
+      },
+    ];
+
+    vi.mocked(adminVintagesApi.getAdminVintages).mockResolvedValue({
+      items: rowsWithNullYear,
+      totalCount: rowsWithNullYear.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/cosechas']}>
+        <AdminVintagesPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Espumante NV')).toBeInTheDocument();
+    });
+
+    const detailLinks = screen.getAllByRole('link', { name: 'Ver detalle' });
+    expect(detailLinks[0]).toHaveAttribute('href', '/vinos/42?cosecha=2022');
+    expect(detailLinks[1]).toHaveAttribute('href', '/vinos/43?cosecha=2023');
+    expect(detailLinks[2]).toHaveAttribute('href', '/vinos/77');
   });
 });

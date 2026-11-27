@@ -1,28 +1,27 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Eye, Pen, Trash2, X, AlertTriangle, Wine, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, Pen, Trash2, X, AlertTriangle, GitMerge, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   getAdminWines,
-  updateWine,
   deleteWine,
   mergeWines,
 } from '../features/admin/api/adminWinesApi';
-import { getWineVintages } from '../features/winery/api/wineApi';
 import { getWineries } from '../features/winery/api/wineryApi';
 import type { WineResponseDto } from '../features/admin/types/adminWines';
-import type { WineVintageResponseDto } from '../features/winery/types/wine';
 import type { WineryResponseDto } from '../features/winery/types/winery';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
-  StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
+import type { Column, FilterSelectConfig } from '../features/admin';
 import { getWineTypeLabel } from '../features/admin/utils/wineTypeLabels';
 import { cn } from '../lib/utils';
 
@@ -34,13 +33,21 @@ const WINE_TYPES = [
   { value: 'Orange', label: 'Naranjo' },
 ];
 
+const WINE_ORIGINS = [
+  { value: 'community', label: 'Comunitario' },
+  { value: 'official', label: 'Oficial' },
+];
+
 export default function AdminWinesPage() {
   const toast = useAdminToast();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Filtros de búsqueda
-  const [searchName, setSearchName] = useState('');
+  // Bodega permanece en estado local (no integra el contrato URL de Bloque 0)
   const [searchWinery, setSearchWinery] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+
+  const searchName = filters.search?.trim() || undefined;
+  const selectedType = filters.type || undefined;
+  const selectedOrigin = filters.origin || undefined;
 
   // Bodegas aprobadas para el selector de edición
   const [approvedWineries, setApprovedWineries] = useState<WineryResponseDto[]>([]);
@@ -67,16 +74,18 @@ export default function AdminWinesPage() {
       return getAdminWines({
         pageNumber: page,
         pageSize,
-        name: searchName || undefined,
-        winery: searchWinery || undefined,
-        wineType: selectedType || undefined,
+        name: searchName,
+        winery: searchWinery.trim() || undefined,
+        wineType: selectedType,
+        ...(selectedOrigin ? { origin: selectedOrigin } : {}),
       });
     },
-    [searchName, searchWinery, selectedType]
+    [searchName, searchWinery, selectedType, selectedOrigin]
   );
 
   const {
     items: wines,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -84,101 +93,52 @@ export default function AdminWinesPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<WineResponseDto>(fetcher, [
-    searchName,
-    searchWinery,
-    selectedType,
-  ]);
-
-  // Modal de Detalle (Cosechas)
-  const [detailWine, setDetailWine] = useState<WineResponseDto | null>(null);
-  const [detailVintages, setDetailVintages] = useState<WineVintageResponseDto[]>([]);
-  const [isLoadingVintages, setIsLoadingVintages] = useState(false);
-
-  const handleOpenDetail = async (wine: WineResponseDto) => {
-    setDetailWine(wine);
-    setIsLoadingVintages(true);
-    try {
-      const vintages = await getWineVintages(wine.id);
-      setDetailVintages(vintages);
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err));
-      setDetailVintages([]);
-    } finally {
-      setIsLoadingVintages(false);
+  } = usePagedList<WineResponseDto>(
+    fetcher,
+    [searchName, searchWinery, selectedType, selectedOrigin],
+    {
+      page: filters.page,
+      onPageChange: setUrlPage,
     }
-  };
+  );
 
-  // Modal de Edición
-  const [editingWine, setEditingWine] = useState<WineResponseDto | null>(null);
-  const [editForm, setEditForm] = useState<{
-    name: string;
-    wineType: string;
-    description: string;
-    wineryId: number | null;
-    wineryNameText: string;
-  }>({
-    name: '',
-    wineType: 'Red',
-    description: '',
-    wineryId: null,
-    wineryNameText: '',
-  });
-  const [editError, setEditError] = useState<string | null>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const handleSearchNameChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
 
-  const handleOpenEdit = (wine: WineResponseDto) => {
-    setEditingWine(wine);
-    setEditForm({
-      name: wine.name,
-      wineType: wine.wineType,
-      description: wine.description ?? '',
-      wineryId: wine.wineryId,
-      wineryNameText: wine.wineryNameText ?? '',
-    });
-    setEditError(null);
-  };
+  const handleClearAllFilters = useCallback(() => {
+    setSearchWinery('');
+    clearFilters();
+  }, [clearFilters]);
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingWine) return;
+  const wineSelects = useMemo<FilterSelectConfig[]>(
+    () => [
+      {
+        id: 'wine-type-filter',
+        label: 'Tipo de vino',
+        ariaLabel: 'Filtrar por tipo',
+        value: selectedType ?? '',
+        placeholder: 'Todos los tipos',
+        options: WINE_TYPES,
+        onChange: (value) => setFilter('type', value || undefined),
+      },
+      {
+        id: 'wine-origin-filter',
+        label: 'Origen',
+        ariaLabel: 'Filtrar por origen',
+        value: selectedOrigin ?? '',
+        placeholder: 'Todos los orígenes',
+        options: WINE_ORIGINS,
+        onChange: (value) => setFilter('origin', value || undefined),
+      },
+    ],
+    [selectedType, selectedOrigin, setFilter]
+  );
 
-    if (!editForm.name.trim()) {
-      setEditError('El nombre del vino es obligatorio.');
-      return;
-    }
-    if (editForm.name.length > 150) {
-      setEditError('El nombre no puede superar los 150 caracteres.');
-      return;
-    }
-    if (editForm.description.length > 1000) {
-      setEditError('La descripción no puede superar los 1000 caracteres.');
-      return;
-    }
-    if (editForm.wineryNameText.length > 150) {
-      setEditError('El nombre de la bodega no puede superar los 150 caracteres.');
-      return;
-    }
-
-    setIsSavingEdit(true);
-    setEditError(null);
-    try {
-      await updateWine(editingWine.id, {
-        name: editForm.name.trim(),
-        wineType: editForm.wineType,
-        description: editForm.description.trim() || null,
-        wineryId: editForm.wineryId,
-        wineryNameText: editForm.wineryNameText.trim() || null,
-      });
-      toast.success('Vino actualizado exitosamente.');
-      setEditingWine(null);
-      await reload();
-    } catch (err: unknown) {
-      setEditError(getApiErrorMessage(err));
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
+  const hasActiveFilters = Boolean(searchName || selectedType || selectedOrigin || searchWinery.trim());
 
   // Diálogo de Eliminación
   const [deletingWine, setDeletingWine] = useState<WineResponseDto | null>(null);
@@ -230,7 +190,7 @@ export default function AdminWinesPage() {
     setIsSearchingMerge(true);
     setMergeError(null);
     try {
-      const results = await getAdminWines({
+      const { items: results } = await getAdminWines({
         name: mergeSearchQuery.trim(),
         pageSize: 20,
       });
@@ -343,25 +303,25 @@ export default function AdminWinesPage() {
           return (
             <div className="flex items-center justify-end gap-1.5">
               {/* Detalle */}
-              <button
-                type="button"
-                title="Ver detalle y cosechas"
-                onClick={() => void handleOpenDetail(row)}
-                className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors cursor-pointer"
+              <Link
+                to={`/vinos/${row.id}`}
+                title="Ver detalle"
+                aria-label="Ver detalle"
+                className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors inline-flex items-center justify-center"
               >
                 <Eye className="w-4 h-4" />
-              </button>
+              </Link>
 
               {/* Editar (oculto si ya es duplicado) */}
               {!isDuplicate && (
-                <button
-                  type="button"
+                <Link
+                  to={`/admin/vinos/${row.id}`}
                   title="Editar vino"
-                  onClick={() => handleOpenEdit(row)}
-                  className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors cursor-pointer"
+                  aria-label="Editar vino"
+                  className="p-1.5 rounded-lg border border-white/10 bg-zinc-800/60 text-neutral-300 hover:text-white hover:bg-zinc-700 transition-colors inline-flex items-center justify-center"
                 >
                   <Pen className="w-4 h-4" />
-                </button>
+                </Link>
               )}
 
               {/* Fusionar (oculto si ya es duplicado) */}
@@ -393,7 +353,6 @@ export default function AdminWinesPage() {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [wineriesMap]
   );
 
@@ -405,69 +364,34 @@ export default function AdminWinesPage() {
       />
 
       {/* Barra de Filtros */}
-      <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex flex-wrap gap-3">
-        {/* Nombre */}
-        <div className="flex-1 min-w-[180px] space-y-1">
-          <label
-            htmlFor="wine-name-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Buscar por nombre
-          </label>
-          <input
-            id="wine-name-filter"
-            aria-label="Buscar por nombre"
-            type="text"
-            placeholder="Ej: Malbec Reserva..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          />
-        </div>
-
-        {/* Tipo */}
-        <div className="w-40 space-y-1">
-          <label
-            htmlFor="wine-type-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Tipo de vino
-          </label>
-          <select
-            id="wine-type-filter"
-            aria-label="Filtrar por tipo"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          >
-            <option value="">Todos los tipos</option>
-            {WINE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Bodega */}
-        <div className="flex-1 min-w-[180px] space-y-1">
-          <label
-            htmlFor="wine-winery-filter"
-            className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-          >
-            Bodega
-          </label>
-          <input
-            id="wine-winery-filter"
-            aria-label="Filtrar por bodega"
-            type="text"
-            placeholder="Ej: Catena Zapata..."
-            value={searchWinery}
-            onChange={(e) => setSearchWinery(e.target.value)}
-            className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-          />
-        </div>
-      </div>
+      <AdminFilterBar
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchNameChange}
+        searchLabel="Buscar por nombre"
+        searchPlaceholder="Ej: Malbec Reserva..."
+        selects={wineSelects}
+        extraControls={
+          <div className="flex-1 min-w-[180px] space-y-1">
+            <label
+              htmlFor="wine-winery-filter"
+              className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
+            >
+              Bodega
+            </label>
+            <input
+              id="wine-winery-filter"
+              aria-label="Filtrar por bodega"
+              type="text"
+              placeholder="Ej: Catena Zapata..."
+              value={searchWinery}
+              onChange={(e) => setSearchWinery(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
+            />
+          </div>
+        }
+        onClearFilters={handleClearAllFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Error con reintento */}
       {error && <ErrorBanner message={error} onRetry={reload} />}
@@ -486,246 +410,10 @@ export default function AdminWinesPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={wines.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
-
-      {/* Modal de Detalle (Solo Lectura) */}
-      {detailWine && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="detail-modal-title"
-            className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl space-y-4"
-          >
-            <div className="flex items-start justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 id="detail-modal-title" className="text-base font-semibold text-zinc-100 flex items-center gap-2">
-                  <Wine className="w-5 h-5 text-rose-400" />
-                  <span>{detailWine.name}</span>
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Tipo: {getWineTypeLabel(detailWine.wineType)} · Origen: {detailWine.sourceType}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDetailWine(null)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                aria-label="Cerrar modal de detalle"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {detailWine.description && (
-              <p className="text-xs text-neutral-300 leading-relaxed bg-zinc-950 p-3 rounded-lg border border-white/5">
-                {detailWine.description}
-              </p>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-neutral-400">
-                Cosechas registradas ({detailVintages.length})
-              </h4>
-              {isLoadingVintages ? (
-                <div className="py-6 text-center text-xs text-neutral-500 animate-pulse">
-                  Cargando cosechas...
-                </div>
-              ) : detailVintages.length === 0 ? (
-                <div className="py-4 text-center text-xs text-neutral-500 italic">
-                  Este vino no tiene cosechas registradas.
-                </div>
-              ) : (
-                <div className="max-h-52 overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-lg bg-zinc-950">
-                  {detailVintages.map((v) => (
-                    <div key={v.id} className="p-3 flex items-center justify-between text-xs">
-                      <div className="space-y-0.5">
-                        <span className="font-semibold text-zinc-200">
-                          Año: {v.year ?? 'S/A'}
-                        </span>
-                        <div className="text-[11px] text-neutral-400">
-                          Graduación: {v.alcoholContent ? `${v.alcoholContent}%` : '—'}
-                        </div>
-                      </div>
-                      <StatusBadge status={v.approvalStatus} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setDetailWine(null)}
-                className="px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-200 hover:text-white transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Edición */}
-      {editingWine && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-modal-title"
-            className="w-full max-w-lg rounded-2xl bg-zinc-900 border border-white/10 p-6 shadow-2xl space-y-4"
-          >
-            <div className="flex items-start justify-between border-b border-white/10 pb-3">
-              <h3 id="edit-modal-title" className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                <Pen className="w-4 h-4 text-rose-400" />
-                <span>Editar Vino #{editingWine.id}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setEditingWine(null)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                aria-label="Cerrar modal de edición"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {editError && (
-              <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-900/60 text-xs text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{editError}</span>
-              </div>
-            )}
-
-            <form onSubmit={(e) => void handleSaveEdit(e)} className="space-y-4">
-              {/* Nombre */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="edit-wine-name"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-                >
-                  Nombre del vino *
-                </label>
-                <input
-                  id="edit-wine-name"
-                  type="text"
-                  required
-                  maxLength={150}
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-                />
-              </div>
-
-              {/* Tipo */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="edit-wine-type"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-                >
-                  Tipo de vino *
-                </label>
-                <select
-                  id="edit-wine-type"
-                  value={editForm.wineType}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, wineType: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-                >
-                  {WINE_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Selector de Bodega Oficial */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="edit-wine-winery"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-                >
-                  Bodega oficial
-                </label>
-                <select
-                  id="edit-wine-winery"
-                  value={editForm.wineryId ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : null;
-                    setEditForm((prev) => ({ ...prev, wineryId: val }));
-                  }}
-                  className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-                >
-                  <option value="">Sin bodega oficial vinculada</option>
-                  {approvedWineries.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Nombre de Bodega en Texto */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="edit-wine-winery-text"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-                >
-                  Nombre de bodega en texto
-                </label>
-                <input
-                  id="edit-wine-winery-text"
-                  type="text"
-                  maxLength={150}
-                  placeholder="Texto libre de bodega cuando no hay bodega oficial"
-                  value={editForm.wineryNameText}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, wineryNameText: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-                />
-              </div>
-
-              {/* Descripción */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="edit-wine-description"
-                  className="block text-[11px] font-mono uppercase tracking-wider text-neutral-400"
-                >
-                  Descripción
-                </label>
-                <textarea
-                  id="edit-wine-description"
-                  rows={3}
-                  maxLength={1000}
-                  value={editForm.description}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full p-3 rounded-lg bg-zinc-950 border border-white/10 text-xs text-neutral-200 focus:outline-none focus:border-rose-500/60"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  disabled={isSavingEdit}
-                  onClick={() => setEditingWine(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingEdit}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#6b1d28] hover:bg-[#852332] text-white transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Fusión de Vinos Duplicados */}
       {mergeDuplicateWine && (

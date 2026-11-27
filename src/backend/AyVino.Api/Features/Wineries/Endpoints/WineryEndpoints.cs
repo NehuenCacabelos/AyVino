@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Common.Security.Jwt;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
@@ -18,8 +19,11 @@ public static class WineryEndpoints
     {
         var group = app.MapGroup("/api/wineries").WithTags("Wineries");
 
-        group.MapGet("/", async (int pageNumber, int pageSize, string? status, int? locationId, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, status, locationId, user.GetActorOrNull(), ct)))
+        group.MapGet("/", async (HttpResponse response, int pageNumber, int pageSize, string? status, int? locationId, string? search, ClaimsPrincipal? user, IWineryService service, CancellationToken ct) =>
+        {
+            var result = await service.GetAllPagedAsync(pageNumber, pageSize, status, locationId, search, user.GetActorOrNull(), ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        })
             .WithName("GetAllWineries")
             .WithSummary("Lists wineries, paginated, with optional status and location filters.");
 

@@ -59,43 +59,51 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
     public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId = null, int? grapeId = null, int? yearFrom = null, int? yearTo = null, CancellationToken ct = default) =>
         GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, null, false, ct);
 
-    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default)
+    private const string GetAllFromAndWhereSql = """
+        FROM wines w
+        LEFT JOIN wineries wy ON wy.id = w.winery_id
+        WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
+          AND (@SourceType IS NULL OR w.source_type = @SourceType)
+          AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+          AND (
+            @IsAdmin = TRUE
+            OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+            OR (w.winery_id IS NULL OR wy.status = 2)
+          )
+          AND (
+            @IsAdmin = TRUE
+            OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+            OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
+          )
+          AND (@GrapeId IS NULL OR EXISTS (
+                SELECT 1 FROM wine_vintages wv
+                JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
+                WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId
+                  AND (@IsAdmin = TRUE
+                       OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                       OR wv.approval_status = 2)))
+          AND (
+                (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
+                    SELECT 1 FROM wine_vintages wv2
+                    WHERE wv2.wine_id = w.id
+                      AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
+                      AND (@YearTo IS NULL OR wv2.year <= @YearTo)
+                      AND (@IsAdmin = TRUE
+                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
+                           OR wv2.approval_status = 2)
+                )
+              )
+        """;
+
+    public Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+        GetAllAsync(pageNumber, pageSize, wineryId, grapeId, yearFrom, yearTo, currentUserId, isAdmin, null, ct);
+
+    public async Task<IEnumerable<Wine>> GetAllAsync(int pageNumber, int pageSize, int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, SourceType? origin, CancellationToken ct = default)
     {
-        const string sql = """
+        const string sql = $"""
             SELECT w.id, w.winery_id, w.winery_name_text, w.name, w.description, w.wine_type,
                    w.location_id, w.source_type, w.duplicate_of_wine_id, w.rating_sum, w.review_count
-            FROM wines w
-            LEFT JOIN wineries wy ON wy.id = w.winery_id
-            WHERE (@WineryId IS NULL OR w.winery_id = @WineryId)
-              AND (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
-              AND (
-                @IsAdmin = TRUE
-                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-                OR (w.winery_id IS NULL OR wy.status = 2)
-              )
-              AND (
-                @IsAdmin = TRUE
-                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status = 2)
-              )
-              AND (@GrapeId IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_vintages wv
-                    JOIN wine_grapes wg ON wg.wine_vintage_id = wv.id
-                    WHERE wv.wine_id = w.id AND wg.grape_id = @GrapeId
-                      AND (@IsAdmin = TRUE
-                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
-                           OR wv.approval_status = 2)))
-              AND (
-                    (@YearFrom IS NULL AND @YearTo IS NULL) OR EXISTS (
-                        SELECT 1 FROM wine_vintages wv2
-                        WHERE wv2.wine_id = w.id
-                          AND (@YearFrom IS NULL OR wv2.year >= @YearFrom)
-                          AND (@YearTo IS NULL OR wv2.year <= @YearTo)
-                          AND (@IsAdmin = TRUE
-                               OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv2.uploaded_by_user_id = @CurrentUserId))
-                               OR wv2.approval_status = 2)
-                    )
-                  )
+            {GetAllFromAndWhereSql}
             ORDER BY w.id
             OFFSET @Offset LIMIT @PageSize;
             """;
@@ -105,6 +113,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
             new CommandDefinition(sql, new
             {
                 WineryId = wineryId,
+                SourceType = origin.HasValue ? (int)origin.Value : (int?)null,
                 GrapeId = grapeId,
                 YearFrom = yearFrom,
                 YearTo = yearTo,
@@ -112,6 +121,29 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 IsAdmin = isAdmin,
                 Offset = offset,
                 PageSize = pageSize
+            }, cancellationToken: ct));
+    }
+
+    public Task<int> CountAsync(int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, CancellationToken ct = default) =>
+        CountAsync(wineryId, grapeId, yearFrom, yearTo, currentUserId, isAdmin, null, ct);
+
+    public async Task<int> CountAsync(int? wineryId, int? grapeId, int? yearFrom, int? yearTo, int? currentUserId, bool isAdmin, SourceType? origin, CancellationToken ct = default)
+    {
+        const string sql = $"""
+            SELECT COUNT(*)::int
+            {GetAllFromAndWhereSql};
+            """;
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, new
+            {
+                WineryId = wineryId,
+                SourceType = origin.HasValue ? (int)origin.Value : (int?)null,
+                GrapeId = grapeId,
+                YearFrom = yearFrom,
+                YearTo = yearTo,
+                CurrentUserId = currentUserId,
+                IsAdmin = isAdmin
             }, cancellationToken: ct));
     }
 
@@ -581,7 +613,122 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
     public const double SearchSimilarityThreshold = 0.3;
 
-    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
+    private const string SearchCatalogLocationJoinsSql = """
+        FROM wines w
+        LEFT JOIN wineries wy ON wy.id = w.winery_id
+        LEFT JOIN locations loc ON loc.id = w.location_id
+        LEFT JOIN cities c ON c.id = loc.city_id
+        LEFT JOIN states s ON s.id = c.state_id
+        LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
+        LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
+        LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+        """;
+
+    private const string SearchCatalogWhereSql = """
+        WHERE (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
+          AND (
+            @IsAdmin = TRUE
+            OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+            OR wy.status IS NULL
+            OR wy.status != 3
+          )
+          AND (
+            @IsAdmin = TRUE
+            OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
+            OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status != 3)
+            OR w.source_type = 1
+            OR w.winery_id IS NOT NULL
+          )
+        AND (@SearchKey IS NULL OR (
+            w.name_key LIKE @SearchKeyPattern
+            OR wy.name_key LIKE @SearchKeyPattern
+            OR w.winery_text_key LIKE @SearchKeyPattern
+            OR similarity(w.name_key, @SearchKey) > @Threshold
+            OR similarity(COALESCE(wy.name_key, w.winery_text_key, ''), @SearchKey) > @Threshold
+        ))
+        AND (@Name IS NULL
+            OR w.name ILIKE @NamePattern
+            OR w.name % @Name)
+        AND (@Winery IS NULL
+            OR wy.name ILIKE @WineryPattern
+            OR w.winery_name_text ILIKE @WineryPattern
+            OR wy.name % @Winery
+            OR w.winery_name_text % @Winery)
+        AND (@WineType IS NULL OR w.wine_type = @WineType)
+        AND (@GrapeId IS NULL OR EXISTS (
+                SELECT 1 FROM wine_vintages wv_g
+                JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
+                WHERE wv_g.wine_id = w.id
+                  AND wg.grape_id = @GrapeId
+                  AND (@IsAdmin = TRUE
+                       OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv_g.uploaded_by_user_id = @CurrentUserId))
+                       OR wv_g.approval_status != 3)
+            ))
+        AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
+        AND (@WineryId IS NULL OR w.winery_id = @WineryId)
+        AND (@SourceType IS NULL OR w.source_type = @SourceType)
+        AND (@Year IS NULL OR EXISTS (
+                SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
+                AND (@IsAdmin = TRUE
+                     OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
+                     OR wv.approval_status = 2
+                     OR (@HasSearchTerm = TRUE AND w.source_type = 1))
+            ))
+        """;
+
+    private static DynamicParameters? BuildCatalogSearchParameters(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        SourceType? origin,
+        out bool hasOtherSearchTerms)
+    {
+        string? searchKey = null;
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            searchKey = WineLabelNormalizer.ToSearchKey(search);
+            if (searchKey.Length < 2)
+            {
+                hasOtherSearchTerms = false;
+                return null;
+            }
+        }
+
+        var cleanName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        var cleanWinery = string.IsNullOrWhiteSpace(winery) ? null : winery.Trim();
+        hasOtherSearchTerms = cleanName is not null || cleanWinery is not null;
+        var hasSearchTerm = searchKey is not null || hasOtherSearchTerms;
+
+        var parameters = new DynamicParameters();
+        parameters.Add("SearchKey", searchKey);
+        parameters.Add("SearchKeyPrefix", searchKey is null ? null : $"{searchKey}%");
+        parameters.Add("SearchKeyPattern", searchKey is null ? null : $"%{searchKey}%");
+        parameters.Add("Threshold", SearchSimilarityThreshold);
+        parameters.Add("Name", cleanName);
+        parameters.Add("NamePattern", cleanName is null ? null : $"%{cleanName}%");
+        parameters.Add("Winery", cleanWinery);
+        parameters.Add("WineryPattern", cleanWinery is null ? null : $"%{cleanWinery}%");
+        parameters.Add("WineType", wineType.HasValue ? (int)wineType.Value : (int?)null);
+        parameters.Add("Year", year);
+        parameters.Add("GrapeId", grapeId);
+        parameters.Add("StateId", stateId);
+        parameters.Add("WineryId", wineryId);
+        parameters.Add("SourceType", origin.HasValue ? (int)origin.Value : (int?)null);
+        parameters.Add("CurrentUserId", currentUserId);
+        parameters.Add("IsAdmin", isAdmin);
+        parameters.Add("HasSearchTerm", hasSearchTerm);
+        parameters.Add("HasOtherSearchTerms", hasOtherSearchTerms);
+        return parameters;
+    }
+
+    public Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
         string? search,
         string? name,
         string? winery,
@@ -594,24 +741,36 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
         int? grapeId = null,
         int? stateId = null,
         int? wineryId = null,
+        CancellationToken ct = default) =>
+        SearchCatalogAsync(search, name, winery, year, wineType, pageNumber, pageSize, currentUserId, isAdmin, grapeId, stateId, wineryId, null, ct);
+
+    public async Task<IEnumerable<CatalogWineItemDto>> SearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int pageNumber,
+        int pageSize,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        SourceType? origin,
         CancellationToken ct = default)
     {
-        string? searchKey = null;
-        if (!string.IsNullOrWhiteSpace(search))
+        var parameters = BuildCatalogSearchParameters(
+            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, origin, out _);
+        if (parameters is null)
         {
-            searchKey = WineLabelNormalizer.ToSearchKey(search);
-            if (searchKey.Length < 2)
-            {
-                return [];
-            }
+            return [];
         }
 
-        var cleanName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
-        var cleanWinery = string.IsNullOrWhiteSpace(winery) ? null : winery.Trim();
-        var hasOtherSearchTerms = cleanName is not null || cleanWinery is not null;
-        var hasSearchTerm = searchKey is not null || hasOtherSearchTerms;
+        parameters.Add("Offset", (pageNumber - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
-        const string sql = """
+        const string sql = $"""
             SELECT
                 w.id AS Id,
                 w.winery_id AS WineryId,
@@ -653,14 +812,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 END AS AverageRating,
                 w.review_count AS ReviewCount,
                 wy.logo_image_id AS WineryLogoImageId
-            FROM wines w
-            LEFT JOIN wineries wy ON wy.id = w.winery_id
-            LEFT JOIN locations loc ON loc.id = w.location_id
-            LEFT JOIN cities c ON c.id = loc.city_id
-            LEFT JOIN states s ON s.id = c.state_id
-            LEFT JOIN locations wy_loc ON wy_loc.id = wy.location_id
-            LEFT JOIN cities wy_c ON wy_c.id = wy_loc.city_id
-            LEFT JOIN states wy_s ON wy_s.id = wy_c.state_id
+            {SearchCatalogLocationJoinsSql}
             LEFT JOIN LATERAL (
                 SELECT wv.year, wv.image_id
                 FROM wine_vintages wv
@@ -694,54 +846,7 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
                 ORDER BY wg.percentage DESC NULLS LAST, g.name ASC
                 LIMIT 1
             ) main_grape ON TRUE
-            WHERE (@IsAdmin = TRUE OR w.duplicate_of_wine_id IS NULL)
-              AND (
-                @IsAdmin = TRUE
-                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-                OR wy.status IS NULL
-                OR wy.status != 3
-              )
-              AND (
-                @IsAdmin = TRUE
-                OR (@CurrentUserId IS NOT NULL AND wy.user_id = @CurrentUserId)
-                OR EXISTS (SELECT 1 FROM wine_vintages wv_pub WHERE wv_pub.wine_id = w.id AND wv_pub.approval_status != 3)
-                OR w.source_type = 1
-                OR w.winery_id IS NOT NULL
-              )
-            AND (@SearchKey IS NULL OR (
-                w.name_key LIKE @SearchKeyPattern
-                OR wy.name_key LIKE @SearchKeyPattern
-                OR w.winery_text_key LIKE @SearchKeyPattern
-                OR similarity(w.name_key, @SearchKey) > @Threshold
-                OR similarity(COALESCE(wy.name_key, w.winery_text_key, ''), @SearchKey) > @Threshold
-            ))
-            AND (@Name IS NULL
-                OR w.name ILIKE @NamePattern
-                OR w.name % @Name)
-            AND (@Winery IS NULL
-                OR wy.name ILIKE @WineryPattern
-                OR w.winery_name_text ILIKE @WineryPattern
-                OR wy.name % @Winery
-                OR w.winery_name_text % @Winery)
-            AND (@WineType IS NULL OR w.wine_type = @WineType)
-            AND (@GrapeId IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_vintages wv_g
-                    JOIN wine_grapes wg ON wg.wine_vintage_id = wv_g.id
-                    WHERE wv_g.wine_id = w.id
-                      AND wg.grape_id = @GrapeId
-                      AND (@IsAdmin = TRUE
-                           OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv_g.uploaded_by_user_id = @CurrentUserId))
-                           OR wv_g.approval_status != 3)
-                ))
-            AND (@StateId IS NULL OR COALESCE(s.id, wy_s.id) = @StateId)
-            AND (@WineryId IS NULL OR w.winery_id = @WineryId)
-            AND (@Year IS NULL OR EXISTS (
-                    SELECT 1 FROM wine_vintages wv WHERE wv.wine_id = w.id AND wv.year = @Year
-                    AND (@IsAdmin = TRUE
-                         OR (@CurrentUserId IS NOT NULL AND (wy.user_id = @CurrentUserId OR wv.uploaded_by_user_id = @CurrentUserId))
-                         OR wv.approval_status = 2
-                         OR (@HasSearchTerm = TRUE AND w.source_type = 1))
-                ))
+            {SearchCatalogWhereSql}
             ORDER BY
                 CASE WHEN @SearchKey IS NOT NULL THEN
                     CASE
@@ -784,28 +889,53 @@ public class WineRepository(IDbConnectionFactory connectionFactory) : IWineRepos
 
         await using var connection = await connectionFactory.CreateConnectionAsync(ct);
         return await connection.QueryAsync<CatalogWineItemDto>(
-            new CommandDefinition(sql, new
-            {
-                SearchKey = searchKey,
-                SearchKeyPrefix = searchKey is null ? null : $"{searchKey}%",
-                SearchKeyPattern = searchKey is null ? null : $"%{searchKey}%",
-                Threshold = SearchSimilarityThreshold,
-                Name = cleanName,
-                NamePattern = cleanName is null ? null : $"%{cleanName}%",
-                Winery = cleanWinery,
-                WineryPattern = cleanWinery is null ? null : $"%{cleanWinery}%",
-                WineType = wineType.HasValue ? (int)wineType.Value : (int?)null,
-                Year = year,
-                GrapeId = grapeId,
-                StateId = stateId,
-                WineryId = wineryId,
-                CurrentUserId = currentUserId,
-                IsAdmin = isAdmin,
-                HasSearchTerm = hasSearchTerm,
-                HasOtherSearchTerms = hasOtherSearchTerms,
-                Offset = (pageNumber - 1) * pageSize,
-                PageSize = pageSize
-            }, cancellationToken: ct));
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public Task<int> CountSearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId = null,
+        int? stateId = null,
+        int? wineryId = null,
+        CancellationToken ct = default) =>
+        CountSearchCatalogAsync(search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, null, ct);
+
+    public async Task<int> CountSearchCatalogAsync(
+        string? search,
+        string? name,
+        string? winery,
+        int? year,
+        WineType? wineType,
+        int? currentUserId,
+        bool isAdmin,
+        int? grapeId,
+        int? stateId,
+        int? wineryId,
+        SourceType? origin,
+        CancellationToken ct = default)
+    {
+        var parameters = BuildCatalogSearchParameters(
+            search, name, winery, year, wineType, currentUserId, isAdmin, grapeId, stateId, wineryId, origin, out _);
+        if (parameters is null)
+        {
+            return 0;
+        }
+
+        const string sql = $"""
+            SELECT COUNT(*)::int
+            {SearchCatalogLocationJoinsSql}
+            {SearchCatalogWhereSql};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
     }
 
     public async Task<MergeWinesResultDto> MergeWinesAsync(int targetId, int duplicateId, CancellationToken ct = default)

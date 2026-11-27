@@ -49,6 +49,41 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
 
     public async Task<IEnumerable<City>> GetAllAsync(int pageNumber, int pageSize, int? stateId, int? status, CancellationToken ct = default)
     {
+        var (whereClause, parameters) = BuildFilter(stateId, status);
+        var offset = (pageNumber - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var sql = $"""
+            SELECT {SelectColumns}
+            FROM Cities
+            {whereClause}
+            ORDER BY Name ASC
+            OFFSET @Offset LIMIT @PageSize;
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.QueryAsync<City>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    public async Task<int> CountAsync(int? stateId, int? status, CancellationToken ct = default)
+    {
+        var (whereClause, parameters) = BuildFilter(stateId, status);
+
+        var sql = $"""
+            SELECT COUNT(*)::int
+            FROM Cities
+            {whereClause};
+            """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
+        return await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(sql, parameters, cancellationToken: ct));
+    }
+
+    private static (string WhereClause, DynamicParameters Parameters) BuildFilter(int? stateId, int? status)
+    {
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
 
@@ -65,21 +100,7 @@ public class CityRepository(IDbConnectionFactory connectionFactory) : ICityRepos
         }
 
         var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
-        var offset = (pageNumber - 1) * pageSize;
-        parameters.Add("Offset", offset);
-        parameters.Add("PageSize", pageSize);
-
-        var sql = $"""
-            SELECT {SelectColumns}
-            FROM Cities
-            {whereClause}
-            ORDER BY Name ASC
-            OFFSET @Offset LIMIT @PageSize;
-            """;
-
-        await using var connection = await connectionFactory.CreateConnectionAsync(ct);
-        return await connection.QueryAsync<City>(
-            new CommandDefinition(sql, parameters, cancellationToken: ct));
+        return (whereClause, parameters);
     }
 
     public async Task<int> CreateAsync(City city, CancellationToken ct = default)

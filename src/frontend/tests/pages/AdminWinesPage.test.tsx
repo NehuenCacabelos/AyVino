@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminWinesPage from '@/pages/AdminWinesPage';
 import * as adminWinesApi from '@/features/admin/api/adminWinesApi';
 import * as wineApi from '@/features/winery/api/wineApi';
@@ -8,7 +8,11 @@ import * as wineryApi from '@/features/winery/api/wineryApi';
 import { AdminToastProvider } from '@/features/admin';
 import type { WineResponseDto } from '@/features/admin/types/adminWines';
 import type { WineryResponseDto } from '@/features/winery/types/winery';
-import type { WineVintageResponseDto } from '@/features/winery/types/wine';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
 
 vi.mock('@/features/admin/api/adminWinesApi', () => ({
   getAdminWines: vi.fn(),
@@ -64,7 +68,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('la carga inicial pide vinos y los renderiza con sus badges', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -82,19 +89,23 @@ describe('AdminWinesPage Component', () => {
         winery: undefined,
         wineType: undefined,
       });
-      expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Catena Zapata')).toBeInTheDocument();
-      expect(screen.getByText('Oficial')).toBeInTheDocument();
-      expect(screen.getByText('Torrontés Riojano')).toBeInTheDocument();
-      expect(screen.getByText('Bodega Artesanal Don Carlos')).toBeInTheDocument();
-      expect(screen.getByText('Comunitario')).toBeInTheDocument();
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Gran Malbec Reserva')).toBeInTheDocument();
+      expect(within(table).getByText('Bodega Catena Zapata')).toBeInTheDocument();
+      expect(within(table).getByText('Oficial')).toBeInTheDocument();
+      expect(within(table).getByText('Torrontés Riojano')).toBeInTheDocument();
+      expect(within(table).getByText('Bodega Artesanal Don Carlos')).toBeInTheDocument();
+      expect(within(table).getByText('Comunitario')).toBeInTheDocument();
       expect(screen.getByText('Duplicado de #12')).toBeInTheDocument();
       expect(screen.getByText('Sin reseñas')).toBeInTheDocument();
     });
   });
 
   it('los filtros envían name, winery y wineType a getAdminWines', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -128,11 +139,10 @@ describe('AdminWinesPage Component', () => {
     });
   });
 
-  it('editar abre modal y envía el cuerpo correcto a updateWine', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
-    vi.mocked(adminWinesApi.updateWine).mockResolvedValue({
-      ...mockWines[0],
-      name: 'Gran Malbec Reserva Editado',
+  it('editar navega a /admin/vinos/:id sin abrir modal ni llamar a updateWine', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
     });
 
     render(
@@ -147,32 +157,17 @@ describe('AdminWinesPage Component', () => {
       expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
     });
 
-    const editBtns = screen.getAllByTitle(/editar vino/i);
-    fireEvent.click(editBtns[0]);
-
-    // Modal abierto
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(/editar vino #10/i)).toBeInTheDocument();
-
-    const nameField = screen.getByLabelText(/nombre del vino \*/i);
-    fireEvent.change(nameField, { target: { value: 'Gran Malbec Reserva Editado' } });
-
-    const saveBtn = screen.getByRole('button', { name: /guardar cambios/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(adminWinesApi.updateWine).toHaveBeenCalledWith(10, {
-        name: 'Gran Malbec Reserva Editado',
-        wineType: 'Red',
-        description: 'Notas a ciruela y roble francés',
-        wineryId: 1,
-        wineryNameText: null,
-      });
-    });
+    const editLinks = screen.getAllByRole('link', { name: 'Editar vino' });
+    expect(editLinks).toHaveLength(1); // El vino #20 duplicado oculta la acción editar
+    expect(editLinks[0]).toHaveAttribute('href', '/admin/vinos/10');
+    expect(adminWinesApi.updateWine).not.toHaveBeenCalled();
   });
 
   it('eliminar exige confirmación en ConfirmDialog y llama a deleteWine', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     vi.mocked(adminWinesApi.deleteWine).mockResolvedValue(undefined);
 
     render(
@@ -203,7 +198,10 @@ describe('AdminWinesPage Component', () => {
   });
 
   it('eliminar vino con conflicto 409 muestra el mensaje retornado por el servidor', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
     const serverMessage = 'No se puede eliminar el vino porque tiene historial de usuarios (reseñas: 3, marcas: 5, cava: 1). Si es un duplicado, usá la fusión.';
     const conflictError = {
       isAxiosError: true,
@@ -241,17 +239,11 @@ describe('AdminWinesPage Component', () => {
     });
   });
 
-  it('ver detalle llama a getWineVintages y muestra el modal con cosechas', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
-    vi.mocked(wineApi.getWineVintages).mockResolvedValue([
-      {
-        id: 101,
-        wineId: 10,
-        year: 2020,
-        alcoholContent: 14.5,
-        approvalStatus: 'Approved',
-      } as unknown as WineVintageResponseDto,
-    ]);
+  it('ver detalle navega a /vinos/:id sin llamar a getWineVintages ni abrir modal', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -265,18 +257,17 @@ describe('AdminWinesPage Component', () => {
       expect(screen.getByText('Gran Malbec Reserva')).toBeInTheDocument();
     });
 
-    const detailBtns = screen.getAllByTitle(/ver detalle y cosechas/i);
-    fireEvent.click(detailBtns[0]);
-
-    await waitFor(() => {
-      expect(wineApi.getWineVintages).toHaveBeenCalledWith(10);
-      expect(screen.getByText('Año: 2020')).toBeInTheDocument();
-      expect(screen.getByText('Graduación: 14.5%')).toBeInTheDocument();
-    });
+    const detailLinks = screen.getAllByRole('link', { name: 'Ver detalle' });
+    expect(detailLinks[0]).toHaveAttribute('href', '/vinos/10');
+    expect(detailLinks[1]).toHaveAttribute('href', '/vinos/20');
+    expect(wineApi.getWineVintages).not.toHaveBeenCalled();
   });
 
   it('un vino duplicado no muestra el botón de fusionar', async () => {
-    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue(mockWines);
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/vinos']}>
@@ -299,49 +290,52 @@ describe('AdminWinesPage Component', () => {
   it('flujo de fusión modal: paso 1 busca candidato (sin sí mismo ni duplicados), paso 2 exige checkbox y llama a mergeWines en orden correcto', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
       if (params?.name === 'Cabernet') {
-        return [
-          {
-            id: 10, // Mismo vino a fusionar
-            name: 'Gran Malbec Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 0,
-            wineryId: 1,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-          {
-            id: 20, // Ya es un duplicado
-            name: 'Torrontés Riojano',
-            wineType: 'White',
-            duplicateOfWineId: 12,
-            sourceType: 'Community',
-            reviewCount: 0,
-            wineryId: null,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-          {
-            id: 30, // Candidato canónico válido
-            name: 'Cabernet Sauvignon Gran Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 5,
-            wineryId: 1,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: 4.5,
-          },
-        ];
+        return {
+          items: [
+            {
+              id: 10, // Mismo vino a fusionar
+              name: 'Gran Malbec Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 0,
+              wineryId: 1,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+            {
+              id: 20, // Ya es un duplicado
+              name: 'Torrontés Riojano',
+              wineType: 'White',
+              duplicateOfWineId: 12,
+              sourceType: 'Community',
+              reviewCount: 0,
+              wineryId: null,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+            {
+              id: 30, // Candidato canónico válido
+              name: 'Cabernet Sauvignon Gran Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 5,
+              wineryId: 1,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: 4.5,
+            },
+          ],
+          totalCount: 3,
+        };
       }
-      return mockWines;
+      return { items: mockWines, totalCount: mockWines.length };
     });
 
     vi.mocked(adminWinesApi.mergeWines).mockResolvedValue({
@@ -434,23 +428,26 @@ describe('AdminWinesPage Component', () => {
   it('muestra mensaje de error del servidor en el modal si la fusión falla (400/404/409)', async () => {
     vi.mocked(adminWinesApi.getAdminWines).mockImplementation(async (params) => {
       if (params?.name === 'Cabernet') {
-        return [
-          {
-            id: 30,
-            name: 'Cabernet Sauvignon Gran Reserva',
-            wineType: 'Red',
-            duplicateOfWineId: null,
-            sourceType: 'Official',
-            reviewCount: 0,
-            wineryId: null,
-            wineryNameText: null,
-            description: null,
-            locationId: null,
-            averageRating: null,
-          },
-        ];
+        return {
+          items: [
+            {
+              id: 30,
+              name: 'Cabernet Sauvignon Gran Reserva',
+              wineType: 'Red',
+              duplicateOfWineId: null,
+              sourceType: 'Official',
+              reviewCount: 0,
+              wineryId: null,
+              wineryNameText: null,
+              description: null,
+              locationId: null,
+              averageRating: null,
+            },
+          ],
+          totalCount: 1,
+        };
       }
-      return mockWines;
+      return { items: mockWines, totalCount: mockWines.length };
     });
 
     vi.mocked(adminWinesApi.mergeWines).mockRejectedValue({
@@ -487,10 +484,83 @@ describe('AdminWinesPage Component', () => {
     fireEvent.click(within(dialog).getByLabelText(/entiendo que no se puede deshacer/i));
     fireEvent.click(within(dialog).getByRole('button', { name: /^fusionar$/i }));
 
-    await waitFor(() => {
+      await waitFor(() => {
       expect(within(dialog).getByText('El vino origen ya fue fusionado anteriormente.')).toBeInTheDocument();
       // El modal permanece abierto para que el admin pueda leer el error o corregir
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('sincroniza search, type y origin con la URL, carga URL prefiltrada y limpia filtros', async () => {
+    vi.mocked(adminWinesApi.getAdminWines).mockResolvedValue({
+      items: mockWines,
+      totalCount: mockWines.length,
+    });
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/admin/vinos?search=malbec&type=Red&origin=official']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(adminWinesApi.getAdminWines).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: 'malbec',
+        winery: undefined,
+        wineType: 'Red',
+        origin: 'official',
+      });
+    });
+
+    expect((screen.getByLabelText(/buscar por nombre/i) as HTMLInputElement).value).toBe('malbec');
+    expect((screen.getByLabelText(/filtrar por tipo/i) as HTMLSelectElement).value).toBe('Red');
+    expect((screen.getByLabelText(/filtrar por origen/i) as HTMLSelectElement).value).toBe('official');
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('');
+      expect(adminWinesApi.getAdminWines).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: undefined,
+        winery: undefined,
+        wineType: undefined,
+      });
+    });
+
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/vinos']}>
+        <AdminToastProvider>
+          <AdminWinesPage />
+          <LocationProbe />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/filtrar por origen/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/filtrar por origen/i), { target: { value: 'community' } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toBe('?origin=community');
+      expect(adminWinesApi.getAdminWines).toHaveBeenLastCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        name: undefined,
+        winery: undefined,
+        wineType: undefined,
+        origin: 'community',
+      });
     });
   });
 });

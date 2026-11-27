@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Search,
+  Eye,
   UserX,
   UserCheck,
   Trash2,
@@ -21,27 +22,39 @@ import {
 import type { AdminUserListItemDto } from '../features/admin/types/adminUsers';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
   ActiveBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
+import type { Column, FilterSelectConfig } from '../features/admin';
 import { cn } from '../lib/utils';
 
-type RoleFilter = 'ALL' | 'Admin' | 'Winery' | 'User';
+const ROLE_OPTIONS = [
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Winery', label: 'Bodega' },
+  { value: 'User', label: 'Usuario' },
+];
+
+const USER_STATUS_OPTIONS = [
+  { value: 'Active', label: 'Activos' },
+  { value: 'Blocked', label: 'Bloqueados' },
+];
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const toast = useAdminToast();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Filtros locales en la página actual
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
+  const searchParam = filters.search?.trim() || undefined;
+  const roleParam = filters.role || undefined;
+  const statusParam = filters.status || undefined;
 
   // Modales y procesamiento
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -62,13 +75,23 @@ export default function AdminUsersPage() {
   });
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  // Hook paginado (el backend no recibe filtros en este endpoint)
-  const fetcher = useCallback((page: number, pageSize: number) => {
-    return getUsers({ pageNumber: page, pageSize });
-  }, []);
+  // Hook paginado contra backend
+  const fetcher = useCallback(
+    (page: number, pageSize: number) => {
+      return getUsers({
+        pageNumber: page,
+        pageSize,
+        ...(searchParam ? { search: searchParam } : {}),
+        ...(roleParam ? { role: roleParam } : {}),
+        ...(statusParam ? { status: statusParam } : {}),
+      });
+    },
+    [searchParam, roleParam, statusParam]
+  );
 
   const {
     items: users,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -76,21 +99,43 @@ export default function AdminUsersPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<AdminUserListItemDto>(fetcher, []);
+  } = usePagedList<AdminUserListItemDto>(fetcher, [searchParam, roleParam, statusParam], {
+    page: filters.page,
+    onPageChange: setUrlPage,
+  });
 
-  // Filtrado en el cliente SOLO de los datos de la página cargada
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const matchesSearch =
-        searchTerm.trim() === '' ||
-        u.username.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase().trim());
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
 
-      const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+  const selects = useMemo<FilterSelectConfig[]>(
+    () => [
+      {
+        id: 'admin-users-role-filter',
+        label: 'Rol',
+        ariaLabel: 'Filtrar por rol',
+        value: filters.role ?? '',
+        placeholder: 'Todos los roles',
+        options: ROLE_OPTIONS,
+        onChange: (value) => setFilter('role', value || undefined),
+      },
+      {
+        id: 'admin-users-status-filter',
+        label: 'Estado',
+        ariaLabel: 'Filtrar por estado',
+        value: filters.status ?? '',
+        placeholder: 'Todos los estados',
+        options: USER_STATUS_OPTIONS,
+        onChange: (value) => setFilter('status', value || undefined),
+      },
+    ],
+    [filters.role, filters.status, setFilter]
+  );
 
-      return matchesSearch && matchesRole;
-    });
-  }, [users, searchTerm, roleFilter]);
+  const hasActiveFilters = Boolean(searchParam || roleParam || statusParam);
 
   // Acciones
   const handleToggleStatus = async (user: AdminUserListItemDto) => {
@@ -334,6 +379,28 @@ export default function AdminUsersPage() {
 
           return (
             <div className="flex items-center justify-end gap-1.5">
+              {/* Ver perfil */}
+              {row.username?.trim() ? (
+                <Link
+                  to={`/perfil/${encodeURIComponent(row.username)}`}
+                  title="Ver perfil"
+                  aria-label="Ver perfil"
+                  className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-colors inline-flex items-center justify-center"
+                >
+                  <Eye className="w-4 h-4" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Usuario sin nombre de perfil"
+                  aria-label="Ver perfil"
+                  className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-neutral-500 opacity-40 cursor-not-allowed inline-flex items-center justify-center"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              )}
+
               {/* Cambiar rol */}
               <button
                 type="button"
@@ -397,43 +464,16 @@ export default function AdminUsersPage() {
         description="Gestión integral de cuentas de usuarios, productores vitivinícolas y administradores"
       />
 
-      {/* Barra de búsqueda y selector de rol */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 max-w-xl">
-          {/* Input de búsqueda */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por usuario o email..."
-              aria-label="Buscar por usuario o email"
-              className="w-full h-10 rounded-xl pl-10 pr-4 text-xs font-sans bg-[#141416] border border-white/10 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-rose-500 transition-colors"
-            />
-          </div>
-
-          {/* Selector de rol */}
-          <div className="flex items-center gap-2">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-              aria-label="Filtrar por rol"
-              className="h-10 rounded-xl border border-white/10 bg-[#141416] px-3 text-xs text-neutral-200 focus:border-rose-500 focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">Todos los roles</option>
-              <option value="Admin">Admin</option>
-              <option value="Winery">Bodega</option>
-              <option value="User">Usuario</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Texto auxiliar visible */}
-        <span className="text-[11px] font-mono text-neutral-500 self-start sm:self-center">
-          El filtro se aplica a la página actual
-        </span>
-      </div>
+      {/* Barra de búsqueda y filtros en servidor */}
+      <AdminFilterBar
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchChange}
+        searchLabel="Buscar usuario"
+        searchPlaceholder="Buscar por usuario o email..."
+        selects={selects}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Error de carga */}
       {error && <ErrorBanner message={error} onRetry={() => void reload()} />}
@@ -441,7 +481,7 @@ export default function AdminUsersPage() {
       {/* Tabla de usuarios */}
       <DataTable
         columns={columns}
-        rows={filteredUsers}
+        rows={users}
         rowKey={(row) => row.id}
         isLoading={isLoading}
         emptyMessage="No hay usuarios."
@@ -453,6 +493,7 @@ export default function AdminUsersPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={users.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />

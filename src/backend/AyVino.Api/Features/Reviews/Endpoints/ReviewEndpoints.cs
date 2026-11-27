@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Reviews.DTOs;
 using AyVino.Api.Features.Reviews.Services;
 
@@ -12,6 +13,7 @@ public static class ReviewEndpoints
         var group = app.MapGroup("/api/reviews").WithTags("Reviews");
 
         group.MapGet("/", async (
+            HttpResponse response,
             IReviewService service,
             CancellationToken ct,
             int pageNumber = 1,
@@ -21,8 +23,8 @@ public static class ReviewEndpoints
             int? userId = null,
             decimal? rating = null) =>
         {
-            var reviews = await service.GetPagedForAdminAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
-            return Results.Ok(reviews);
+            var result = await service.GetPagedForAdminWithCountAsync(pageNumber, pageSize, wineId, wineVintageId, userId, rating, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
         })
         .RequireAuthorization(AppPolicies.RequireAdmin)
         .WithName("GetReviewsForAdmin")

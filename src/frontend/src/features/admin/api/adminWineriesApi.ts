@@ -1,5 +1,37 @@
 import apiClient from '../../../services/apiClient';
-import type { WineryStatus } from '../../winery/types/winery';
+import type { WineryResponseDto, WineryStatus } from '../../winery/types/winery';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
+
+export interface GetAdminWineriesParams {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: string;
+  locationId?: number;
+  search?: string;
+}
+
+/**
+ * Lista paginada de bodegas para el panel de administración, leyendo `X-Total-Count`.
+ * GET /api/wineries
+ */
+export async function getAdminWineries(
+  params?: GetAdminWineriesParams
+): Promise<PagedResponse<WineryResponseDto>> {
+  const response = await apiClient.get<WineryResponseDto[]>('/wineries', {
+    params: {
+      pageNumber: params?.pageNumber ?? 1,
+      pageSize: params?.pageSize ?? 10,
+      status: params?.status,
+      locationId: params?.locationId,
+      search: params?.search?.trim() || undefined,
+    },
+  });
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
+}
 
 /**
  * Cambia el estado de moderación de una bodega.

@@ -14,4 +14,11 @@ public interface IAuditRepository
         DateTime? from = null,
         DateTime? to = null,
         CancellationToken ct = default);
+    Task<int> CountAsync(
+        short? action = null,
+        string? entityType = null,
+        int? userId = null,
+        DateTime? from = null,
+        DateTime? to = null,
+        CancellationToken ct = default) => Task.FromResult(0);
 }

@@ -1,5 +1,33 @@
 import apiClient from '../../../services/apiClient';
 import type { GrapeResponseDto } from '../../winery/types/grape';
+import type { PagedResponse } from '../types/pagedResult';
+import { parseTotalCountHeader } from '../utils/totalCount';
+
+export interface GetAdminGrapesParams {
+  pageNumber?: number;
+  pageSize?: number;
+  colorType?: string;
+}
+
+/**
+ * Lista paginada de cepas para el panel de administración, leyendo `X-Total-Count`.
+ * GET /api/grapes
+ */
+export async function getAdminGrapes(
+  params?: GetAdminGrapesParams
+): Promise<PagedResponse<GrapeResponseDto>> {
+  const response = await apiClient.get<GrapeResponseDto[]>('/grapes', {
+    params: {
+      pageNumber: params?.pageNumber ?? 1,
+      pageSize: params?.pageSize ?? 10,
+      colorType: params?.colorType,
+    },
+  });
+  return {
+    items: response.data,
+    totalCount: parseTotalCountHeader(response.headers),
+  };
+}
 
 export interface CreateGrapeRequestDto {
   name: string;

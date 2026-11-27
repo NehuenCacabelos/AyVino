@@ -1,3 +1,4 @@
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security;
 using AyVino.Api.Features.Wines.DTOs;
 
@@ -12,4 +13,8 @@ public interface IWineVintageService
     Task<WineVintageResponseDto> ChangeStatusAsync(int wineId, int vintageId, ChangeWineVintageStatusRequestDto dto, CancellationToken ct = default);
     Task DeleteAsync(int wineId, int vintageId, Actor actor, CancellationToken ct = default);
     Task<IEnumerable<AdminWineVintageListItemDto>> GetPagedForAdminAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default);
+    Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, CancellationToken ct = default) =>
+        Task.FromResult(new PagedResult<AdminWineVintageListItemDto>([], 0));
+    Task<PagedResult<AdminWineVintageListItemDto>> GetPagedForAdminWithCountAsync(int pageNumber, int pageSize, string? status, string? search, CancellationToken ct = default) =>
+        GetPagedForAdminWithCountAsync(pageNumber, pageSize, status, ct);
 }

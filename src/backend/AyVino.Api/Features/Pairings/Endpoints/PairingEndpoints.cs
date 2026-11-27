@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Pairings.DTOs;
@@ -24,9 +25,11 @@ public static class PairingEndpoints
         .WithSummary("Creates a new pairing catalog entry.")
         .WithAudit(AuditAction.PairingCreated, "Pairing", entityIdResolver: (ctx, res) => (res as Created<PairingResponseDto>)?.Value?.Id, details: (ctx, res) => ctx.Arguments.OfType<CreatePairingRequestDto>().FirstOrDefault()?.Name);
 
-        group.MapGet("/", async (int pageNumber, int pageSize, string? category, IPairingService service, CancellationToken ct) =>
-            Results.Ok(await service.GetAllAsync(pageNumber, pageSize, category, ct))
-        ).WithName("GetPairings").WithSummary("Lists paginated pairings, with optional filter by category.");
+        group.MapGet("/", async (HttpResponse response, int pageNumber, int pageSize, string? category, IPairingService service, CancellationToken ct) =>
+        {
+            var result = await service.GetAllPagedAsync(pageNumber, pageSize, category, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        }).WithName("GetPairings").WithSummary("Lists paginated pairings, with optional filter by category.");
 
         group.MapGet("/{id:int}", async (int id, IPairingService service, CancellationToken ct) =>
             Results.Ok(await service.GetByIdAsync(id, ct))

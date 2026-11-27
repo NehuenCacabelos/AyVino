@@ -32,7 +32,7 @@ describe('AdminCitiesPage Component', () => {
   });
 
   it('la carga inicial pide status Pending por defecto y muestra la provincia resuelta', async () => {
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockPendingCities);
+    vi.mocked(adminCitiesApi.getCities).mockResolvedValue({ items: mockPendingCities, totalCount: 1 });
 
     render(
       <MemoryRouter initialEntries={['/admin/ciudades']}>
@@ -56,7 +56,7 @@ describe('AdminCitiesPage Component', () => {
   });
 
   it('filtrar por provincia envía stateId en la petición', async () => {
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockPendingCities);
+    vi.mocked(adminCitiesApi.getCities).mockResolvedValue({ items: mockPendingCities, totalCount: 1 });
 
     render(
       <MemoryRouter initialEntries={['/admin/ciudades']}>
@@ -84,7 +84,7 @@ describe('AdminCitiesPage Component', () => {
   });
 
   it('aprobar llama changeCityStatus con Approved y recarga la lista', async () => {
-    vi.mocked(adminCitiesApi.getCities).mockResolvedValue(mockPendingCities);
+    vi.mocked(adminCitiesApi.getCities).mockResolvedValue({ items: mockPendingCities, totalCount: 1 });
     vi.mocked(adminCitiesApi.changeCityStatus).mockResolvedValue(undefined);
 
     render(

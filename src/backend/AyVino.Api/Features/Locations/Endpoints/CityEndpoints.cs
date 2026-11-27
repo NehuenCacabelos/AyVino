@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Constants;
+using AyVino.Api.Common.Extensions;
 using AyVino.Api.Features.Audit.Endpoints;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Locations.DTOs;
@@ -21,8 +22,11 @@ public static class CityEndpoints
         .WithName("GetOrCreateCity")
         .WithSummary("Returns an existing city or creates it as Pending if it doesn't exist");
 
-        group.MapGet("/", async (ICityService cityService, CancellationToken ct, int pageNumber = 1, int pageSize = 10, int? stateId = null, string? status = null) =>
-            Results.Ok(await cityService.GetAllAsync(pageNumber, pageSize, stateId, status, ct)))
+        group.MapGet("/", async (HttpResponse response, ICityService cityService, CancellationToken ct, int pageNumber = 1, int pageSize = 10, int? stateId = null, string? status = null) =>
+        {
+            var result = await cityService.GetAllPagedAsync(pageNumber, pageSize, stateId, status, ct);
+            return response.OkWithTotalCount(result.Items, result.TotalCount);
+        })
             .WithName("GetAllCities")
             .WithSummary("Gets a paginated list of cities, filterable by state and status");
 

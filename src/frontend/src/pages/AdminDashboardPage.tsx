@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building2,
-  MapPin,
   Wine,
   UserX,
   Users,
@@ -70,7 +69,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     let isMounted = true;
     getAuditLogs({ pageNumber: 1, pageSize: 5 })
-      .then((items) => {
+      .then(({ items }) => {
         if (isMounted) setAuditState({ items, isLoading: false, error: null });
       })
       .catch((err: unknown) => {
@@ -104,257 +103,213 @@ export default function AdminDashboardPage() {
         description={`Hola, ${user?.username || 'Administrador'}. Revisá las solicitudes pendientes y gestioná el ecosistema vitivinícola.`}
       />
 
-      {/* 4 Tarjetas KPI con conteo exacto */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* 3 Tarjetas KPI con conteo exacto */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* KPI 1: Bodegas pendientes de moderación */}
-        <div
-          className={cn(
-            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
-            statsState.error
-              ? 'border-rose-900/60 bg-rose-950/20'
-              : stats && stats.wineries.pending > 0
-                ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
-                : 'border-white/10 bg-[#121015] hover:border-white/20'
-          )}
-        >
-          {statsState.isLoading ? (
-            <div className="py-6 flex items-center justify-center text-neutral-400">
-              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-            </div>
-          ) : statsState.error ? (
-            <div className="py-2 space-y-3">
-              <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
-              <button
-                type="button"
-                onClick={retryStats}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reintentar</span>
-              </button>
-            </div>
-          ) : (
-            <Link to="/admin/bodegas?status=Pending" className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                  Bodegas pendientes
-                </span>
-                <div
-                  className={cn(
-                    'p-2 rounded-xl border',
-                    (stats?.wineries.pending ?? 0) > 0
-                      ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
-                      : 'border-white/10 bg-white/5 text-neutral-400'
-                  )}
+        {statsState.isLoading || statsState.error ? (
+          <div
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between',
+              statsState.error ? 'border-rose-900/60 bg-rose-950/20' : 'border-white/10 bg-[#121015]'
+            )}
+          >
+            {statsState.isLoading ? (
+              <div className="py-6 flex items-center justify-center text-neutral-400">
+                <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+              </div>
+            ) : (
+              <div className="py-2 space-y-3">
+                <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
+                <button
+                  type="button"
+                  onClick={retryStats}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
                 >
-                  <Building2 className="w-4 h-4" />
-                </div>
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reintentar</span>
+                </button>
               </div>
-              <div className="mt-4">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
-                  {stats?.wineries.pending ?? 0}
-                </span>
-                <div className="mt-1 flex items-center gap-1.5 text-xs">
-                  {(stats?.wineries.pending ?? 0) === 0 ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
-                    </span>
-                  ) : (
-                    <span className="text-amber-300 font-medium">Requieren moderación</span>
-                  )}
-                </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            to="/admin/bodegas?status=Pending"
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70',
+              stats && stats.wineries.pending > 0
+                ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
+                : 'border-white/10 bg-[#121015] hover:border-white/20 hover:bg-white/[0.03]'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
+                Bodegas pendientes
+              </span>
+              <div
+                className={cn(
+                  'p-2 rounded-xl border',
+                  (stats?.wineries.pending ?? 0) > 0
+                    ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
+                    : 'border-white/10 bg-white/5 text-neutral-400'
+                )}
+              >
+                <Building2 className="w-4 h-4" />
               </div>
-            </Link>
-          )}
-        </div>
+            </div>
+            <div className="mt-4">
+              <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
+                {stats?.wineries.pending ?? 0}
+              </span>
+              <div className="mt-1 flex items-center gap-1.5 text-xs">
+                {(stats?.wineries.pending ?? 0) === 0 ? (
+                  <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
+                  </span>
+                ) : (
+                  <span className="text-amber-300 font-medium">Requieren moderación</span>
+                )}
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* KPI 2: Cosechas pendientes de moderación */}
-        <div
-          className={cn(
-            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
-            statsState.error
-              ? 'border-rose-900/60 bg-rose-950/20'
-              : stats && stats.vintages.pending > 0
-                ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
-                : 'border-white/10 bg-[#121015] hover:border-white/20'
-          )}
-        >
-          {statsState.isLoading ? (
-            <div className="py-6 flex items-center justify-center text-neutral-400">
-              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-            </div>
-          ) : statsState.error ? (
-            <div className="py-2 space-y-3">
-              <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
-              <button
-                type="button"
-                onClick={retryStats}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reintentar</span>
-              </button>
-            </div>
-          ) : (
-            <Link to="/admin/cosechas?status=Pending" className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                  Cosechas pendientes
-                </span>
-                <div
-                  className={cn(
-                    'p-2 rounded-xl border',
-                    (stats?.vintages.pending ?? 0) > 0
-                      ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
-                      : 'border-white/10 bg-white/5 text-neutral-400'
-                  )}
+        {statsState.isLoading || statsState.error ? (
+          <div
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between',
+              statsState.error ? 'border-rose-900/60 bg-rose-950/20' : 'border-white/10 bg-[#121015]'
+            )}
+          >
+            {statsState.isLoading ? (
+              <div className="py-6 flex items-center justify-center text-neutral-400">
+                <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+              </div>
+            ) : (
+              <div className="py-2 space-y-3">
+                <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
+                <button
+                  type="button"
+                  onClick={retryStats}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
                 >
-                  <Wine className="w-4 h-4" />
-                </div>
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reintentar</span>
+                </button>
               </div>
-              <div className="mt-4">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
-                  {stats?.vintages.pending ?? 0}
-                </span>
-                <div className="mt-1 flex items-center gap-1.5 text-xs">
-                  {(stats?.vintages.pending ?? 0) === 0 ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
-                    </span>
-                  ) : (
-                    <span className="text-amber-300 font-medium">Requieren moderación</span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {/* KPI 3: Ciudades pendientes de moderación */}
-        <div
-          className={cn(
-            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
-            statsState.error
-              ? 'border-rose-900/60 bg-rose-950/20'
-              : stats && stats.cities.pending > 0
+            )}
+          </div>
+        ) : (
+          <Link
+            to="/admin/cosechas?status=Pending"
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70',
+              stats && stats.vintages.pending > 0
                 ? 'border-amber-900/60 bg-[#171311] hover:border-amber-700/60'
-                : 'border-white/10 bg-[#121015] hover:border-white/20'
-          )}
-        >
-          {statsState.isLoading ? (
-            <div className="py-6 flex items-center justify-center text-neutral-400">
-              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-            </div>
-          ) : statsState.error ? (
-            <div className="py-2 space-y-3">
-              <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
-              <button
-                type="button"
-                onClick={retryStats}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
+                : 'border-white/10 bg-[#121015] hover:border-white/20 hover:bg-white/[0.03]'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
+                Cosechas pendientes
+              </span>
+              <div
+                className={cn(
+                  'p-2 rounded-xl border',
+                  (stats?.vintages.pending ?? 0) > 0
+                    ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
+                    : 'border-white/10 bg-white/5 text-neutral-400'
+                )}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reintentar</span>
-              </button>
+                <Wine className="w-4 h-4" />
+              </div>
             </div>
-          ) : (
-            <Link to="/admin/ciudades?status=Pending" className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                  Ciudades pendientes
-                </span>
-                <div
-                  className={cn(
-                    'p-2 rounded-xl border',
-                    (stats?.cities.pending ?? 0) > 0
-                      ? 'border-amber-900/50 bg-amber-950/40 text-amber-300'
-                      : 'border-white/10 bg-white/5 text-neutral-400'
-                  )}
-                >
-                  <MapPin className="w-4 h-4" />
-                </div>
+            <div className="mt-4">
+              <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
+                {stats?.vintages.pending ?? 0}
+              </span>
+              <div className="mt-1 flex items-center gap-1.5 text-xs">
+                {(stats?.vintages.pending ?? 0) === 0 ? (
+                  <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
+                  </span>
+                ) : (
+                  <span className="text-amber-300 font-medium">Requieren moderación</span>
+                )}
               </div>
-              <div className="mt-4">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
-                  {stats?.cities.pending ?? 0}
-                </span>
-                <div className="mt-1 flex items-center gap-1.5 text-xs">
-                  {(stats?.cities.pending ?? 0) === 0 ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Todo al día
-                    </span>
-                  ) : (
-                    <span className="text-amber-300 font-medium">Requieren moderación</span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )}
-        </div>
+            </div>
+          </Link>
+        )}
 
-        {/* KPI 4: Usuarios bloqueados (tono alerta si > 0) */}
-        <div
-          className={cn(
-            'rounded-2xl border p-5 transition-all flex flex-col justify-between',
-            statsState.error
-              ? 'border-rose-900/60 bg-rose-950/20'
-              : stats && stats.users.blocked > 0
+        {/* KPI 3: Usuarios bloqueados (tono alerta si > 0) */}
+        {statsState.isLoading || statsState.error ? (
+          <div
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between',
+              statsState.error ? 'border-rose-900/60 bg-rose-950/20' : 'border-white/10 bg-[#121015]'
+            )}
+          >
+            {statsState.isLoading ? (
+              <div className="py-6 flex items-center justify-center text-neutral-400">
+                <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+              </div>
+            ) : (
+              <div className="py-2 space-y-3">
+                <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
+                <button
+                  type="button"
+                  onClick={retryStats}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reintentar</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            to="/admin/usuarios?status=Blocked"
+            className={cn(
+              'rounded-2xl border p-5 transition-all flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70',
+              stats && stats.users.blocked > 0
                 ? 'border-rose-900/60 bg-rose-950/20 hover:border-rose-700/60'
-                : 'border-white/10 bg-[#121015] hover:border-white/20'
-          )}
-        >
-          {statsState.isLoading ? (
-            <div className="py-6 flex items-center justify-center text-neutral-400">
-              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
-            </div>
-          ) : statsState.error ? (
-            <div className="py-2 space-y-3">
-              <p className="text-xs text-rose-300 font-sans">{statsState.error}</p>
-              <button
-                type="button"
-                onClick={retryStats}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-300 hover:text-white cursor-pointer"
+                : 'border-white/10 bg-[#121015] hover:border-white/20 hover:bg-white/[0.03]'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
+                Usuarios bloqueados
+              </span>
+              <div
+                className={cn(
+                  'p-2 rounded-xl border',
+                  (stats?.users.blocked ?? 0) > 0
+                    ? 'border-rose-800/60 bg-rose-950/50 text-rose-300'
+                    : 'border-white/10 bg-white/5 text-neutral-400'
+                )}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reintentar</span>
-              </button>
+                <UserX className="w-4 h-4" />
+              </div>
             </div>
-          ) : (
-            <Link to="/admin/usuarios" className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                  Usuarios bloqueados
-                </span>
-                <div
-                  className={cn(
-                    'p-2 rounded-xl border',
-                    (stats?.users.blocked ?? 0) > 0
-                      ? 'border-rose-800/60 bg-rose-950/50 text-rose-300'
-                      : 'border-white/10 bg-white/5 text-neutral-400'
-                  )}
-                >
-                  <UserX className="w-4 h-4" />
-                </div>
+            <div className="mt-4">
+              <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
+                {stats?.users.blocked ?? 0}
+              </span>
+              <div className="mt-1 flex items-center gap-1.5 text-xs">
+                {(stats?.users.blocked ?? 0) > 0 ? (
+                  <span className="text-rose-300 font-medium flex items-center gap-1">
+                    <ShieldAlert className="w-3.5 h-3.5" /> Cuentas suspendidas
+                  </span>
+                ) : (
+                  <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Sin bloqueos activos
+                  </span>
+                )}
               </div>
-              <div className="mt-4">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-zinc-100">
-                  {stats?.users.blocked ?? 0}
-                </span>
-                <div className="mt-1 flex items-center gap-1.5 text-xs">
-                  {(stats?.users.blocked ?? 0) > 0 ? (
-                    <span className="text-rose-300 font-medium flex items-center gap-1">
-                      <ShieldAlert className="w-3.5 h-3.5" /> Cuentas suspendidas
-                    </span>
-                  ) : (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Sin bloqueos activos
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )}
-        </div>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Grilla de Métricas Completas del Ecosistema */}
@@ -364,7 +319,10 @@ export default function AdminDashboardPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total usuarios */}
-          <div className="p-4 rounded-2xl border border-white/10 bg-[#121015] flex items-center gap-3.5">
+          <Link
+            to="/admin/usuarios"
+            className="p-4 rounded-2xl border border-white/10 bg-[#121015] hover:bg-white/[0.03] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70 transition-all flex items-center gap-3.5"
+          >
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-neutral-300">
               <Users className="w-5 h-5 text-indigo-400" />
             </div>
@@ -372,10 +330,13 @@ export default function AdminDashboardPage() {
               <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Total Usuarios</p>
               <p className="text-xl font-bold text-zinc-100">{stats?.users.total ?? (statsState.isLoading ? '—' : 0)}</p>
             </div>
-          </div>
+          </Link>
 
           {/* Total bodegas */}
-          <div className="p-4 rounded-2xl border border-white/10 bg-[#121015] flex items-center gap-3.5">
+          <Link
+            to="/admin/bodegas"
+            className="p-4 rounded-2xl border border-white/10 bg-[#121015] hover:bg-white/[0.03] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70 transition-all flex items-center gap-3.5"
+          >
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-neutral-300">
               <Building2 className="w-5 h-5 text-emerald-400" />
             </div>
@@ -388,10 +349,13 @@ export default function AdminDashboardPage() {
                 </span>
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* Total vinos */}
-          <div className="p-4 rounded-2xl border border-white/10 bg-[#121015] flex items-center gap-3.5">
+          <Link
+            to="/admin/vinos"
+            className="p-4 rounded-2xl border border-white/10 bg-[#121015] hover:bg-white/[0.03] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70 transition-all flex items-center gap-3.5"
+          >
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-neutral-300">
               <Wine className="w-5 h-5 text-rose-400" />
             </div>
@@ -404,10 +368,13 @@ export default function AdminDashboardPage() {
                 </span>
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* Total reseñas */}
-          <div className="p-4 rounded-2xl border border-white/10 bg-[#121015] flex items-center gap-3.5">
+          <Link
+            to="/admin/resenas"
+            className="p-4 rounded-2xl border border-white/10 bg-[#121015] hover:bg-white/[0.03] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/70 transition-all flex items-center gap-3.5"
+          >
             <div className="p-2.5 rounded-xl border border-white/10 bg-white/5 text-neutral-300">
               <Star className="w-5 h-5 text-amber-400" />
             </div>
@@ -415,7 +382,7 @@ export default function AdminDashboardPage() {
               <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">Total Reseñas</p>
               <p className="text-xl font-bold text-zinc-100">{stats?.reviews.total ?? (statsState.isLoading ? '—' : 0)}</p>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
 

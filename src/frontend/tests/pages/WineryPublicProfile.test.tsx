@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import WineryPublicProfileLayout from '@/pages/WineryPublicProfileLayout';
 import WineryPublicOverviewPage from '@/pages/WineryPublicOverviewPage';
 import WineryPublicCatalogPage from '@/pages/WineryPublicCatalogPage';
+import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import type {
   WineryPublicProfileResponseDto,
   WineryPublicCatalogResponseDto,
 } from '@/features/winery/types';
+
+vi.mock('@/features/admin/api/adminWineriesApi', () => ({
+  getAdminWineries: vi.fn(),
+  changeWineryStatus: vi.fn(),
+  deleteWinery: vi.fn(),
+}));
 
 // Mock de Leaflet para jsdom
 vi.mock('react-leaflet', () => ({
@@ -446,6 +453,183 @@ describe('WineryPublicProfile Integration Flow', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText(/sin valoraciones/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('franja admin: no se muestra para visitantes ni usuarios no admin', async () => {
+    mockCurrentUser = null;
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega Catena Zapata')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('admin-winery-moderation-bar')).not.toBeInTheDocument();
+
+    unmount();
+
+    mockCurrentUser = { id: 10, username: 'usuario_comun', role: 'User' };
+    render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bodega Catena Zapata')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('admin-winery-moderation-bar')).not.toBeInTheDocument();
+  });
+
+  it('franja admin: muestra StatusBadge, dueño si viene en DTO y botones según estado (Pending/Approved/Rejected)', async () => {
+    mockCurrentUser = { id: 1, username: 'admin', role: 'Admin' };
+
+    // 1. Pending con userId -> Aprobar y Rechazar
+    mockGetWineryPublicProfile.mockResolvedValueOnce({
+      ...samplePreviewProfile,
+      userId: 77,
+    });
+
+    const { unmount: unmountPending } = render(
+      <MemoryRouter initialEntries={['/bodegas/2']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-winery-moderation-bar')).toBeInTheDocument();
+    });
+    const barPending = screen.getByTestId('admin-winery-moderation-bar');
+    expect(within(barPending).getByText('Pendiente')).toBeInTheDocument();
+    expect(within(barPending).getByText('Usuario #77')).toBeInTheDocument();
+    expect(within(barPending).getByRole('button', { name: 'Aprobar' })).toBeInTheDocument();
+    expect(within(barPending).getByRole('button', { name: 'Rechazar' })).toBeInTheDocument();
+    unmountPending();
+
+    // 2. Approved sin userId -> solo Rechazar
+    mockGetWineryPublicProfile.mockResolvedValueOnce(sampleApprovedProfile);
+    const { unmount: unmountApproved } = render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-winery-moderation-bar')).toBeInTheDocument();
+    });
+    const barApproved = screen.getByTestId('admin-winery-moderation-bar');
+    expect(within(barApproved).getByText('Aprobada')).toBeInTheDocument();
+    expect(within(barApproved).queryByText(/Usuario #/)).not.toBeInTheDocument();
+    expect(within(barApproved).queryByRole('button', { name: 'Aprobar' })).not.toBeInTheDocument();
+    expect(within(barApproved).getByRole('button', { name: 'Rechazar' })).toBeInTheDocument();
+    unmountApproved();
+
+    // 3. Rejected -> solo Aprobar
+    mockGetWineryPublicProfile.mockResolvedValueOnce({
+      ...sampleApprovedProfile,
+      status: 'Rejected',
+    });
+    render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-winery-moderation-bar')).toBeInTheDocument();
+    });
+    const barRejected = screen.getByTestId('admin-winery-moderation-bar');
+    expect(within(barRejected).getByText('Rechazada')).toBeInTheDocument();
+    expect(within(barRejected).getByRole('button', { name: 'Aprobar' })).toBeInTheDocument();
+    expect(within(barRejected).queryByRole('button', { name: 'Rechazar' })).not.toBeInTheDocument();
+  });
+
+  it('franja admin: aprobar llama a changeWineryStatus("Approved") y recarga el perfil', async () => {
+    mockCurrentUser = { id: 1, username: 'admin', role: 'Admin' };
+    mockGetWineryPublicProfile
+      .mockResolvedValueOnce(samplePreviewProfile)
+      .mockResolvedValueOnce({ ...samplePreviewProfile, status: 'Approved', isPreview: false });
+    vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={['/bodegas/2']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Aprobar' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+
+    await waitFor(() => {
+      expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(2, 'Approved');
+      expect(mockGetWineryPublicProfile).toHaveBeenCalledTimes(2);
+      expect(within(screen.getByTestId('admin-winery-moderation-bar')).getByText('Aprobada')).toBeInTheDocument();
+    });
+  });
+
+  it('franja admin: rechazar una bodega aprobada exige ConfirmDialog, llama changeWineryStatus("Rejected") y recarga', async () => {
+    mockCurrentUser = { id: 1, username: 'admin', role: 'Admin' };
+    mockGetWineryPublicProfile
+      .mockResolvedValueOnce(sampleApprovedProfile)
+      .mockResolvedValueOnce({ ...sampleApprovedProfile, status: 'Rejected' });
+    vi.mocked(adminWineriesApi.changeWineryStatus).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={['/bodegas/1']}>
+        <Routes>
+          <Route path="/bodegas/:id" element={<WineryPublicProfileLayout />}>
+            <Route index element={<WineryPublicOverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Rechazar' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rechazar' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('¿Suspender bodega?')).toBeInTheDocument();
+    expect(adminWineriesApi.changeWineryStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Suspender' }));
+
+    await waitFor(() => {
+      expect(adminWineriesApi.changeWineryStatus).toHaveBeenCalledWith(1, 'Rejected');
+      expect(mockGetWineryPublicProfile).toHaveBeenCalledTimes(2);
+      expect(within(screen.getByTestId('admin-winery-moderation-bar')).getByText('Rechazada')).toBeInTheDocument();
     });
   });
 });

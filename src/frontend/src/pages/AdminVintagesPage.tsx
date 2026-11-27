@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Eye,
   Check,
@@ -7,90 +7,62 @@ import {
   Trash2,
   Wine,
   User,
-  Calendar,
-  Thermometer,
-  Clock,
-  Percent,
-  Layers,
 } from 'lucide-react';
-import type { ApprovalStatus, WineVintageResponseDto } from '../features/winery/types/wine';
+import type { ApprovalStatus } from '../features/winery/types/wine';
 import {
   getAdminVintages,
   changeVintageStatus,
   deleteVintage,
-  getVintageDetail,
 } from '../features/admin/api/adminVintagesApi';
 import type { AdminWineVintageListItem } from '../features/admin/types/adminVintages';
-import { getGrapes } from '../features/winery/api/grapeApi';
 import { getWineTypeLabel } from '../features/admin/utils/wineTypeLabels';
 import {
   PageHeader,
+  AdminFilterBar,
   DataTable,
   PaginationControls,
   StatusBadge,
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminStats,
+  useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
-import { cn } from '../lib/utils';
+import type { Column, FilterChipOption } from '../features/admin';
 import { imageUrl } from '../lib/image';
 
-type StatusFilter = 'Pending' | 'Approved' | 'Rejected' | 'All';
-
-const STATUS_CHIPS: { label: string; value: StatusFilter }[] = [
-  { label: 'Pendientes', value: 'Pending' },
-  { label: 'Aprobadas', value: 'Approved' },
-  { label: 'Rechazadas', value: 'Rejected' },
-  { label: 'Todas', value: 'All' },
-];
+type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
 export default function AdminVintagesPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useAdminToast();
+  const { stats, refresh: refreshStats } = useAdminStats();
+  const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
 
-  // Estado de filtros
-  const rawStatus = searchParams.get('status');
+  const statusChips = useMemo<FilterChipOption[]>(
+    () => [
+      { label: 'Todas', value: 'All' },
+      {
+        label: stats ? `Pendientes (${stats.vintages.pending})` : 'Pendientes',
+        value: 'Pending',
+      },
+      { label: 'Aprobadas', value: 'Approved' },
+      { label: 'Rechazadas', value: 'Rejected' },
+    ],
+    [stats]
+  );
+
   const currentStatus: StatusFilter =
-    rawStatus === 'Approved' || rawStatus === 'Rejected' || rawStatus === 'All'
-      ? rawStatus
-      : 'Pending';
+    filters.status === 'Pending' || filters.status === 'Approved' || filters.status === 'Rejected'
+      ? filters.status
+      : 'All';
 
   const statusParam = currentStatus === 'All' ? undefined : (currentStatus as ApprovalStatus);
+  const searchParam = filters.search?.trim() || undefined;
 
-  // Estados de operaciones y modales
+  // Estados de operaciones
   const [processingId, setProcessingId] = useState<number | null>(null);
-
-  // Estado del modal de detalle
-  const [detailItem, setDetailItem] = useState<AdminWineVintageListItem | null>(null);
-  const [detailData, setDetailData] = useState<WineVintageResponseDto | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-
-  // Diccionario en memoria de uvas para resolver ids
-  const [grapesMap, setGrapesMap] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    let isMounted = true;
-    getGrapes({ pageNumber: 1, pageSize: 100 })
-      .then((data) => {
-        if (!isMounted) return;
-        const map: Record<number, string> = {};
-        data.forEach((g) => {
-          map[g.id] = g.name;
-        });
-        setGrapesMap(map);
-      })
-      .catch(() => {
-        // En caso de fallo, se mantendrá vacío y se mostrará "Uva #id"
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -115,14 +87,16 @@ export default function AdminVintagesPage() {
       return getAdminVintages({
         pageNumber: page,
         pageSize,
-        status: statusParam,
+        ...(statusParam ? { status: statusParam } : {}),
+        ...(searchParam ? { search: searchParam } : {}),
       });
     },
-    [statusParam]
+    [statusParam, searchParam]
   );
 
   const {
     items: vintages,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -130,13 +104,26 @@ export default function AdminVintagesPage() {
     setPage,
     setPageSize,
     reload,
-  } = usePagedList<AdminWineVintageListItem>(fetcher, [statusParam]);
+  } = usePagedList<AdminWineVintageListItem>(fetcher, [statusParam, searchParam], {
+    page: filters.page,
+    onPageChange: setUrlPage,
+  });
 
-  const handleChipClick = (status: StatusFilter) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('status', status);
-    setSearchParams(next);
-  };
+  const handleChipClick = useCallback(
+    (status: string) => {
+      setFilter('status', status === 'All' ? undefined : status);
+    },
+    [setFilter]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setFilter('search', value.trim() ? value : undefined);
+    },
+    [setFilter]
+  );
+
+  const hasActiveFilters = Boolean(statusParam || searchParam);
 
   // Acciones sobre la cosecha
   const handleApprove = async (item: AdminWineVintageListItem) => {
@@ -144,7 +131,7 @@ export default function AdminVintagesPage() {
     try {
       await changeVintageStatus(item.wineId, item.vintageId, 'Approved');
       toast.success('Cosecha aprobada exitosamente.');
-      await reload();
+      await Promise.all([reload(), refreshStats()]);
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -166,7 +153,7 @@ export default function AdminVintagesPage() {
           await changeVintageStatus(item.wineId, item.vintageId, 'Rejected');
           toast.success('Cosecha rechazada.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -191,7 +178,7 @@ export default function AdminVintagesPage() {
           await deleteVintage(item.wineId, item.vintageId);
           toast.success('Cosecha eliminada del catálogo.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -200,25 +187,6 @@ export default function AdminVintagesPage() {
         }
       },
     });
-  };
-
-  const loadDetail = useCallback(async (wineId: number, vintageId: number) => {
-    setDetailLoading(true);
-    setDetailError(null);
-    try {
-      const data = await getVintageDetail(wineId, vintageId);
-      setDetailData(data);
-    } catch (err: unknown) {
-      setDetailError(getApiErrorMessage(err));
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
-
-  const openDetailModal = (item: AdminWineVintageListItem) => {
-    setDetailItem(item);
-    setDetailData(null);
-    void loadDetail(item.wineId, item.vintageId);
   };
 
   // Definición de columnas
@@ -358,16 +326,18 @@ export default function AdminVintagesPage() {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => openDetailModal(row)}
-                disabled={isBusy}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-white/5 disabled:opacity-40 transition-colors cursor-pointer"
+              <Link
+                to={
+                  row.year != null
+                    ? `/vinos/${row.wineId}?cosecha=${row.year}`
+                    : `/vinos/${row.wineId}`
+                }
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-white/5 transition-colors inline-flex items-center justify-center"
                 title="Ver detalle"
-                aria-label="Ver detalle de la cosecha"
+                aria-label="Ver detalle"
               >
                 <Eye className="w-4 h-4" />
-              </button>
+              </Link>
 
               <button
                 type="button"
@@ -395,27 +365,18 @@ export default function AdminVintagesPage() {
         description="Revisá y aprobá las cosechas cargadas por usuarios y bodegas"
       />
 
-      {/* Filtros por estado */}
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_CHIPS.map((chip) => {
-          const isActive = currentStatus === chip.value;
-          return (
-            <button
-              key={chip.value}
-              type="button"
-              onClick={() => handleChipClick(chip.value)}
-              className={cn(
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer border',
-                isActive
-                  ? 'bg-[#6b1d28] text-white border-rose-700/60 shadow-sm shadow-rose-950/50'
-                  : 'bg-[#121015] text-neutral-400 hover:text-neutral-200 border-white/10 hover:border-white/20'
-              )}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Filtros por estado y búsqueda */}
+      <AdminFilterBar
+        chips={statusChips}
+        activeChip={currentStatus}
+        onChipChange={handleChipClick}
+        searchValue={filters.search ?? ''}
+        onSearchChange={handleSearchChange}
+        searchLabel="Buscar cosecha"
+        searchPlaceholder="Buscar por vino o bodega..."
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Banner de Error */}
       {error && <ErrorBanner message={error} onRetry={() => void reload()} />}
@@ -427,6 +388,9 @@ export default function AdminVintagesPage() {
         rowKey={(row) => row.vintageId}
         isLoading={isLoading}
         emptyMessage="No hay cosechas con este estado."
+        rowClassName={(row) =>
+          row.approvalStatus === 'Pending' ? 'border-l-2 border-l-amber-400/80 bg-amber-950/10' : undefined
+        }
       />
 
       {/* Controles de Paginación */}
@@ -434,216 +398,10 @@ export default function AdminVintagesPage() {
         page={page}
         pageSize={pageSize}
         itemsOnPage={vintages.length}
+        totalCount={totalCount}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
-
-      {/* Modal de Detalle de Cosecha */}
-      {detailItem && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="detail-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
-        >
-          <div className="relative w-full max-w-xl bg-[#121015] border border-white/10 rounded-2xl p-6 shadow-2xl text-neutral-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-white/[0.08]">
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 block mb-1">
-                  Ficha Técnica de Cosecha
-                </span>
-                <h2 id="detail-title" className="text-xl font-serif font-bold text-zinc-100">
-                  {detailItem.wineName}{' '}
-                  <span className="text-rose-400 font-mono text-base font-normal">
-                    ({detailItem.year != null ? detailItem.year : 'S/A'})
-                  </span>
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailItem(null);
-                  setDetailData(null);
-                }}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                aria-label="Cerrar modal de detalle"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {detailLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-neutral-400 space-y-3">
-                <Wine className="w-8 h-8 animate-pulse text-rose-500" />
-                <span className="text-xs font-mono">Cargando especificaciones...</span>
-              </div>
-            ) : detailError ? (
-              <div className="py-6">
-                <ErrorBanner
-                  message={detailError}
-                  onRetry={() => void loadDetail(detailItem.wineId, detailItem.vintageId)}
-                />
-              </div>
-            ) : (
-              <div className="mt-4 space-y-4 text-xs">
-                {/* Imagen y ficha principal */}
-                <div className="flex flex-col sm:flex-row gap-4 p-4 bg-[#0c0c0e] rounded-xl border border-white/5 items-center sm:items-start">
-                  <div className="w-24 h-32 rounded-lg overflow-hidden bg-neutral-900 border border-white/10 flex items-center justify-center shrink-0">
-                    {(detailData?.imageId || detailData?.imageUrl || detailItem.imageId || detailItem.imageUrl) ? (
-                      <img
-                        src={
-                          detailData?.imageId
-                            ? imageUrl(detailData.imageId, 'bottle')!
-                            : (detailData?.imageUrl || (detailItem.imageId ? imageUrl(detailItem.imageId, 'bottle')! : detailItem.imageUrl!))
-                        }
-                        alt={detailItem.wineName}
-                        className="w-full h-full object-contain p-2"
-                      />
-                    ) : (
-                      <Wine className="w-8 h-8 text-neutral-600" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 space-y-2 text-center sm:text-left">
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-white/5 border border-white/10 text-neutral-300">
-                        {getWineTypeLabel(String(detailItem.wineType))}
-                      </span>
-                      <StatusBadge
-                        status={
-                          detailItem.approvalStatus === 'Approved' ||
-                          detailItem.approvalStatus === 'Rejected'
-                            ? detailItem.approvalStatus
-                            : 'Pending'
-                        }
-                      />
-                    </div>
-
-                    <div className="text-neutral-400 text-xs">
-                      <span className="font-mono text-neutral-500 block uppercase tracking-wider text-[10px]">
-                        Bodega
-                      </span>
-                      <span className="text-zinc-200 font-medium text-sm">
-                        {detailItem.wineryName || 'Sin bodega asignada'}
-                      </span>
-                    </div>
-
-                    <div className="text-neutral-400 text-xs">
-                      <span className="font-mono text-neutral-500 block uppercase tracking-wider text-[10px]">
-                        Subido por
-                      </span>
-                      <span className="text-neutral-300">
-                        {detailItem.uploadedByUsername || `Usuario #${detailItem.uploadedByUserId}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Métricas técnicas */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="p-3 bg-[#0c0c0e] rounded-xl border border-white/5">
-                    <span className="text-neutral-500 font-mono uppercase tracking-wider block mb-1 flex items-center gap-1.5 text-[10px]">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Año de Añada
-                    </span>
-                    <span className="font-mono text-zinc-100 font-bold text-sm">
-                      {detailData?.year ?? detailItem.year ?? 'S/A'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-[#0c0c0e] rounded-xl border border-white/5">
-                    <span className="text-neutral-500 font-mono uppercase tracking-wider block mb-1 flex items-center gap-1.5 text-[10px]">
-                      <Percent className="w-3.5 h-3.5" />
-                      Graduación
-                    </span>
-                    <span className="font-mono text-zinc-100 font-bold text-sm">
-                      {detailData?.alcoholContent != null || detailItem.alcoholContent != null
-                        ? `${Number(
-                            detailData?.alcoholContent ?? detailItem.alcoholContent
-                          ).toLocaleString('es-AR', {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 2,
-                          })} %`
-                        : '—'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-[#0c0c0e] rounded-xl border border-white/5 col-span-2 sm:col-span-1">
-                    <span className="text-neutral-500 font-mono uppercase tracking-wider block mb-1 flex items-center gap-1.5 text-[10px]">
-                      <Thermometer className="w-3.5 h-3.5" />
-                      T° Servicio
-                    </span>
-                    <span className="font-mono text-zinc-100 font-bold text-sm">
-                      {detailData?.servingTemperature != null
-                        ? `${detailData.servingTemperature} °C`
-                        : '—'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Consejo de Guarda */}
-                {detailData?.agingAdvice && (
-                  <div className="p-3 bg-[#0c0c0e] rounded-xl border border-white/5">
-                    <span className="text-neutral-500 font-mono uppercase tracking-wider block mb-1 flex items-center gap-1.5 text-[10px]">
-                      <Clock className="w-3.5 h-3.5" />
-                      Consejo de Guarda
-                    </span>
-                    <p className="text-neutral-300 font-sans leading-relaxed">
-                      {detailData.agingAdvice}
-                    </p>
-                  </div>
-                )}
-
-                {/* Corte de Uvas (Blends) */}
-                <div className="p-3 bg-[#0c0c0e] rounded-xl border border-white/5">
-                  <span className="text-neutral-500 font-mono uppercase tracking-wider block mb-2 flex items-center gap-1.5 text-[10px]">
-                    <Layers className="w-3.5 h-3.5" />
-                    Corte de Varietales (Blend)
-                  </span>
-                  {detailData?.grapes && detailData.grapes.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {detailData.grapes.map((grape) => {
-                        const grapeName = grapesMap[grape.grapeId] || `Uva #${grape.grapeId}`;
-                        return (
-                          <span
-                            key={grape.grapeId}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-900 border border-white/10 text-xs text-neutral-200"
-                          >
-                            <span className="font-medium">{grapeName}</span>
-                            {grape.percentage != null && (
-                              <span className="text-rose-400 font-mono text-[11px]">
-                                {grape.percentage} %
-                              </span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span className="text-neutral-500 font-sans italic">
-                      No se registraron porcentajes de uvas para esta cosecha.
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-6 pt-4 border-t border-white/[0.08] flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailItem(null);
-                  setDetailData(null);
-                }}
-                className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Diálogo de Confirmación */}
       <ConfirmDialog

@@ -24,7 +24,7 @@ describe('AdminPairingsPage Component', () => {
   });
 
   it('crear envía name y category correctos al backend', async () => {
-    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue(mockPairings);
+    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue({ items: mockPairings, totalCount: 2 });
     vi.mocked(adminPairingsApi.createPairing).mockResolvedValue({
       id: 3,
       name: 'Trucha a la manteca negra',
@@ -66,7 +66,7 @@ describe('AdminPairingsPage Component', () => {
   });
 
   it('el filtro por categoría envía el parámetro al backend', async () => {
-    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue(mockPairings);
+    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue({ items: mockPairings, totalCount: 2 });
 
     render(
       <MemoryRouter initialEntries={['/admin/maridajes']}>
@@ -93,7 +93,7 @@ describe('AdminPairingsPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog antes de llamar a deletePairing', async () => {
-    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue(mockPairings);
+    vi.mocked(adminPairingsApi.getPairings).mockResolvedValue({ items: mockPairings, totalCount: 2 });
     vi.mocked(adminPairingsApi.deletePairing).mockResolvedValue(undefined);
 
     render(

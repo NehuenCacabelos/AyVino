@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Features.Grapes.DTOs;
 using AyVino.Api.Features.Grapes.Enums;
 using AyVino.Api.Features.Grapes.Repositories;
@@ -17,19 +18,32 @@ public class GrapeService(IGrapeRepository grapeRepository) : IGrapeService
 
     public async Task<IEnumerable<GrapeResponseDto>> GetAllAsync(int pageNumber, int pageSize, string? colorType, CancellationToken ct = default)
     {
-        ValidatePagination(pageNumber, pageSize);
-
-        int? colorTypeValue = null;
-        if (!string.IsNullOrWhiteSpace(colorType))
-        {
-            if (!Enum.TryParse<ColorType>(colorType, ignoreCase: true, out var parsedColor))
-                throw new ValidationException($"Invalid color type: '{colorType}'.");
-
-            colorTypeValue = (int)parsedColor;
-        }
-
+        var colorTypeValue = ValidateAndParseListFilters(pageNumber, pageSize, colorType);
         var grapes = await grapeRepository.GetAllAsync(pageNumber, pageSize, colorTypeValue, ct);
         return grapes.ToResponseDtoList();
+    }
+
+    public async Task<PagedResult<GrapeResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? colorType, CancellationToken ct = default)
+    {
+        var colorTypeValue = ValidateAndParseListFilters(pageNumber, pageSize, colorType);
+        var grapes = await grapeRepository.GetAllAsync(pageNumber, pageSize, colorTypeValue, ct);
+        var totalCount = await grapeRepository.CountAsync(colorTypeValue, ct);
+        return new PagedResult<GrapeResponseDto>(grapes.ToResponseDtoList(), totalCount);
+    }
+
+    private static int? ValidateAndParseListFilters(int pageNumber, int pageSize, string? colorType)
+    {
+        ValidatePagination(pageNumber, pageSize);
+
+        if (string.IsNullOrWhiteSpace(colorType))
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<ColorType>(colorType, ignoreCase: true, out var parsedColor))
+            throw new ValidationException($"Invalid color type: '{colorType}'.");
+
+        return (int)parsedColor;
     }
 
     public async Task<GrapeResponseDto> CreateAsync(CreateGrapeRequestDto request, CancellationToken ct = default)

@@ -1,4 +1,5 @@
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Features.Audit.DTOs;
 using AyVino.Api.Features.Audit.Enums;
 using AyVino.Api.Features.Audit.Models;
@@ -41,19 +42,40 @@ public class AuditService(IAuditRepository repository, ILogger<AuditService> log
         DateTime? to = null,
         CancellationToken ct = default)
     {
+        var actionValue = ValidateAndParseFilter(pageNumber, pageSize, action);
+        var entries = await repository.GetPagedAsync(pageNumber, pageSize, actionValue, entityType, userId, from, to, ct);
+        return entries.ToDtoList();
+    }
+
+    public async Task<PagedResult<AuditLogEntryDto>> GetPagedWithCountAsync(
+        int pageNumber,
+        int pageSize,
+        string? action = null,
+        string? entityType = null,
+        int? userId = null,
+        DateTime? from = null,
+        DateTime? to = null,
+        CancellationToken ct = default)
+    {
+        var actionValue = ValidateAndParseFilter(pageNumber, pageSize, action);
+        var entries = await repository.GetPagedAsync(pageNumber, pageSize, actionValue, entityType, userId, from, to, ct);
+        var totalCount = await repository.CountAsync(actionValue, entityType, userId, from, to, ct);
+        return new PagedResult<AuditLogEntryDto>(entries.ToDtoList(), totalCount);
+    }
+
+    private static short? ValidateAndParseFilter(int pageNumber, int pageSize, string? action)
+    {
         if (pageNumber <= 0) throw new ValidationException("pageNumber debe ser mayor a 0.");
         if (pageSize is <= 0 or > 100) throw new ValidationException("pageSize debe estar entre 1 y 100.");
 
-        short? actionValue = null;
-        if (!string.IsNullOrWhiteSpace(action))
+        if (string.IsNullOrWhiteSpace(action))
         {
-            if (!Enum.TryParse<AuditAction>(action, ignoreCase: true, out var parsedAction))
-                throw new ValidationException($"Acción de auditoría inválida: '{action}'.");
-
-            actionValue = (short)parsedAction;
+            return null;
         }
 
-        var entries = await repository.GetPagedAsync(pageNumber, pageSize, actionValue, entityType, userId, from, to, ct);
-        return entries.ToDtoList();
+        if (!Enum.TryParse<AuditAction>(action, ignoreCase: true, out var parsedAction))
+            throw new ValidationException($"Acción de auditoría inválida: '{action}'.");
+
+        return (short)parsedAction;
     }
 }

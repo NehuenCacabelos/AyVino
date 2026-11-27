@@ -48,6 +48,7 @@ const AdminPairingsPage = lazy(() => import('../pages/AdminPairingsPage'));
 const AdminAuditPage = lazy(() => import('../pages/AdminAuditPage'));
 const AdminReviewsPage = lazy(() => import('../pages/AdminReviewsPage'));
 const AdminWinesPage = lazy(() => import('../pages/AdminWinesPage'));
+const AdminWineEditPage = lazy(() => import('../pages/AdminWineEditPage'));
 
 /**
  * Indicador de carga sobrio para transiciones entre rutas.
@@ -455,6 +456,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<RouteFallbackLoader />}>
                 <AdminWinesPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'vinos/:wineId',
+            element: (
+              <Suspense fallback={<RouteFallbackLoader />}>
+                <AdminWineEditPage />
               </Suspense>
             ),
           },

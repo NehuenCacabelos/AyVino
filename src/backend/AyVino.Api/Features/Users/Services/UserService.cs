@@ -1,8 +1,10 @@
 using System.Text.RegularExpressions;
 using AyVino.Api.Common.Exceptions;
+using AyVino.Api.Common.Models;
 using AyVino.Api.Common.Security.Hashing;
 using AyVino.Api.Common.Constants;
 using AyVino.Api.Features.Users.DTOs;
+using AyVino.Api.Features.Users.Enums;
 using AyVino.Api.Features.Users.Repositories;
 
 namespace AyVino.Api.Features.Users.Services;
@@ -105,6 +107,50 @@ public partial class UserService(IUserRepository userRepository, IPasswordHasher
         ValidatePagination(pageNumber, pageSize);
         var users = await userRepository.GetAllAsync(pageNumber, pageSize, ct);
         return users.ToResponseDtoList();
+    }
+
+    public Task<PagedResult<UserResponseDto>> GetAllPagedAsync(int pageNumber, int pageSize, CancellationToken ct = default) =>
+        GetAllPagedAsync(pageNumber, pageSize, null, null, null, ct);
+
+    public async Task<PagedResult<UserResponseDto>> GetAllPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        string? role,
+        string? status,
+        CancellationToken ct = default)
+    {
+        ValidatePagination(pageNumber, pageSize);
+
+        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+        string? canonicalRole = null;
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            if (!Enum.TryParse<UserRoleFilter>(role.Trim(), ignoreCase: true, out var parsedRole) || !Enum.IsDefined(parsedRole))
+                throw new ValidationException($"Rol inválido: '{role}'. Valores permitidos: Admin, Winery, User.");
+
+            canonicalRole = parsedRole.ToString();
+        }
+
+        bool? isActive = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<UserStatusFilter>(status.Trim(), ignoreCase: true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+                throw new ValidationException($"Estado de usuario inválido: '{status}'. Valores permitidos: Active, Blocked.");
+
+            isActive = parsedStatus == UserStatusFilter.Active;
+        }
+
+        var hasFilters = normalizedSearch is not null || canonicalRole is not null || isActive.HasValue;
+        var users = hasFilters
+            ? await userRepository.GetAllAsync(pageNumber, pageSize, normalizedSearch, canonicalRole, isActive, ct)
+            : await userRepository.GetAllAsync(pageNumber, pageSize, ct);
+        var totalCount = hasFilters
+            ? await userRepository.CountAsync(normalizedSearch, canonicalRole, isActive, ct)
+            : await userRepository.CountAsync(ct);
+
+        return new PagedResult<UserResponseDto>(users.ToResponseDtoList(), totalCount);
     }
 
     public async Task<UserResponseDto> UpdateProfileAsync(int id, UpdateUserProfileRequestDto dto, CancellationToken ct = default)

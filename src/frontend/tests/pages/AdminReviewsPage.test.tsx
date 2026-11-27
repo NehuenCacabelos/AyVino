@@ -44,7 +44,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('la carga inicial pide reseñas y las renderiza en la tabla', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -72,7 +75,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('el filtro de puntaje envía rating al hacer clic en un chip', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -101,7 +107,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('los inputs de ID envían wineId y userId en la petición', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
 
     render(
       <MemoryRouter initialEntries={['/admin/resenas']}>
@@ -133,7 +142,10 @@ describe('AdminReviewsPage Component', () => {
   });
 
   it('eliminar exige confirmación en ConfirmDialog y llama a deleteReviewByAdmin', async () => {
-    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue(mockReviews);
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
     vi.mocked(adminReviewsApi.deleteReviewByAdmin).mockResolvedValue(undefined);
 
     render(
@@ -161,5 +173,29 @@ describe('AdminReviewsPage Component', () => {
     await waitFor(() => {
       expect(adminReviewsApi.deleteReviewByAdmin).toHaveBeenCalledWith(101);
     });
+  });
+
+  it('"Ver vino" enlaza a /vinos/:wineId?cosecha=:year y omite cosecha si year es null', async () => {
+    vi.mocked(adminReviewsApi.getAdminReviews).mockResolvedValue({
+      items: mockReviews,
+      totalCount: mockReviews.length,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/resenas']}>
+        <AdminToastProvider>
+          <AdminReviewsPage />
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Gran Reserva Malbec')).toBeInTheDocument();
+    });
+
+    const wineLinks = screen.getAllByRole('link', { name: 'Ver vino' });
+    expect(wineLinks).toHaveLength(2);
+    expect(wineLinks[0]).toHaveAttribute('href', '/vinos/10?cosecha=2021');
+    expect(wineLinks[1]).toHaveAttribute('href', '/vinos/12');
   });
 });

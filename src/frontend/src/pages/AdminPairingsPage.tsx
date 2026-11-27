@@ -60,6 +60,7 @@ export default function AdminPairingsPage() {
 
   const {
     items: pairings,
+    totalCount,
     page,
     pageSize,
     isLoading,
@@ -278,6 +279,7 @@ export default function AdminPairingsPage() {
           page={page}
           pageSize={pageSize}
           itemsOnPage={pairings.length}
+          totalCount={totalCount}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
         />
