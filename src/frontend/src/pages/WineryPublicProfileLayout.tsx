@@ -25,6 +25,7 @@ import {
   WineryPublicTopBar,
   type WineryPublicProfileResponseDto,
 } from '../features/winery';
+import AdminWineryModerationBar from '../features/admin/components/AdminWineryModerationBar';
 import { cn } from '../lib/utils';
 
 export interface WineryPublicOutletContext {
@@ -294,6 +295,11 @@ export default function WineryPublicProfileLayout() {
 
       {/* 3. Contenedor Principal con offset para TopBar fija (y cartel de preview si aplica) */}
       <div className={cn('flex-1 flex flex-col', profile.isPreview ? 'pt-24' : 'pt-14')}>
+        {/* Franja superior exclusiva para administradores */}
+        {user?.role === 'Admin' && (
+          <AdminWineryModerationBar profile={profile} onUpdated={handleReload} />
+        )}
+
         {/* BANNER DINÁMICO Vitivinícola o Fotografía Oficial */}
         <WineryBanner
           wineryName={profile.name}

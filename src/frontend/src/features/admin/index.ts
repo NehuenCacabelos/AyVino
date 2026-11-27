@@ -1,4 +1,6 @@
 export { default as AdminLayout } from './components/AdminLayout';
+export { default as AdminWineryModerationBar } from './components/AdminWineryModerationBar';
+export type { AdminWineryModerationBarProps } from './components/AdminWineryModerationBar';
 export { AdminToastProvider, useAdminToast } from './components/AdminToast';
 export { AdminStatsProvider, useAdminStats } from './context/AdminStatsContext';
 export type { AdminStatsContextValue } from './context/AdminStatsContext';

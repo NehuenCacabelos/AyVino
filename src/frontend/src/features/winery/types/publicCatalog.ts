@@ -30,6 +30,7 @@ export interface WineryPublicProfileResponseDto {
   reviewCount: number;
   isPreview: boolean;
   isOwner?: boolean;
+  userId?: number | null;
 }
 
 export interface WineryPublicGrapeFilterDto {
