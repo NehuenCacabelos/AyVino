@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
+import AdminWineriesPage from '@/pages/AdminWineriesPage';
 import * as adminStatsApi from '@/features/admin/api/adminStatsApi';
 import * as adminAuditApi from '@/features/admin/api/adminAuditApi';
+import * as adminWineriesApi from '@/features/admin/api/adminWineriesApi';
 import * as authModule from '@/features/auth';
+import { AdminToastProvider } from '@/features/admin';
 import type { AdminStatsDto } from '@/features/admin/types/adminStats';
 import type { AuditLogEntryDto } from '@/features/admin/types/adminAudit';
 
@@ -14,6 +17,12 @@ vi.mock('@/features/admin/api/adminStatsApi', () => ({
 
 vi.mock('@/features/admin/api/adminAuditApi', () => ({
   getAuditLogs: vi.fn(),
+}));
+
+vi.mock('@/features/admin/api/adminWineriesApi', () => ({
+  getAdminWineries: vi.fn(),
+  changeWineryStatus: vi.fn(),
+  deleteWinery: vi.fn(),
 }));
 
 const mockUseAuth = vi.fn();
@@ -174,6 +183,70 @@ describe('AdminDashboardPage Component', () => {
       // Error en el bloque de auditoría
       expect(screen.getByText('Error al cargar auditoría.')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
+    });
+  });
+
+  it('cada card de KPI y métricas renderiza como Link con su href esperado y foco visible', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: [], totalCount: 0 });
+
+    render(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+
+    const expectedLinks: { pattern: RegExp; href: string }[] = [
+      { pattern: /bodegas pendientes/i, href: '/admin/bodegas?status=Pending' },
+      { pattern: /cosechas pendientes/i, href: '/admin/cosechas?status=Pending' },
+      { pattern: /usuarios bloqueados/i, href: '/admin/usuarios?status=Blocked' },
+      { pattern: /total usuarios/i, href: '/admin/usuarios' },
+      { pattern: /total bodegas/i, href: '/admin/bodegas' },
+      { pattern: /catálogo de vinos/i, href: '/admin/vinos' },
+      { pattern: /total reseñas/i, href: '/admin/resenas' },
+    ];
+
+    for (const item of expectedLinks) {
+      const links = screen.getAllByRole('link', { name: item.pattern });
+      const cardLink = links.find((el) => el.getAttribute('href') === item.href);
+      expect(cardLink).toBeDefined();
+      expect(cardLink?.className).toContain('focus-visible:');
+    }
+  });
+
+  it('click en la card de Bodegas pendientes navega a /admin/bodegas?status=Pending con chip Pendientes activo', async () => {
+    vi.mocked(adminStatsApi.getAdminStats).mockResolvedValue(mockStats);
+    vi.mocked(adminAuditApi.getAuditLogs).mockResolvedValue({ items: [], totalCount: 0 });
+    vi.mocked(adminWineriesApi.getAdminWineries).mockResolvedValue({ items: [], totalCount: 0 });
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AdminToastProvider>
+          <Routes>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/bodegas" element={<AdminWineriesPage />} />
+          </Routes>
+        </AdminToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /bodegas pendientes/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('link', { name: /bodegas pendientes/i }));
+
+    await waitFor(() => {
+      expect(adminWineriesApi.getAdminWineries).toHaveBeenCalledWith({
+        pageNumber: 1,
+        pageSize: 10,
+        status: 'Pending',
+      });
+      expect(screen.getByRole('button', { name: 'Pendientes' })).toHaveAttribute('aria-pressed', 'true');
     });
   });
 });
