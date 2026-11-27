@@ -92,9 +92,9 @@ Siguiendo la **Regla de Aislamiento Estricto** del proyecto, todo el dominio vit
 El panel de administración es una herramienta interna, sobria y funcional diseñada exclusivamente para usuarios con rol `Admin`. Implementa el mismo tema oscuro `#0f0f11` y acentos borgoña `#6b1d28` que el resto del sistema, garantizando responsividad fluida (menú lateral drawer en móviles y barra lateral fija en escritorio).
 
 ### 4.1 Componentes y Utilidades Compartidas (`features/admin`)
-- **`AdminLayout.tsx`**: Layout maestro protegido (`ProtectedRoute allowedRoles={['Admin']}`). Incluye sidebar con navegación activa, cabecera con avatar y badge de rol "Admin", menú colapsable para dispositivos móviles, y enlaces rápidos de pie ("Volver al sitio" y "Cerrar sesión"). Aloja el `AdminToastProvider`.
+- **`AdminLayout.tsx` y `AdminStatsContext.tsx`**: Layout maestro protegido (`ProtectedRoute allowedRoles={['Admin']}`). Incluye sidebar con navegación activa, badges numéricos ámbar con el conteo de pendientes en *Bodegas* y *Cosechas* (`99+` si supera 99), cabecera con avatar y badge de rol "Admin", menú colapsable para dispositivos móviles, y enlaces rápidos de pie ("Volver al sitio" y "Cerrar sesión"). Aloja el `AdminToastProvider` y `AdminStatsProvider` (con función `refresh()` compartida).
 - **`PageHeader.tsx`**: Título editorial, descripción explicativa de sección y slots para acciones primarias.
-- **`DataTable.tsx`**: Tabla genérica tipada `<T>` con estados de carga animados (5 skeletons), mensaje vacío personalizado y scroll horizontal contenido sin romper el viewport general.
+- **`DataTable.tsx`**: Tabla genérica tipada `<T>` con estados de carga animados (5 skeletons), `rowClassName` opcional por fila (usado para resaltar en ámbar registros `Pending`), mensaje vacío personalizado y scroll horizontal contenido sin romper el viewport general.
 - **`PaginationControls.tsx`**: Controles de paginación con soporte opcional para `totalCount` mediante header `X-Total-Count` (muestra `"Página X de Y · N resultados"` junto a botones Primera/Anterior/Siguiente/Última cuando está disponible, conservando el modo clásico sin conteo si `totalCount` es `null`) y selector de tamaño (10, 25, 50).
 - **`AdminFilterBar.tsx`**: Barra reutilizable de filtros para el panel con chips de estado (con contadores opcionales), buscador de texto con debounce de 300ms, selects configurables y botón "Limpiar filtros".
 - **`StatusBadge.tsx` y `ActiveBadge.tsx`**: Badges visuales para estados de moderación (`Pending` en ámbar, `Approved` en verde, `Rejected` en rojo) y actividad de usuarios (`Activo` en verde, `Inactivo` en gris).
@@ -136,6 +136,7 @@ src/frontend/src/
 │   │   ├── api/               # adminWineriesApi, adminCitiesApi, adminVintagesApi, adminUsersApi, adminGrapesApi, adminPairingsApi, adminAuditApi, adminReviewsApi, adminWinesApi, adminStatsApi
 │   │   ├── components/        # AdminLayout, AdminFilterBar, DataTable, PaginationControls, StatusBadge,
 │   │   │                      # ConfirmDialog, AdminToast, ErrorBanner, PageHeader
+│   │   ├── context/           # AdminStatsContext (conteos pendientes y refresh en AdminLayout)
 │   │   ├── hooks/             # usePagedList, useAdminFilters
 │   │   ├── types/             # pagedResult, adminUsers, adminPairings, adminVintages, adminAudit, adminReviews, adminWines, adminStats
 │   │   └── utils/             # totalCount, getApiErrorMessage, grapeLabels, pairingLabels, wineTypeLabels, auditLabels

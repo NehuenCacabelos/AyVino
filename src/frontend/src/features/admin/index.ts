@@ -1,5 +1,7 @@
 export { default as AdminLayout } from './components/AdminLayout';
 export { AdminToastProvider, useAdminToast } from './components/AdminToast';
+export { AdminStatsProvider, useAdminStats } from './context/AdminStatsContext';
+export type { AdminStatsContextValue } from './context/AdminStatsContext';
 export { default as AdminFilterBar } from './components/AdminFilterBar';
 export type {
   AdminFilterBarProps,
@@ -17,7 +19,7 @@ export type { PaginationControlsProps } from './components/PaginationControls';
 export { default as StatusBadge, ActiveBadge } from './components/StatusBadge';
 export type { StatusBadgeType } from './components/StatusBadge';
 export { usePagedList } from './hooks/usePagedList';
-export type { UsePagedListReturn } from './hooks/usePagedList';
+export type { UsePagedListOptions, UsePagedListReturn } from './hooks/usePagedList';
 export { useAdminFilters } from './hooks/useAdminFilters';
 export type {
   AdminFilterKey,

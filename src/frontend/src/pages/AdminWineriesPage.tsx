@@ -27,24 +27,32 @@ import {
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminStats,
   useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
+import type { Column, FilterChipOption } from '../features/admin';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
-const STATUS_CHIPS: { label: string; value: StatusFilter }[] = [
-  { label: 'Todas', value: 'All' },
-  { label: 'Pendientes', value: 'Pending' },
-  { label: 'Aprobadas', value: 'Approved' },
-  { label: 'Rechazadas', value: 'Rejected' },
-];
-
 export default function AdminWineriesPage() {
   const toast = useAdminToast();
+  const { stats, refresh: refreshStats } = useAdminStats();
   const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
+
+  const statusChips = useMemo<FilterChipOption[]>(
+    () => [
+      { label: 'Todas', value: 'All' },
+      {
+        label: stats ? `Pendientes (${stats.wineries.pending})` : 'Pendientes',
+        value: 'Pending',
+      },
+      { label: 'Aprobadas', value: 'Approved' },
+      { label: 'Rechazadas', value: 'Rejected' },
+    ],
+    [stats]
+  );
 
   const currentStatus: StatusFilter =
     filters.status === 'Pending' || filters.status === 'Approved' || filters.status === 'Rejected'
@@ -125,7 +133,7 @@ export default function AdminWineriesPage() {
     try {
       await changeWineryStatus(id, 'Approved');
       toast.success('Bodega aprobada exitosamente.');
-      await reload();
+      await Promise.all([reload(), refreshStats()]);
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -150,7 +158,7 @@ export default function AdminWineriesPage() {
           await changeWineryStatus(winery.id, 'Rejected');
           toast.success(isApproved ? 'Bodega suspendida.' : 'Bodega rechazada.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -175,7 +183,7 @@ export default function AdminWineriesPage() {
           await deleteWinery(winery.id);
           toast.success('Bodega eliminada del sistema.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -331,7 +339,7 @@ export default function AdminWineriesPage() {
 
       {/* Barra de filtros */}
       <AdminFilterBar
-        chips={STATUS_CHIPS}
+        chips={statusChips}
         activeChip={currentStatus}
         onChipChange={handleChipClick}
         searchValue={filters.search ?? ''}
@@ -352,6 +360,9 @@ export default function AdminWineriesPage() {
         rowKey={(row) => row.id}
         isLoading={isLoading}
         emptyMessage="No hay bodegas con este estado."
+        rowClassName={(row) =>
+          row.status === 'Pending' ? 'border-l-2 border-l-amber-400/80 bg-amber-950/10' : undefined
+        }
       />
 
       {/* Paginación */}

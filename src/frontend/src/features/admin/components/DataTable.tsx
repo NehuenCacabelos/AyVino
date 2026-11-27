@@ -14,11 +14,12 @@ export interface DataTableProps<T> {
   rowKey: (row: T) => string | number;
   isLoading: boolean;
   emptyMessage: string;
+  rowClassName?: (row: T) => string | undefined;
 }
 
 /**
  * Tabla de datos genérica para vistas administrativas.
- * Soporta estados de carga con filas esqueleto, scroll horizontal en mobile y estado vacío.
+ * Soporta estados de carga con filas esqueleto, scroll horizontal en mobile, clases por fila y estado vacío.
  */
 export default function DataTable<T>({
   columns,
@@ -26,6 +27,7 @@ export default function DataTable<T>({
   rowKey,
   isLoading,
   emptyMessage,
+  rowClassName,
 }: DataTableProps<T>) {
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-[#121015] shadow-xl">
@@ -74,7 +76,7 @@ export default function DataTable<T>({
               rows.map((row) => (
                 <tr
                   key={rowKey(row)}
-                  className="hover:bg-white/[0.03] transition-colors"
+                  className={cn('hover:bg-white/[0.03] transition-colors', rowClassName?.(row))}
                 >
                   {columns.map((col) => (
                     <td

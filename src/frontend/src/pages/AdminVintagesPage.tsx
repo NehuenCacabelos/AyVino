@@ -31,25 +31,33 @@ import {
   ConfirmDialog,
   ErrorBanner,
   useAdminToast,
+  useAdminStats,
   useAdminFilters,
   usePagedList,
   getApiErrorMessage,
 } from '../features/admin';
-import type { Column } from '../features/admin';
+import type { Column, FilterChipOption } from '../features/admin';
 import { imageUrl } from '../lib/image';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
-const STATUS_CHIPS: { label: string; value: StatusFilter }[] = [
-  { label: 'Todas', value: 'All' },
-  { label: 'Pendientes', value: 'Pending' },
-  { label: 'Aprobadas', value: 'Approved' },
-  { label: 'Rechazadas', value: 'Rejected' },
-];
-
 export default function AdminVintagesPage() {
   const toast = useAdminToast();
+  const { stats, refresh: refreshStats } = useAdminStats();
   const { filters, setFilter, setPage: setUrlPage, clearFilters } = useAdminFilters();
+
+  const statusChips = useMemo<FilterChipOption[]>(
+    () => [
+      { label: 'Todas', value: 'All' },
+      {
+        label: stats ? `Pendientes (${stats.vintages.pending})` : 'Pendientes',
+        value: 'Pending',
+      },
+      { label: 'Aprobadas', value: 'Approved' },
+      { label: 'Rechazadas', value: 'Rejected' },
+    ],
+    [stats]
+  );
 
   const currentStatus: StatusFilter =
     filters.status === 'Pending' || filters.status === 'Approved' || filters.status === 'Rejected'
@@ -158,7 +166,7 @@ export default function AdminVintagesPage() {
     try {
       await changeVintageStatus(item.wineId, item.vintageId, 'Approved');
       toast.success('Cosecha aprobada exitosamente.');
-      await reload();
+      await Promise.all([reload(), refreshStats()]);
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err));
     } finally {
@@ -180,7 +188,7 @@ export default function AdminVintagesPage() {
           await changeVintageStatus(item.wineId, item.vintageId, 'Rejected');
           toast.success('Cosecha rechazada.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -205,7 +213,7 @@ export default function AdminVintagesPage() {
           await deleteVintage(item.wineId, item.vintageId);
           toast.success('Cosecha eliminada del catálogo.');
           setConfirmDialog((prev) => ({ ...prev, open: false }));
-          await reload();
+          await Promise.all([reload(), refreshStats()]);
         } catch (err: unknown) {
           toast.error(getApiErrorMessage(err));
         } finally {
@@ -411,7 +419,7 @@ export default function AdminVintagesPage() {
 
       {/* Filtros por estado y búsqueda */}
       <AdminFilterBar
-        chips={STATUS_CHIPS}
+        chips={statusChips}
         activeChip={currentStatus}
         onChipChange={handleChipClick}
         searchValue={filters.search ?? ''}
@@ -432,6 +440,9 @@ export default function AdminVintagesPage() {
         rowKey={(row) => row.vintageId}
         isLoading={isLoading}
         emptyMessage="No hay cosechas con este estado."
+        rowClassName={(row) =>
+          row.approvalStatus === 'Pending' ? 'border-l-2 border-l-amber-400/80 bg-amber-950/10' : undefined
+        }
       />
 
       {/* Controles de Paginación */}
